@@ -1,0 +1,85 @@
+cabal-version:      3.0
+name:               plutarch-quickcheck
+version:            1.0.0
+synopsis:           Helpers for property testing plutarch
+description:
+  Contains several helpers for law checks of Plutarch type classes, as well as 
+  helpers for property test writing. Some orphan instances useful for Plutarch 
+  property writing are also included.
+
+homepage:           https://github.com/Liqwid-Labs/plutarch-quickcheck
+bug-reports:        https://github.com/Liqwid-Labs/plutarch-quickcheck/issues
+license:
+license-file:
+author:             Koz Ross
+maintainer:         Koz Ross <koz@mlabs.city>
+copyright:          (C) 2022 Liqwid Labs
+category:           Test
+build-type:         Simple
+tested-with:        GHC ==9.2.1
+extra-source-files: README.md
+
+source-repository head
+  type:     git
+  location: https://github.com/Liqwid-Labs/plutarch-quickcheck
+
+-- Common sections
+
+common common-lang
+  ghc-options:
+    -Wall -Wcompat -Wincomplete-uni-patterns
+    -Wincomplete-record-updates -Wredundant-constraints
+    -Wmissing-export-lists -Wmissing-deriving-strategies -Werror
+
+  build-depends:      base ^>=4.16
+  default-extensions:
+    BangPatterns
+    BinaryLiterals
+    ConstraintKinds
+    DataKinds
+    DeriveFunctor
+    DeriveGeneric
+    DeriveTraversable
+    DerivingStrategies
+    DerivingVia
+    EmptyCase
+    FlexibleContexts
+    FlexibleInstances
+    GeneralisedNewtypeDeriving
+    HexFloatLiterals
+    ImportQualifiedPost
+    InstanceSigs
+    KindSignatures
+    LambdaCase
+    MultiParamTypeClasses
+    NumericUnderscores
+    OverloadedStrings
+    ScopedTypeVariables
+    StandaloneDeriving
+    TupleSections
+    TypeOperators
+
+  default-language:   Haskell2010
+
+-- Libraries
+
+library
+  import:          common-lang
+  exposed-modules:
+    Test.Tasty.Plutarch.Laws
+    Test.Tasty.Plutarch.Property
+
+  other-modules:   Test.Tasty.Plutarch.Helpers
+  build-depends:
+    , plutarch
+    , plutus-ledger-api
+    , pretty
+    , pretty-show
+    , QuickCheck
+    , tagged
+    , tasty
+    , tasty-quickcheck
+    , text
+    , universe
+
+  hs-source-dirs:  src
