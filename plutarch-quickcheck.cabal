@@ -31,7 +31,10 @@ common common-lang
     -Wincomplete-record-updates -Wredundant-constraints
     -Wmissing-export-lists -Wmissing-deriving-strategies -Werror
 
-  build-depends:      base ^>=4.16
+  build-depends:
+    , base      ^>=4.16
+    , plutarch
+
   default-extensions:
     BangPatterns
     BinaryLiterals
@@ -71,7 +74,6 @@ library
 
   other-modules:   Test.Tasty.Plutarch.Helpers
   build-depends:
-    , plutarch
     , plutus-ledger-api
     , pretty
     , pretty-show
@@ -83,3 +85,20 @@ library
     , universe
 
   hs-source-dirs:  src
+
+-- Test suites
+
+test-suite square-tests
+  import:         common-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  build-depends:
+    , plutarch-quickcheck
+    , QuickCheck
+    , tagged
+    , tasty
+    , tasty-quickcheck
+    , universe
+
+  ghc-options:    -O2 -threaded -rtsopts -with-rtsopts=-N
+  hs-source-dirs: examples/square-tests

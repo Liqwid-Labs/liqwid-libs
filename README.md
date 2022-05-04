@@ -54,7 +54,15 @@ executable examples:
 * `examples/natural-tests`, which demonstrates law checking.
 
 These are designed to be read as code, but can also be executed to see what they
-do.
+do: use `cabal new-test` if you want these. It is also worth reading their Cabal
+file entries for common `ghc-options` to ensure the best (and fastest) testing
+experience. You _also_ want to have one of the following:
+
+* `test-show-details: direct` in your `cabal.project` file; or
+* `--test-show-details=direct` passed as a flag to `cabal new-test`.
+
+Without one of these, your test output will be very limited. We have this set up
+for our examples; ensure you have this set up for your own tests.
 
 To integrate this with your project, use Nix. We work against a [fork of
 Plutarch](https://github.com/peter-mlabs/plutarch) (the `liqwid/extra` branch),
