@@ -111,3 +111,9 @@ test-suite zip-tests
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   hs-source-dirs: examples/zip-tests
+
+test-suite natural-tests
+  import:         common-tests
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  hs-source-dirs: examples/natural-tests
