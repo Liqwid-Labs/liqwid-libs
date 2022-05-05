@@ -9,15 +9,17 @@ description:
 
 homepage:           https://github.com/Liqwid-Labs/plutarch-quickcheck
 bug-reports:        https://github.com/Liqwid-Labs/plutarch-quickcheck/issues
-license:
-license-file:
+license:            Apache-2.0
+license-file:       LICENSE
 author:             Koz Ross
 maintainer:         Koz Ross <koz@mlabs.city>
 copyright:          (C) 2022 Liqwid Labs
 category:           Test
 build-type:         Simple
 tested-with:        GHC ==9.2.1
-extra-source-files: README.md
+extra-source-files:
+  LICENSE
+  README.md
 
 source-repository head
   type:     git

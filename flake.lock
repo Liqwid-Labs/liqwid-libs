@@ -860,22 +860,6 @@
         "type": "github"
       }
     },
-    "nixpkgs-2111_3": {
-      "locked": {
-        "lastModified": 1650287833,
-        "narHash": "sha256-lTmQ/Yj7zjtRAcEstIa4sxOvn6vAQRsgekX88wO2CXI=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "ac1191a866bf974d7e246cc7bb0b9c7e80d7cd7a",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "ref": "nixpkgs-21.11-darwin",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
     "nixpkgs-unstable": {
       "locked": {
         "lastModified": 1644486793,
@@ -1006,23 +990,22 @@
           "haskell-nix",
           "nixpkgs-unstable"
         ],
-        "nixpkgs-2111": "nixpkgs-2111_3",
         "plutus": "plutus",
         "protolude": "protolude",
         "sized-functors": "sized-functors",
         "th-extras": "th-extras"
       },
       "locked": {
-        "lastModified": 1650382454,
-        "narHash": "sha256-b31DK+E/0MtR45+Z+F5U1E8jjcewvZ42UmFLZlXDAYM=",
-        "owner": "peter-mlabs",
+        "lastModified": 1651662854,
+        "narHash": "sha256-1oildFtPUm68Cnbh2tGCABElaf/06GIHeyF8TUWsVig=",
+        "owner": "Plutonomicon",
         "repo": "plutarch",
-        "rev": "6ef18aacd02050fc07398e399cff5e8734c1045e",
+        "rev": "8c90f412e040da2debefc3f31a388cdb99d52c62",
         "type": "github"
       },
       "original": {
-        "owner": "peter-mlabs",
-        "ref": "liqwid/extra",
+        "owner": "Plutonomicon",
+        "ref": "staging",
         "repo": "plutarch",
         "type": "github"
       }

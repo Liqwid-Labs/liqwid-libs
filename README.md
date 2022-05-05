@@ -29,6 +29,8 @@ can be quite difficult and error-prone. Lastly, the error output of QuickCheck
   loudly) if not.
 * Error output tries to be as helpful as it can, both by using prettyprinting
   and also explaining in more natural language what exactly went wrong.
+* We provide extensive documentation to assist you, including both examples and
+  Haddocks. Never step on any QuickCheck rakes again!
 
 Currently, we are able to test the following type class laws:
 
@@ -64,10 +66,11 @@ experience. You _also_ want to have one of the following:
 Without one of these, your test output will be very limited. We have this set up
 for our examples; ensure you have this set up for your own tests.
 
-To integrate this with your project, use Nix. We work against a [fork of
-Plutarch](https://github.com/peter-mlabs/plutarch) (the `liqwid/extra` branch),
-so you will have to use it also. See the `flake.nix` file for more details.
+To integrate this with your project, use Nix. We work against the `staging`
+branch of Plutarch, so you will have to use it also. See the `flake.nix` file
+for more details.
 
 # What can I do with this?
 
-TODO when released
+`plutarch-quickcheck` is licensed under the Apache 2.0 license (SPDX code
+`Apache-2.0`); for more details, please see the `LICENSE` file.

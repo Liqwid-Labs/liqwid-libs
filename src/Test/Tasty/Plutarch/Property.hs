@@ -5,7 +5,7 @@
 
 {- | Module: Test.Tasty.Plutarch.Property
  Copyright: (C) Liqwid Labs 2022
- License: Proprietary
+ License: Apache 2.0
  Maintainer: Koz Ross <koz@mlabs.city>
  Portability: GHC only
  Stability: Experimental

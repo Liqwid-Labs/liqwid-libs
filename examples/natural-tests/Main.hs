@@ -1,8 +1,9 @@
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {- | Module: Main
  Copyright: (C) Liqwid Labs 2022
- License: Proprietary
+ License: Apache 2.0
  Portability: GHC only
  Stability: Experimental
 
@@ -12,7 +13,8 @@
 module Main (main) where
 
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
-import Plutarch (DerivePNewtype (DerivePNewtype), S, Term)
+import Plutarch (DerivePNewtype (DerivePNewtype), PlutusType, S, Term)
+import Plutarch.Builtin (PIsData)
 import Plutarch.Integer (PInteger)
 import Plutarch.Lift (
     PConstantDecl (PConstantRepr, PConstanted, pconstantFromRepr, pconstantToRepr),
@@ -26,8 +28,6 @@ import Test.Tasty.Plutarch.Laws (
 -- If you need QuickCheck stuff, import it from 'Test.QuickCheck', /not/
 -- 'Test.Tasty.QuickCheck'! To see why, read [this
 -- issue](https://github.com/UnkindPartition/tasty/issues/208)
-
-import Plutarch.Builtin (PIsData)
 import Test.QuickCheck (
     NonNegative (NonNegative),
     arbitrary,
@@ -42,7 +42,7 @@ import Test.Tasty.QuickCheck (QuickCheckTests)
 -- but we will use a newtype for simplicity.
 
 newtype PNatural (s :: S) = PNatural (Term s PInteger)
-    deriving (PIsData) via (DerivePNewtype PNatural PInteger)
+    deriving (PlutusType, PIsData) via (DerivePNewtype PNatural PInteger)
 
 -- We will also need a corresponding \'Haskell-level\' type. While we _could_
 -- use the built-in 'Natural', we'll instead define another newtype to make it

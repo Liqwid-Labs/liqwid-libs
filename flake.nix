@@ -7,7 +7,7 @@
   # see https://github.com/NixOS/nix/issues/6013
   inputs.nixpkgs-2111 = { url = "github:NixOS/nixpkgs/nixpkgs-21.11-darwin"; };
 
-  inputs.plutarch.url = "github:peter-mlabs/plutarch/liqwid/extra";
+  inputs.plutarch.url = "github:Plutonomicon/plutarch/staging";
   inputs.plutarch.inputs.nixpkgs.follows = "plutarch/haskell-nix/nixpkgs-unstable";
 
   outputs = inputs@{ self, nixpkgs, haskell-nix, plutarch, ... }:

@@ -2,7 +2,7 @@
 
 {- | Module: Main
  Copyright: (C) Liqwid Labs 2022
- License: Proprietary
+ License: Apache 2.0
  Portability: GHC only
  Stability: Experimental
 
