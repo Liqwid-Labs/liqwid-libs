@@ -64,6 +64,18 @@ common common-lang
 
   default-language:   Haskell2010
 
+common common-tests
+  import:        common-lang
+  ghc-options:   -O2 -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+    , plutarch
+    , plutarch-quickcheck
+    , QuickCheck
+    , tagged
+    , tasty
+    , tasty-quickcheck
+    , universe
+
 -- Libraries
 
 library
@@ -89,16 +101,13 @@ library
 -- Test suites
 
 test-suite square-tests
-  import:         common-lang
+  import:         common-tests
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
-  build-depends:
-    , plutarch-quickcheck
-    , QuickCheck
-    , tagged
-    , tasty
-    , tasty-quickcheck
-    , universe
-
-  ghc-options:    -O2 -threaded -rtsopts -with-rtsopts=-N
   hs-source-dirs: examples/square-tests
+
+test-suite zip-tests
+  import:         common-tests
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  hs-source-dirs: examples/zip-tests

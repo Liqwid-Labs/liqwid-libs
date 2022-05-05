@@ -12,17 +12,16 @@ module Main (main) where
 import Data.Tagged (Tagged (Tagged))
 import Data.Universe (Finite (cardinality, universeF), Universe (universe))
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
+import Plutarch (S, Term, pcon, phoistAcyclic, plam, (#), type (:-->))
+import Plutarch.Bool (PBool (PTrue), (#<=), (#==))
+import Plutarch.Integer (PInteger, prem)
+import Plutarch.Maybe (PMaybe (PJust))
 import Test.Tasty (adjustOption, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (QuickCheckTests, testProperty)
 
 -- If you need QuickCheck stuff, import it from 'Test.QuickCheck', /not/
 -- 'Test.Tasty.QuickCheck'! To see why, read [this
 -- issue](https://github.com/UnkindPartition/tasty/issues/208)
-
-import Plutarch (S, Term, pcon, phoistAcyclic, plam, (#), type (:-->))
-import Plutarch.Bool (PBool (PTrue), (#<=), (#==))
-import Plutarch.Integer (PInteger, prem)
-import Plutarch.Maybe (PMaybe (PJust))
 import Test.QuickCheck (Gen, Property, arbitrary, shrink)
 import Test.Tasty.Plutarch.Property (classifiedProperty, peqProperty)
 
@@ -66,10 +65,10 @@ p1Outcome = pcon PTrue
 -- 'Integer'. We define generators and shrinkers using 'Integer' instead of
 -- @'Term' s 'PInteger'@ for several reasons:
 --
--- * We have the full power of Haskell to generate and shrink values;
--- * We don't run into problems of term closure and the type system, as this
+-- - We have the full power of Haskell to generate and shrink values;
+-- - We don't run into problems of term closure and the type system, as this
 -- requires impredicative instantiation; and
--- * It acts as an extra guard against our tests just being a redefinition of
+-- - It acts as an extra guard against our tests just being a redefinition of
 -- what we're trying to test in the first place.
 --
 -- Thus, we need a @'Gen' 'Integer'@ and an @Integer -> [Integer]@ shrinker.
@@ -107,9 +106,9 @@ data Parity = IsOdd | IsEven
 
 -- We also have to make it a member of three type classes:
 --
--- * 'Show' (to allow us to display case distributions);
--- * 'Universe' (to prove we can enumerate its values); and
--- * 'Finite' (to prove it's not infinite, and how many values it has).
+-- - 'Show' (to allow us to display case distributions);
+-- - 'Universe' (to prove we can enumerate its values); and
+-- - 'Finite' (to prove it's not infinite, and how many values it has).
 --
 -- In theory, you can derive all three of these automatically: 'Show' can be
 -- @stock@-derived, and 'Universe' and 'Finite' can be derived if your type has
@@ -198,7 +197,7 @@ property2 = classifiedProperty p2Generator p2Shrinker p2Expected p2Classifier p2
 
 main :: IO ()
 main = do
-    -- Always do this! It ensures you don't get encoding errors, and failed tests
+    -- Always do this! It ensures you don't get encoding errors, and failed tests,
     -- for no reason.
     setLocaleEncoding utf8
     -- adjustOption allows us to set a minimum test count, while not forbidding
