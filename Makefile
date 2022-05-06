@@ -9,19 +9,12 @@ SHELL := env bash
 usage:
 	@echo "usage: make <command> [OPTIONS]"
 	@echo
-	@echo "Available options:"
-	@echo "  WALLET  -- Specify wallet for command (1 or 2)"
-	@echo "  FLAGS   -- Additional options passed to --ghc-options"
-	@echo "  NIXOS   -- Add stack flags --no-nix and --system-ghc to work around stack issues on NixOS"
-	@echo
 	@echo "Available commands:"
 	@echo "  hoogle              -- Start local hoogle"
 	@echo "  build               -- Run cabal v2-build"
 	@echo "  dev                 -- Run cabal v2-build -f development"
 	@echo "  watch [COMMAND]     -- Track files: plutarch-quickcheck.cabal, src/* test/* testlib/* and run 'make [COMMAND]' on change"
 	@echo "  test                -- Run cabal v2-test"
-	@echo "  accept_pirs         -- Accept new PIR changes"
-	@echo "  costing             -- Run cost-estimation benchmark"
 	@echo "  ghci                -- Run cabal v2-repl plutarch-quickcheck"
 	@echo "  format              -- Apply source code formatting with fourmolu"
 	@echo "  format_check        -- Check source code formatting without making changes"
@@ -30,11 +23,6 @@ usage:
 	@echo "  lint                -- Apply hlint suggestions"
 	@echo "  lint_check          -- Check hlint suggestions"
 	@echo "  readme_contents     -- Add table of contents to README"
-	@echo "  vis_blockchain      -- Writes rendered blockchain outputs of sample traces to ./vis/"
-	@echo "  extra_suite         -- Run vis_blockchain and costing suites"
-	@echo "  diagrams            -- Build SVG diagrams from graphviz dot diagrams"
-	@echo "  diagram_pngs        -- Build PNG images from graphviz dot diagrams"
-	@echo "  clean_diagrams      -- Delete results from diagrams, diagram_pngs"
 	@echo "  hasktags            -- Build ctags/etags files"
 	@echo "  haddock             -- Build haddock docs"
 
@@ -65,9 +53,6 @@ watch: requires_nix_shell
 
 test: requires_nix_shell
 	cabal v2-test
-
-accept_pirs: requires_nix_shell
-	stack build --test $(STACK_FLAGS) $(GHC_FLAGS) --ta '-p MarketAction --accept'
 
 ghci: requires_nix_shell
 	cabal v2-repl $(GHC_FLAGS) plutarch-quickcheck
@@ -151,26 +136,6 @@ clear_build:
 
 ################################################################################
 # Docs
-
-DIAGRAMS := docs/eutxo-design
-DOT_INPUTS := $(wildcard $(DIAGRAMS)/*.dot )
-DOT_SVGS := $(patsubst %.dot, %.svg, $(DOT_INPUTS))
-DOT_PNGS := $(patsubst %.dot, %.png, $(DOT_INPUTS))
-
-
-diagram_pngs: $(DOT_PNGS)
-diagrams: $(DOT_SVGS)
-
-clean_diagrams:
-	rm $(DOT_SVGS)
-	rm $(DOT_PNGS)
-
-# This doesn't work for now, some issue with resvg not loading fonts
-%.png: %.svg
-	convert $< $@
-
-%.svg: %.dot
-	dot -Tsvg $< -o $@
 
 hasktags:
 	hasktags -b ./src ./test ./testlib
