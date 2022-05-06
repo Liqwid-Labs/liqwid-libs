@@ -188,7 +188,7 @@ property2 = classifiedProperty p2Generator p2Shrinker p2Expected p2Classifier p2
 -- worth noting that we have a universal property: this means that we have to
 -- adjust the number of tests that @tasty-quickcheck@ will perform, as the
 -- default (100) is too low to be of any use. We will perform 10,000 tests
--- instead, but leave the option to add more at the command line if pople
+-- instead, but leave the option to add more at the command line if people
 -- choose.
 --
 -- If you have no universal properties, you can skip the step above; conditional
