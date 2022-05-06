@@ -4,6 +4,21 @@ on:
     paths-ignore: ["README.md", "STANDARDS.md", "LICENSE", "CHANGELOG.md"]
   pull_request:
 jobs:
+  lint:
+    name: "Lint"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout base repo
+        uses: actions/checkout@v2
+      - name: Set up HLint
+        uses: haskell/actions/hlint-setup@v1
+        with:
+          version: 3.4
+      - name: Run HLint
+        uses: haskell/actions/hlint-run@v2
+        with:
+          path: '["src/", "examples/natural-tests", "examples/zip-tests", "examples/square-tests"]'
+          fail-on: "suggestion"
   check-formatting:
     name: "Check source code formatting"
     runs-on: ubuntu-latest
