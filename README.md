@@ -3,36 +3,34 @@
 ## What is this?
 
 A helper library to write Plutarch-oriented QuickCheck property tests. It
-includes support for both 'general' QuickCheck-based property testing, as well
-as testing (some) Plutarch type class laws. These helpers are designed to
+includes support for both 'general' QuickCheck-based property testing and testing (some) Plutarch type class laws. These helpers
 integrate seamlessly with
 [`tasty-quickcheck`](https://hackage.haskell.org/package/tasty-quickcheck).
 
 ## What _exactly_ does this do for me?
 
-QuickCheck is a folkloric minefield, and can be quite tedious to use correctly.
-Furthermore, its interactions with Plutarch can be quite non-obvious, and a lot
+QuickCheck is a folkloric minefield and can be quite tedious to use correctly.
+Furthermore, its interactions with Plutarch can be non-obvious, and much
 of the built-in functionality it provides is not very useful for it.
 Furthermore, while Plutarch type classes do have laws, verifying them by hand
-can be quite difficult and error-prone. Lastly, the error output of QuickCheck
-(and by extension, `tasty-quickcheck`) can be quite hard to make sense of.
+can be complex and error-prone. Lastly, the error output of QuickCheck
+(and, by extension, `tasty-quickcheck`) can be hard to understand.
 
 `plutarch-quickcheck` aims to fix all of these issues:
 
 * As long as you can provide generators and shrinkers, you don't have to
-  interact with any other part of QuickCheck _at all_; the boilerplate is done
-  for you. This applies equally to both general properties and laws checks.
+  interact with any other part of QuickCheck _at all_; this library handles the boilerplate. This applies equally to both general properties and laws checks.
 * Issues of QuickCheck coverage, especially for conditional properties, are
   handled automatically: you never have to consider this.
 * Whenever possible, `plutarch-quickcheck` will ensure that things are defined,
-  and behaving, sensibly relative one another, and will inform you (quite
+  and behaving sensibly relative to one another, and will inform you (quite
   loudly) if not.
 * Error output tries to be as helpful as it can, both by using prettyprinting
   and also explaining in more natural language what exactly went wrong.
 * We provide extensive documentation to assist you, including both examples and
   Haddocks. Never step on any QuickCheck rakes again!
 
-Currently, we are able to test the following type class laws:
+Currently, we can test the following type class laws:
 
 * `PConstantDecl` and `PUnsafeLiftDecl`
 
@@ -55,15 +53,15 @@ executable examples:
   cases; and
 * `examples/natural-tests`, which demonstrates law checking.
 
-These are designed to be read as code, but can also be executed to see what they
-do: use `cabal new-test` if you want these. It is also worth reading their Cabal
-file entries for common `ghc-options` to ensure the best (and fastest) testing
+Users new to the library can read the examples as code, as well as execute the tests with `cabal new-test` to see what they
+do. The examples' Cabal
+file entries for common `ghc-options` are worth reading to ensure the best (and fastest) testing
 experience. You _also_ want to have one of the following:
 
 * `test-show-details: direct` in your `cabal.project` file; or
 * `--test-show-details=direct` passed as a flag to `cabal new-test`.
 
-Without one of these, your test output will be very limited. We have this set up
+Without one of these, your test output will be minimal. We have this set up
 for our examples; ensure you have this set up for your own tests.
 
 To integrate this with your project, use Nix. We work against the `staging`
@@ -73,4 +71,4 @@ for more details.
 # What can I do with this?
 
 `plutarch-quickcheck` is licensed under the Apache 2.0 license (SPDX code
-`Apache-2.0`); for more details, please see the `LICENSE` file.
+`Apache-2.0`); please see the `LICENSE` file for more details.
