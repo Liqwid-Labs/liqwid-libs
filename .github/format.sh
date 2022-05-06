@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# Name first argument to be clear
 FOURMOLU=$1
 
 # Extensions necessary to tell fourmolu about 

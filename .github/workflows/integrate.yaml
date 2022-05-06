@@ -1,16 +1,8 @@
 on:
   push:
-    paths:
-      - '**.hs'
-      - '**.nix'
-      - 'plutarch-quickcheck.cabal'
-    branches:
-      - main
+    branches: ["main"]
+    paths-ignore: ["README.md", "STANDARDS.md", "LICENSE", "CHANGELOG.md"]
   pull_request:
-    paths:
-      - '**.hs'
-      - '**.nix'
-      - 'plutarch-quickcheck.cabal'
 jobs:
   check-formatting:
     name: "Check source code formatting"
@@ -27,7 +19,7 @@ jobs:
       - name: Get fourmolu
         uses: actions/checkout@v2
         with:
-          repository: mattparsons/fourmolu
+          repository: parsonsmatt/fourmolu
           path: ./fourmolu
           ref: 30ffbe3491e71a6d81620bd66fd842c3ef3f8bd2
       - name: Configure fourmolu
@@ -48,6 +40,6 @@ jobs:
           restore-keys: ${{ env.V }}-
       - name: Install fourmolu
         working-directory: fourmolu
-        run: cabal new-install --install-method=copy --installdir=${{ runner.temp }} --overwrite-policy=always fourmolu
+        run: cabal new-install --install-method=copy --installdir=${{ runner.temp }} --overwrite-policy=always exe:fourmolu
       - name: Check formatting
         run: ./.github/format.sh ${{ runner.temp }}/fourmolu
