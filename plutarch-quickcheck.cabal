@@ -83,11 +83,14 @@ common common-tests
 library
   import:          common-lang
   exposed-modules:
+    Test.Tasty.Plutarch.Instances
     Test.Tasty.Plutarch.Laws
     Test.Tasty.Plutarch.Property
 
   other-modules:   Test.Tasty.Plutarch.Helpers
   build-depends:
+    , bytestring
+    , plutus-core
     , plutus-ledger-api
     , pretty
     , pretty-show
