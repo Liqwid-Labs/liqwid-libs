@@ -19,7 +19,8 @@ can be complex and error-prone. Lastly, the error output of QuickCheck
 `plutarch-quickcheck` aims to fix all of these issues:
 
 * As long as you can provide generators and shrinkers, you don't have to
-  interact with any other part of QuickCheck _at all_; this library handles the boilerplate. This applies equally to both general properties and laws checks.
+  interact with any other part of QuickCheck _at all_; this library handles the 
+  boilerplate. This applies equally to both general properties and laws checks.
 * Issues of QuickCheck coverage, especially for conditional properties, are
   handled automatically: you never have to consider this.
 * Whenever possible, `plutarch-quickcheck` will ensure that things are defined,
@@ -53,16 +54,15 @@ executable examples:
   cases; and
 * `examples/natural-tests`, which demonstrates law checking.
 
-Users new to the library can read the examples as code, as well as execute the tests with `cabal new-test` to see what they
-do. The examples' Cabal
-file entries for common `ghc-options` are worth reading to ensure the best (and fastest) testing
-experience. You _also_ want to have one of the following:
+Users new to the library can read the examples as code, as well as execute the 
+tests with `cabal new-test` to see what they do.
 
-* `test-show-details: direct` in your `cabal.project` file; or
-* `--test-show-details=direct` passed as a flag to `cabal new-test`.
-
-Without one of these, your test output will be minimal. We have this set up
-for our examples; ensure you have this set up for your own tests.
+We also have [a wiki
+article](https://github.com/Liqwid-Labs/plutarch-quickcheck/wiki/Testing-without-tears:-good-practices-and-tips)
+describing good practices for use of this library, as well as QuickCheck and
+`tasty-quickcheck` in general. We recommend reading this even for experienced
+QuickCheck hands, as there are a lot of useful, and less-known, bits of
+information there.
 
 To integrate this with your project, use Nix. We work against the `staging`
 branch of Plutarch, so you will have to use it also. See the `flake.nix` file
