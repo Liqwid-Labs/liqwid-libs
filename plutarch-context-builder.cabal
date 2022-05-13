@@ -1,0 +1,80 @@
+cabal-version:      3.0
+name:               plutarch-context-builder
+version:            1.0.0
+synopsis:           A builder for ScriptContexts
+description:
+  Defines a builder for ScriptContexts, with helpers for commonly-needed uses.
+
+homepage:           https://github.com/Liqwid-Labs/plutarch-context-builder
+bug-reports:
+  https://github.com/Liqwid-Labs/plutarch-context-builder/issues
+
+license:
+
+-- license-file:       LICENSE
+author:             Koz Ross
+maintainer:         Koz Ross <koz@mlabs.city>
+copyright:          (C) 2022 Liqwid Labs
+category:           Plutarch
+build-type:         Simple
+tested-with:        GHC ==9.2.1
+extra-source-files: README.md
+
+-- LICENSE
+source-repository head
+  type:     git
+  location: https://github.com/Liqwid-Labs/plutarch-context-builder
+
+-- Common sections
+
+common common-lang
+  ghc-options:
+    -Wall -Wcompat -Wincomplete-uni-patterns
+    -Wincomplete-record-updates -Wredundant-constraints
+    -Wmissing-export-lists -Wmissing-deriving-strategies -Werror
+
+  build-depends:
+    , base      ^>=4.16
+    , plutarch
+
+  default-extensions:
+    BangPatterns
+    BinaryLiterals
+    ConstraintKinds
+    DataKinds
+    DeriveFunctor
+    DeriveGeneric
+    DeriveTraversable
+    DerivingStrategies
+    DerivingVia
+    EmptyCase
+    FlexibleContexts
+    FlexibleInstances
+    GeneralisedNewtypeDeriving
+    HexFloatLiterals
+    ImportQualifiedPost
+    InstanceSigs
+    KindSignatures
+    LambdaCase
+    MultiParamTypeClasses
+    NumericUnderscores
+    OverloadedStrings
+    ScopedTypeVariables
+    StandaloneDeriving
+    TupleSections
+    TypeOperators
+
+  default-language:   Haskell2010
+
+-- Libraries
+
+library
+  import:          common-lang
+  exposed-modules: Plutarch.Context.Minting
+  other-modules:   Plutarch.Context.Internal
+  build-depends:
+    , acc
+    , plutus-core
+    , plutus-ledger-api
+
+  hs-source-dirs:  src
