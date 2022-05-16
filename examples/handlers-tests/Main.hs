@@ -6,6 +6,10 @@
 
  Example of @plutarch-quickcheck@ tests. These are meant to be read as source
  code.
+
+ handlers-tests contains cases corresponding to each possible outputs of `classifiedProperty`.
+ It demonstrates how each conditions of `classifiedProperty` is evoked, and also serves as a test
+ to check if `classifiedProperty` is working correctly.
 -}
 module Main (main) where
 
