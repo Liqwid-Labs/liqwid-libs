@@ -118,15 +118,7 @@ data SideUTXO = SideUTXO UTXOType ValueType
 
  @since 1.0.0
 -}
-data ValidatorUTXO (datum :: Type)
-    = -- | A UTxO which will /not/ be used for spending.
-      --
-      -- @since 1.0.0
-      NonSpendUTXO datum Value
-    | -- | A UTxO which will be used for spending.
-      --
-      -- @since 1.0.0
-      SpendUTXO datum Value
+data ValidatorUTXO (datum :: Type) = ValidatorUTXO datum Value
     deriving stock
         ( -- | @since 1.0.0
           Show
