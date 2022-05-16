@@ -1,3 +1,4 @@
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
@@ -42,8 +43,9 @@ import Plutarch (
     (#$),
     type (:-->),
  )
-import Plutarch.Bool (PBool (PFalse, PTrue), PEq ((#==)))
+import Plutarch.Bool (PBool (PFalse, PTrue), PEq ((#==)), pif)
 import Plutarch.Evaluate (EvalError, evalScript)
+import Plutarch.Integer (PInteger)
 import Plutarch.Lift (PUnsafeLiftDecl (PLifted), pconstant)
 import Plutarch.Maybe (PMaybe (PJust, PNothing))
 import Plutarch.TermCont (tcont)
@@ -166,7 +168,7 @@ classifiedProperty getGen shr getOutcome classify comp = case cardinality @ix of
         guard (classify x' == ix)
         pure (ix, x')
     go ::
-        (forall (s' :: S). Term s' (c :--> PBool)) ->
+        (forall (s' :: S). Term s' (c :--> PInteger)) ->
         (ix, a) ->
         Property
     go precompiled (ix, input) =
@@ -179,7 +181,11 @@ classifiedProperty getGen shr getOutcome classify comp = case cardinality @ix of
                      in counterexample (prettyLogs logs)
                             . ensureCovered input classify
                             $ case res of
-                                Right s' -> sameAsExpected s'
+                                Right s' ->
+                                    if
+                                            | s' == canonNegOne -> counterexample ranOnCrash . property $ False
+                                            | s' == canonZero -> property True
+                                            | otherwise -> counterexample wrongResult . property $ False
                                 Left e ->
                                     let sTest = compile (pisNothing #$ getOutcome # pconstant input)
                                         (testRes, _, _) = evalScript sTest
@@ -211,14 +217,14 @@ classifiedTemplate ::
     (PEq d) =>
     (forall (s' :: S). Term s' (c :--> d)) ->
     (forall (s' :: S). Term s' (c :--> PMaybe d)) ->
-    Term s (c :--> PBool)
+    Term s (c :--> PInteger)
 classifiedTemplate comp getOutcome = phoistAcyclic $
     plam $ \input -> unTermCont $ do
         actual <- tclet (comp # input)
         expectedMay <- tcmatch (getOutcome # input)
         pure $ case expectedMay of
-            PNothing -> pcon PFalse
-            PJust expected -> expected #== actual
+            PNothing -> (-1)
+            PJust expected -> pif (expected #== actual) 0 1
 
 pisNothing ::
     forall (a :: S -> Type) (s :: S).
@@ -229,6 +235,12 @@ pisNothing = phoistAcyclic $
         PJust _ -> pcon PFalse
 
 -- Property handlers
+
+ranOnCrash :: String
+ranOnCrash = "A case which should have crashed ran successfully instead."
+
+wrongResult :: String
+wrongResult = "Test script result does not match expected value."
 
 failCrashyGetOutcome :: EvalError -> Property
 failCrashyGetOutcome err = counterexample go . property $ False
@@ -265,10 +277,7 @@ unexpectedError err = counterexample go . property $ False
 -- TODO: Figure out a way of capturing the result of just the function being
 -- passed to the test.
 sameAsExpected :: Script -> Property
-sameAsExpected actual = counterexample go (canonTrue == actual)
-  where
-    go :: String
-    go = "Test script result does not match expected value."
+sameAsExpected actual = counterexample wrongResult (canonTrue == actual)
 
 crashedWhenItShouldHave :: EvalError -> Script -> Property
 crashedWhenItShouldHave err actual = counterexample go (canonTrue == actual)
@@ -333,6 +342,12 @@ tcmatch t = tcont (pmatch t)
 
 canonTrue :: Script
 canonTrue = compile (pcon PTrue)
+
+canonNegOne :: Script
+canonNegOne = compile (-1 :: forall s. Term s PInteger)
+
+canonZero :: Script
+canonZero = compile (0 :: forall s. Term s PInteger)
 
 prettyLogs :: [Text] -> String
 prettyLogs =
