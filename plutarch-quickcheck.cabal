@@ -75,6 +75,7 @@ common common-tests
     , QuickCheck
     , tagged
     , tasty
+    , tasty-expected-failure
     , tasty-quickcheck
     , universe
 
@@ -122,3 +123,9 @@ test-suite natural-tests
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   hs-source-dirs: examples/natural-tests
+
+test-suite handlers-tests
+  import:         common-tests
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  hs-source-dirs: examples/handlers-tests
