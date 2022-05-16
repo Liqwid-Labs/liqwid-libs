@@ -183,8 +183,8 @@ classifiedProperty getGen shr getOutcome classify comp = case cardinality @ix of
                             $ case res of
                                 Right s' ->
                                     if
-                                            | s' == canonNegOne -> counterexample ranOnCrash . property $ False
-                                            | s' == canonZero -> property True
+                                            | s' == canon 2 -> counterexample ranOnCrash . property $ False
+                                            | s' == canon 0 -> property True
                                             | otherwise -> counterexample wrongResult . property $ False
                                 Left e ->
                                     let sTest = compile (pisNothing #$ getOutcome # pconstant input)
@@ -212,6 +212,20 @@ peqTemplate comp = phoistAcyclic $
     plam $ \expected input ->
         expected #== comp # input
 
+-- Note from Seungheon!
+-- Here, Template is using old fashion C-style
+-- error handler--it uses integer for different types
+-- of possibilities. We do not want to use custom datatype
+-- or PMaybe as it will either have Scott-encoded weirdness
+-- or much longer code.
+--
+-- 0 - failure
+-- 1 - success
+-- 2 - unexpected success
+--
+-- Due to Plutarch weird-ness, probably, Scott-encoded
+-- negative Integers, all "codes" should be positive number.
+
 classifiedTemplate ::
     forall (c :: S -> Type) (d :: S -> Type) (s :: S).
     (PEq d) =>
@@ -223,7 +237,7 @@ classifiedTemplate comp getOutcome = phoistAcyclic $
         actual <- tclet (comp # input)
         expectedMay <- tcmatch (getOutcome # input)
         pure $ case expectedMay of
-            PNothing -> (-1)
+            PNothing -> 2
             PJust expected -> pif (expected #== actual) 0 1
 
 pisNothing ::
@@ -343,11 +357,8 @@ tcmatch t = tcont (pmatch t)
 canonTrue :: Script
 canonTrue = compile (pcon PTrue)
 
-canonNegOne :: Script
-canonNegOne = compile (-1 :: forall s. Term s PInteger)
-
-canonZero :: Script
-canonZero = compile (0 :: forall s. Term s PInteger)
+canon :: Integer -> Script
+canon x = compile (pconstant x)
 
 prettyLogs :: [Text] -> String
 prettyLogs =

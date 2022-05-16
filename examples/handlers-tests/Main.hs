@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 {- | Module: Main
  Copyright: (C) Liqwid Labs 2022
  License: Apache 2.0
@@ -12,15 +10,23 @@
 module Main (main) where
 
 import Data.Tagged (Tagged (Tagged))
-import Data.Universe (Finite (cardinality, universeF), Universe (universe))
-import Plutarch
-import Plutarch.Integer (PInteger, pquot)
-import Plutarch.Maybe
---import Plutarch.TermCont
---import Plutarch.Trace
+import Data.Universe (
+    Finite (cardinality, universeF),
+    Universe (universe),
+ )
 
-import Test.QuickCheck
+import Plutarch (PCon (pcon), S, Term, plam, (#), type (:-->))
+import Plutarch.Integer (PInteger, PIntegral (pquot))
+import Plutarch.Maybe (PMaybe (..))
+import Plutarch.Trace (ptraceError)
+
+import Test.QuickCheck (
+    Arbitrary (arbitrary, shrink),
+    Gen,
+    Property,
+ )
 import Test.Tasty (defaultMain, testGroup)
+import Test.Tasty.ExpectedFailure (expectFailBecause)
 import Test.Tasty.Plutarch.Property (classifiedProperty)
 import Test.Tasty.QuickCheck (testProperty)
 
@@ -36,29 +42,70 @@ instance Finite HandlerCases where
 
 classifier :: Integer -> HandlerCases
 classifier a
-  | even a = EvenNumber
-  | otherwise = OddNumber
+    | even a = EvenNumber
+    | otherwise = OddNumber
 
 generator :: HandlerCases -> Gen Integer
 generator EvenNumber = (arbitrary :: Gen Integer) >>= (\number -> return $ number * 2)
 generator OddNumber = (arbitrary :: Gen Integer) >>= (\number -> return $ number * 2 + 1)
-  
+
 shrinker :: Integer -> [Integer]
 shrinker = shrink
 
-expected :: forall (s :: S). Term s ( PInteger :--> PMaybe PInteger)
-expected = phoistAcyclic $
-  plam $ \_t -> unTermCont $ do
-    pure $ pcon $ PNothing
+expectedFailureSucceeding :: Property
+expectedFailureSucceeding = classifiedProperty generator shrinker expected classifier definition
+  where
+    expected :: forall (s :: S). Term s (PInteger :--> PMaybe PInteger)
+    expected = plam $ const $ pcon PNothing
 
-definition :: forall (s :: S). Term s (PInteger :--> PInteger)
-definition = pquot # 2 
+    definition :: forall (s :: S). Term s (PInteger :--> PInteger)
+    definition = pquot # 2
 
-ourProperty :: Property
-ourProperty = classifiedProperty generator shrinker expected classifier definition
+expectedFailureFailing :: Property
+expectedFailureFailing = classifiedProperty generator shrinker expected classifier definition
+  where
+    expected :: forall (s :: S). Term s (PInteger :--> PMaybe PInteger)
+    expected = plam $ const $ pcon PNothing
+
+    definition :: forall (s :: S). Term s (PInteger :--> PInteger)
+    definition = plam $ const $ ptraceError "failure"
+
+expectedSuccessFailing :: Property
+expectedSuccessFailing = classifiedProperty generator shrinker expected classifier definition
+  where
+    expected :: forall (s :: S). Term s (PInteger :--> PMaybe PInteger)
+    expected = plam $ \x -> pcon $ PJust x
+
+    definition :: forall (s :: S). Term s (PInteger :--> PInteger)
+    definition = plam $ const $ ptraceError "failure"
+
+expectedSuccessIncorrectValue :: Property
+expectedSuccessIncorrectValue = classifiedProperty generator shrinker expected classifier definition
+  where
+    expected :: forall (s :: S). Term s (PInteger :--> PMaybe PInteger)
+    expected = plam $ \x -> pcon $ PJust x
+
+    definition :: forall (s :: S). Term s (PInteger :--> PInteger)
+    definition = plam (+ 1)
+
+expectedSuccessCorrectValue :: Property
+expectedSuccessCorrectValue = classifiedProperty generator shrinker expected classifier definition
+  where
+    expected :: forall (s :: S). Term s (PInteger :--> PMaybe PInteger)
+    expected = plam $ \x -> pcon $ PJust x
+
+    definition :: forall (s :: S). Term s (PInteger :--> PInteger)
+    definition = plam id
 
 main :: IO ()
 main = do
-    defaultMain . testGroup "Handlers" $
-        [ testProperty "will Fail" ourProperty
+    defaultMain . testGroup "Possible outputs of classifiedProperty" $
+        [ expectFailBecause "expects failure but script runs successfully" $
+            testProperty "\"expected: Failure/yields: Success\"" expectedFailureSucceeding
+        , testProperty "\"expected: Failure/yields: Failure\"" expectedFailureFailing
+        , expectFailBecause "expects success but script crashed" $
+            testProperty "\"expected: Success/yields: Failure\"" expectedSuccessFailing
+        , expectFailBecause "Yielded value is incorrect" $
+            testProperty "\"expected: Success/yields: Success but Incorrect\"" expectedSuccessIncorrectValue
+        , testProperty "\"expected: Success/yields: Success and Correct\"" expectedSuccessCorrectValue
         ]

@@ -75,6 +75,7 @@ common common-tests
     , QuickCheck
     , tagged
     , tasty
+    , tasty-expected-failure
     , tasty-quickcheck
     , universe
 
