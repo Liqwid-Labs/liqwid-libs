@@ -32,24 +32,84 @@ module Plutarch.Context.Minting (
     mintForeign,
     signedWith,
     extraData,
+
+    -- ** Compilation
+    mintingContext,
 ) where
 
-import Control.Monad (guard)
+import Acc (Acc)
+import qualified Acc
+import Control.Monad (foldM, guard)
+import Data.Foldable (toList, traverse_)
 import Data.Functor (($>))
 import Data.Kind (Type)
+import Data.List.NonEmpty (NonEmpty)
+import Data.Maybe (mapMaybe)
 import Plutarch (S)
+import Plutarch.Api.V1 (datumHash)
 import Plutarch.Builtin (PIsData, pdata, pforgetData)
 import Plutarch.Context.Internal (
     Minting (Minting),
-    MintingBuilder (MB),
+    MintingBuilder (
+        MB,
+        sbDatums,
+        sbInputs,
+        sbMints,
+        sbOutputs,
+        sbSignatures
+    ),
     SideUTXO (SideUTXO),
+    TransactionConfig (
+        testCurrencySymbol,
+        testFee,
+        testTimeRange,
+        testTxId,
+        testValidatorHash
+    ),
     UTXOType (PubKeyUTXO, ScriptUTXO),
     ValueType (GeneralValue, TokensValue),
  )
 import Plutarch.Lift (PUnsafeLiftDecl (PLifted), pconstant, plift)
+import Plutus.V1.Ledger.Address (
+    Address,
+    pubKeyHashAddress,
+    scriptHashAddress,
+ )
+import Plutus.V1.Ledger.Api (BuiltinData (BuiltinData))
+import Plutus.V1.Ledger.Contexts (
+    ScriptContext (ScriptContext),
+    TxId (TxId),
+    TxInInfo (TxInInfo),
+    TxInfo (
+        TxInfo,
+        txInfoDCert,
+        txInfoData,
+        txInfoFee,
+        txInfoId,
+        txInfoInputs,
+        txInfoMint,
+        txInfoOutputs,
+        txInfoSignatories,
+        txInfoValidRange,
+        txInfoWdrl
+    ),
+    TxOut (TxOut),
+    TxOutRef (TxOutRef),
+ )
+import qualified Plutus.V1.Ledger.Contexts as Contexts
 import Plutus.V1.Ledger.Crypto (PubKeyHash)
-import Plutus.V1.Ledger.Scripts (ValidatorHash)
-import Plutus.V1.Ledger.Value (TokenName, Value)
+import Plutus.V1.Ledger.Scripts (
+    Datum (Datum),
+    DatumHash,
+    ValidatorHash,
+ )
+import Plutus.V1.Ledger.Value (
+    CurrencySymbol,
+    TokenName,
+    Value,
+    symbols,
+ )
+import qualified Plutus.V1.Ledger.Value as Value
 import PlutusCore.Data (Data)
 
 {- | Some positive number of tokens, with the given name, controlled by the
@@ -327,7 +387,122 @@ extraData ::
     MintingBuilder redeemer
 extraData x = MB mempty mempty mempty (pure . datafy $ x) mempty
 
+{- | Construct a 'ScriptContext' for minting, given a configuration and a list
+ of things to do.
+
+ @since 1.0.0
+-}
+mintingContext ::
+    forall (redeemer :: Type).
+    TransactionConfig ->
+    MintingBuilder redeemer ->
+    NonEmpty MintingAction ->
+    Maybe ScriptContext
+mintingContext conf builder acts =
+    ScriptContext <$> go <*> (pure . Contexts.Minting $ sym)
+  where
+    sym :: CurrencySymbol
+    sym = testCurrencySymbol conf
+    go :: Maybe TxInfo
+    go = case baseTxInfo conf builder of
+        Nothing -> Nothing
+        Just baseInfo ->
+            Just $ baseInfo{txInfoMint = mintingValue <> txInfoMint baseInfo}
+    mintingValue :: Value
+    mintingValue = foldMap (processAction sym) acts
+
 -- Helpers
+
+processAction :: CurrencySymbol -> MintingAction -> Value
+processAction sym =
+    uncurry (Value.singleton sym) . \case
+        Mint (Tokens name amount) -> (name, amount)
+        Burn (Tokens name amount) -> (name, negate amount)
+
+baseTxInfo ::
+    forall (redeemer :: Type).
+    TransactionConfig ->
+    MintingBuilder redeemer ->
+    Maybe TxInfo
+baseTxInfo conf builder = do
+    value <- foldM toUsefulValue mempty . sbMints $ builder
+    insList <- toList <$> (foldM checkSideAndCombine mempty . sbInputs $ builder)
+    outsList <- toList <$> (foldM checkSideAndCombine mempty . sbOutputs $ builder)
+    let signatures = toList . sbSignatures $ builder
+    let dats = toList . fmap datumWithHash . sbDatums $ builder
+    pure $
+        starterTxInfo
+            { txInfoMint = value
+            , txInfoInputs = createTxInInfos insList
+            , txInfoOutputs = createTxOuts outsList
+            , txInfoSignatories = signatures
+            , txInfoData =
+                mapMaybe sideUtxoToDatum insList
+                    <> mapMaybe sideUtxoToDatum outsList
+                    <> dats
+            }
+  where
+    toUsefulValue :: Value -> Minting -> Maybe Value
+    toUsefulValue acc (Minting val) =
+        (acc <>) <$> ((traverse_ (\sym -> guard (sym /= ourSym)) . symbols $ val) $> val)
+    ourSym :: CurrencySymbol
+    ourSym = testCurrencySymbol conf
+    ourAddress :: Address
+    ourAddress = scriptHashAddress . testValidatorHash $ conf
+    checkSideAndCombine :: Acc SideUTXO -> SideUTXO -> Maybe (Acc SideUTXO)
+    checkSideAndCombine acc side@(SideUTXO typ _) = do
+        let sideAddress = case typ of
+                PubKeyUTXO pkh _ -> pubKeyHashAddress pkh
+                ScriptUTXO hash _ -> scriptHashAddress hash
+        Acc.cons <$> (guard (sideAddress /= ourAddress) $> side) <*> pure acc
+    starterTxInfo :: TxInfo
+    starterTxInfo =
+        TxInfo
+            { txInfoInputs = mempty
+            , txInfoOutputs = mempty
+            , txInfoFee = testFee conf
+            , txInfoMint = mempty
+            , txInfoDCert = mempty
+            , txInfoWdrl = mempty
+            , txInfoValidRange = testTimeRange conf
+            , txInfoSignatories = mempty
+            , txInfoData = mempty
+            , txInfoId = TxId "testTx"
+            }
+    createTxInInfos :: [SideUTXO] -> [TxInInfo]
+    createTxInInfos xs =
+        let outRefs = TxOutRef (testTxId conf) <$> [1 ..]
+         in zipWith TxInInfo outRefs . fmap (sideToTxOut ourSym) $ xs
+    createTxOuts :: [SideUTXO] -> [TxOut]
+    createTxOuts = fmap (sideToTxOut ourSym)
+
+sideUtxoToDatum :: SideUTXO -> Maybe (DatumHash, Datum)
+sideUtxoToDatum (SideUTXO typ _) = case typ of
+    ScriptUTXO _ dat -> Just . datumWithHash $ dat
+    PubKeyUTXO _ dat -> datumWithHash <$> dat
+
+datumWithHash :: Data -> (DatumHash, Datum)
+datumWithHash d = (datumHash dt, dt)
+  where
+    dt :: Datum
+    dt = Datum . BuiltinData $ d
+
+extractValue :: CurrencySymbol -> ValueType -> Value
+extractValue sym = \case
+    GeneralValue val -> val
+    TokensValue name amount -> Value.singleton sym name amount
+
+sideToTxOut :: CurrencySymbol -> SideUTXO -> TxOut
+sideToTxOut sym (SideUTXO typ val) =
+    let value = extractValue sym val
+     in case typ of
+            PubKeyUTXO pkh mDat ->
+                TxOut (pubKeyHashAddress pkh) value $ datumHash . dataToDatum <$> mDat
+            ScriptUTXO hash dat ->
+                TxOut (scriptHashAddress hash) value . Just . datumHash . dataToDatum $ dat
+
+dataToDatum :: Data -> Datum
+dataToDatum = Datum . BuiltinData
 
 input ::
     forall (redeemer :: Type).

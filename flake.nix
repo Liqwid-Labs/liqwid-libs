@@ -9,7 +9,6 @@
 
   inputs.plutarch.url = "github:Plutonomicon/plutarch/staging";
   inputs.plutarch.inputs.nixpkgs.follows = "plutarch/haskell-nix/nixpkgs-unstable";
-
   outputs = inputs@{ self, nixpkgs, haskell-nix, plutarch, ... }:
     let
       supportedSystems = with nixpkgs.lib.systems.supported; tier1 ++ tier2 ++ tier3;
