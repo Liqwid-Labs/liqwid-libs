@@ -17,11 +17,11 @@ module Test.Tasty.Plutarch.Property (
     -- * Basic properties
     peqProperty,
 
+    -- * Properties that always should fail
+    alwaysFailProperty,
+
     -- * Coverage-based properties
     classifiedProperty,
-
-    -- * Calssified property optimized for cases that always fails
-    alwaysFailProperty,
 ) where
 
 import Control.Monad (guard)
@@ -105,10 +105,15 @@ peqProperty expected gen shr comp =
                 Left e -> unexpectedError e
                 Right s' -> sameAsExpected s'
 
-{- | `alwaysfailproperty` universially checks if given computation fails.
- This function operates very similarly to `peqProperty` but just checking
- for the failures. Since output does not need to be checked, `PEq` instance
- is not required.
+{- | 'alwaysFailProperty' universally checks if given computation fails.
+ This runs the given script with generated input; it makes sure that
+ script fails by crashes or errors.  Since output does not need to be
+ checked, `PEq` instance is not required.
+
+ This function provides quicker and simpler interface when writing
+ properties involving, for example, a validator or a minting policy
+ because these scripts are focused on correctly aborting script when
+ certain input is given.
 
  @since 1.0.1
 -}
@@ -119,17 +124,12 @@ alwaysFailProperty ::
     , PUnsafeLiftDecl c
     ) =>
     Gen a ->
-    -- | A shrinker for inputs.
     (a -> [a]) ->
-    -- | The computation to test.
     (forall (s :: S). Term s (c :--> d)) ->
     Property
 alwaysFailProperty gen shr comp = forAllShrinkShow gen shr showInput (go comp)
   where
-    go ::
-        (forall (s' :: S). Term s' (c :--> d)) ->
-        a ->
-        Property
+    go :: (forall (s' :: S). Term s' (c :--> d)) -> a -> Property
     go precompiled input =
         let s = compile (precompiled # pconstant input)
             (res, _, _) = evalScript s
