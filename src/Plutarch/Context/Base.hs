@@ -6,9 +6,16 @@ module Plutarch.Context.Base (
     mint,
     extraData,
     compileBaseTxInfo,
+    inputFromPubKey,
+    inputFromPubKeyWith,
+    inputFromOtherScript,
+    outputToPubKey,
+    outputToPubKeyWith,
+    outputToOtherScript,
     input,
     output,
     datafy,
+    datumWithHash,
 ) where
 
 import Acc (Acc)
@@ -60,7 +67,7 @@ import Plutus.V1.Ledger.Contexts (
     TxOutRef (TxOutRef),
  )
 import Plutus.V1.Ledger.Crypto (PubKeyHash)
-import Plutus.V1.Ledger.Scripts (Datum (Datum), DatumHash)
+import Plutus.V1.Ledger.Scripts (Datum (Datum), DatumHash, ValidatorHash)
 import Plutus.V1.Ledger.Value (CurrencySymbol, Value, symbols)
 import qualified Plutus.V1.Ledger.Value as Value
 import PlutusCore.Data (Data)
@@ -165,13 +172,89 @@ datafy ::
     Data
 datafy x = plift (pforgetData (pdata (pconstant x)))
 
--- Helpers
+inputFromPubKey ::
+    forall (a :: Type).
+    PubKeyHash ->
+    Value ->
+    BaseBuilder a
+inputFromPubKey pkh = input . pubSideGeneral pkh
+
+outputToPubKey ::
+    forall (a :: Type).
+    PubKeyHash ->
+    Value ->
+    BaseBuilder a
+outputToPubKey pkh = output . pubSideGeneral pkh
+
+inputFromPubKeyWith ::
+    forall (b :: Type) (a :: Type) (p :: S -> Type).
+    (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
+    PubKeyHash ->
+    Value ->
+    b ->
+    BaseBuilder a
+inputFromPubKeyWith pkh val = input . pubSideGeneralWith pkh val
+
+outputToPubKeyWith ::
+    forall (b :: Type) (a :: Type) (p :: S -> Type).
+    (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
+    PubKeyHash ->
+    Value ->
+    b ->
+    BaseBuilder a
+outputToPubKeyWith pkh val = output . pubSideGeneralWith pkh val
+
+inputFromOtherScript ::
+    forall (b :: Type) (a :: Type) (p :: S -> Type).
+    (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
+    ValidatorHash ->
+    Value ->
+    b ->
+    BaseBuilder a
+inputFromOtherScript vh val = input . scriptSideGeneral vh val
+
+outputToOtherScript ::
+    forall (b :: Type) (a :: Type) (p :: S -> Type).
+    (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
+    ValidatorHash ->
+    Value ->
+    b ->
+    BaseBuilder a
+outputToOtherScript vh val = output . scriptSideGeneral vh val
 
 datumWithHash :: Data -> (DatumHash, Datum)
 datumWithHash d = (datumHash dt, dt)
   where
     dt :: Datum
     dt = Datum . BuiltinData $ d
+
+-- Helpers
+
+dataToDatum :: Data -> Datum
+dataToDatum = Datum . BuiltinData
+
+pubSideGeneral :: PubKeyHash -> Value -> SideUTXO
+pubSideGeneral pkh = SideUTXO (PubKeyUTXO pkh Nothing) . GeneralValue
+
+pubSideGeneralWith ::
+    forall (b :: Type) (p :: S -> Type).
+    (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
+    PubKeyHash ->
+    Value ->
+    b ->
+    SideUTXO
+pubSideGeneralWith pkh val x =
+    SideUTXO (PubKeyUTXO pkh . Just . datafy $ x) (GeneralValue val)
+
+scriptSideGeneral ::
+    forall (b :: Type) (p :: S -> Type).
+    (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
+    ValidatorHash ->
+    Value ->
+    b ->
+    SideUTXO
+scriptSideGeneral vh val x =
+    SideUTXO (ScriptUTXO vh . datafy $ x) (GeneralValue val)
 
 sideToTxOut :: CurrencySymbol -> SideUTXO -> TxOut
 sideToTxOut sym (SideUTXO typ val) =
@@ -191,6 +274,3 @@ extractValue :: CurrencySymbol -> ValueType -> Value
 extractValue sym = \case
     GeneralValue val -> val
     TokensValue name amount -> Value.singleton sym name amount
-
-dataToDatum :: Data -> Datum
-dataToDatum = Datum . BuiltinData

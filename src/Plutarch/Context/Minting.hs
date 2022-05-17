@@ -1,4 +1,5 @@
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Plutarch.Context.Minting (
@@ -49,7 +50,7 @@ import Plutarch.Context.Internal (
     SideUTXO (SideUTXO),
     TransactionConfig (testCurrencySymbol),
     UTXOType (PubKeyUTXO, ScriptUTXO),
-    ValueType (GeneralValue, TokensValue),
+    ValueType (TokensValue),
  )
 import Plutarch.Lift (PUnsafeLiftDecl (PLifted))
 import Plutus.V1.Ledger.Contexts (
@@ -81,6 +82,9 @@ newtype MintingBuilder (redeemer :: Type) = MB (BaseBuilder redeemer)
           Semigroup
         )
         via (BaseBuilder redeemer)
+
+-- Ensures no coercion funny business
+type role MintingBuilder nominal
 
 {- | Some positive number of tokens, with the given name, controlled by the
  minting policy for which the script context is being built.
@@ -133,10 +137,7 @@ inputFromPubKey ::
     PubKeyHash ->
     Value ->
     MintingBuilder redeemer
-inputFromPubKey pkh val = MB . Base.input $ go
-  where
-    go :: SideUTXO
-    go = SideUTXO (PubKeyUTXO pkh Nothing) (GeneralValue val)
+inputFromPubKey pkh = MB . Base.inputFromPubKey pkh
 
 {- | Describes a single input from a 'PubKey', where some additional data is
  also provided.
@@ -150,10 +151,7 @@ inputFromPubKeyWith ::
     Value ->
     a ->
     MintingBuilder redeemer
-inputFromPubKeyWith pkh val x = MB . Base.input $ go
-  where
-    go :: SideUTXO
-    go = SideUTXO (PubKeyUTXO pkh . Just . Base.datafy $ x) (GeneralValue val)
+inputFromPubKeyWith pkh val = MB . Base.inputFromPubKeyWith pkh val
 
 {- | Describes a single input of 'Tokens' from a 'PubKey'.
 
@@ -200,10 +198,7 @@ inputFromOtherScript ::
     Value ->
     a ->
     MintingBuilder redeemer
-inputFromOtherScript vh val x = MB . Base.input $ go
-  where
-    go :: SideUTXO
-    go = SideUTXO (ScriptUTXO vh . Base.datafy $ x) (GeneralValue val)
+inputFromOtherScript vh val = MB . Base.inputFromOtherScript vh val
 
 {- | As 'inputFromOtherScript', except the input is a 'Tokens'.
 
@@ -230,10 +225,7 @@ outputToPubKey ::
     PubKeyHash ->
     Value ->
     MintingBuilder redeemer
-outputToPubKey pkh val = MB . Base.output $ go
-  where
-    go :: SideUTXO
-    go = SideUTXO (PubKeyUTXO pkh Nothing) (GeneralValue val)
+outputToPubKey pkh = MB . Base.outputToPubKey pkh
 
 {- | Describes a single output of 'Tokens' to a 'PubKey'.
 
@@ -262,10 +254,7 @@ outputToPubKeyWith ::
     Value ->
     a ->
     MintingBuilder redeemer
-outputToPubKeyWith phk val x = MB . Base.output $ go
-  where
-    go :: SideUTXO
-    go = SideUTXO (PubKeyUTXO phk . Just . Base.datafy $ x) (GeneralValue val)
+outputToPubKeyWith pkh val = MB . Base.outputToPubKeyWith pkh val
 
 {- | As 'outputTokensToPubKey', but adds some extra data as well.
 
@@ -298,13 +287,7 @@ outputToOtherScript ::
     Value ->
     a ->
     MintingBuilder redeemer
-outputToOtherScript vh val x = MB . Base.output $ go
-  where
-    go :: SideUTXO
-    go =
-        let value = GeneralValue val
-            typ = ScriptUTXO vh . Base.datafy $ x
-         in SideUTXO typ value
+outputToOtherScript vh val = MB . Base.outputToOtherScript vh val
 
 {- | As 'outputToOtherScript' except that the output is a 'Tokens'.
 

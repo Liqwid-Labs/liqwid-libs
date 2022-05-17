@@ -1,19 +1,13 @@
-{-# LANGUAGE RoleAnnotations #-}
-
 module Plutarch.Context.Internal (
     InputPosition (..),
     TransactionConfig (..),
     UTXOType (..),
     SideUTXO (..),
     ValidatorUTXO (..),
-    Minting (..),
-    SpendingBuilder (..),
-    MintingBuilder (..),
     ValueType (..),
     defaultConfig,
 ) where
 
-import Acc (Acc)
 import Data.Kind (Type)
 import Plutus.V1.Ledger.Crypto (PubKeyHash)
 import Plutus.V1.Ledger.Interval (Interval, always)
@@ -123,72 +117,3 @@ data ValidatorUTXO (datum :: Type) = ValidatorUTXO datum Value
         ( -- | @since 1.0.0
           Show
         )
-
-{- | A value minted with a minting policy other than the one this script context
- is meant to be run with. Do not use this for tokens being minted by the
- script itself.
-
- = Note
-
- As an additional form of safety, any asset classes whose 'CurrencySymbol's
- match the one specified in the 'TransactionConfig' will be excluded.
-
- @since 1.0.0
--}
-newtype Minting = Minting Value
-    deriving stock
-        ( -- | @since 1.0.0
-          Show
-        )
-
-{- | A context builder whose result is for spending. Corresponds to validators
- (broadly speaking), as well as 'Plutus.V1.Ledger.Contexts.Spending'.
-
- @since 1.0.0
--}
-data SpendingBuilder (datum :: Type) (redeemer :: Type) = SB
-    { -- We do this to share structure
-    sbInner :: MintingBuilder redeemer
-    , sbValidatorInputs :: Acc (ValidatorUTXO datum)
-    , sbValidatorOutputs :: Acc (ValidatorUTXO datum)
-    }
-    deriving stock
-        ( -- | @since 1.0.0
-          Show
-        )
-
-{- | Combines every part of both arguments.
-
- @since 1.0.0
--}
-instance Semigroup (SpendingBuilder datum redeemer) where
-    SB inner vins vouts <> SB inner' vins' vouts' =
-        SB (inner <> inner') (vins <> vins') (vouts <> vouts')
-
-{- | A context builder whose result is for minting. Corresponds to minting
- policies (broadly speaking), as well as 'Plutus.V1.Ledger.Contexts.Minting'.
-
- @since 1.0.0
--}
-data MintingBuilder (redeemer :: Type) = MB
-    { sbInputs :: Acc SideUTXO
-    , sbOutputs :: Acc SideUTXO
-    , sbSignatures :: Acc PubKeyHash
-    , sbDatums :: Acc Data
-    , sbMints :: Acc Minting
-    }
-    deriving stock
-        ( -- | @since 1.0.0
-          Show
-        )
-
--- Avoids us doing silly things with coercions
-type role MintingBuilder nominal
-
-{- | Combines every part of both arguments.
-
- @since 1.0.0
--}
-instance Semigroup (MintingBuilder redeemer) where
-    MB ins outs sigs dats ms <> MB ins' outs' sigs' dats' ms' =
-        MB (ins <> ins') (outs <> outs') (sigs <> sigs') (dats <> dats') (ms <> ms')
