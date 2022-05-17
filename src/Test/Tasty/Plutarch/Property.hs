@@ -225,8 +225,6 @@ alwaysFailProperty getGen shr classify comp = case cardinality @ix of
     Tagged 1 -> failOutOneCase
     _ -> forAllShrinkShow gen shr' (showInput . snd) (go comp)
   where
-    -- expectFailure :: forall (s :: S). Term s (c :--> PMaybe d)
-    -- expectFailure = phoistAcyclic $ plam $ const $ pcon PNothing
     gen :: Gen (ix, a)
     gen = do
         ix <- elements universeF
@@ -240,18 +238,18 @@ alwaysFailProperty getGen shr classify comp = case cardinality @ix of
         (forall (s' :: S). Term s' (c :--> d)) ->
         (ix, a) ->
         Property
-    go precompiled (ix, input) =
-        let classified = classify input
-         in if ix /= classified
-                then failedClassification ix classified
-                else
-                    let s = compile (precompiled # pconstant input)
-                        (res, _, logs) = evalScript s
-                     in counterexample (prettyLogs logs)
-                            . ensureCovered input classify
-                            $ case res of
-                                Right _ -> counterexample ranOnCrash . property $ False
-                                Left _ -> property True
+    go precompiled (ix, input)
+        | ix /= classified = failedClassification ix classified
+        | otherwise =
+            let s = compile (precompiled # pconstant input)
+                (res, _, logs) = evalScript s
+             in counterexample (prettyLogs logs)
+                    . ensureCovered input classify
+                    $ case res of
+                        Right _ -> counterexample ranOnCrash . property $ False
+                        Left _ -> property True
+      where
+        classified = classify input
 
 -- Note from Koz
 --
