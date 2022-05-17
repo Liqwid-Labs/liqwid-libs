@@ -19,6 +19,9 @@ module Test.Tasty.Plutarch.Property (
 
     -- * Coverage-based properties
     classifiedProperty,
+
+    -- * Calssified property optimized for cases that always fails
+    alwaysFailProperty,
 ) where
 
 import Control.Monad (guard)
@@ -192,6 +195,64 @@ classifiedProperty getGen shr getOutcome classify comp = case cardinality @ix of
                                      in case testRes of
                                             Left e' -> failCrashyGetOutcome e'
                                             Right s' -> crashedWhenItShouldHave e s'
+
+{- | `alwaysfailproperty` operates similarly to `classifiedProperty` but optimized
+ for cases that will always fail. Scripts will only run once and will have some
+ considerable performance benefit as compared to `classifiedProperty`.
+-}
+alwaysFailProperty ::
+    forall (a :: Type) (ix :: Type) (c :: S -> Type) (d :: S -> Type).
+    ( Show a
+    , Finite ix
+    , Eq ix
+    , Show ix
+    , PLifted c ~ a
+    , PUnsafeLiftDecl c
+    , PEq d
+    ) =>
+    -- | A way to generate values for each case. We expect that for any such
+    -- generated value, the classification function should report the appropriate
+    -- case: a test iteration will fail if this doesn't happen.
+    (ix -> Gen a) ->
+    -- | A shrinker for inputs.
+    (a -> [a]) ->
+    -- | A \'classifier function\' for generated inputs.
+    (a -> ix) ->
+    -- | The computation to test.
+    (forall (s :: S). Term s (c :--> d)) ->
+    Property
+alwaysFailProperty getGen shr classify comp = case cardinality @ix of
+    Tagged 0 -> failOutNoCases
+    Tagged 1 -> failOutOneCase
+    _ -> forAllShrinkShow gen shr' (showInput . snd) (go (classifiedTemplate comp expectFailure))
+  where
+    expectFailure :: forall (s :: S). Term s (c :--> PMaybe d)
+    expectFailure = phoistAcyclic $ plam $ const $ pcon PNothing
+    gen :: Gen (ix, a)
+    gen = do
+        ix <- elements universeF
+        (ix,) <$> getGen ix
+    shr' :: (ix, a) -> [(ix, a)]
+    shr' (ix, x) = do
+        x' <- shr x
+        guard (classify x' == ix)
+        pure (ix, x')
+    go ::
+        (forall (s' :: S). Term s' (c :--> PInteger)) ->
+        (ix, a) ->
+        Property
+    go precompiled (ix, input) =
+        let classified = classify input
+         in if ix /= classified
+                then failedClassification ix classified
+                else
+                    let s = compile (precompiled # pconstant input)
+                        (res, _, logs) = evalScript s
+                     in counterexample (prettyLogs logs)
+                            . ensureCovered input classify
+                            $ case res of
+                                Right _ -> counterexample ranOnCrash . property $ False
+                                Left _ -> property True
 
 -- Note from Koz
 --
