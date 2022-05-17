@@ -131,11 +131,11 @@ alwaysFailProperty gen shr comp = forAllShrinkShow gen shr showInput (go comp)
         a ->
         Property
     go precompiled input =
-      let s = compile (precompiled # pconstant input)
-          (res, _, _) = evalScript s
-      in case res of
-             Right _ -> counterexample ranOnCrash . property $ False
-             Left _ -> property True
+        let s = compile (precompiled # pconstant input)
+            (res, _, _) = evalScript s
+         in case res of
+                Right _ -> counterexample ranOnCrash . property $ False
+                Left _ -> property True
 
 {- | Given a finite set of classes, each with an associated generator of inputs,
  a shrinker for inputs, a Plutarch function for constructing (possible)
