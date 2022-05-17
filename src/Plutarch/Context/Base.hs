@@ -1,6 +1,8 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Plutarch.Context.Base (
+    UTXOType (..),
+    SideUTXO (..),
     BaseBuilder (..),
     signedWith,
     mint,
@@ -29,7 +31,6 @@ import Plutarch (S)
 import Plutarch.Api.V1 (datumHash)
 import Plutarch.Builtin (PIsData, pdata, pforgetData)
 import Plutarch.Context.Internal (
-    SideUTXO (SideUTXO),
     TransactionConfig (
         testCurrencySymbol,
         testFee,
@@ -37,8 +38,6 @@ import Plutarch.Context.Internal (
         testTxId,
         testValidatorHash
     ),
-    UTXOType (PubKeyUTXO, ScriptUTXO),
-    ValueType (GeneralValue, TokensValue),
  )
 import Plutarch.Lift (PUnsafeLiftDecl (PLifted), pconstant, plift)
 import Plutus.V1.Ledger.Address (
@@ -69,12 +68,19 @@ import Plutus.V1.Ledger.Contexts (
 import Plutus.V1.Ledger.Crypto (PubKeyHash)
 import Plutus.V1.Ledger.Scripts (Datum (Datum), DatumHash, ValidatorHash)
 import Plutus.V1.Ledger.Value (CurrencySymbol, Value, symbols)
-import qualified Plutus.V1.Ledger.Value as Value
 import PlutusCore.Data (Data)
 
+data UTXOType
+    = PubKeyUTXO PubKeyHash (Maybe Data)
+    | ScriptUTXO ValidatorHash Data
+    deriving stock (Show)
+
+data SideUTXO (a :: Type) = SideUTXO UTXOType a
+    deriving stock (Show)
+
 data BaseBuilder (a :: Type) = BB
-    { bbInputs :: Acc SideUTXO
-    , bbOutputs :: Acc SideUTXO
+    { bbInputs :: Acc (SideUTXO Value)
+    , bbOutputs :: Acc (SideUTXO Value)
     , bbSignatures :: Acc PubKeyHash
     , bbDatums :: Acc Data
     , bbMints :: Acc Value
@@ -121,7 +127,7 @@ compileBaseTxInfo conf builder = do
     pure $
         TxInfo
             { txInfoInputs = createTxInInfos insList
-            , txInfoOutputs = sideToTxOut ourSym <$> outsList
+            , txInfoOutputs = sideToTxOut <$> outsList
             , txInfoFee = testFee conf
             , txInfoMint = value
             , txInfoDCert = mempty
@@ -142,26 +148,29 @@ compileBaseTxInfo conf builder = do
     toUsefulValue :: Value -> Value -> Maybe Value
     toUsefulValue acc val =
         (acc <>) <$> ((traverse_ (\sym -> guard (sym /= ourSym)) . symbols $ val) $> val)
-    checkSideAndCombine :: Acc SideUTXO -> SideUTXO -> Maybe (Acc SideUTXO)
+    checkSideAndCombine ::
+        Acc (SideUTXO Value) ->
+        SideUTXO Value ->
+        Maybe (Acc (SideUTXO Value))
     checkSideAndCombine acc side@(SideUTXO typ _) = do
         let sideAddress = case typ of
                 PubKeyUTXO pkh _ -> pubKeyHashAddress pkh
                 ScriptUTXO hash _ -> scriptHashAddress hash
         Acc.cons <$> (guard (sideAddress /= ourAddress) $> side) <*> pure acc
-    createTxInInfos :: [SideUTXO] -> [TxInInfo]
+    createTxInInfos :: [SideUTXO Value] -> [TxInInfo]
     createTxInInfos xs =
         let outRefs = TxOutRef (testTxId conf) <$> [1 ..]
-         in zipWith TxInInfo outRefs . fmap (sideToTxOut ourSym) $ xs
+         in zipWith TxInInfo outRefs . fmap sideToTxOut $ xs
 
 input ::
     forall (a :: Type).
-    SideUTXO ->
+    SideUTXO Value ->
     BaseBuilder a
 input x = mempty{bbInputs = pure x}
 
 output ::
     forall (a :: Type).
-    SideUTXO ->
+    SideUTXO Value ->
     BaseBuilder a
 output x = mempty{bbOutputs = pure x}
 
@@ -233,8 +242,8 @@ datumWithHash d = (datumHash dt, dt)
 dataToDatum :: Data -> Datum
 dataToDatum = Datum . BuiltinData
 
-pubSideGeneral :: PubKeyHash -> Value -> SideUTXO
-pubSideGeneral pkh = SideUTXO (PubKeyUTXO pkh Nothing) . GeneralValue
+pubSideGeneral :: PubKeyHash -> Value -> SideUTXO Value
+pubSideGeneral pkh = SideUTXO (PubKeyUTXO pkh Nothing)
 
 pubSideGeneralWith ::
     forall (b :: Type) (p :: S -> Type).
@@ -242,9 +251,9 @@ pubSideGeneralWith ::
     PubKeyHash ->
     Value ->
     b ->
-    SideUTXO
+    SideUTXO Value
 pubSideGeneralWith pkh val x =
-    SideUTXO (PubKeyUTXO pkh . Just . datafy $ x) (GeneralValue val)
+    SideUTXO (PubKeyUTXO pkh . Just . datafy $ x) val
 
 scriptSideGeneral ::
     forall (b :: Type) (p :: S -> Type).
@@ -252,25 +261,18 @@ scriptSideGeneral ::
     ValidatorHash ->
     Value ->
     b ->
-    SideUTXO
+    SideUTXO Value
 scriptSideGeneral vh val x =
-    SideUTXO (ScriptUTXO vh . datafy $ x) (GeneralValue val)
+    SideUTXO (ScriptUTXO vh . datafy $ x) val
 
-sideToTxOut :: CurrencySymbol -> SideUTXO -> TxOut
-sideToTxOut sym (SideUTXO typ val) =
-    let value = extractValue sym val
-     in case typ of
-            PubKeyUTXO pkh mDat ->
-                TxOut (pubKeyHashAddress pkh) value $ datumHash . dataToDatum <$> mDat
-            ScriptUTXO hash dat ->
-                TxOut (scriptHashAddress hash) value . Just . datumHash . dataToDatum $ dat
+sideToTxOut :: SideUTXO Value -> TxOut
+sideToTxOut (SideUTXO typ value) = case typ of
+    PubKeyUTXO pkh mDat ->
+        TxOut (pubKeyHashAddress pkh) value $ datumHash . dataToDatum <$> mDat
+    ScriptUTXO hash dat ->
+        TxOut (scriptHashAddress hash) value . Just . datumHash . dataToDatum $ dat
 
-sideUtxoToDatum :: SideUTXO -> Maybe (DatumHash, Datum)
+sideUtxoToDatum :: SideUTXO Value -> Maybe (DatumHash, Datum)
 sideUtxoToDatum (SideUTXO typ _) = case typ of
     ScriptUTXO _ dat -> Just . datumWithHash $ dat
     PubKeyUTXO _ dat -> datumWithHash <$> dat
-
-extractValue :: CurrencySymbol -> ValueType -> Value
-extractValue sym = \case
-    GeneralValue val -> val
-    TokensValue name amount -> Value.singleton sym name amount

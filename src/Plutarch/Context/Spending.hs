@@ -38,7 +38,6 @@ import qualified Plutarch.Context.Base as Base
 import Plutarch.Context.Internal (
     InputPosition (AtBack, AtFront),
     TransactionConfig (testInputPosition, testTxId, testValidatorHash),
-    ValidatorUTXO (ValidatorUTXO),
  )
 import Plutarch.Lift (PUnsafeLiftDecl (PLifted))
 import Plutus.V1.Ledger.Address (scriptHashAddress)
@@ -269,3 +268,8 @@ spendingContext conf build (TestUTXO d v) =
                     , txOutDatumHash = Just dh
                     }
             }
+
+-- Helpers
+
+data ValidatorUTXO (datum :: Type) = ValidatorUTXO datum Value
+    deriving stock (Show)
