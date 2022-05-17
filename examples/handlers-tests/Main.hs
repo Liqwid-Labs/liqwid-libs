@@ -29,10 +29,10 @@ import Test.QuickCheck (
     Gen,
     Property,
  )
-import Test.Tasty (defaultMain, testGroup)
+import Test.Tasty (adjustOption, defaultMain, testGroup)
 import Test.Tasty.ExpectedFailure (expectFailBecause)
-import Test.Tasty.Plutarch.Property (classifiedProperty)
-import Test.Tasty.QuickCheck (testProperty)
+import Test.Tasty.Plutarch.Property (alwaysFailProperty, classifiedProperty)
+import Test.Tasty.QuickCheck (QuickCheckTests, testProperty)
 
 data HandlerCases = EvenNumber | OddNumber
     deriving stock (Eq, Show)
@@ -101,15 +101,50 @@ expectedSuccessCorrectValue = classifiedProperty generator shrinker expected cla
     definition :: forall (s :: S). Term s (PInteger :--> PInteger)
     definition = plam id
 
+alwaysFails :: Property
+alwaysFails = alwaysFailProperty arbitrary shrink definition
+  where
+    definition :: forall (s :: S). Term s (PInteger :--> PInteger)
+    definition = plam $ const $ ptraceError "failed"
+
+alwaysFailsSucceeds :: Property
+alwaysFailsSucceeds = alwaysFailProperty arbitrary shrink definition
+  where
+    definition :: forall (s :: S). Term s (PInteger :--> PInteger)
+    definition = plam $ const $ 5
+
+alwaysFailsOnClassifiedProperty :: Property
+alwaysFailsOnClassifiedProperty = classifiedProperty generator shrinker expected classifier definition
+  where
+    expected :: forall (s :: S). Term s (PInteger :--> PMaybe PInteger)
+    expected = plam $ const $ pcon $ PNothing
+
+    definition :: forall (s :: S). Term s (PInteger :--> PInteger)
+    definition = plam $ const $ ptraceError "failed"
+
 main :: IO ()
 main = do
-    defaultMain . testGroup "Possible outputs of classifiedProperty" $
-        [ expectFailBecause "expects failure but script runs successfully" $
-            testProperty "\"expected: Failure/yields: Success\"" expectedFailureSucceeding
-        , testProperty "\"expected: Failure/yields: Failure\"" expectedFailureFailing
-        , expectFailBecause "expects success but script crashed" $
-            testProperty "\"expected: Success/yields: Failure\"" expectedSuccessFailing
-        , expectFailBecause "Yielded value is incorrect" $
-            testProperty "\"expected: Success/yields: Success but Incorrect\"" expectedSuccessIncorrectValue
-        , testProperty "\"expected: Success/yields: Success and Correct\"" expectedSuccessCorrectValue
-        ]
+    defaultMain $
+        testGroup
+            "Handlers Tests"
+            [ testGroup "Possible outputs of classifiedProperty" $
+                [ expectFailBecause "expects failure but script runs successfully" $
+                    testProperty "\"expected: Failure/yields: Success\"" expectedFailureSucceeding
+                , testProperty "\"expected: Failure/yields: Failure\"" expectedFailureFailing
+                , expectFailBecause "expects success but script crashed" $
+                    testProperty "\"expected: Success/yields: Failure\"" expectedSuccessFailing
+                , expectFailBecause "Yielded value is incorrect" $
+                    testProperty "\"expected: Success/yields: Success but Incorrect\"" expectedSuccessIncorrectValue
+                , testProperty "\"expected: Success/yields: Success and Correct\"" expectedSuccessCorrectValue
+                ]
+            , adjustOption go $
+                testGroup "alwaysFailproperty" $
+                    [ expectFailBecause "expects failure but script runs successfully" $
+                        testProperty "\"expected: Failure/yields: Success\"" alwaysFailsSucceeds
+                    , testProperty "faster (using alwaysFailProperty)" alwaysFails
+                    , testProperty "slower (using classifiedProperty)" alwaysFailsOnClassifiedProperty
+                    ]
+            ]
+  where
+    go :: QuickCheckTests -> QuickCheckTests
+    go = max 10000

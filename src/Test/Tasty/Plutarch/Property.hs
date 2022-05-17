@@ -17,6 +17,9 @@ module Test.Tasty.Plutarch.Property (
     -- * Basic properties
     peqProperty,
 
+    -- * Properties that always should fail
+    alwaysFailProperty,
+
     -- * Coverage-based properties
     classifiedProperty,
 ) where
@@ -101,6 +104,37 @@ peqProperty expected gen shr comp =
          in counterexample (prettyLogs logs) $ case res of
                 Left e -> unexpectedError e
                 Right s' -> sameAsExpected s'
+
+{- | 'alwaysFailProperty' universally checks if given computation fails.
+ This runs the given script with generated input; it makes sure that
+ script fails by crashes or errors.
+
+ This function provides quicker and simpler interface when writing
+ properties involving, for example, a validator or a minting policy
+ because these scripts are focused on correctly aborting script when
+ certain input is given.
+
+ @since 1.0.1
+-}
+alwaysFailProperty ::
+    forall (a :: Type) (c :: S -> Type) (d :: S -> Type).
+    ( Show a
+    , PLifted c ~ a
+    , PUnsafeLiftDecl c
+    ) =>
+    Gen a ->
+    (a -> [a]) ->
+    (forall (s :: S). Term s (c :--> d)) ->
+    Property
+alwaysFailProperty gen shr comp = forAllShrinkShow gen shr showInput (go comp)
+  where
+    go :: (forall (s' :: S). Term s' (c :--> d)) -> a -> Property
+    go precompiled input =
+        let s = compile (precompiled # pconstant input)
+            (res, _, _) = evalScript s
+         in case res of
+                Right _ -> counterexample ranOnCrash . property $ False
+                Left _ -> property True
 
 {- | Given a finite set of classes, each with an associated generator of inputs,
  a shrinker for inputs, a Plutarch function for constructing (possible)
