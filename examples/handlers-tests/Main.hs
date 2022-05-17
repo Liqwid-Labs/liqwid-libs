@@ -102,13 +102,13 @@ expectedSuccessCorrectValue = classifiedProperty generator shrinker expected cla
     definition = plam id
 
 alwaysFails :: Property
-alwaysFails = alwaysFailProperty generator shrinker classifier definition
+alwaysFails = alwaysFailProperty arbitrary shrink definition
   where
     definition :: forall (s :: S). Term s (PInteger :--> PInteger)
     definition = plam $ const $ ptraceError "failed"
 
 alwaysFailsSucceeds :: Property
-alwaysFailsSucceeds = alwaysFailProperty generator shrinker classifier definition
+alwaysFailsSucceeds = alwaysFailProperty arbitrary shrink definition
   where
     definition :: forall (s :: S). Term s (PInteger :--> PInteger)
     definition = plam $ const $ 5
@@ -147,4 +147,4 @@ main = do
             ]
   where
     go :: QuickCheckTests -> QuickCheckTests
-    go = max 10000000
+    go = max 10000
