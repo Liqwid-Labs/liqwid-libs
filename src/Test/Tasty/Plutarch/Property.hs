@@ -107,8 +107,7 @@ peqProperty expected gen shr comp =
 
 {- | 'alwaysFailProperty' universally checks if given computation fails.
  This runs the given script with generated input; it makes sure that
- script fails by crashes or errors.  Since output does not need to be
- checked, `PEq` instance is not required.
+ script fails by crashes or errors.
 
  This function provides quicker and simpler interface when writing
  properties involving, for example, a validator or a minting policy
