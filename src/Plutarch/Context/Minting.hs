@@ -2,6 +2,17 @@
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE TypeFamilies #-}
 
+{- | Module: Plutarch.Context.Minting
+ Copyright: (C) Liqwid Labs 2022
+ License: Proprietary
+ Maintainer: Koz Ross <koz@mlabs.city>
+ Portability: GHC only
+ Stability: Experimental
+
+ Builder for minting contexts. 'MintingBuilder' is an instance of 'Semigroup',
+ which allows combining the results of this API's functions into a larger
+ 'MintingBuilder' using '<>'.
+-}
 module Plutarch.Context.Minting (
     -- * Types
     MintingBuilder,
@@ -148,7 +159,7 @@ data MintingAction = Mint Tokens | Burn Tokens
           Show
         )
 
-{- | Describes a single input from a 'PubKey'.
+{- | Describes a single input from a public key.
 
  @since 1.0.0
 -}
@@ -159,8 +170,7 @@ inputFromPubKey ::
     MintingBuilder redeemer
 inputFromPubKey pkh val = MB (Base.inputFromPubKey pkh val) mempty mempty
 
-{- | Describes a single input from a 'PubKey', where some additional data is
- also provided.
+{- | As 'inputFromPubKey', but with some additional data.
 
  @since 1.0.0
 -}
@@ -174,7 +184,7 @@ inputFromPubKeyWith ::
 inputFromPubKeyWith pkh val x =
     MB (Base.inputFromPubKeyWith pkh val x) mempty mempty
 
-{- | Describes a single input of 'Tokens' from a 'PubKey'.
+{- | Describes a single input of 'Tokens' from a public key.
 
  @since 1.0.0
 -}
@@ -228,7 +238,7 @@ inputTokensFromOtherScript ::
 inputTokensFromOtherScript vh t x =
     MB mempty (pure . otherScriptTokens vh x $ t) mempty
 
-{- | Describes a single output to a 'PubKey'.
+{- | Describes a single output to a public key.
 
  @since 1.0.0
 -}
@@ -239,7 +249,7 @@ outputToPubKey ::
     MintingBuilder redeemer
 outputToPubKey pkh val = MB (Base.outputToPubKey pkh val) mempty mempty
 
-{- | Describes a single output of 'Tokens' to a 'PubKey'.
+{- | Describes a single output of 'Tokens' to a public key.
 
  @since 1.0.0
 -}

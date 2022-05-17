@@ -1,3 +1,12 @@
+{- | Module: Plutarch.Context.Config
+ Copyright: (C) Liqwid Labs 2022
+ License: Proprietary
+ Maintainer: Koz Ross <koz@mlabs.city>
+ Portability: GHC only
+ Stability: Experimental
+
+ Configuration for context generation.
+-}
 module Plutarch.Context.Config (
     -- * Type
     ContextConfig (..),

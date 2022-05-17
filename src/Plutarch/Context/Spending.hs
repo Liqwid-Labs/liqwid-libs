@@ -1,6 +1,17 @@
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE TypeFamilies #-}
 
+{- | Module: Plutarch.Context.Spending
+ Copyright: (C) Liqwid Labs 2022
+ License: Proprietary
+ Maintainer: Koz Ross <koz@mlabs.city>
+ Portability: GHC only
+ Stability: Experimental
+
+ Builder for spending contexts. 'SpendingBuilder' is an instance of 'Semigroup',
+ which allows combining the results of this API's functions into a larger
+ 'SpendingBuilder' using '<>'.
+-}
 module Plutarch.Context.Spending (
     -- * Types
     SpendingBuilder,
@@ -89,7 +100,7 @@ data TestUTXO (datum :: Type) = TestUTXO datum Value
           Show
         )
 
-{- | Describes a single input from a 'PubKey'.
+{- | Describes a single input from a public key.
 
  @since 1.0.0
 -}
@@ -144,7 +155,7 @@ inputSelfExtra val x =
     go :: ValidatorUTXO datum
     go = ValidatorUTXO x val
 
-{- | Describes a single output to a 'PubKey'.
+{- | Describes a single output to a public key.
 
  @since 1.0.0
 -}
