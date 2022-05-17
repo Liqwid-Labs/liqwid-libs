@@ -208,7 +208,6 @@ alwaysFailProperty ::
     , Show ix
     , PLifted c ~ a
     , PUnsafeLiftDecl c
-    , PEq d
     ) =>
     -- | A way to generate values for each case. We expect that for any such
     -- generated value, the classification function should report the appropriate
@@ -224,10 +223,10 @@ alwaysFailProperty ::
 alwaysFailProperty getGen shr classify comp = case cardinality @ix of
     Tagged 0 -> failOutNoCases
     Tagged 1 -> failOutOneCase
-    _ -> forAllShrinkShow gen shr' (showInput . snd) (go (classifiedTemplate comp expectFailure))
+    _ -> forAllShrinkShow gen shr' (showInput . snd) (go comp)
   where
-    expectFailure :: forall (s :: S). Term s (c :--> PMaybe d)
-    expectFailure = phoistAcyclic $ plam $ const $ pcon PNothing
+    -- expectFailure :: forall (s :: S). Term s (c :--> PMaybe d)
+    -- expectFailure = phoistAcyclic $ plam $ const $ pcon PNothing
     gen :: Gen (ix, a)
     gen = do
         ix <- elements universeF
@@ -238,7 +237,7 @@ alwaysFailProperty getGen shr classify comp = case cardinality @ix of
         guard (classify x' == ix)
         pure (ix, x')
     go ::
-        (forall (s' :: S). Term s' (c :--> PInteger)) ->
+        (forall (s' :: S). Term s' (c :--> d)) ->
         (ix, a) ->
         Property
     go precompiled (ix, input) =
