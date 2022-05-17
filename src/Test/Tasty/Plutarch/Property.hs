@@ -105,6 +105,38 @@ peqProperty expected gen shr comp =
                 Left e -> unexpectedError e
                 Right s' -> sameAsExpected s'
 
+{- | `alwaysfailproperty` universially checks if given computation fails.
+ This function operates very similarly to `peqProperty` but just checking
+ for the failures. Since output does not need to be checked, `PEq` instance
+ is not required.
+
+ @since 1.0.1
+-}
+alwaysFailProperty ::
+    forall (a :: Type) (c :: S -> Type) (d :: S -> Type).
+    ( Show a
+    , PLifted c ~ a
+    , PUnsafeLiftDecl c
+    ) =>
+    Gen a ->
+    -- | A shrinker for inputs.
+    (a -> [a]) ->
+    -- | The computation to test.
+    (forall (s :: S). Term s (c :--> d)) ->
+    Property
+alwaysFailProperty gen shr comp = forAllShrinkShow gen shr showInput (go comp)
+  where
+    go ::
+        (forall (s' :: S). Term s' (c :--> d)) ->
+        a ->
+        Property
+    go precompiled input =
+      let s = compile (precompiled # pconstant input)
+          (res, _, _) = evalScript s
+      in case res of
+             Right _ -> counterexample ranOnCrash . property $ False
+             Left _ -> property True
+
 {- | Given a finite set of classes, each with an associated generator of inputs,
  a shrinker for inputs, a Plutarch function for constructing (possible)
  expected results, and a way of classifying any generated input, run the given
@@ -195,36 +227,6 @@ classifiedProperty getGen shr getOutcome classify comp = case cardinality @ix of
                                      in case testRes of
                                             Left e' -> failCrashyGetOutcome e'
                                             Right s' -> crashedWhenItShouldHave e s'
-
-{- | `alwaysfailproperty` universially checks if given computation fails.
- This function operates very similarly to `peqProperty` but just checking
- for the failures. Since output does not need to be checked, `PEq` instance
- is not required.
--}
-alwaysFailProperty ::
-    forall (a :: Type) (c :: S -> Type) (d :: S -> Type).
-    ( Show a
-    , PLifted c ~ a
-    , PUnsafeLiftDecl c
-    ) =>
-    Gen a ->
-    -- | A shrinker for inputs.
-    (a -> [a]) ->
-    -- | The computation to test.
-    (forall (s :: S). Term s (c :--> d)) ->
-    Property
-alwaysFailProperty gen shr comp = forAllShrinkShow gen shr showInput (go comp)
-  where
-    go ::
-        (forall (s' :: S). Term s' (c :--> d)) ->
-        a ->
-        Property
-    go precompiled input =
-      let s = compile (precompiled # pconstant input)
-          (res, _, _) = evalScript s
-      in case res of
-             Right _ -> counterexample ranOnCrash . property $ False
-             Left _ -> property True
 
 -- Note from Koz
 --
