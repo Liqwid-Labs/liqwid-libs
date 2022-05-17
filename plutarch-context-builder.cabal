@@ -74,7 +74,10 @@ library
     Plutarch.Context.Minting
     Plutarch.Context.Spending
 
-  other-modules:   Plutarch.Context.Internal
+  other-modules:
+    Plutarch.Context.Base
+    Plutarch.Context.Internal
+
   build-depends:
     , acc
     , plutus-core
