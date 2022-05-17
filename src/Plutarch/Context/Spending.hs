@@ -35,9 +35,11 @@ import Plutarch (S)
 import Plutarch.Builtin (PIsData)
 import Plutarch.Context.Base (BaseBuilder)
 import qualified Plutarch.Context.Base as Base
-import Plutarch.Context.Internal (
-    InputPosition (AtBack, AtFront),
-    TransactionConfig (testInputPosition, testTxId, testValidatorHash),
+import Plutarch.Context.Config (
+    ContextConfig (
+        configTxId,
+        configValidatorHash
+    ),
  )
 import Plutarch.Lift (PUnsafeLiftDecl (PLifted))
 import Plutus.V1.Ledger.Address (scriptHashAddress)
@@ -236,7 +238,7 @@ extraData x = SB (Base.extraData x) mempty mempty
 spendingContext ::
     forall (datum :: Type) (redeemer :: Type) (p :: S -> Type).
     (PUnsafeLiftDecl p, PLifted p ~ datum, PIsData p) =>
-    TransactionConfig ->
+    ContextConfig ->
     SpendingBuilder datum redeemer ->
     TestUTXO datum ->
     Maybe ScriptContext
@@ -250,20 +252,18 @@ spendingContext conf build (TestUTXO d v) =
         let inInfo = ownTxInInfo . fst $ inData
         pure $
             baseInfo
-                { txInfoInputs = case testInputPosition conf of
-                    AtFront -> inInfo : txInfoInputs baseInfo
-                    AtBack -> txInfoInputs baseInfo <> [inInfo]
+                { txInfoInputs = inInfo : txInfoInputs baseInfo
                 , txInfoData = inData : txInfoData baseInfo
                 }
     ourOutRef :: TxOutRef
-    ourOutRef = TxOutRef (testTxId conf) 0
+    ourOutRef = TxOutRef (configTxId conf) 0
     ownTxInInfo :: DatumHash -> TxInInfo
     ownTxInInfo dh =
         TxInInfo
             { txInInfoOutRef = ourOutRef
             , txInInfoResolved =
                 TxOut
-                    { txOutAddress = scriptHashAddress . testValidatorHash $ conf
+                    { txOutAddress = scriptHashAddress . configValidatorHash $ conf
                     , txOutValue = v
                     , txOutDatumHash = Just dh
                     }

@@ -30,13 +30,13 @@ import Data.Maybe (mapMaybe)
 import Plutarch (S)
 import Plutarch.Api.V1 (datumHash)
 import Plutarch.Builtin (PIsData, pdata, pforgetData)
-import Plutarch.Context.Internal (
-    TransactionConfig (
-        testCurrencySymbol,
-        testFee,
-        testTimeRange,
-        testTxId,
-        testValidatorHash
+import Plutarch.Context.Config (
+    ContextConfig (
+        configCurrencySymbol,
+        configFee,
+        configTimeRange,
+        configTxId,
+        configValidatorHash
     ),
  )
 import Plutarch.Lift (PUnsafeLiftDecl (PLifted), pconstant, plift)
@@ -115,7 +115,7 @@ extraData x = mempty{bbDatums = pure . datafy $ x}
 
 compileBaseTxInfo ::
     forall (a :: Type).
-    TransactionConfig ->
+    ContextConfig ->
     BaseBuilder a ->
     Maybe TxInfo
 compileBaseTxInfo conf builder = do
@@ -128,11 +128,11 @@ compileBaseTxInfo conf builder = do
         TxInfo
             { txInfoInputs = createTxInInfos insList
             , txInfoOutputs = sideToTxOut <$> outsList
-            , txInfoFee = testFee conf
+            , txInfoFee = configFee conf
             , txInfoMint = value
             , txInfoDCert = mempty
             , txInfoWdrl = mempty
-            , txInfoValidRange = testTimeRange conf
+            , txInfoValidRange = configTimeRange conf
             , txInfoSignatories = signatures
             , txInfoData =
                 mapMaybe sideUtxoToDatum insList
@@ -142,9 +142,9 @@ compileBaseTxInfo conf builder = do
             }
   where
     ourAddress :: Address
-    ourAddress = scriptHashAddress . testValidatorHash $ conf
+    ourAddress = scriptHashAddress . configValidatorHash $ conf
     ourSym :: CurrencySymbol
-    ourSym = testCurrencySymbol conf
+    ourSym = configCurrencySymbol conf
     toUsefulValue :: Value -> Value -> Maybe Value
     toUsefulValue acc val =
         (acc <>) <$> ((traverse_ (\sym -> guard (sym /= ourSym)) . symbols $ val) $> val)
@@ -159,7 +159,7 @@ compileBaseTxInfo conf builder = do
         Acc.cons <$> (guard (sideAddress /= ourAddress) $> side) <*> pure acc
     createTxInInfos :: [SideUTXO Value] -> [TxInInfo]
     createTxInInfos xs =
-        let outRefs = TxOutRef (testTxId conf) <$> [1 ..]
+        let outRefs = TxOutRef (configTxId conf) <$> [1 ..]
          in zipWith TxInInfo outRefs . fmap sideToTxOut $ xs
 
 input ::

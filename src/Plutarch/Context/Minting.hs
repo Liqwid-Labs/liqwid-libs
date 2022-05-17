@@ -55,8 +55,12 @@ import Plutarch.Context.Base (
     UTXOType (PubKeyUTXO, ScriptUTXO),
  )
 import qualified Plutarch.Context.Base as Base
-import Plutarch.Context.Internal (
-    TransactionConfig (testCurrencySymbol, testTxId, testValidatorHash),
+import Plutarch.Context.Config (
+    ContextConfig (
+        configCurrencySymbol,
+        configTxId,
+        configValidatorHash
+    ),
  )
 import Plutarch.Lift (PUnsafeLiftDecl (PLifted))
 import Plutus.V1.Ledger.Address (Address, pubKeyHashAddress, scriptHashAddress)
@@ -343,7 +347,7 @@ extraData x = MB (Base.extraData x) mempty mempty
 -}
 mintingContext ::
     forall (redeemer :: Type).
-    TransactionConfig ->
+    ContextConfig ->
     MintingBuilder redeemer ->
     NonEmpty MintingAction ->
     Maybe ScriptContext
@@ -351,9 +355,9 @@ mintingContext conf builder acts =
     ScriptContext <$> go <*> (pure . Minting $ ourSym)
   where
     ourSym :: CurrencySymbol
-    ourSym = testCurrencySymbol conf
+    ourSym = configCurrencySymbol conf
     ourAddress :: Address
-    ourAddress = scriptHashAddress . testValidatorHash $ conf
+    ourAddress = scriptHashAddress . configValidatorHash $ conf
     go :: Maybe TxInfo
     go = do
         baseTxInfo <- Base.compileBaseTxInfo conf . mbInner $ builder
@@ -385,7 +389,7 @@ mintingContext conf builder acts =
         Acc.cons <$> (guard (sideAddress /= ourAddress) $> side) <*> pure acc
     createTxInInfos :: [SideUTXO Tokens] -> [TxInInfo]
     createTxInInfos xs =
-        let outRefs = TxOutRef (testTxId conf) <$> [1 ..]
+        let outRefs = TxOutRef (configTxId conf) <$> [1 ..]
          in zipWith TxInInfo outRefs . fmap (sideToTxOut ourSym) $ xs
 
 -- Helpers
