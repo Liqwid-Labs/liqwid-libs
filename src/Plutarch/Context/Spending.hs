@@ -15,7 +15,7 @@
 module Plutarch.Context.Spending (
     -- * Types
     SpendingBuilder,
-    TestUTXO (..),
+    ValidatorUTXO (..),
 
     -- * Functions
 
@@ -103,7 +103,7 @@ instance Semigroup (SpendingBuilder datum redeemer) where
 
  @since 1.0.0
 -}
-data TestUTXO (datum :: Type) = TestUTXO datum Value
+data ValidatorUTXO (datum :: Type) = ValidatorUTXO datum Value
     deriving stock
         ( -- | @since 1.0.0
           Show
@@ -266,9 +266,9 @@ spendingContext ::
     (PUnsafeLiftDecl p, PLifted p ~ datum, PIsData p) =>
     ContextConfig ->
     SpendingBuilder datum redeemer ->
-    TestUTXO datum ->
+    ValidatorUTXO datum ->
     Maybe ScriptContext
-spendingContext conf builder (TestUTXO d v) = Base.runBuild go conf
+spendingContext conf builder (ValidatorUTXO d v) = Base.runBuild go conf
   where
     go :: Build ScriptContext
     go = do
@@ -349,6 +349,3 @@ validatorInInfoDatums (acc1, acc2) vutxo@(ValidatorUTXO d _) = do
     let txInInfo = TxInInfo ref txOut
     let vdata = Base.datumWithHash . Base.datafy $ d
     pure (pure txInInfo <> acc1, pure vdata <> acc2)
-
-data ValidatorUTXO (datum :: Type) = ValidatorUTXO datum Value
-    deriving stock (Show)
