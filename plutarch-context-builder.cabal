@@ -78,6 +78,7 @@ library
   other-modules:   Plutarch.Context.Base
   build-depends:
     , acc
+    , mtl
     , plutus-core
     , plutus-ledger-api
 

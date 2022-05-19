@@ -41,10 +41,13 @@ module Plutarch.Context.Spending (
 ) where
 
 import Acc (Acc)
+import Control.Monad (foldM)
+import Control.Monad.Reader (asks)
+import Data.Foldable (toList)
 import Data.Kind (Type)
 import Plutarch (S)
 import Plutarch.Builtin (PIsData)
-import Plutarch.Context.Base (BaseBuilder)
+import Plutarch.Context.Base (BaseBuilder, Build)
 import qualified Plutarch.Context.Base as Base
 import Plutarch.Context.Config (
     ContextConfig (
@@ -58,12 +61,18 @@ import Plutus.V1.Ledger.Contexts (
     ScriptContext (ScriptContext),
     ScriptPurpose (Spending),
     TxInInfo (TxInInfo, txInInfoOutRef, txInInfoResolved),
-    TxInfo (txInfoData, txInfoInputs),
+    TxInfo (
+        txInfoData,
+        txInfoInputs,
+        txInfoMint,
+        txInfoOutputs,
+        txInfoSignatories
+    ),
     TxOut (TxOut, txOutAddress, txOutDatumHash, txOutValue),
     TxOutRef (TxOutRef),
  )
 import Plutus.V1.Ledger.Crypto (PubKeyHash)
-import Plutus.V1.Ledger.Scripts (DatumHash, ValidatorHash)
+import Plutus.V1.Ledger.Scripts (Datum, DatumHash, ValidatorHash)
 import Plutus.V1.Ledger.Value (Value)
 
 {- | A context builder for spending. Corresponds broadly to validators, and to
@@ -241,8 +250,14 @@ extraData ::
     SpendingBuilder datum redeemer
 extraData x = SB (Base.extraData x) mempty mempty
 
-{- | Construct a 'ScriptContext' for spending, given a description of what
- inputs to the script should be checked, and a configuration.
+{- | Construct a 'ScriptContext' for spending, given a configuration and a
+ description of what inputs to the script should be checked.
+
+ = Note
+
+ As part of construction, we verify if any \'additional\' inputs have
+ addresses different from that of the script. If an \'additional\' input's
+ address matches the one in the configuration, this function will fail.
 
  @since 1.0.0
 -}
@@ -253,34 +268,87 @@ spendingContext ::
     SpendingBuilder datum redeemer ->
     TestUTXO datum ->
     Maybe ScriptContext
-spendingContext conf build (TestUTXO d v) =
-    ScriptContext <$> go <*> (pure . Spending $ ourOutRef)
+spendingContext conf builder (TestUTXO d v) = Base.runBuild go conf
   where
-    go :: Maybe TxInfo
+    go :: Build ScriptContext
     go = do
-        baseInfo <- Base.compileBaseTxInfo conf . sbInner $ build
+        tid <- asks configTxId
+        let purpose = Spending . TxOutRef tid $ 0
+        baseInfo <- Base.baseTxInfo
+        let inner = sbInner builder
+        (baseIn, baseInData) <-
+            Base.toInInfoDatums id
+                . Base.bbInputs
+                $ inner
+        let (baseOut, baseOutData) =
+                Base.toTxOutDatums id
+                    . Base.bbOutputs
+                    $ inner
+        value <- Base.combineExternalMints . Base.bbMints $ inner
+        (vIn, vInData) <-
+            foldM validatorInInfoDatums (mempty, mempty)
+                . sbValidatorInputs
+                $ builder
+        vOut <- traverse validatorTxOut . sbValidatorOutputs $ builder
+        inInfo <- createOwnInfo
         let inData = Base.datumWithHash . Base.datafy $ d
-        let inInfo = ownTxInInfo . fst $ inData
-        pure $
-            baseInfo
-                { txInfoInputs = inInfo : txInfoInputs baseInfo
-                , txInfoData = inData : txInfoData baseInfo
-                }
-    ourOutRef :: TxOutRef
-    ourOutRef = TxOutRef (configTxId conf) 0
-    ownTxInInfo :: DatumHash -> TxInInfo
-    ownTxInInfo dh =
-        TxInInfo
-            { txInInfoOutRef = ourOutRef
-            , txInInfoResolved =
-                TxOut
-                    { txOutAddress = scriptHashAddress . configValidatorHash $ conf
-                    , txOutValue = v
-                    , txOutDatumHash = Just dh
+        let fullInfo =
+                baseInfo
+                    { txInfoMint = value
+                    , txInfoInputs = (inInfo :) . toList $ baseIn <> vIn
+                    , txInfoOutputs = toList $ baseOut <> vOut
+                    , txInfoSignatories = toList . Base.bbSignatures $ inner
+                    , txInfoData =
+                        (inData :) . toList $
+                            (Base.datumWithHash <$> Base.bbDatums inner)
+                                <> baseInData
+                                <> baseOutData
+                                <> vInData
                     }
-            }
+        pure . ScriptContext fullInfo $ purpose
+    createOwnInfo :: Build TxInInfo
+    createOwnInfo = do
+        tid <- asks configTxId
+        address <- asks (scriptHashAddress . configValidatorHash)
+        pure $
+            TxInInfo
+                { txInInfoOutRef = TxOutRef tid 0
+                , txInInfoResolved =
+                    TxOut
+                        { txOutAddress = address
+                        , txOutValue = v
+                        , txOutDatumHash = Just . fst . Base.datumWithHash . Base.datafy $ d
+                        }
+                }
 
 -- Helpers
+
+validatorTxOut ::
+    forall (datum :: Type) (p :: S -> Type).
+    (PUnsafeLiftDecl p, PLifted p ~ datum, PIsData p) =>
+    ValidatorUTXO datum ->
+    Build TxOut
+validatorTxOut (ValidatorUTXO d v) = do
+    address <- asks (scriptHashAddress . configValidatorHash)
+    pure $
+        TxOut
+            { txOutAddress = address
+            , txOutValue = v
+            , txOutDatumHash = Just . fst . Base.datumWithHash . Base.datafy $ d
+            }
+
+validatorInInfoDatums ::
+    forall (datum :: Type) (p :: S -> Type).
+    (PUnsafeLiftDecl p, PLifted p ~ datum, PIsData p) =>
+    (Acc TxInInfo, Acc (DatumHash, Datum)) ->
+    ValidatorUTXO datum ->
+    Build (Acc TxInInfo, Acc (DatumHash, Datum))
+validatorInInfoDatums (acc1, acc2) vutxo@(ValidatorUTXO d _) = do
+    ref <- asks (TxOutRef . configTxId) <*> Base.freshOutRefIndex
+    txOut <- validatorTxOut vutxo
+    let txInInfo = TxInInfo ref txOut
+    let vdata = Base.datumWithHash . Base.datafy $ d
+    pure (pure txInInfo <> acc1, pure vdata <> acc2)
 
 data ValidatorUTXO (datum :: Type) = ValidatorUTXO datum Value
     deriving stock (Show)

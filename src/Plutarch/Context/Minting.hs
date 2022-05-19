@@ -50,49 +50,44 @@ module Plutarch.Context.Minting (
 ) where
 
 import Acc (Acc)
-import qualified Acc
-import Control.Monad (foldM, guard)
+import Control.Monad (guard)
+import Control.Monad.Reader (asks)
 import Data.Foldable (toList)
 import Data.Functor (($>))
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty)
-import Data.Maybe (mapMaybe)
 import Plutarch (S)
-import Plutarch.Api.V1 (datumHash)
 import Plutarch.Builtin (PIsData)
 import Plutarch.Context.Base (
     BaseBuilder,
+    Build,
     SideUTXO (SideUTXO),
     UTXOType (PubKeyUTXO, ScriptUTXO),
  )
 import qualified Plutarch.Context.Base as Base
 import Plutarch.Context.Config (
-    ContextConfig (
-        configCurrencySymbol,
-        configTxId,
-        configValidatorHash
-    ),
+    ContextConfig (configCurrencySymbol),
  )
 import Plutarch.Lift (PUnsafeLiftDecl (PLifted))
-import Plutus.V1.Ledger.Address (Address, pubKeyHashAddress, scriptHashAddress)
-import Plutus.V1.Ledger.Api (BuiltinData (BuiltinData))
 import Plutus.V1.Ledger.Contexts (
     ScriptContext (ScriptContext),
     ScriptPurpose (Minting),
-    TxInInfo (TxInInfo),
-    TxInfo (txInfoData, txInfoInputs, txInfoMint, txInfoOutputs),
-    TxOut (TxOut),
-    TxOutRef (TxOutRef),
+    TxInfo (
+        txInfoData,
+        txInfoInputs,
+        txInfoMint,
+        txInfoOutputs,
+        txInfoSignatories
+    ),
  )
 import Plutus.V1.Ledger.Crypto (PubKeyHash)
-import Plutus.V1.Ledger.Scripts (Datum (Datum), DatumHash, ValidatorHash)
+import Plutus.V1.Ledger.Scripts (ValidatorHash)
 import Plutus.V1.Ledger.Value (
     CurrencySymbol,
     TokenName,
     Value,
  )
 import qualified Plutus.V1.Ledger.Value as Value
-import PlutusCore.Data (Data)
 
 {- | Some positive number of tokens, with the given name, controlled by the
  minting policy for which the script context is being built.
@@ -211,6 +206,13 @@ inputTokensFromPubKeyWith pkh t x =
 
 {- | Describes an input from a script /other/ than the one for which the context
  is being made.
+
+ = Note
+
+ The `ContextConfig` specifies a 'ValidatorHash' for the script for which the
+ script context is being build. Ensure that the 'ValidatorHash' passed here is
+ different from the 'ValidatorHash' you specify in the 'ContextConfig', or the
+ construction process (in 'mintingContext') will fail.
 
  @since 1.0.0
 -}
@@ -353,6 +355,12 @@ extraData x = MB (Base.extraData x) mempty mempty
 {- | Construct a 'ScriptContext' for minting, given a configuration and a list
  of things to do.
 
+ = Note
+
+ As part of construction, we verify if any \'additional\' inputs have
+ addresses different from that of the script. If an \'additional\' input's
+ address matches the one in the configuration, this function will fail.
+
  @since 1.0.0
 -}
 mintingContext ::
@@ -361,62 +369,51 @@ mintingContext ::
     MintingBuilder redeemer ->
     NonEmpty MintingAction ->
     Maybe ScriptContext
-mintingContext conf builder acts =
-    ScriptContext <$> go <*> (pure . Minting $ ourSym)
+mintingContext conf builder acts = Base.runBuild go conf
   where
-    ourSym :: CurrencySymbol
-    ourSym = configCurrencySymbol conf
-    ourAddress :: Address
-    ourAddress = scriptHashAddress . configValidatorHash $ conf
-    go :: Maybe TxInfo
+    go :: Build ScriptContext
     go = do
-        baseTxInfo <- Base.compileBaseTxInfo conf . mbInner $ builder
-        ourTokenInsList <-
-            toList <$> (foldM checkSideAndCombine mempty . mbTokensInputs $ builder)
-        ourTokenOutsList <-
-            toList <$> (foldM checkSideAndCombine mempty . mbTokensOutputs $ builder)
-        pure $
-            baseTxInfo
-                { txInfoInputs = txInfoInputs baseTxInfo <> createTxInInfos ourTokenInsList
-                , txInfoOutputs =
-                    txInfoOutputs baseTxInfo <> fmap (sideToTxOut ourSym) ourTokenOutsList
-                , txInfoMint = mintingValue <> txInfoMint baseTxInfo
-                , txInfoData =
-                    txInfoData baseTxInfo
-                        <> mapMaybe sideUTXOToDatum ourTokenInsList
-                        <> mapMaybe sideUTXOToDatum ourTokenOutsList
-                }
-    mintingValue :: Value
-    mintingValue = foldMap (processAction ourSym) acts
-    checkSideAndCombine ::
-        Acc (SideUTXO Tokens) ->
-        SideUTXO Tokens ->
-        Maybe (Acc (SideUTXO Tokens))
-    checkSideAndCombine acc side@(SideUTXO typ _) = do
-        let sideAddress = case typ of
-                PubKeyUTXO pkh _ -> pubKeyHashAddress pkh
-                ScriptUTXO vh _ -> scriptHashAddress vh
-        Acc.cons <$> (guard (sideAddress /= ourAddress) $> side) <*> pure acc
-    createTxInInfos :: [SideUTXO Tokens] -> [TxInInfo]
-    createTxInInfos xs =
-        let outRefs = TxOutRef (configTxId conf) <$> [1 ..]
-         in zipWith TxInInfo outRefs . fmap (sideToTxOut ourSym) $ xs
+        sym <- asks configCurrencySymbol
+        let purpose = Minting sym
+        baseInfo <- Base.baseTxInfo
+        let inner = mbInner builder
+        (baseIn, baseInData) <-
+            Base.toInInfoDatums id
+                . Base.bbInputs
+                $ inner
+        (tokensIn, tokensInData) <-
+            Base.toInInfoDatums (tokensToValue sym)
+                . mbTokensInputs
+                $ builder
+        let (baseOut, baseOutData) =
+                Base.toTxOutDatums id
+                    . Base.bbOutputs
+                    $ inner
+        let (tokensOut, tokensOutData) =
+                Base.toTxOutDatums (tokensToValue sym)
+                    . mbTokensOutputs
+                    $ builder
+        value <- Base.combineExternalMints . Base.bbMints $ inner
+        let fullInfo =
+                baseInfo
+                    { txInfoMint = foldMap (processAction sym) acts <> value
+                    , txInfoInputs = toList $ baseIn <> tokensIn
+                    , txInfoOutputs = toList $ baseOut <> tokensOut
+                    , txInfoSignatories = toList . Base.bbSignatures $ inner
+                    , txInfoData =
+                        toList $
+                            (Base.datumWithHash <$> Base.bbDatums inner)
+                                <> baseInData
+                                <> baseOutData
+                                <> tokensInData
+                                <> tokensOutData
+                    }
+        pure . ScriptContext fullInfo $ purpose
 
 -- Helpers
 
-sideUTXOToDatum :: SideUTXO Tokens -> Maybe (DatumHash, Datum)
-sideUTXOToDatum (SideUTXO typ _) = case typ of
-    PubKeyUTXO _ mDat -> Base.datumWithHash <$> mDat
-    ScriptUTXO _ dat -> Just . Base.datumWithHash $ dat
-
-sideToTxOut :: CurrencySymbol -> SideUTXO Tokens -> TxOut
-sideToTxOut sym (SideUTXO typ (T name amount)) =
-    let value = Value.singleton sym name amount
-     in case typ of
-            PubKeyUTXO pkh mDat ->
-                TxOut (pubKeyHashAddress pkh) value $ datumHash . dataToDatum <$> mDat
-            ScriptUTXO vh dat ->
-                TxOut (scriptHashAddress vh) value . Just . datumHash . dataToDatum $ dat
+tokensToValue :: CurrencySymbol -> Tokens -> Value
+tokensToValue sym (T name amount) = Value.singleton sym name amount
 
 processAction :: CurrencySymbol -> MintingAction -> Value
 processAction sym =
@@ -447,5 +444,6 @@ otherScriptTokens ::
 otherScriptTokens vh x =
     SideUTXO (ScriptUTXO vh . Base.datafy $ x)
 
+{-
 dataToDatum :: Data -> Datum
-dataToDatum = Datum . BuiltinData
+dataToDatum = Datum . BuiltinData -}
