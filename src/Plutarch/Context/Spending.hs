@@ -289,7 +289,10 @@ spendingContext conf builder (ValidatorUTXO d v) = Base.runBuild go conf
             foldM validatorInInfoDatums (mempty, mempty)
                 . sbValidatorInputs
                 $ builder
-        vOut <- traverse validatorTxOut . sbValidatorOutputs $ builder
+        (vOut, vOutData) <-
+            foldM validatorOutDatums (mempty, mempty)
+                . sbValidatorOutputs
+                $ builder
         inInfo <- createOwnInfo
         let inData = Base.datumWithHash . Base.datafy $ d
         let fullInfo =
@@ -304,6 +307,7 @@ spendingContext conf builder (ValidatorUTXO d v) = Base.runBuild go conf
                                 <> baseInData
                                 <> baseOutData
                                 <> vInData
+                                <> vOutData
                     }
         pure . ScriptContext fullInfo $ purpose
     createOwnInfo :: Build TxInInfo
@@ -349,3 +353,14 @@ validatorInInfoDatums (acc1, acc2) vutxo@(ValidatorUTXO d _) = do
     let txInInfo = TxInInfo ref txOut
     let vdata = Base.datumWithHash . Base.datafy $ d
     pure (pure txInInfo <> acc1, pure vdata <> acc2)
+
+validatorOutDatums ::
+    forall (datum :: Type) (p :: S -> Type).
+    (PUnsafeLiftDecl p, PLifted p ~ datum, PIsData p) =>
+    (Acc TxOut, Acc (DatumHash, Datum)) ->
+    ValidatorUTXO datum ->
+    Build (Acc TxOut, Acc (DatumHash, Datum))
+validatorOutDatums (acc1, acc2) vutxo@(ValidatorUTXO d _) = do
+    txOut <- validatorTxOut vutxo
+    let vdata = Base.datumWithHash . Base.datafy $ d
+    pure (pure txOut <> acc1, pure vdata <> acc2)  
