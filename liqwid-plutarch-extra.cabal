@@ -1,0 +1,78 @@
+cabal-version:      3.0
+name:               liqwid-plutarch-extra
+version:            1.0.0
+synopsis:           A collection of Plutarch extras from Liqwid Labs
+description:        Several useful data types and functions for Plutarch.
+homepage:           https://github.com/Liqwid-Labs/liqwid-plutarch-extra
+bug-reports:        https://github.com/Liqwid-Labs/liqwid-plutarch-extra/issues
+license:            Apache-2.0
+license-file:       LICENSE
+author:             Koz Ross
+maintainer:         Koz Ross <koz@mlabs.city>
+copyright:          (C) 2022 Liqwid Labs
+category:           Test
+build-type:         Simple
+tested-with:        GHC ==9.2.1
+extra-source-files:
+  LICENSE
+  README.md
+
+source-repository head
+  type:     git
+  location: https://github.com/Liqwid-Labs/liqwid-plutarch-extra
+
+-- Common sections
+
+common common-lang
+  ghc-options:
+    -Wall -Wcompat -Wincomplete-uni-patterns
+    -Wincomplete-record-updates -Wredundant-constraints
+    -Wmissing-export-lists -Wmissing-deriving-strategies -Werror
+
+  build-depends:
+    , base            ^>=4.16
+    , plutarch
+    , plutarch-extra
+
+  default-extensions:
+    BangPatterns
+    BinaryLiterals
+    ConstraintKinds
+    DataKinds
+    DeriveTraversable
+    DerivingVia
+    EmptyCase
+    FlexibleContexts
+    FlexibleInstances
+    GeneralisedNewtypeDeriving
+    HexFloatLiterals
+    InstanceSigs
+    KindSignatures
+    LambdaCase
+    MultiParamTypeClasses
+    NumericUnderscores
+    OverloadedStrings
+    ScopedTypeVariables
+    StandaloneDeriving
+    TupleSections
+    TypeOperators
+
+  default-language:   Haskell2010
+
+-- Libraries
+
+library
+  import:          common-lang
+  exposed-modules:
+    Plutarch.Extra.Applicative
+    Plutarch.Extra.Bool
+    Plutarch.Extra.Const
+    Plutarch.Extra.Function
+    Plutarch.Extra.Functor
+    Plutarch.Extra.Identity
+    Plutarch.Extra.Sum
+    Plutarch.Extra.These
+    Plutarch.Extra.Traversable
+
+  build-depends:   generics-sop
+  hs-source-dirs:  src
