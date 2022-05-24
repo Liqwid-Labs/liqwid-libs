@@ -25,7 +25,7 @@ import Plutarch (
 import Plutarch.Bool (PEq, POrd)
 import Plutarch.Builtin (PIsData)
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
-import Plutarch.Extra.Functor (PFunctor (PCovariantable, pfmap))
+import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap))
 import Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Integer (PIntegral)
 import Plutarch.Show (PShow)
@@ -94,7 +94,7 @@ deriving anyclass instance (PShow a) => PShow (PSum a)
 
 -- | @since 1.0.0
 instance PFunctor PSum where
-    type PCovariantable PSum = Top
+    type PSubcategory PSum = Top
     pfmap = phoistAcyclic $
         plam $ \f t -> unTermCont $ do
             PSum t' <- pmatchC t

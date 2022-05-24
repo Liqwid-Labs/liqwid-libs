@@ -45,8 +45,8 @@ import Plutarch.DataRepr (
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
 import Plutarch.Extra.Bool (pcompare)
 import Plutarch.Extra.Functor (
-    PBifunctor (PBicovariantableLeft, PBicovariantableRight, pbimap, psecond),
-    PFunctor (PCovariantable, pfmap),
+    PBifunctor (PSubcategoryLeft, PSubcategoryRight, pbimap, psecond),
+    PFunctor (PSubcategory, pfmap),
  )
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.Extra.Traversable (PTraversable (ptraverse))
@@ -104,13 +104,13 @@ deriving anyclass instance (PShow a, PShow b) => PShow (PThese a b)
 
 -- | @since 1.0.0
 instance PFunctor (PThese a) where
-    type PCovariantable (PThese a) = Top
+    type PSubcategory (PThese a) = Top
     pfmap = psecond
 
 -- | @since 1.0.0
 instance PBifunctor PThese where
-    type PBicovariantableLeft PThese = Top
-    type PBicovariantableRight PThese = Top
+    type PSubcategoryLeft PThese = Top
+    type PSubcategoryRight PThese = Top
     pbimap = phoistAcyclic $
         plam $ \f g t -> unTermCont $ do
             t' <- pmatchC t
@@ -211,13 +211,13 @@ deriving via
 
 -- | @since 1.0.0
 instance (PIsData a) => PFunctor (PDThese a) where
-    type PCovariantable (PDThese a) = PIsData
+    type PSubcategory (PDThese a) = PIsData
     pfmap = psecond
 
 -- | @since 1.0.0
 instance PBifunctor PDThese where
-    type PBicovariantableLeft PDThese = PIsData
-    type PBicovariantableRight PDThese = PIsData
+    type PSubcategoryLeft PDThese = PIsData
+    type PSubcategoryRight PDThese = PIsData
     pbimap = phoistAcyclic $
         plam $ \f g t -> unTermCont $ do
             t' <- pmatchC t

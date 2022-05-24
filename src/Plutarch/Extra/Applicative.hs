@@ -1,4 +1,5 @@
 {-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -24,10 +25,12 @@ import Plutarch (
     (#),
     type (:-->),
  )
-import Plutarch.Builtin (PBuiltinList)
+import Plutarch.Api.V1.Maybe (PMaybeData (PDJust, PDNothing))
+import Plutarch.Builtin (PBuiltinList, pdata, pfromData)
+import Plutarch.DataRepr (pdcons, pdnil, pfield)
 import Plutarch.Either (PEither (PLeft, PRight))
 import Plutarch.Extra.Function (papply, pconst)
-import Plutarch.Extra.Functor (PFunctor (PCovariantable))
+import Plutarch.Extra.Functor (PFunctor (PSubcategory))
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.List (PList, pconcat, pcons, pmap, pnil, puncons)
 import Plutarch.Maybe (PMaybe (PJust, PNothing))
@@ -37,7 +40,7 @@ import Plutarch.Pair (PPair (PPair))
 class (PFunctor f) => PApply (f :: (S -> Type) -> S -> Type) where
     pliftA2 ::
         forall (a :: S -> Type) (b :: S -> Type) (c :: S -> Type) (s :: S).
-        (PCovariantable f a, PCovariantable f b, PCovariantable f c) =>
+        (PSubcategory f a, PSubcategory f b, PSubcategory f c) =>
         Term s ((a :--> b :--> c) :--> f a :--> f b :--> f c)
 
 -- | @since 1.0.0
@@ -49,6 +52,19 @@ instance PApply PMaybe where
             pure . pcon $ case (xs', ys') of
                 (PJust x, PJust y) -> PJust $ f # x # y
                 _ -> PNothing
+
+-- | @since 1.0.0
+instance PApply PMaybeData where
+    pliftA2 = phoistAcyclic $
+        plam $ \f xs ys -> unTermCont $ do
+            xs' <- pmatchC xs
+            ys' <- pmatchC ys
+            case (xs', ys') of
+                (PDJust x, PDJust y) -> do
+                    x' <- pletC (pfromData $ pfield @"_0" # x)
+                    y' <- pletC (pfromData $ pfield @"_0" # y)
+                    pure . pcon . PDJust $ pdcons # pdata (f # x' # y') # pdnil
+                _ -> pure . pcon . PDNothing $ pdnil
 
 -- | @since 1.0.0
 instance PApply PList where
@@ -100,12 +116,16 @@ instance PApply (PEither e) where
 class (PApply f) => PApplicative (f :: (S -> Type) -> S -> Type) where
     ppure ::
         forall (a :: S -> Type) (s :: S).
-        (PCovariantable f a) =>
+        (PSubcategory f a) =>
         Term s (a :--> f a)
 
 -- | @since 1.0.0
 instance PApplicative PMaybe where
     ppure = phoistAcyclic $ plam $ pcon . PJust
+
+-- | @since 1.0.0
+instance PApplicative PMaybeData where
+    ppure = phoistAcyclic $ plam $ \x -> pcon . PDJust $ pdcons # pdata x # pdnil
 
 -- | @since 1.0.0
 instance PApplicative PList where
@@ -126,7 +146,7 @@ instance PApplicative (PEither e) where
 -- | @since 1.0.0
 (#<*>) ::
     forall (f :: (S -> Type) -> S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S).
-    (PCovariantable f (a :--> b), PCovariantable f a, PCovariantable f b, PApply f) =>
+    (PSubcategory f (a :--> b), PSubcategory f a, PSubcategory f b, PApply f) =>
     Term s (f (a :--> b)) ->
     Term s (f a) ->
     Term s (f b)
@@ -135,7 +155,7 @@ fs #<*> xs = pliftA2 # papply # fs # xs
 -- | @since 1.0.0
 (#*>) ::
     forall (f :: (S -> Type) -> S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S).
-    (PCovariantable f a, PCovariantable f b, PApply f) =>
+    (PSubcategory f a, PSubcategory f b, PApply f) =>
     Term s (f a) ->
     Term s (f b) ->
     Term s (f b)
@@ -144,7 +164,7 @@ t #*> t' = pliftA2 # plam (\_ x -> x) # t # t'
 -- | @since 1.0.0
 (#<*) ::
     forall (f :: (S -> Type) -> S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S).
-    (PCovariantable f a, PCovariantable f b, PApply f) =>
+    (PSubcategory f a, PSubcategory f b, PApply f) =>
     Term s (f a) ->
     Term s (f b) ->
     Term s (f a)

@@ -1,4 +1,5 @@
 {-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Plutarch.Extra.Traversable (
     -- * Type classes
@@ -29,11 +30,13 @@ import Plutarch (
     (#),
     type (:-->),
  )
-import Plutarch.Builtin (PBuiltinList)
+import Plutarch.Api.V1.Maybe (PMaybeData (PDJust, PDNothing))
+import Plutarch.Builtin (PBuiltinList, pdata, pfromData)
+import Plutarch.DataRepr (pdcons, pdnil, pfield)
 import Plutarch.Either (PEither (PLeft, PRight))
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
 import Plutarch.Extra.Const (PConst (PConst))
-import Plutarch.Extra.Functor (PFunctor (PCovariantable, pfmap))
+import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap))
 import Plutarch.Extra.Identity (PIdentity (PIdentity))
 import Plutarch.Extra.Sum (PSum (PSum))
 import Plutarch.Extra.TermCont (pletC, pmatchC)
@@ -47,11 +50,11 @@ class (PFunctor t) => PTraversable (t :: (S -> Type) -> S -> Type) where
     ptraverse ::
         forall (f :: (S -> Type) -> S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S).
         ( PApplicative f
-        , PCovariantable f a
-        , PCovariantable f b
-        , PCovariantable f (t b)
-        , PCovariantable t a
-        , PCovariantable t b
+        , PSubcategory f a
+        , PSubcategory f b
+        , PSubcategory f (t b)
+        , PSubcategory t a
+        , PSubcategory t b
         ) =>
         Term s ((a :--> f b) :--> t a :--> f (t b))
 
@@ -80,6 +83,18 @@ instance PTraversable PMaybe where
                 PJust x -> do
                     res <- pletC (f # x)
                     pure $ pfmap # plam (pcon . PJust) # res
+
+-- | @since 1.0.0
+instance PTraversable PMaybeData where
+    ptraverse = phoistAcyclic $
+        plam $ \f t -> unTermCont $ do
+            t' <- pmatchC t
+            case t' of
+                PDNothing _ -> pure $ ppure # (pcon . PDNothing $ pdnil)
+                PDJust t'' -> do
+                    x <- pletC (pfromData $ pfield @"_0" # t'')
+                    res <- pletC (f # x)
+                    pure $ pfmap # plam (\y -> pcon . PDJust $ pdcons # pdata y # pdnil) # res
 
 -- | @since 1.0.0
 instance PTraversable PList where
@@ -123,9 +138,9 @@ class (PTraversable t) => PSemiTraversable (t :: (S -> Type) -> S -> Type) where
     psemitraverse ::
         forall (f :: (S -> Type) -> S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S).
         ( PApply f
-        , PCovariantable f a
-        , PCovariantable f b
-        , PCovariantable f (t b)
+        , PSubcategory f a
+        , PSubcategory f b
+        , PSubcategory f (t b)
         ) =>
         Term s ((a :--> f b) :--> t a :--> f (t b))
 
@@ -195,7 +210,7 @@ pfold ::
     forall (t :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
     ( PTraversable t
     , forall (s' :: S). Monoid (Term s' a)
-    , PCovariantable t a
+    , PSubcategory t a
     ) =>
     Term s (t a :--> a)
 pfold = phoistAcyclic $
@@ -216,7 +231,7 @@ pfoldMap ::
     forall (t :: (S -> Type) -> S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S).
     ( PTraversable t
     , forall (s' :: S). Monoid (Term s' b)
-    , PCovariantable t a
+    , PSubcategory t a
     ) =>
     Term s ((a :--> b) :--> t a :--> b)
 pfoldMap = phoistAcyclic $
@@ -235,7 +250,7 @@ pfoldMap = phoistAcyclic $
 -}
 plength ::
     forall (t :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
-    (PTraversable t, PCovariantable t a) =>
+    (PTraversable t, PSubcategory t a) =>
     Term s (t a :--> PInteger)
 plength = phoistAcyclic $
     plam $ \t -> unTermCont $ do
@@ -255,7 +270,7 @@ psum ::
     forall (t :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
     ( PTraversable t
     , forall (s' :: S). Num (Term s' a)
-    , PCovariantable t a
+    , PSubcategory t a
     ) =>
     Term s (t a :--> a)
 psum = phoistAcyclic $

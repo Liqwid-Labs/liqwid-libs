@@ -26,8 +26,8 @@ import Plutarch.Bool (PEq, POrd)
 import Plutarch.Builtin (PIsData)
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
 import Plutarch.Extra.Functor (
-    PBifunctor (PBicovariantableLeft, PBicovariantableRight, pbimap, psecond),
-    PFunctor (PCovariantable, pfmap),
+    PBifunctor (PSubcategoryLeft, PSubcategoryRight, pbimap, psecond),
+    PFunctor (PSubcategory, pfmap),
  )
 import Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Integer (PIntegral)
@@ -92,13 +92,13 @@ deriving anyclass instance (PShow a) => PShow (PConst a b)
 
 -- | @since 1.0.0
 instance PFunctor (PConst a) where
-    type PCovariantable (PConst a) = Top
+    type PSubcategory (PConst a) = Top
     pfmap = psecond
 
 -- | @since 1.0.0
 instance PBifunctor PConst where
-    type PBicovariantableLeft PConst = Top
-    type PBicovariantableRight PConst = Top
+    type PSubcategoryLeft PConst = Top
+    type PSubcategoryRight PConst = Top
     pbimap = phoistAcyclic $
         plam $ \f _ t -> unTermCont $ do
             PConst tx <- pmatchC t
