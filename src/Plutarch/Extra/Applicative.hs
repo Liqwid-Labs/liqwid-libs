@@ -24,10 +24,12 @@ import Plutarch (
     (#),
     type (:-->),
  )
+import Plutarch.Builtin (PBuiltinList)
 import Plutarch.Either (PEither (PLeft, PRight))
 import Plutarch.Extra.Function (papply, pconst)
 import Plutarch.Extra.Functor (PFunctor (PCovariantable))
-import Plutarch.Extra.TermCont (pmatchC)
+import Plutarch.Extra.TermCont (pletC, pmatchC)
+import Plutarch.List (PList, pconcat, pcons, pmap, pnil, puncons)
 import Plutarch.Maybe (PMaybe (PJust, PNothing))
 import Plutarch.Pair (PPair (PPair))
 
@@ -48,7 +50,29 @@ instance PApply PMaybe where
                 (PJust x, PJust y) -> PJust $ f # x # y
                 _ -> PNothing
 
--- TODO: PList, PBuiltinList, because it's a head-scratcher
+-- | @since 1.0.0
+instance PApply PList where
+    pliftA2 = phoistAcyclic $
+        plam $ \f xs ys -> unTermCont $ do
+            t <- pmatchC (puncons # ys)
+            case t of
+                PNothing -> pure pnil
+                PJust t' -> do
+                    PPair thead ttail <- pmatchC t'
+                    res <- pletC (pmap # plam (\x -> f # x # thead) # xs)
+                    pure $ pconcat # res # (pliftA2 # f # xs # ttail)
+
+-- | @since 1.0.0
+instance PApply PBuiltinList where
+    pliftA2 = phoistAcyclic $
+        plam $ \f xs ys -> unTermCont $ do
+            t <- pmatchC (puncons # ys)
+            case t of
+                PNothing -> pure pnil
+                PJust t' -> do
+                    PPair thead ttail <- pmatchC t'
+                    res <- pletC (pmap # plam (\x -> f # x # thead) # xs)
+                    pure $ pconcat # res # (pliftA2 # f # xs # ttail)
 
 -- | @since 1.0.0
 instance (forall (s :: S). Semigroup (Term s a)) => PApply (PPair a) where
@@ -83,7 +107,13 @@ class (PApply f) => PApplicative (f :: (S -> Type) -> S -> Type) where
 instance PApplicative PMaybe where
     ppure = phoistAcyclic $ plam $ pcon . PJust
 
--- TODO: PList, PBuiltinList due to Apply
+-- | @since 1.0.0
+instance PApplicative PList where
+    ppure = phoistAcyclic $ plam $ \x -> pcons # x # pnil
+
+-- | @since 1.0.0
+instance PApplicative PBuiltinList where
+    ppure = phoistAcyclic $ plam $ \x -> pcons # x # pnil
 
 -- | @since 1.0.0
 instance (forall (s :: S). Monoid (Term s a)) => PApplicative (PPair a) where

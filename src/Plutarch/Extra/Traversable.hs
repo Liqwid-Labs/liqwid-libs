@@ -29,17 +29,18 @@ import Plutarch (
     (#),
     type (:-->),
  )
+import Plutarch.Builtin (PBuiltinList)
 import Plutarch.Either (PEither (PLeft, PRight))
-import Plutarch.Extra.Applicative (PApplicative (ppure), PApply)
+import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
 import Plutarch.Extra.Const (PConst (PConst))
 import Plutarch.Extra.Functor (PFunctor (PCovariantable, pfmap))
 import Plutarch.Extra.Identity (PIdentity (PIdentity))
 import Plutarch.Extra.Sum (PSum (PSum))
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.Integer (PInteger)
+import Plutarch.List (PList, pcons, pnil, puncons)
 import Plutarch.Maybe (PMaybe (PJust, PNothing))
 import Plutarch.Pair (PPair (PPair))
-import Plutarch.Unit (PUnit)
 
 -- | @since 1.0.0
 class (PFunctor t) => PTraversable (t :: (S -> Type) -> S -> Type) where
@@ -49,6 +50,8 @@ class (PFunctor t) => PTraversable (t :: (S -> Type) -> S -> Type) where
         , PCovariantable f a
         , PCovariantable f b
         , PCovariantable f (t b)
+        , PCovariantable t a
+        , PCovariantable t b
         ) =>
         Term s ((a :--> f b) :--> t a :--> f (t b))
 
@@ -78,7 +81,27 @@ instance PTraversable PMaybe where
                     res <- pletC (f # x)
                     pure $ pfmap # plam (pcon . PJust) # res
 
--- TODO: PList, PBuiltinList, because tedium
+-- | @since 1.0.0
+instance PTraversable PList where
+    ptraverse = phoistAcyclic $
+        plam $ \f xs -> unTermCont $ do
+            t <- pmatchC (puncons # xs)
+            case t of
+                PNothing -> pure $ ppure # pnil
+                PJust t' -> do
+                    PPair thead ttail <- pmatchC t'
+                    pure $ pliftA2 # pcons # (f # thead) # (ptraverse # f # ttail)
+
+-- | @since 1.0.0
+instance PTraversable PBuiltinList where
+    ptraverse = phoistAcyclic $
+        plam $ \f xs -> unTermCont $ do
+            t <- pmatchC (puncons # xs)
+            case t of
+                PNothing -> pure $ ppure # pnil
+                PJust t' -> do
+                    PPair thead ttail <- pmatchC t'
+                    pure $ pliftA2 # pcons # (f # thead) # (ptraverse # f # ttail)
 
 -- | @since 1.0.0
 instance PTraversable (PPair a) where
@@ -143,7 +166,7 @@ psemifold = phoistAcyclic $
   where
     go ::
         forall (s' :: S).
-        Term s' (a :--> PConst a PUnit)
+        Term s' (a :--> PConst a a)
     go = phoistAcyclic $ plam $ pcon . PConst
 
 {- | Collapse a non-empty \'structure\' with a projection into a 'Semigroup'.
@@ -161,7 +184,7 @@ psemifoldMap = phoistAcyclic $
   where
     go ::
         forall (s' :: S).
-        Term s' ((a :--> b) :--> a :--> PConst b PUnit)
+        Term s' ((a :--> b) :--> a :--> PConst b a)
     go = phoistAcyclic $ plam $ \f x -> pcon . PConst $ f # x
 
 {- | Collapse a possibly empty \'structure\' full of a 'Monoid'.
@@ -170,7 +193,10 @@ psemifoldMap = phoistAcyclic $
 -}
 pfold ::
     forall (t :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
-    (PTraversable t, forall (s' :: S). Monoid (Term s' a)) =>
+    ( PTraversable t
+    , forall (s' :: S). Monoid (Term s' a)
+    , PCovariantable t a
+    ) =>
     Term s (t a :--> a)
 pfold = phoistAcyclic $
     plam $ \t -> unTermCont $ do
@@ -179,7 +205,7 @@ pfold = phoistAcyclic $
   where
     go ::
         forall (s' :: S).
-        Term s' (a :--> PConst a PUnit)
+        Term s' (a :--> PConst a a)
     go = phoistAcyclic $ plam $ pcon . PConst
 
 {- | Collapse a possibly empty \'structure\' with a projection into a 'Monoid'.
@@ -188,7 +214,10 @@ pfold = phoistAcyclic $
 -}
 pfoldMap ::
     forall (t :: (S -> Type) -> S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S).
-    (PTraversable t, forall (s' :: S). Monoid (Term s' b)) =>
+    ( PTraversable t
+    , forall (s' :: S). Monoid (Term s' b)
+    , PCovariantable t a
+    ) =>
     Term s ((a :--> b) :--> t a :--> b)
 pfoldMap = phoistAcyclic $
     plam $ \f t -> unTermCont $ do
@@ -197,7 +226,7 @@ pfoldMap = phoistAcyclic $
   where
     go ::
         forall (s' :: S).
-        Term s' ((a :--> b) :--> a :--> PConst b PUnit)
+        Term s' ((a :--> b) :--> a :--> PConst b a)
     go = phoistAcyclic $ plam $ \f x -> pcon . PConst $ f # x
 
 {- | Counts the number of elements in the \'structure\'.
@@ -206,7 +235,7 @@ pfoldMap = phoistAcyclic $
 -}
 plength ::
     forall (t :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
-    (PTraversable t) =>
+    (PTraversable t, PCovariantable t a) =>
     Term s (t a :--> PInteger)
 plength = phoistAcyclic $
     plam $ \t -> unTermCont $ do
@@ -224,7 +253,10 @@ plength = phoistAcyclic $
 -}
 psum ::
     forall (t :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
-    (PTraversable t, forall (s' :: S). Num (Term s' a)) =>
+    ( PTraversable t
+    , forall (s' :: S). Num (Term s' a)
+    , PCovariantable t a
+    ) =>
     Term s (t a :--> a)
 psum = phoistAcyclic $
     plam $ \t -> unTermCont $ do

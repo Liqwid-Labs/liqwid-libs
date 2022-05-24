@@ -29,7 +29,7 @@ import Plutarch.Builtin (PBuiltinList)
 import Plutarch.Either (PEither (PLeft, PRight))
 import Plutarch.Extra.Function (pconst, pidentity)
 import Plutarch.Extra.TermCont (pmatchC)
-import Plutarch.Lift (PLift)
+import Plutarch.Lift (PUnsafeLiftDecl)
 import Plutarch.List (PList, pmap)
 import Plutarch.Maybe (PMaybe (PJust, PNothing))
 import Plutarch.Pair (PPair (PPair))
@@ -60,7 +60,7 @@ instance PFunctor PList where
 
 -- | @since 1.0.0
 instance PFunctor PBuiltinList where
-    type PCovariantable PBuiltinList = PLift
+    type PCovariantable PBuiltinList = PUnsafeLiftDecl
     pfmap = phoistAcyclic $ plam $ \f t -> pmap # f # t
 
 -- | @since 1.0.0
