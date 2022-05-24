@@ -1054,13 +1054,13 @@
       "locked": {
         "lastModified": 1652353304,
         "narHash": "sha256-DeSwiDyJeI9had5OCxLiGtYeDl07Vic0cR8RETBLY9k=",
-        "owner": "Plutonomicon",
+        "owner": "Liqwid-Labs",
         "repo": "plutarch",
         "rev": "ae2059f11f24d47bedeaa18749d01711cddab0bc",
         "type": "github"
       },
       "original": {
-        "owner": "Plutonomicon",
+        "owner": "Liqwid-Labs",
         "ref": "staging",
         "repo": "plutarch",
         "type": "github"
