@@ -1,4 +1,4 @@
-# `plutarch-quickcheck`
+# `liqwid-plutarch-extra`
 
 ## What is this?
 
