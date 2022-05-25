@@ -67,6 +67,7 @@ library
     Plutarch.Api.V1.AssetClass
     Plutarch.Extra.Applicative
     Plutarch.Extra.Bool
+    Plutarch.Extra.Comonad
     Plutarch.Extra.Const
     Plutarch.Extra.Function
     Plutarch.Extra.Functor
@@ -75,6 +76,7 @@ library
     Plutarch.Extra.Numeric
     Plutarch.Extra.State
     Plutarch.Extra.Sum
+    Plutarch.Extra.Tagged
     Plutarch.Extra.These
     Plutarch.Extra.Traversable
 
