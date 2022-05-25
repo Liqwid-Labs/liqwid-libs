@@ -80,5 +80,9 @@ library
     Plutarch.Extra.These
     Plutarch.Extra.Traversable
 
-  build-depends:   generics-sop
+  build-depends:
+    , generics-sop
+    , plutus-tx
+    , tagged
+
   hs-source-dirs:  src
