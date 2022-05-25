@@ -71,6 +71,8 @@ library
     Plutarch.Extra.Function
     Plutarch.Extra.Functor
     Plutarch.Extra.Identity
+    Plutarch.Extra.Maybe
+    Plutarch.Extra.Numeric
     Plutarch.Extra.State
     Plutarch.Extra.Sum
     Plutarch.Extra.These
