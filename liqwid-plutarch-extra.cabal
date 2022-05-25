@@ -64,12 +64,14 @@ common common-lang
 library
   import:          common-lang
   exposed-modules:
+    Plutarch.Api.V1.AssetClass
     Plutarch.Extra.Applicative
     Plutarch.Extra.Bool
     Plutarch.Extra.Const
     Plutarch.Extra.Function
     Plutarch.Extra.Functor
     Plutarch.Extra.Identity
+    Plutarch.Extra.State
     Plutarch.Extra.Sum
     Plutarch.Extra.These
     Plutarch.Extra.Traversable
