@@ -69,6 +69,7 @@ library
     Plutarch.Api.V1.Value
     Plutarch.Extra.Applicative
     Plutarch.Extra.Bool
+    Plutarch.Extra.Category
     Plutarch.Extra.Comonad
     Plutarch.Extra.Const
     Plutarch.Extra.Function
@@ -77,6 +78,7 @@ library
     Plutarch.Extra.Map
     Plutarch.Extra.Maybe
     Plutarch.Extra.Numeric
+    Plutarch.Extra.Profunctor
     Plutarch.Extra.State
     Plutarch.Extra.Sum
     Plutarch.Extra.Tagged

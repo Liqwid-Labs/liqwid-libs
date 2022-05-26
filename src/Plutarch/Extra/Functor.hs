@@ -49,9 +49,44 @@ import Plutarch.Maybe (PMaybe (PJust, PNothing))
 import Plutarch.Pair (PPair (PPair))
 import Plutarch.Unit (PUnit (PUnit))
 
--- | @since 1.0.0
+{- | Describes a Plutarch-level covariant endofunctor. However, unlike in
+ Haskell, the endofunctor is defined over a subcategory of @Plut@, rather than
+ all of it.
+
+ Put another way, this is the Plutarch equivalent to 'Functor', but unlike in
+ Haskell, instead of requiring full parametricity, we are allowed to constrain
+ what we are parametric over.
+
+ = Laws
+
+ Formally, @f@ must be an endofunctor on a subcategory of @Plut@, as described
+ by the 'PSubcategory' constraint. This means that the following must hold:
+
+ * @'pfmap' '#' 'Plutarch.Extra.Category.pidentity'@ @=@
+ @'Plutarch.Extra.Category.pidentity'@
+ * @'pfmap' '#' (f 'Plutarch.Extra.Category.#>>>' g)@ @=@ @('pfmap' '#' f)
+ 'Plutarch.Extra.Category.#>>>' ('pfmap' '#' g)@
+
+ If @'PSubcategory' f@ is 'Top' (that is, @f@ is defined as an endofunctor on
+ /all/ of @Plut@), the second law is a free theorem; however, in any other
+ case, it may not be.
+
+ @since 1.0.0
+-}
 class PFunctor (f :: (S -> Type) -> S -> Type) where
+    -- | Describes the subcategory of @Plut@ that @f@ is an endofunctor on. Put
+    -- another way, this describes what kind of types @f@ is \'parametric
+    -- over\'.
+    --
+    -- Common choices for this are:
+    --
+    -- * 'Top', which means \'parametric over anything of kind @'S' -> 'Type'@\'
+    -- * 'PIsData', which means \'parametric over things which are
+    -- @Data@-encodable\'
+    -- * 'PUnsafeLiftDecl', which means \'parametric over things that have a
+    -- Haskell-level equivalent\'
     type PSubcategory f :: (S -> Type) -> Constraint
+
     pfmap ::
         forall (a :: S -> Type) (b :: S -> Type) (s :: S).
         (PSubcategory f a, PSubcategory f b) =>
@@ -105,7 +140,10 @@ instance PFunctor (PEither e) where
     type PSubcategory (PEither e) = Top
     pfmap = psecond
 
--- | @since 1.0.0
+{- | Replace all locations in the input with the same value.
+
+ @since 1.0.0
+-}
 (#<$) ::
     forall (f :: (S -> Type) -> S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S).
     (PFunctor f, PSubcategory f a, PSubcategory f b) =>
@@ -114,7 +152,12 @@ instance PFunctor (PEither e) where
     Term s (f a)
 x #<$ f = pfmap # (pconst # x) # f
 
--- | @since 1.0.0
+infixl 4 #<$
+
+{- | Flipped version of '#<$'.
+
+ @since 1.0.0
+-}
 (#$>) ::
     forall (f :: (S -> Type) -> S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S).
     (PFunctor f, PSubcategory f a, PSubcategory f b) =>
@@ -123,7 +166,10 @@ x #<$ f = pfmap # (pconst # x) # f
     Term s (f b)
 (#$>) = flip (#<$)
 
--- | @since 1.0.0
+{- | Infix, 'Term'-level version of 'pfmap'.
+
+ @since 1.0.0
+-}
 (#<$>) ::
     forall (f :: (S -> Type) -> S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S).
     (PFunctor f, PSubcategory f a, PSubcategory f b) =>
@@ -132,7 +178,12 @@ x #<$ f = pfmap # (pconst # x) # f
     Term s (f b)
 f #<$> t = pfmap # f # t
 
--- | @since 1.0.0
+infixl 4 #<$>
+
+{- | Flipped version of '#<$>'.
+
+ @since 1.0.0
+-}
 (#<&>) ::
     forall (f :: (S -> Type) -> S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S).
     (PFunctor f, PSubcategory f a, PSubcategory f b) =>
@@ -141,7 +192,12 @@ f #<$> t = pfmap # f # t
     Term s (f b)
 (#<&>) = flip (#<$>)
 
--- | @since 1.0.0
+infixl 1 #<&>
+
+{- | Erases every location in the input.
+
+ @since 1.0.0
+-}
 pvoid ::
     forall (f :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
     (PFunctor f, PSubcategory f a, PSubcategory f PUnit) =>
@@ -149,10 +205,70 @@ pvoid ::
     Term s (f PUnit)
 pvoid t = t #$> pcon PUnit
 
--- | @since 1.0.0
+{- | Similar to 'PFunctor', but is covariant in /two/ parameters instead of one.
+ This means that types like 'PEither' don't need to be partially applied, as
+ is the case with 'PFunctor'. Formally, this represents a Plutarch-level
+ covariant bifunctor; just as with 'PFunctor' however, it is defined over a
+ subcategory of 'Plut'.
+
+ Similarly to 'PFunctor', this is the Plutarch equivalent of 'Bifunctor'.
+
+ = Laws
+
+ Formally, @f@ must be a bifunctor on a subcategory of @Plut@, as described by
+ 'PSubcategoryLeft' (for the first parameter) and 'PSubcategoryRight' (for the
+ second). For 'pbimap', this means the following must hold:
+
+ * @'pbimap' '#' 'Plutarch.Extra.Category.pidentity' '#'
+ 'Plutarch.Extra.Category.pidentity'@ @=@
+ @'Plutarch.Extra.Category.pidentity'@
+ * @'pbimap' '#' (f1 'Plutarch.Extra.Category.#>>>' f2) '#' (g1
+ 'Plutarch.Extra.Category.#>>>' g2)@ @=@ @('pbimap' '#' f1 '#' g1)
+ 'Plutarch.Extra.Category.#>>>' ('pbimap' '#' f2 '#' g2)@
+
+ Furthermore, @'PSubcategoryLeft f' ~ 'PSubcategoryRight' f@ should hold; this
+ may be required in the future. If both @'PSubcategoryLeft' f@ and
+ @'PSubcategoryRight' f@ are 'Top', the second law is a free theorem; however,
+ this does not hold in general.
+
+ If you define 'pfirst' and 'psecond', the following must also hold:
+
+ * @'pfirst' '#' 'Plutarch.Extra.Category.pidentity'@ @=@ @'psecond' '#'
+ 'Plutarch.Extra.Category.pidentity'@ @=@
+ @'Plutarch.Extra.Category.pidentity'@
+ * @'pfirst' '#' f@ @=@ @'pbimap' '#' f '#'
+ 'Plutarch.Extra.Category.pidentity'@
+ * @'psecond' '#' f@ @=@ @'pbimap' '#' 'Plutarch.Extra.Category.pidentity' '#'
+ f@
+ * @'pfirst' '#' (f 'Plutarch.Extra.Category.#>>>' g)@ @=@ @('pfirst' '#' f)
+ 'Plutarch.Extra.Category.#>>>' ('pfirst' '#' g)@
+ * @'psecond' '#' (f 'Plutarch.Extra.Category.#>>>' g)@ @=@ @('psecond' '#' f)
+ 'Plutarch.Extra.Category.#>>>' ('psecond' '#' g)@
+
+ If you define 'pfirst' and 'psecond' /instead/ of 'pbimap', the following
+ must also hold:
+
+ * @('pfirst' '#' f) 'Plutarch.Extra.Category.#>>>' ('psecond' '#' g)@ @=@
+ @('psecond' '#' g) 'Plutarch.Extra.Category.#>>>' ('pfirst' '#' f)@ @=@
+ @'pbimap' '#' f '#' g@
+
+ = Note
+
+ If @f a@ is also an instance of 'PFunctor', @'PSubcategoryRight' f ~
+ 'PSubcategory' (f a)@ should hold, and we should have @'pfmap' = 'psecond'@;
+ once again, this is not currently enforced, but may be in the future.
+
+ @since 1.0.0
+-}
 class PBifunctor (f :: (S -> Type) -> (S -> Type) -> S -> Type) where
+    -- | Similar to 'PSubcategory', but for only the first parameter of @f@. See
+    -- the documentation on 'PSubcategory' for common choices here.
     type PSubcategoryLeft f :: (S -> Type) -> Constraint
+
+    -- | Similar to 'PSubcategory', but for only the second parameter of @f@.
+    -- See the documentation on 'PSubcategory' for common choices here.
     type PSubcategoryRight f :: (S -> Type) -> Constraint
+
     {-# MINIMAL pbimap | pfirst, psecond #-}
     pbimap ::
         forall (a :: S -> Type) (b :: S -> Type) (c :: S -> Type) (d :: S -> Type) (s :: S).
