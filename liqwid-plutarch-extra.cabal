@@ -72,6 +72,7 @@ library
     Plutarch.Extra.Function
     Plutarch.Extra.Functor
     Plutarch.Extra.Identity
+    Plutarch.Extra.Map
     Plutarch.Extra.Maybe
     Plutarch.Extra.Numeric
     Plutarch.Extra.State
