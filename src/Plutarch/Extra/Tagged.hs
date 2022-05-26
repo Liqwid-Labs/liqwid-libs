@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 -- Needed for Tagged instances for PlutusTx stuff
@@ -11,6 +12,7 @@ module Plutarch.Extra.Tagged (
     pretag,
 ) where
 
+import Data.Bifunctor (first)
 import Data.Kind (Type)
 import Data.Tagged (Tagged (Tagged))
 import Generics.SOP (I (I), Top)
@@ -27,7 +29,7 @@ import Plutarch (
     (#),
  )
 import Plutarch.Bool (PEq, POrd)
-import Plutarch.Builtin (PIsData)
+import Plutarch.Builtin (PAsData, PData, PIsData)
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
 import Plutarch.Extra.Comonad (PComonad (pextend, pextract))
 import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap))
@@ -39,6 +41,7 @@ import Plutarch.Lift (
     PUnsafeLiftDecl (PLifted),
  )
 import Plutarch.Show (PShow)
+import Plutarch.TryFrom (PTryFrom (PTryFromExcess, ptryFrom'))
 import Plutarch.Unsafe (punsafeCoerce)
 import qualified PlutusTx
 
@@ -103,6 +106,12 @@ deriving via
 deriving anyclass instance (PShow underlying) => PShow (PTagged tag underlying)
 
 -- | @since 1.0.0
+deriving via
+    (DerivePNewtype (PTagged tag underlying) underlying)
+    instance
+        (PTryFrom a underlying) => PTryFrom a (PTagged tag underlying)
+
+-- | @since 1.0.0
 instance PFunctor (PTagged tag) where
     type PSubcategory (PTagged tag) = Top
     pfmap = phoistAcyclic $
@@ -158,6 +167,16 @@ pretag ::
     Term s (PTagged tag a) ->
     Term s (PTagged tag' a)
 pretag = punsafeCoerce
+
+-- | @since 1.0.0
+instance
+    (PTryFrom PData (PAsData underlying)) =>
+    PTryFrom PData (PAsData (PTagged tag underlying))
+    where
+    type
+        PTryFromExcess PData (PAsData (PTagged tag underlying)) =
+            PTryFromExcess PData (PAsData underlying)
+    ptryFrom' d k = ptryFrom' @_ @(PAsData underlying) d $ k . first punsafeCoerce
 
 -- These are needed, because plutus-tx doesn't have them
 
