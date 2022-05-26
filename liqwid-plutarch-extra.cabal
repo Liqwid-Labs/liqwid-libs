@@ -65,6 +65,8 @@ library
   import:          common-lang
   exposed-modules:
     Plutarch.Api.V1.AssetClass
+    Plutarch.Api.V1.ScriptContext
+    Plutarch.Api.V1.Value
     Plutarch.Extra.Applicative
     Plutarch.Extra.Bool
     Plutarch.Extra.Comonad
