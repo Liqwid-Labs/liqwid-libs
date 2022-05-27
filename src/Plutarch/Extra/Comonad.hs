@@ -1,4 +1,5 @@
 module Plutarch.Extra.Comonad (
+    PExtend (..),
     PComonad (..),
 ) where
 
@@ -14,26 +15,66 @@ import Plutarch (
     type (:-->),
  )
 import Plutarch.Extra.Functor (PFunctor (PSubcategory))
-import Plutarch.Extra.TermCont (pmatchC)
+import Plutarch.Extra.TermCont (pletC, pmatchC)
+import Plutarch.List (PList, pcons, pnil, puncons)
+import Plutarch.Maybe (PMaybe (PJust, PNothing))
 import Plutarch.Pair (PPair (PPair))
 
 -- | @since 1.0.0
-class (PFunctor w) => PComonad (w :: (S -> Type) -> S -> Type) where
-    pextract ::
-        forall (a :: S -> Type) (s :: S).
-        (PSubcategory w a) =>
-        Term s (w a :--> a)
+class (PFunctor w) => PExtend (w :: (S -> Type) -> S -> Type) where
     pextend ::
         forall (a :: S -> Type) (b :: S -> Type) (s :: S).
         (PSubcategory w a, PSubcategory w b) =>
         Term s ((w a :--> b) :--> w a :--> w b)
 
+{- | Applies the given function over every proper suffix of a 'PList', from
+ longest to shortest, and returns their results in a 'PList'.
+
+ @since 1.0.0
+-}
+instance PExtend PList where
+    pextend ::
+        forall (a :: S -> Type) (b :: S -> Type) (s :: S).
+        Term s ((PList a :--> b) :--> PList a :--> PList b)
+    pextend = phoistAcyclic $
+        plam $ \f xs -> unTermCont $ do
+            t <- pmatchC (puncons # xs)
+            case t of
+                PNothing -> pure pnil
+                PJust t' -> do
+                    PPair _ ttail <- pmatchC t'
+                    pure $ go # f # ttail
+      where
+        go ::
+            forall (s' :: S).
+            Term s' ((PList a :--> b) :--> PList a :--> PList b)
+        go = phoistAcyclic $
+            plam $ \f xs -> unTermCont $ do
+                res <- pletC (f # xs)
+                t <- pmatchC (puncons # xs)
+                case t of
+                    PNothing -> pure $ pcons # res # pnil
+                    PJust t' -> do
+                        PPair _ ttail <- pmatchC t'
+                        pure $ pcons # res # (go # f # ttail)
+
+-- | @since 1.0.0
+instance PExtend (PPair a) where
+    pextend = phoistAcyclic $
+        plam $ \f p -> unTermCont $ do
+            PPair x _ <- pmatchC p
+            pure . pcon . PPair x $ f # p
+
+-- | @since 1.0.0
+class (PExtend w) => PComonad (w :: (S -> Type) -> S -> Type) where
+    pextract ::
+        forall (a :: S -> Type) (s :: S).
+        (PSubcategory w a) =>
+        Term s (w a :--> a)
+
+-- | @since 1.0.0
 instance PComonad (PPair a) where
     pextract = phoistAcyclic $
         plam $ \p -> unTermCont $ do
             PPair _ t <- pmatchC p
             pure t
-    pextend = phoistAcyclic $
-        plam $ \f p -> unTermCont $ do
-            PPair x _ <- pmatchC p
-            pure . pcon . PPair x $ f # p

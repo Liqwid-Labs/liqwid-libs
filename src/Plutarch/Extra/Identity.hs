@@ -24,7 +24,10 @@ import Plutarch (
 import Plutarch.Bool (PEq, POrd)
 import Plutarch.Builtin (PIsData)
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
-import Plutarch.Extra.Comonad (PComonad (pextend, pextract))
+import Plutarch.Extra.Comonad (
+    PComonad (pextract),
+    PExtend (pextend),
+ )
 import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap))
 import Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Integer (PIntegral)
@@ -96,12 +99,15 @@ instance PFunctor PIdentity where
             pure . pcon . PIdentity $ f # t'
 
 -- | @since 1.0.0
+instance PExtend PIdentity where
+    pextend = phoistAcyclic $ plam $ \f t -> pcon . PIdentity $ f # t
+
+-- | @since 1.0.0
 instance PComonad PIdentity where
     pextract = phoistAcyclic $
         plam $ \t -> unTermCont $ do
             PIdentity t' <- pmatchC t
             pure t'
-    pextend = phoistAcyclic $ plam $ \f t -> pcon . PIdentity $ f # t
 
 -- | @since 1.0.0
 instance PApply PIdentity where

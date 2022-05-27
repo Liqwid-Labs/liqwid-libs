@@ -31,7 +31,10 @@ import Plutarch (
 import Plutarch.Bool (PEq, POrd)
 import Plutarch.Builtin (PAsData, PData, PIsData)
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
-import Plutarch.Extra.Comonad (PComonad (pextend, pextract))
+import Plutarch.Extra.Comonad (
+    PComonad (pextract),
+    PExtend (pextend),
+ )
 import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap))
 import Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Extra.Traversable (PTraversable (ptraverse))
@@ -120,12 +123,15 @@ instance PFunctor (PTagged tag) where
             pure . pcon . PTagged $ f # t'
 
 -- | @since 1.0.0
+instance PExtend (PTagged tag) where
+    pextend = phoistAcyclic $ plam $ \f t -> pcon . PTagged $ f # t
+
+-- | @since 1.0.0
 instance PComonad (PTagged tag) where
     pextract = phoistAcyclic $
         plam $ \t -> unTermCont $ do
             PTagged t' <- pmatchC t
             pure t'
-    pextend = phoistAcyclic $ plam $ \f t -> pcon . PTagged $ f # t
 
 -- | @since 1.0.0
 instance PApply (PTagged tag) where

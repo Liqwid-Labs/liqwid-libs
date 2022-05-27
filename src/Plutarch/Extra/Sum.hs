@@ -25,6 +25,7 @@ import Plutarch (
 import Plutarch.Bool (PEq, POrd)
 import Plutarch.Builtin (PIsData)
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
+import Plutarch.Extra.Comonad (PComonad (pextract), PExtend (pextend))
 import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap))
 import Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Integer (PIntegral)
@@ -99,6 +100,17 @@ instance PFunctor PSum where
         plam $ \f t -> unTermCont $ do
             PSum t' <- pmatchC t
             pure . pcon . PSum $ f # t'
+
+-- | @since 1.0.0
+instance PExtend PSum where
+    pextend = phoistAcyclic $ plam $ \f t -> pcon . PSum $ f # t
+
+-- | @since 1.0.0
+instance PComonad PSum where
+    pextract = phoistAcyclic $
+        plam $ \t -> unTermCont $ do
+            PSum t' <- pmatchC t
+            pure t'
 
 -- | @since 1.0.0
 instance PApply PSum where

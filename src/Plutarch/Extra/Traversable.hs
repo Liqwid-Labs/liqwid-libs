@@ -11,8 +11,10 @@ module Plutarch.Extra.Traversable (
     -- ** Folds
     psemifold,
     psemifoldMap,
+    psemifoldComonad,
     pfold,
     pfoldMap,
+    pfoldComonad,
 
     -- ** Specialized folds
     plength,
@@ -35,6 +37,7 @@ import Plutarch.Builtin (PBuiltinList, pdata, pfromData)
 import Plutarch.DataRepr (pdcons, pdnil, pfield)
 import Plutarch.Either (PEither (PLeft, PRight))
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
+import Plutarch.Extra.Comonad (PComonad (pextract))
 import Plutarch.Extra.Const (PConst (PConst))
 import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap))
 import Plutarch.Extra.Identity (PIdentity (PIdentity))
@@ -202,6 +205,26 @@ psemifoldMap = phoistAcyclic $
         Term s' ((a :--> b) :--> a :--> PConst b a)
     go = phoistAcyclic $ plam $ \f x -> pcon . PConst $ f # x
 
+{- | Collapse a non-empty \'structure\' with a projection into a 'PComonad'.
+ This is the most general semifold possible.
+
+ @since 1.0.0
+-}
+psemifoldComonad ::
+    forall
+        (t :: (S -> Type) -> S -> Type)
+        (f :: (S -> Type) -> S -> Type)
+        (a :: S -> Type)
+        (b :: S -> Type)
+        (s :: S).
+    ( PComonad f
+    , PSemiTraversable t
+    , forall (s' :: S). Semigroup (Term s' (f b))
+    , PSubcategory f b
+    ) =>
+    Term s ((a :--> f b) :--> t a :--> b)
+psemifoldComonad = phoistAcyclic $ plam $ \f t -> pextract # (psemifoldMap # f # t)
+
 {- | Collapse a possibly empty \'structure\' full of a 'Monoid'.
 
  @since 1.0.0
@@ -244,6 +267,27 @@ pfoldMap = phoistAcyclic $
         Term s' ((a :--> b) :--> a :--> PConst b a)
     go = phoistAcyclic $ plam $ \f x -> pcon . PConst $ f # x
 
+{- | Collapse a possibly empty \'structure\' with a projection into a
+ 'PComonad'. This is the most general fold possible.
+
+ @since 1.0.0
+-}
+pfoldComonad ::
+    forall
+        (t :: (S -> Type) -> S -> Type)
+        (f :: (S -> Type) -> S -> Type)
+        (a :: S -> Type)
+        (b :: S -> Type)
+        (s :: S).
+    ( PComonad f
+    , PTraversable t
+    , forall (s' :: S). Monoid (Term s' (f b))
+    , PSubcategory f b
+    , PSubcategory t a
+    ) =>
+    Term s ((a :--> f b) :--> t a :--> b)
+pfoldComonad = phoistAcyclic $ plam $ \f t -> pextract # (pfoldMap # f # t)
+
 {- | Counts the number of elements in the \'structure\'.
 
  @since 1.0.0
@@ -252,10 +296,7 @@ plength ::
     forall (t :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
     (PTraversable t, PSubcategory t a) =>
     Term s (t a :--> PInteger)
-plength = phoistAcyclic $
-    plam $ \t -> unTermCont $ do
-        PSum res <- pmatchC (pfoldMap # go # t)
-        pure res
+plength = phoistAcyclic $ plam $ \t -> pfoldComonad # go # t
   where
     go ::
         forall (s' :: S).
@@ -273,10 +314,7 @@ psum ::
     , PSubcategory t a
     ) =>
     Term s (t a :--> a)
-psum = phoistAcyclic $
-    plam $ \t -> unTermCont $ do
-        PSum res <- pmatchC (pfoldMap # go # t)
-        pure res
+psum = phoistAcyclic $ plam $ \t -> pfoldComonad # go # t
   where
     go ::
         forall (s' :: S).
