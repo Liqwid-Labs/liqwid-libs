@@ -84,6 +84,7 @@ library
     Plutarch.Extra.Tagged
     Plutarch.Extra.These
     Plutarch.Extra.Traversable
+    Plutarch.Extra.Record
 
   build-depends:
     , generics-sop
