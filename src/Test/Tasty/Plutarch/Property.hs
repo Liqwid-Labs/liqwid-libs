@@ -22,6 +22,9 @@ module Test.Tasty.Plutarch.Property (
 
     -- * Coverage-based properties
     classifiedProperty,
+
+    -- * Coverage-based properties with native Haskell 
+    classifiedPropertyNative,
 ) where
 
 import Control.Monad (guard)
@@ -227,6 +230,80 @@ classifiedProperty getGen shr getOutcome classify comp = case cardinality @ix of
                                             Left e' -> failCrashyGetOutcome e'
                                             Right s' -> crashedWhenItShouldHave e s'
 
+{- | Identical to @classifiedProperty@ but it receives expected result
+   in Haskell function instead of Plutarch function. As a result it
+   requires little bit tighter constraints but allows more readable
+   code for writing expected result.
+
+ @since 1.0.2
+-}
+classifiedPropertyNative ::
+    forall (a :: Type) (e :: Type) (ix :: Type) (c :: S -> Type) (d :: S -> Type).
+    ( Show a
+    , Finite ix
+    , Eq ix
+    , Show ix
+    , PLifted c ~ a
+    , PLifted d ~ e
+    , PUnsafeLiftDecl c
+    , PUnsafeLiftDecl d
+    , PEq d
+    ) =>
+    -- | A way to generate values for each case. We expect that for any such
+    -- generated value, the classification function should report the appropriate
+    -- case: a test iteration will fail if this doesn't happen.
+    (ix -> Gen a) ->
+    -- | A shrinker for inputs.
+    (a -> [a]) ->
+    -- | Given an input value, either construct its
+    -- corresponding expected value or fail.
+    (a -> Maybe e) ->
+    -- | A \'classifier function\' for generated inputs.
+    (a -> ix) ->
+    -- | The computation to test.
+    (forall (s :: S). Term s (c :--> d)) ->
+    Property
+classifiedPropertyNative getGen shr getOutcome classify comp = case cardinality @ix of
+    Tagged 0 -> failOutNoCases
+    Tagged 1 -> failOutOneCase
+    _ -> forAllShrinkShow gen shr' (showInput . snd) (go (classifiedTemplateNativeEx comp))
+  where
+    gen :: Gen (ix, a)
+    gen = do
+        ix <- elements universeF
+        (ix,) <$> getGen ix
+    shr' :: (ix, a) -> [(ix, a)]
+    shr' (ix, x) = do
+        x' <- shr x
+        guard (classify x' == ix)
+        pure (ix, x')
+    go ::
+        (forall (s' :: S). Term s' (c :--> (PMaybe d) :--> PInteger)) ->
+        (ix, a) ->
+        Property
+    go precompiled (ix, input) =
+      if ix /= classified
+      then failedClassification ix classified
+      else
+        let s = compile (precompiled # (pconstant input) # toPMaybe (getOutcome input))
+            (res, _, logs) = evalScript s
+        in counterexample (prettyLogs logs)
+           . ensureCovered input classify
+           $ case res of
+               Right s' ->
+                 if
+                   | s' == canon 2 -> counterexample ranOnCrash . property $ False
+                   | s' == canon 0 -> property True
+                   | otherwise -> counterexample wrongResult . property $ False
+               Left e ->
+                 let sTest = compile (pisNothing #$ toPMaybe (getOutcome input))
+                     (testRes, _, _) = evalScript sTest
+                 in case testRes of
+                      Left e' -> failCrashyGetOutcome e'
+                      Right s' -> crashedWhenItShouldHave e s'
+      where
+        classified = classify input
+
 -- Note from Koz
 --
 -- The 'double lift' in the above definition is definitely quite suboptimal.
@@ -273,6 +350,28 @@ classifiedTemplate comp getOutcome = phoistAcyclic $
         pure $ case expectedMay of
             PNothing -> 2
             PJust expected -> pif (expected #== actual) 0 1
+
+classifiedTemplateNativeEx ::
+    forall (c :: S -> Type) (d :: S -> Type) (s :: S).
+    (PEq d) =>
+    (forall (s' :: S). Term s' (c :--> d)) ->
+    Term s (c :--> PMaybe d :--> PInteger)
+classifiedTemplateNativeEx comp = phoistAcyclic $
+    plam $ \input res -> unTermCont $ do
+        actual <- tclet (comp # input)
+        expectedMay <- tcmatch res
+        pure $ case expectedMay of
+            PNothing -> 2
+            PJust expected -> pif (expected #== actual) 0 1
+
+toPMaybe ::
+  forall (a :: Type) (c :: S -> Type) (s :: S).
+  ( PLifted c ~ a
+  , PUnsafeLiftDecl c
+  ) =>
+  Maybe a -> Term s (PMaybe c)
+toPMaybe (Just x) = pcon $ PJust $ pconstant x
+toPMaybe Nothing = pcon PNothing
 
 pisNothing ::
     forall (a :: S -> Type) (s :: S).
