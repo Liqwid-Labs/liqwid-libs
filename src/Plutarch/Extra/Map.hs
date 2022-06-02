@@ -17,7 +17,7 @@ import Plutarch (
     (#),
     type (:-->),
  )
-import Plutarch.Api.V1.AssocMap (PMap (PMap))
+import Plutarch.Api.V1.AssocMap (KeyGuarantees, PMap (PMap))
 import Plutarch.Bool (PBool, PEq ((#==)))
 import Plutarch.Builtin (
     PAsData,
@@ -39,9 +39,9 @@ import Plutarch.Trace (ptraceError)
 
 -- | @since 1.0.0
 plookup ::
-    forall (k :: S -> Type) (v :: S -> Type) (s :: S).
+    forall (k :: S -> Type) (v :: S -> Type) (keys :: KeyGuarantees) (s :: S).
     (PIsData v, PIsData k, PEq k) =>
-    Term s (k :--> PMap k v :--> PMaybe v)
+    Term s (k :--> PMap keys k v :--> PMaybe v)
 plookup = phoistAcyclic $
     plam $ \x m -> unTermCont $ do
         PMap kvs <- pmatchC m
@@ -60,9 +60,9 @@ plookup = phoistAcyclic $
 
 -- | @since 1.0.0
 plookup' ::
-    forall (k :: S -> Type) (v :: S -> Type) (s :: S).
+    forall (k :: S -> Type) (v :: S -> Type) (keys :: KeyGuarantees) (s :: S).
     (PIsData v, PIsData k, PEq k) =>
-    Term s (k :--> PMap k v :--> v)
+    Term s (k :--> PMap keys k v :--> v)
 plookup' = phoistAcyclic $
     plam $ \x m -> unTermCont $ do
         res <- pmatchC (plookup # x # m)
@@ -72,10 +72,10 @@ plookup' = phoistAcyclic $
 
 -- | @since 1.0.0
 pmapFromList ::
-    forall (k :: S -> Type) (v :: S -> Type) (s :: S).
+    forall (k :: S -> Type) (v :: S -> Type) (keys :: KeyGuarantees) (s :: S).
     (PIsData k, PIsData v) =>
     [(Term s k, Term s v)] ->
-    Term s (PMap k v)
+    Term s (PMap keys k v)
 pmapFromList = pcon . PMap . foldl' go (pcon PNil)
   where
     go ::
@@ -90,8 +90,8 @@ pmapFromList = pcon . PMap . foldl' go (pcon PNil)
 
 -- | @since 1.0.0
 pkeys ::
-    forall (k :: S -> Type) (v :: S -> Type) (s :: S).
-    Term s (PMap k v :--> PBuiltinList (PAsData k))
+    forall (k :: S -> Type) (v :: S -> Type) (keys :: KeyGuarantees) (s :: S).
+    Term s (PMap keys k v :--> PBuiltinList (PAsData k))
 pkeys = phoistAcyclic $
     plam $ \m -> unTermCont $ do
         PMap kvs <- pmatchC m

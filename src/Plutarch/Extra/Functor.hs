@@ -17,6 +17,7 @@ module Plutarch.Extra.Functor (
 import Data.Kind (Constraint, Type)
 import Generics.SOP (Top)
 import Plutarch (
+    PType,
     S,
     Term,
     pcon,
@@ -26,7 +27,7 @@ import Plutarch (
     (#),
     type (:-->),
  )
-import Plutarch.Api.V1.AssocMap (PMap (PMap))
+import Plutarch.Api.V1.AssocMap (KeyGuarantees, PMap (PMap))
 import Plutarch.Api.V1.Maybe (PMaybeData (PDJust, PDNothing))
 import Plutarch.Builtin (
     PAsData,
@@ -126,8 +127,8 @@ instance PFunctor PBuiltinList where
     pfmap = phoistAcyclic $ plam $ \f t -> pmap # f # t
 
 -- | @since 1.0.0
-instance (PIsData k) => PFunctor (PMap k) where
-    type PSubcategory (PMap k) = PIsData
+instance forall (s :: KeyGuarantees) (k :: PType). (PIsData k) => PFunctor (PMap s k) where
+    type PSubcategory (PMap s k) = PIsData
     pfmap = psecond
 
 -- | @since 1.0.0
@@ -317,13 +318,13 @@ instance PBifunctor PEither where
                 PRight y -> PRight $ g # y
 
 -- | @since 1.0.0
-instance PBifunctor PMap where
-    type PSubcategoryLeft PMap = PIsData
-    type PSubcategoryRight PMap = PIsData
+instance forall (keys :: KeyGuarantees). PBifunctor (PMap keys) where
+    type PSubcategoryLeft (PMap keys) = PIsData
+    type PSubcategoryRight (PMap keys) = PIsData
     pbimap ::
         forall (a :: S -> Type) (b :: S -> Type) (c :: S -> Type) (d :: S -> Type) (s :: S).
         (PIsData a, PIsData b, PIsData c, PIsData d) =>
-        Term s ((a :--> b) :--> (c :--> d) :--> PMap a c :--> PMap b d)
+        Term s ((a :--> b) :--> (c :--> d) :--> PMap keys a c :--> PMap keys b d)
     pbimap = phoistAcyclic $
         plam $ \f g t -> unTermCont $ do
             PMap t' <- pmatchC t

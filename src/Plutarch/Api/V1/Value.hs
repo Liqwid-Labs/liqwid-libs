@@ -18,6 +18,8 @@ import Plutarch (
     type (:-->),
  )
 import Plutarch.Api.V1 (
+    AmountGuarantees,
+    KeyGuarantees,
     PCurrencySymbol,
     PMap (PMap),
     PTokenName,
@@ -34,8 +36,8 @@ import Plutarch.List (psingleton)
 import Plutarch.Maybe (PMaybe (PJust, PNothing))
 
 psingletonValue ::
-    forall (s :: S).
-    Term s (PCurrencySymbol :--> PTokenName :--> PInteger :--> PValue)
+    forall (s :: S) (keys :: KeyGuarantees) (amounts :: AmountGuarantees).
+    Term s (PCurrencySymbol :--> PTokenName :--> PInteger :--> PValue keys amounts)
 psingletonValue = phoistAcyclic $
     plam $ \cs tn i -> unTermCont $ do
         innerPair <- pletC (ppairDataBuiltin # pdata tn # pdata i)
@@ -46,8 +48,8 @@ psingletonValue = phoistAcyclic $
 
 -- | @since 1.0.0
 passetClassValue ::
-    forall (s :: S).
-    Term s (PAssetClass :--> PInteger :--> PValue)
+    forall (s :: S) (keys :: KeyGuarantees) (amounts :: AmountGuarantees).
+    Term s (PAssetClass :--> PInteger :--> PValue keys amounts)
 passetClassValue = phoistAcyclic $
     plam $ \ac i -> unTermCont $ do
         cs <- pletC (pfield @"currencySymbol" # ac)
@@ -56,8 +58,8 @@ passetClassValue = phoistAcyclic $
 
 -- | @since 1.0.0
 pvalueOf ::
-    forall (s :: S).
-    Term s (PValue :--> PCurrencySymbol :--> PTokenName :--> PInteger)
+    forall (s :: S) (keys :: KeyGuarantees) (amounts :: AmountGuarantees).
+    Term s (PValue keys amounts :--> PCurrencySymbol :--> PTokenName :--> PInteger)
 pvalueOf = phoistAcyclic $
     plam $ \val cs tn -> unTermCont $ do
         PValue m <- pmatchC val
@@ -72,6 +74,6 @@ pvalueOf = phoistAcyclic $
 
 -- | @since 1.0.0
 padaOf ::
-    forall (s :: S).
-    Term s (PValue :--> PInteger)
+    forall (s :: S) (keys :: KeyGuarantees) (amounts :: AmountGuarantees).
+    Term s (PValue keys amounts :--> PInteger)
 padaOf = phoistAcyclic $ plam $ \v -> pvalueOf # v # pconstant "" # pconstant ""

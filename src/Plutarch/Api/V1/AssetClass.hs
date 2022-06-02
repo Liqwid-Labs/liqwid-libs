@@ -26,6 +26,8 @@ import Plutarch (
     type (:-->),
  )
 import Plutarch.Api.V1 (
+    AmountGuarantees,
+    KeyGuarantees,
     PCurrencySymbol,
     PTokenName,
     PValue (PValue),
@@ -95,8 +97,8 @@ passetClass = phoistAcyclic $
 
 -- | @since 1.0.0
 passetClassValueOf ::
-    forall (s :: S).
-    Term s (PValue :--> PAssetClass :--> PInteger)
+    forall (s :: S) (keys :: KeyGuarantees) (amounts :: AmountGuarantees).
+    Term s (PValue keys amounts :--> PAssetClass :--> PInteger)
 passetClassValueOf = phoistAcyclic $
     plam $ \val ac -> unTermCont $ do
         cs <- pletC (pfromData $ pfield @"currencySymbol" # ac)
@@ -105,8 +107,8 @@ passetClassValueOf = phoistAcyclic $
 
 -- | @since 1.0.0
 pvalueOf ::
-    forall (s :: S).
-    Term s (PValue :--> PCurrencySymbol :--> PTokenName :--> PInteger)
+    forall (s :: S) (keys :: KeyGuarantees) (amounts :: AmountGuarantees).
+    Term s (PValue keys amounts :--> PCurrencySymbol :--> PTokenName :--> PInteger)
 pvalueOf = phoistAcyclic $
     plam $ \val cs tn -> unTermCont $ do
         PValue m <- pmatchC val
