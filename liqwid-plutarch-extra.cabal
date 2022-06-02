@@ -79,12 +79,12 @@ library
     Plutarch.Extra.Maybe
     Plutarch.Extra.Numeric
     Plutarch.Extra.Profunctor
+    Plutarch.Extra.Record
     Plutarch.Extra.State
     Plutarch.Extra.Sum
     Plutarch.Extra.Tagged
     Plutarch.Extra.These
     Plutarch.Extra.Traversable
-    Plutarch.Extra.Record
 
   build-depends:
     , generics-sop

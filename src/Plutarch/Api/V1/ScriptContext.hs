@@ -10,6 +10,8 @@ module Plutarch.Api.V1.ScriptContext (
 
 import Plutarch (S, Term, phoistAcyclic, plam, unTermCont, (#), (:-->))
 import Plutarch.Api.V1 (
+    AmountGuarantees (NoGuarantees, Positive),
+    KeyGuarantees (Sorted),
     PScriptContext,
     PScriptPurpose (PSpending),
     PTxInInfo,
@@ -40,7 +42,7 @@ pownTxInfo = phoistAcyclic $ plam $ \sc -> pfield @"txInfo" # sc
 
 pownValue ::
     forall (s :: S).
-    Term s (PScriptContext :--> PValue)
+    Term s (PScriptContext :--> PValue 'Sorted 'Positive)
 pownValue = phoistAcyclic $
     plam $ \sc -> unTermCont $ do
         input <- pletC (pownInput # sc)
@@ -48,7 +50,7 @@ pownValue = phoistAcyclic $
 
 pownMintValue ::
     forall (s :: S).
-    Term s (PScriptContext :--> PValue)
+    Term s (PScriptContext :--> PValue 'Sorted 'NoGuarantees)
 pownMintValue = phoistAcyclic $ plam $ \sc -> pfield @"mint" # (pownTxInfo # sc)
 
 pownInput ::
