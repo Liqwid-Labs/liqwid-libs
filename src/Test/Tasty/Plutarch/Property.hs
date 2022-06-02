@@ -55,7 +55,7 @@ import Plutarch.Integer (PInteger)
 import Plutarch.Lift (PUnsafeLiftDecl (PLifted), pconstant)
 import Plutarch.Maybe (PMaybe (PJust, PNothing))
 import Plutarch.TermCont (tcont)
-import Plutus.V1.Ledger.Scripts (Script)
+import PlutusLedgerApi.V1.Scripts (Script)
 import Test.QuickCheck (
     Gen,
     Property,

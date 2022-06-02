@@ -27,7 +27,7 @@ import Data.Maybe (isJust, isNothing)
 import Plutarch (S)
 import Plutarch.Builtin (PIsData, pdata, pfromData)
 import Plutarch.Lift (
-    PConstantDecl (PConstantRepr, PConstanted, pconstantFromRepr, pconstantToRepr),
+    PConstantDecl (PConstantRepr, pconstantFromRepr, pconstantToRepr),
     PUnsafeLiftDecl (PLifted),
     pconstant,
     plift,
@@ -109,7 +109,6 @@ pconstantDeclLaws ::
     , Eq b
     , Show b
     , PUnsafeLiftDecl p
-    , PConstanted a ~ p
     , PLifted p ~ a
     , PUnsafeLiftDecl p'
     , PLifted p' ~ b
@@ -185,7 +184,6 @@ pconstantDeclLawsTrivial ::
     , Eq b
     , Show b
     , PUnsafeLiftDecl p
-    , PConstanted a ~ p
     , PLifted p ~ a
     , PUnsafeLiftDecl p'
     , PLifted p' ~ b
@@ -244,7 +242,6 @@ pconstantReprSameLaw ::
     , Eq b
     , Show b
     , PUnsafeLiftDecl p
-    , PConstanted a ~ p
     , PLifted p ~ a
     , PUnsafeLiftDecl p'
     , PLifted p' ~ b
