@@ -51,13 +51,13 @@ import Plutarch.Context.Config (
     ),
  )
 import Plutarch.Lift (PUnsafeLiftDecl (PLifted), pconstant, plift)
-import Plutus.V1.Ledger.Address (
+import PlutusLedgerApi.V1.Address (
     Address,
     pubKeyHashAddress,
     scriptHashAddress,
  )
-import Plutus.V1.Ledger.Api (BuiltinData (BuiltinData))
-import Plutus.V1.Ledger.Contexts (
+import PlutusLedgerApi.V1 (BuiltinData (BuiltinData))
+import PlutusLedgerApi.V1.Contexts (
     TxId (TxId),
     TxInInfo (TxInInfo),
     TxInfo (
@@ -76,9 +76,9 @@ import Plutus.V1.Ledger.Contexts (
     TxOut (TxOut),
     TxOutRef (TxOutRef),
  )
-import Plutus.V1.Ledger.Crypto (PubKeyHash)
-import Plutus.V1.Ledger.Scripts (Datum (Datum), DatumHash, ValidatorHash)
-import Plutus.V1.Ledger.Value (CurrencySymbol, Value, symbols)
+import PlutusLedgerApi.V1.Crypto (PubKeyHash)
+import PlutusLedgerApi.V1.Scripts (Datum (Datum), DatumHash, ValidatorHash)
+import PlutusLedgerApi.V1.Value (CurrencySymbol, Value, symbols)
 import PlutusCore.Data (Data)
 
 data UTXOType

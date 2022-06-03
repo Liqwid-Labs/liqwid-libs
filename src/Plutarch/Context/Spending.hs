@@ -56,8 +56,8 @@ import Plutarch.Context.Config (
     ),
  )
 import Plutarch.Lift (PUnsafeLiftDecl (PLifted))
-import Plutus.V1.Ledger.Address (scriptHashAddress)
-import Plutus.V1.Ledger.Contexts (
+import PlutusLedgerApi.V1.Address (scriptHashAddress)
+import PlutusLedgerApi.V1.Contexts (
     ScriptContext (ScriptContext),
     ScriptPurpose (Spending),
     TxInInfo (TxInInfo, txInInfoOutRef, txInInfoResolved),
@@ -71,12 +71,12 @@ import Plutus.V1.Ledger.Contexts (
     TxOut (TxOut, txOutAddress, txOutDatumHash, txOutValue),
     TxOutRef (TxOutRef),
  )
-import Plutus.V1.Ledger.Crypto (PubKeyHash)
-import Plutus.V1.Ledger.Scripts (Datum, DatumHash, ValidatorHash)
-import Plutus.V1.Ledger.Value (Value)
+import PlutusLedgerApi.V1.Crypto (PubKeyHash)
+import PlutusLedgerApi.V1.Scripts (Datum, DatumHash, ValidatorHash)
+import PlutusLedgerApi.V1.Value (Value)
 
 {- | A context builder for spending. Corresponds broadly to validators, and to
- 'Plutus.V1.Ledger.Contexts.Spending' specifically.
+ 'PlutusLedgerApi.V1.Contexts.Spending' specifically.
 
  @since 1.0.0
 -}
@@ -363,4 +363,4 @@ validatorOutDatums ::
 validatorOutDatums (acc1, acc2) vutxo@(ValidatorUTXO d _) = do
     txOut <- validatorTxOut vutxo
     let vdata = Base.datumWithHash . Base.datafy $ d
-    pure (pure txOut <> acc1, pure vdata <> acc2)  
+    pure (pure txOut <> acc1, pure vdata <> acc2)

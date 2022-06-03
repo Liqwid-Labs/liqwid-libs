@@ -69,7 +69,7 @@ import Plutarch.Context.Config (
     ContextConfig (configCurrencySymbol),
  )
 import Plutarch.Lift (PUnsafeLiftDecl (PLifted))
-import Plutus.V1.Ledger.Contexts (
+import PlutusLedgerApi.V1.Contexts (
     ScriptContext (ScriptContext),
     ScriptPurpose (Minting),
     TxInfo (
@@ -80,14 +80,14 @@ import Plutus.V1.Ledger.Contexts (
         txInfoSignatories
     ),
  )
-import Plutus.V1.Ledger.Crypto (PubKeyHash)
-import Plutus.V1.Ledger.Scripts (ValidatorHash)
-import Plutus.V1.Ledger.Value (
+import PlutusLedgerApi.V1.Crypto (PubKeyHash)
+import PlutusLedgerApi.V1.Scripts (ValidatorHash)
+import PlutusLedgerApi.V1.Value (
     CurrencySymbol,
     TokenName,
     Value,
  )
-import qualified Plutus.V1.Ledger.Value as Value
+import qualified PlutusLedgerApi.V1.Value as Value
 
 {- | Some positive number of tokens, with the given name, controlled by the
  minting policy for which the script context is being built.
@@ -120,7 +120,7 @@ pattern Tokens name amount <- T name amount
 {-# COMPLETE Tokens #-}
 
 {- | A context builder for minting. Corresponds to minting policies (broadly),
- and the 'Plutus.V1.Ledger.Contexts.Minting' purpose specifically.
+ and the 'PlutusLedgerApi.V1.Contexts.Minting' purpose specifically.
 
  @since 1.0.0
 -}

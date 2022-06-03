@@ -15,11 +15,11 @@ module Plutarch.Context.Config (
     defaultConfig,
 ) where
 
-import Plutus.V1.Ledger.Interval (Interval, always)
-import Plutus.V1.Ledger.Scripts (ValidatorHash)
-import Plutus.V1.Ledger.Time (POSIXTime)
-import Plutus.V1.Ledger.Tx (TxId (TxId))
-import Plutus.V1.Ledger.Value (CurrencySymbol, Value)
+import PlutusLedgerApi.V1.Interval (Interval, always)
+import PlutusLedgerApi.V1.Scripts (ValidatorHash)
+import PlutusLedgerApi.V1.Time (POSIXTime)
+import PlutusLedgerApi.V1.Tx (TxId (TxId))
+import PlutusLedgerApi.V1.Value (CurrencySymbol, Value)
 
 {- | Parameters necessary to build a context.
 
