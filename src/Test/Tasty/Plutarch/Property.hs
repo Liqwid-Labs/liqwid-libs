@@ -23,7 +23,7 @@ module Test.Tasty.Plutarch.Property (
     -- * Coverage-based properties
     classifiedProperty,
 
-    -- * Coverage-based properties with native Haskell 
+    -- * Coverage-based properties with native Haskell
     classifiedPropertyNative,
 ) where
 
@@ -282,25 +282,25 @@ classifiedPropertyNative getGen shr getOutcome classify comp = case cardinality 
         (ix, a) ->
         Property
     go precompiled (ix, input) =
-      if ix /= classified
-      then failedClassification ix classified
-      else
-        let s = compile (precompiled # (pconstant input) # toPMaybe (getOutcome input))
-            (res, _, logs) = evalScript s
-        in counterexample (prettyLogs logs)
-           . ensureCovered input classify
-           $ case res of
-               Right s' ->
-                 if
-                   | s' == canon 2 -> counterexample ranOnCrash . property $ False
-                   | s' == canon 0 -> property True
-                   | otherwise -> counterexample wrongResult . property $ False
-               Left e ->
-                 let sTest = compile (pisNothing #$ toPMaybe (getOutcome input))
-                     (testRes, _, _) = evalScript sTest
-                 in case testRes of
-                      Left e' -> failCrashyGetOutcome e'
-                      Right s' -> crashedWhenItShouldHave e s'
+        if ix /= classified
+            then failedClassification ix classified
+            else
+                let s = compile (precompiled # (pconstant input) # toPMaybe (getOutcome input))
+                    (res, _, logs) = evalScript s
+                 in counterexample (prettyLogs logs)
+                        . ensureCovered input classify
+                        $ case res of
+                            Right s' ->
+                                if
+                                        | s' == canon 2 -> counterexample ranOnCrash . property $ False
+                                        | s' == canon 0 -> property True
+                                        | otherwise -> counterexample wrongResult . property $ False
+                            Left e ->
+                                let sTest = compile (pisNothing #$ toPMaybe (getOutcome input))
+                                    (testRes, _, _) = evalScript sTest
+                                 in case testRes of
+                                        Left e' -> failCrashyGetOutcome e'
+                                        Right s' -> crashedWhenItShouldHave e s'
       where
         classified = classify input
 
@@ -365,11 +365,12 @@ classifiedTemplateNativeEx comp = phoistAcyclic $
             PJust expected -> pif (expected #== actual) 0 1
 
 toPMaybe ::
-  forall (a :: Type) (c :: S -> Type) (s :: S).
-  ( PLifted c ~ a
-  , PUnsafeLiftDecl c
-  ) =>
-  Maybe a -> Term s (PMaybe c)
+    forall (a :: Type) (c :: S -> Type) (s :: S).
+    ( PLifted c ~ a
+    , PUnsafeLiftDecl c
+    ) =>
+    Maybe a ->
+    Term s (PMaybe c)
 toPMaybe (Just x) = pcon $ PJust $ pconstant x
 toPMaybe Nothing = pcon PNothing
 
