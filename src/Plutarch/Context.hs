@@ -1,3 +1,12 @@
+{- | Module: Plutarch.Context
+ Copyright: (C) Liqwid Labs 2022
+ License: Proprietary
+ Maintainer: Koz Ross <koz@mlabs.city>
+ Portability: GHC only
+ Stability: Experimental
+
+ Base builder and other specific builders.
+-}
 module Plutarch.Context (
     module Plutarch.Context.Base,
     module Plutarch.Context.Config,

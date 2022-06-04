@@ -14,10 +14,15 @@
  'SpendingBuilder' using '<>'.
 -}
 module Plutarch.Context.Spending (
+    -- * Types
     SpendingBuilder (..),
-    buildSpending,
+
+    -- * Inputs
     inputFromValidatorWith,
     inputFromValidator,
+
+    -- * builder
+    buildSpending,
 ) where
 
 import Control.Monad.Cont (ContT (runContT), MonadTrans (lift))
@@ -29,9 +34,9 @@ import Plutarch.Context.Base (
     BaseBuilder (bbDatums, bbInputs, bbMints, bbOutputs, bbSignatures),
     Builder (..),
     UTXO,
-    baseTxInfo,
     scriptUTXOGeneral,
     scriptUTXOGeneralWith,
+    yieldBaseTxInfo,
     yieldExtraDatums,
     yieldInInfoDatums,
     yieldMint,
@@ -39,7 +44,6 @@ import Plutarch.Context.Base (
  )
 import Plutarch.Context.Config (ContextConfig)
 import Plutarch.Lift (PUnsafeLiftDecl (..))
-import PlutusLedgerApi.V1.Address (scriptHashAddress)
 import PlutusLedgerApi.V1.Contexts (
     ScriptContext (ScriptContext),
     ScriptPurpose (Spending),
@@ -52,8 +56,7 @@ import PlutusLedgerApi.V1.Contexts (
     ),
     TxOutRef (TxOutRef),
  )
-import PlutusLedgerApi.V1.Crypto (PubKeyHash)
-import PlutusLedgerApi.V1.Scripts (Datum, DatumHash, ValidatorHash)
+import PlutusLedgerApi.V1.Scripts (ValidatorHash)
 import PlutusLedgerApi.V1.Value (Value)
 
 {- | A context builder for spending. Corresponds broadly to validators, and to
@@ -70,12 +73,10 @@ data SpendingBuilder = SB
           Show
         )
 
+-- | @since 1.1.0
 instance Builder SpendingBuilder where
     pack = flip SB Nothing
     unpack = sbInner
-
--- Avoids any coercion funny business
-type role SpendingBuilder
 
 -- | @since 1.0.0
 instance Semigroup SpendingBuilder where
@@ -84,9 +85,16 @@ instance Semigroup SpendingBuilder where
     SB inner vin <> SB inner' Nothing =
         SB (inner <> inner') vin
 
+-- | @since 1.1.0
 instance Monoid SpendingBuilder where
     mempty = SB mempty Nothing
 
+{- | Updates the input of the validator that is being validated.
+ This function will override what the previous "input from validator,"
+ if one exists.
+
+ @since 1.1.0
+-}
 inputFromValidator ::
     ValidatorHash ->
     Value ->
@@ -96,6 +104,10 @@ inputFromValidator vh val =
         { sbValidatorInput = Just $ scriptUTXOGeneral vh val
         }
 
+{- | Equivalent to @inputFromValidator@ but with Datum.
+
+ @since 1.1.0
+-}
 inputFromValidatorWith ::
     forall (d :: Type) (p :: S -> Type).
     (PUnsafeLiftDecl p, PLifted p ~ d, PIsData p) =>
@@ -108,6 +120,15 @@ inputFromValidatorWith vh val d =
         { sbValidatorInput = Just $ scriptUTXOGeneralWith vh val d
         }
 
+{- | Builds @ScriptContext@ according to given configuration and
+ @SpendingBuilder@.
+
+ This function will yield @Nothing@ when the builder was never given a
+ validator input--from @inputFromValidator@ or
+ @inputFromValidatorWith@.
+
+ @since 1.1.0
+-}
 buildSpending ::
     ContextConfig ->
     SpendingBuilder ->
@@ -122,7 +143,7 @@ buildSpending config builder = flip runContT Just $
             (outs, outDat) <- yieldOutDatums (bbOutputs bb)
             mintedValue <- yieldMint (bbMints bb)
             extraDat <- yieldExtraDatums (bbDatums bb)
-            base <- baseTxInfo config
+            base <- yieldBaseTxInfo config
 
             let txinfo =
                     base

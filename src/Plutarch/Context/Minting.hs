@@ -15,7 +15,10 @@
  'MintingBuilder' using '<>'.
 -}
 module Plutarch.Context.Minting (
+    -- * Types
     MintingBuilder (..),
+
+    -- * builder
     buildMinting,
 ) where
 
@@ -25,7 +28,7 @@ import Data.Foldable (Foldable (toList))
 import Plutarch.Context.Base (
     BaseBuilder (bbDatums, bbInputs, bbMints, bbOutputs, bbSignatures),
     Builder (..),
-    baseTxInfo,
+    yieldBaseTxInfo,
     yieldExtraDatums,
     yieldInInfoDatums,
     yieldMint,
@@ -33,7 +36,6 @@ import Plutarch.Context.Base (
  )
 
 import Plutarch.Context.Config (ContextConfig)
-import Plutarch.Lift (PUnsafeLiftDecl (..))
 import PlutusLedgerApi.V1.Contexts (
     ScriptContext (ScriptContext),
     ScriptPurpose (Minting),
@@ -45,13 +47,17 @@ import PlutusLedgerApi.V1.Contexts (
         txInfoSignatories
     ),
  )
-import PlutusLedgerApi.V1.Crypto (PubKeyHash)
-import PlutusLedgerApi.V1.Scripts (ValidatorHash)
 import PlutusLedgerApi.V1.Value (
     CurrencySymbol,
     Value,
+    symbols,
  )
-  
+
+{- | A context builder for Minting. Corresponds to
+ 'Plutus.V1.Ledger.Contexts.Minting' specifically.
+
+ @since 1.0.0
+-}
 data MintingBuilder = MB
     { mbInner :: BaseBuilder
     }
@@ -60,13 +66,16 @@ data MintingBuilder = MB
           Show
         )
 
+-- | @since 1.1.0
 instance Semigroup MintingBuilder where
     MB inner <> MB inner' =
         MB (inner <> inner')
 
+-- | @since 1.1.0
 instance Monoid MintingBuilder where
     mempty = MB mempty
 
+-- | @since 1.1.0
 instance Builder MintingBuilder where
     pack = MB
     unpack = mbInner
@@ -74,12 +83,19 @@ instance Builder MintingBuilder where
 uniformCurrencySymbol ::
     Value ->
     Maybe CurrencySymbol
-uniformCurrencySymbol (Value.flattenValue -> xs)
-    | and $ (== head syms) <$> syms = Just $ head syms
+uniformCurrencySymbol (symbols -> xs)
+    | length xs == 1 = Just $ head xs
     | otherwise = Nothing
-  where
-    syms = (\(cs, _, _) -> cs) <$> xs
 
+{- | Builds @ScriptContext@ according to given configuration and
+ @MintingBuilder@.
+
+ This function will yield @Nothing@ when @mint@ interface was never
+ called with a non-empty value or values contain a multiple
+ @CurrencySymbol@.
+
+ @since 1.1.0
+-}
 buildMinting ::
     ContextConfig ->
     MintingBuilder ->
@@ -92,7 +108,7 @@ buildMinting config builder = flip runContT Just $
         (outs, outDat) <- yieldOutDatums (bbOutputs bb)
         mintedValue <- yieldMint (bbMints bb)
         extraDat <- yieldExtraDatums (bbDatums bb)
-        base <- baseTxInfo config
+        base <- yieldBaseTxInfo config
 
         let txinfo =
                 base
