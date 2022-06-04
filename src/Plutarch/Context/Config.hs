@@ -16,10 +16,9 @@ module Plutarch.Context.Config (
 ) where
 
 import PlutusLedgerApi.V1.Interval (Interval, always)
-import PlutusLedgerApi.V1.Scripts (ValidatorHash)
 import PlutusLedgerApi.V1.Time (POSIXTime)
 import PlutusLedgerApi.V1.Tx (TxId (TxId))
-import PlutusLedgerApi.V1.Value (CurrencySymbol, Value)
+import PlutusLedgerApi.V1.Value (Value)
 
 {- | Parameters necessary to build a context.
 
@@ -38,14 +37,6 @@ data ContextConfig = ContextConfig
     -- ^ 'TxId' for the transaction.
     --
     -- @since 1.0.0
-    , configCurrencySymbol :: CurrencySymbol
-    -- ^ 'CurrencySymbol' for the transaction.
-    --
-    -- @since 1.0.0
-    , configValidatorHash :: ValidatorHash
-    -- ^ Hash of the script this will be used with.
-    --
-    -- @since 1.0.0
     }
     deriving stock
         ( -- | @since 1.0.0
@@ -58,4 +49,4 @@ data ContextConfig = ContextConfig
  @since 1.0.0
 -}
 defaultConfig :: ContextConfig
-defaultConfig = ContextConfig mempty always (TxId "abcd") "ff" "90ab"
+defaultConfig = ContextConfig mempty always (TxId "abcd") -- "ff" "90ab"

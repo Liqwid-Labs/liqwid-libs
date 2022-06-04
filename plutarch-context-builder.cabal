@@ -70,12 +70,13 @@ common common-lang
 
 library
   import:          common-lang
-  exposed-modules:
+  exposed-modules: Plutarch.Context
+  other-modules:
+    Plutarch.Context.Base
     Plutarch.Context.Config
     Plutarch.Context.Minting
     Plutarch.Context.Spending
 
-  other-modules:   Plutarch.Context.Base
   build-depends:
     , acc
     , mtl
