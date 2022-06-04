@@ -183,8 +183,8 @@ alwaysFailProperty gen shr comp = forAllShrinkShow gen shr showInput (go comp)
  expected results, and a way of classifying any generated input, run the given
  computation enough times to ensure that all the following hold:
 
- * No case behaves contrary to its expected value; if no expected value exists
-   for a given input, the resulting 'Script' should error.
+ * No case behaves contrary to its expected result; if no expected result exists
+   for a given input, the computation being tested must error.
  * Equal numbers of all possible cases are generated.
  * Running more tests would not impact the distribution of cases (as per
    above) very much.
@@ -215,14 +215,14 @@ classifiedProperty ::
     , PUnsafeLiftDecl c
     , PEq d
     ) =>
-    -- | A way to generate values for each case. We expect that for any such
-    -- generated value, the classification function should report the appropriate
-    -- case: a test iteration will fail if this doesn't happen.
+    -- | A way to generate input values for each case. We expect that for any
+    -- such generated value, the classification function should report the
+    -- appropriate case: a test iteration will fail if this doesn't happen.
     (ix -> Gen a) ->
     -- | A shrinker for inputs.
     (a -> [a]) ->
-    -- | Given a Plutarch equivalent to an input, either construct its
-    -- corresponding expected value or fail.
+    -- | Given a Plutarch equivalent to an input, constructs its corresponding
+    -- expected result. Returns 'PNothing' to signal expected failure.
     (forall (s :: S). Term s (c :--> PMaybe d)) ->
     -- | A \'classifier function\' for generated inputs.
     (a -> ix) ->
