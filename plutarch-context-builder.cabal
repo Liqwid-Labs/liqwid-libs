@@ -102,10 +102,12 @@ library
 -- Tests
 
 test-suite test
-  import:          common-tests
-  type:            exitcode-stdio-1.0
-  main-is:         Main.hs
-  other-modules:   BaseBuilder
-                   Spending
-                   Minting
-  hs-source-dirs:  test/
+  import:         common-tests
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  other-modules:
+    BaseBuilder
+    Minting
+    Spending
+
+  hs-source-dirs: test/

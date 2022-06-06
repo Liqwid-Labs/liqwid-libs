@@ -1,12 +1,10 @@
 module Main (main) where
 
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
-import Test.Tasty (adjustOption, defaultMain, testGroup)
-import Test.Tasty.QuickCheck
-
-import BaseBuilder()
-import Spending (spendingBuilderProperty)
 import Minting (mintingBuilderProperty)
+import Spending (spendingBuilderProperty)
+import Test.Tasty (adjustOption, defaultMain, testGroup)
+import Test.Tasty.QuickCheck (QuickCheckTests, testProperty)
 
 main :: IO ()
 main = do

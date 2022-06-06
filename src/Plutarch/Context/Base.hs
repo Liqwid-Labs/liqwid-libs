@@ -21,12 +21,16 @@ module Plutarch.Context.Base (
     UTXO (..),
 
     -- * Inputs
+    inputFromCredential,
+    inputFromCredentialWith,
     inputFromPubKey,
     inputFromPubKeyWith,
     inputFromScript,
     inputFromScriptWith,
 
     -- * Outputs
+    outputToCredential,
+    outputToCredentialWith,
     outputToPubKey,
     outputToPubKeyWith,
     outputToScript,
@@ -63,7 +67,10 @@ import Plutarch.Context.Config (
  )
 import Plutarch.Lift (PUnsafeLiftDecl (..), pconstant, plift)
 import PlutusCore.Data (Data)
-import PlutusLedgerApi.V1 (BuiltinData (BuiltinData))
+import PlutusLedgerApi.V1 (
+    BuiltinData (BuiltinData),
+    Credential (..),
+ )
 import PlutusLedgerApi.V1.Address (
     Address,
     pubKeyHashAddress,
@@ -78,10 +85,14 @@ import PlutusLedgerApi.V1.Contexts (
     TxOutRef (TxOutRef),
  )
 import PlutusLedgerApi.V1.Crypto (PubKeyHash)
-import PlutusLedgerApi.V1.Scripts (Datum (Datum), DatumHash, ValidatorHash)
+import PlutusLedgerApi.V1.Scripts (
+    Datum (Datum),
+    DatumHash,
+    ValidatorHash,
+ )
 import PlutusLedgerApi.V1.Value (Value)
 
-{- | 'UTXO' is used to represent any input or output of a transaction in the builders. 
+{- | 'UTXO' is used to represent any input or output of a transaction in the builders.
 
 A UTXO contains:
 
@@ -94,8 +105,8 @@ This is different from `TxOut`, in that we store the 'Data' fully instead of the
  @since 1.1.0
 -}
 data UTXO
-  = PubKeyUTXO PubKeyHash Value (Maybe Data)
-  | ScriptUTXO ValidatorHash Value (Maybe Data)
+    = PubKeyUTXO PubKeyHash Value (Maybe Data)
+    | ScriptUTXO ValidatorHash Value (Maybe Data)
     deriving stock (Show)
 
 {- | Pulls address output of given UTXO
@@ -112,7 +123,7 @@ utxoAddress = \case
  @since 1.1.0
 -}
 utxoData :: UTXO -> Maybe (DatumHash, Datum)
-utxoData  = \case
+utxoData = \case
     PubKeyUTXO _ _ dat -> datumWithHash <$> dat
     ScriptUTXO _ _ dat -> datumWithHash <$> dat
 
@@ -130,7 +141,7 @@ utxoToTxOut utxo@(PubKeyUTXO _ value _) =
 utxoToTxOut utxo@(ScriptUTXO _ value _) =
     let address = utxoAddress utxo
         sData = utxoData utxo
-     in TxOut address value . fmap fst $ sData        
+     in TxOut address value . fmap fst $ sData
 
 {- | An abstraction for the higher-level builders.
  It allows those builder to integrate base builder functionalities
@@ -216,6 +227,60 @@ datafy ::
     a ->
     Data
 datafy x = plift (pforgetData (pdata (pconstant x)))
+
+{- | Add input UTXO from Credential.
+
+ @since 1.1.0
+-}
+inputFromCredential ::
+    forall (a :: Type).
+    (Builder a) =>
+    Credential ->
+    Value ->
+    a
+inputFromCredential (PubKeyCredential pkh) = inputFromPubKey pkh
+inputFromCredential (ScriptCredential vh) = inputFromScript vh
+
+{- | Add output UTXO to Credential.
+
+ @since 1.1.0
+-}
+outputToCredential ::
+    forall (a :: Type).
+    (Builder a) =>
+    Credential ->
+    Value ->
+    a
+outputToCredential (PubKeyCredential pkh) = outputToPubKey pkh
+outputToCredential (ScriptCredential vh) = outputToScript vh
+
+{- | Add input UTXO from Credential with Datum.
+
+ @since 1.1.0
+-}
+inputFromCredentialWith ::
+    forall (a :: Type) (b :: Type) (p :: S -> Type).
+    (Builder a, PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
+    Credential ->
+    Value ->
+    b ->
+    a
+inputFromCredentialWith (PubKeyCredential pkh) val = inputFromPubKeyWith pkh val
+inputFromCredentialWith (ScriptCredential vh) val = inputFromScriptWith vh val
+
+{- | Add output UTXO to Credential with Datum.
+
+ @since 1.1.0
+-}
+outputToCredentialWith ::
+    forall (a :: Type) (b :: Type) (p :: S -> Type).
+    (Builder a, PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
+    Credential ->
+    Value ->
+    b ->
+    a
+outputToCredentialWith (PubKeyCredential pkh) val = outputToPubKeyWith pkh val
+outputToCredentialWith (ScriptCredential vh) val = outputToScriptWith vh val
 
 {- | Add input UTXO from PubKey.
 
