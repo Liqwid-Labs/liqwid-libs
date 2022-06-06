@@ -92,3 +92,18 @@ library
     , tagged
 
   hs-source-dirs:  src
+
+test-suite liqwid-plutarch-extra-test
+  import:         common-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Spec.hs
+  ghc-options:    -O2 -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+    , liqwid-plutarch-extra
+    , plutarch-quickcheck
+    , QuickCheck
+    , quickcheck-instances
+    , tasty
+    , tasty-quickcheck
+
+  hs-source-dirs: test

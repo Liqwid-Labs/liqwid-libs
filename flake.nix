@@ -14,6 +14,8 @@
   inputs.haskell-language-server.url = "github:haskell/haskell-language-server";
   inputs.haskell-language-server.flake = false;
 
+  inputs.plutarch-quickcheck.url = "github:liqwid-labs/plutarch-quickcheck?ref=staging";
+
   outputs = inputs@{ self, nixpkgs, nixpkgs-latest, haskell-nix, plutarch, ... }:
     let
       supportedSystems = nixpkgs-latest.lib.systems.flakeExposed;
@@ -113,6 +115,7 @@
           # Added hackage deps on top of plutarch hackage deps
           "${inputs.plutarch}"
           "${inputs.plutarch}/plutarch-extra"
+          "${inputs.plutarch-quickcheck}"
         ]
       );
 
@@ -139,6 +142,7 @@
             # We use the ones from Nixpkgs, since they are cached reliably.
             # Eventually we will probably want to build these with haskell.nix.
             nativeBuildInputs = [
+              pkgs'.fd
               pkgs'.cabal-install
               pkgs'.hlint
               pkgs'.haskellPackages.cabal-fmt
@@ -180,6 +184,7 @@
         self.flake.${system}.checks
         // {
           formatCheck = formatCheckFor system;
+          testSuite = self.flake.${system}.packages."liqwid-plutarch-extra:test:liqwid-plutarch-extra-test";
         }
       );
       check = perSystem (system:
