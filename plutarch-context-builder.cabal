@@ -66,6 +66,20 @@ common common-lang
 
   default-language:   Haskell2010
 
+common common-tests
+  import:        common-lang
+  ghc-options:   -O2 -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+    , bytestring
+    , plutarch
+    , plutarch-context-builder
+    , plutus-core
+    , plutus-ledger-api
+    , QuickCheck
+    , tasty
+    , tasty-hunit
+    , tasty-quickcheck
+
 -- Libraries
 
 library
@@ -84,3 +98,14 @@ library
     , plutus-ledger-api
 
   hs-source-dirs:  src
+
+-- Tests
+
+test-suite test
+  import:          common-tests
+  type:            exitcode-stdio-1.0
+  main-is:         Main.hs
+  other-modules:   BaseBuilder
+                   Spending
+                   Minting
+  hs-source-dirs:  test/

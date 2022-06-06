@@ -42,7 +42,7 @@ import Plutarch.Context.Base (
     yieldMint,
     yieldOutDatums,
  )
-import Plutarch.Context.Config (ContextConfig)
+import Plutarch.Context.Config (ContextConfig, configTxId)
 import Plutarch.Lift (PUnsafeLiftDecl (..))
 import PlutusLedgerApi.V1.Contexts (
     ScriptContext (ScriptContext),
@@ -154,4 +154,4 @@ buildSpending config builder = flip runContT Just $
                         , txInfoSignatories = toList $ bbSignatures bb
                         }
 
-            return $ ScriptContext txinfo (Spending (TxOutRef "" $ toInteger (length ins)))
+            return $ ScriptContext txinfo (Spending (TxOutRef (configTxId config) $ toInteger (length ins)))

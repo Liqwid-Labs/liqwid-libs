@@ -144,7 +144,7 @@ utxoToTxOut utxo@(UTXO _ value) =
 
  @since 1.1.0
 -}
-class Builder a where
+class Monoid a => Builder a where
     pack :: BaseBuilder -> a
     unpack :: a -> BaseBuilder
 
