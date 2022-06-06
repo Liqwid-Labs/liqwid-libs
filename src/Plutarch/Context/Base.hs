@@ -9,10 +9,10 @@
  Portability: GHC only
  Stability: Experimental
 
- Fundumental interfaces for all other higher-level builders. Those
- specific builders are abstracted from the @BaseBuilder@. All
- interfaces here returns an instances of @Builder@ typeclass, and,
- thus, can be used by all other builders.
+ Fundamental interfaces for all other higher-level context-builders.
+ Such specific builders are abstracted from 'BaseBuilder'. All
+ interfaces here return instances of the 'Builder' typeclass. And as
+ a result, they can be used by all other instances of 'Builder'.
 -}
 module Plutarch.Context.Base (
     -- * Types
@@ -81,26 +81,21 @@ import PlutusLedgerApi.V1.Crypto (PubKeyHash)
 import PlutusLedgerApi.V1.Scripts (Datum (Datum), DatumHash, ValidatorHash)
 import PlutusLedgerApi.V1.Value (Value)
 
-{- | Possible Unspend Transaction Outputs type.
- There are only two different types: outputs from PubKeyHash or
- ValidatorHash. Both may or may not have datum attached.
+{- | 'UTXO' is used to represent any input or output of a transaction in the builders. 
 
- @since 1.0.0
--}
-data UTXOType
-    = PubKeyUTXO PubKeyHash (Maybe Data)
-    | ScriptUTXO ValidatorHash (Maybe Data)
-    deriving stock
-        ( -- | @since 1.0.0
-          Show
-        )
+A UTXO contains:
 
-{- | UTXO representation. Any input or output of a transaction will have
- this UTXO structure to be represented in the builders.
+  - A `Value` of one or more assets.
+  - An `Address` that it exists at.
+  - Potentially some Plutus 'Data'.
+
+This is different from `TxOut`, in that we store the 'Data' fully instead of the 'DatumHash'.
 
  @since 1.1.0
 -}
-data UTXO = UTXO UTXOType Value
+data UTXO
+  = PubKeyUTXO PubKeyHash Value (Maybe Data)
+  | ScriptUTXO ValidatorHash Value (Maybe Data)
     deriving stock (Show)
 
 {- | Pulls address output of given UTXO
@@ -108,18 +103,18 @@ data UTXO = UTXO UTXOType Value
  @since 1.1.0
 -}
 utxoAddress :: UTXO -> Address
-utxoAddress (UTXO typ _) = case typ of
-    PubKeyUTXO pkh _ -> pubKeyHashAddress pkh
-    ScriptUTXO vh _ -> scriptHashAddress vh
+utxoAddress = \case
+    PubKeyUTXO pkh _ _ -> pubKeyHashAddress pkh
+    ScriptUTXO vh _ _ -> scriptHashAddress vh
 
 {- | Construct DatumHash-Datum pair of given UTXO
 
  @since 1.1.0
 -}
 utxoData :: UTXO -> Maybe (DatumHash, Datum)
-utxoData (UTXO typ _) = case typ of
-    PubKeyUTXO _ dat -> datumWithHash <$> dat
-    ScriptUTXO _ dat -> datumWithHash <$> dat
+utxoData  = \case
+    PubKeyUTXO _ _ dat -> datumWithHash <$> dat
+    ScriptUTXO _ _ dat -> datumWithHash <$> dat
 
 {- | Construct TxOut of given UTXO
 
@@ -128,10 +123,14 @@ utxoData (UTXO typ _) = case typ of
 utxoToTxOut ::
     UTXO ->
     TxOut
-utxoToTxOut utxo@(UTXO _ value) =
+utxoToTxOut utxo@(PubKeyUTXO _ value _) =
     let address = utxoAddress utxo
         sData = utxoData utxo
      in TxOut address value . fmap fst $ sData
+utxoToTxOut utxo@(ScriptUTXO _ value _) =
+    let address = utxoAddress utxo
+        sData = utxoData utxo
+     in TxOut address value . fmap fst $ sData        
 
 {- | An abstraction for the higher-level builders.
  It allows those builder to integrate base builder functionalities
@@ -140,7 +139,7 @@ utxoToTxOut utxo@(UTXO _ value) =
  @unpack@ will sometimes loose data.
 
  Typeclass Rules:
- 1. pack . upack = id
+ 1. unpack . pack = id
 
  @since 1.1.0
 -}
@@ -339,7 +338,7 @@ output x = mempty{bbOutputs = pure x}
  @since 1.1.0
 -}
 pubUTXOGeneral :: PubKeyHash -> Value -> UTXO
-pubUTXOGeneral pkh = UTXO (PubKeyUTXO pkh Nothing)
+pubUTXOGeneral pkh val = PubKeyUTXO pkh val Nothing
 
 {- | Construct @UTXO@ from PubKeyHash with Datum.
 
@@ -353,14 +352,14 @@ pubUTXOGeneralWith ::
     b ->
     UTXO
 pubUTXOGeneralWith pkh val x =
-    UTXO (PubKeyUTXO pkh . Just . datafy $ x) val
+    PubKeyUTXO pkh val (Just . datafy $ x)
 
 {- | Construct @UTXO@ from ValidatorHash.
 
  @since 1.1.0
 -}
 scriptUTXOGeneral :: ValidatorHash -> Value -> UTXO
-scriptUTXOGeneral vh = UTXO (ScriptUTXO vh Nothing)
+scriptUTXOGeneral vh val = ScriptUTXO vh val Nothing
 
 {- | Construct @UTXO@ from ValidatorHash with Datum.
 
@@ -374,7 +373,7 @@ scriptUTXOGeneralWith ::
     b ->
     UTXO
 scriptUTXOGeneralWith vh val x =
-    UTXO (ScriptUTXO vh . Just . datafy $ x) val
+    ScriptUTXO vh val (Just . datafy $ x)
 
 {- | Provide base @TxInfo@ to Continuation Monad.
 
