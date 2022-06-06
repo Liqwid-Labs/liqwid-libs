@@ -18,6 +18,7 @@ with import ./nix { };
       playground-common
       prettyprinter-configurable
       plutus-use-cases
+      plutarch-quickcheck
     ];
 
   withHoogle = true;
@@ -30,6 +31,8 @@ with import ./nix { };
       stack
       cabal-install
       haskellPackages.fourmolu
+      haskellPackages.cabal-fmt
+      fd
       entr
       git
       ghc
