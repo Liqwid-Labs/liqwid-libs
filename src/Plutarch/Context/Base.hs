@@ -21,32 +21,16 @@ module Plutarch.Context.Base (
     BaseBuilder (..),
     UTXO (..),
 
-    -- * Inputs
-    inputFromCredential,
-    inputFromCredentialWith,
-    inputFromPubKey,
-    inputFromPubKeyWith,
-    inputFromScript,
-    inputFromScriptWith,
-
-    -- * Outputs
-    outputToCredential,
-    outputToCredentialWith,
-    outputToPubKey,
-    outputToPubKeyWith,
-    outputToScript,
-    outputToScriptWith,
-
     -- * Modular constructors
+    ofCredential,
+    ofPubKey,
+    ofScript,
+    to,
+    outputOf,
     with,
-    createdIn,
+    from,
+    amount,
     refIndex,
-    toCredential,
-    toPubKey,
-    toScript,
-    fromCredential,
-    fromPubKey,
-    fromScript,
 
     -- * Others
     signedWith,
@@ -54,23 +38,21 @@ module Plutarch.Context.Base (
     extraData,
 
     -- * Builder components
+    utxoToTxOut,
     yieldBaseTxInfo,
     yieldMint,
     yieldExtraDatums,
     yieldInInfoDatums,
     yieldOutDatums,
-    pubUTXOGeneral,
-    pubUTXOGeneralWith,
-    scriptUTXOGeneral,
-    scriptUTXOGeneralWith,
 ) where
 
 import Acc (Acc)
 import Control.Arrow (Arrow ((&&&)))
-import Control.Monad.Cont (ContT)
+import Control.Monad.Cont (ContT, lift)
 import Data.Foldable (Foldable (toList))
 import Data.Kind (Type)
 import Data.Maybe (catMaybes)
+import Data.List (nub)
 import Plutarch (S)
 import Plutarch.Api.V1 (datumHash)
 import Plutarch.Builtin (PIsData, pdata, pforgetData)
@@ -133,6 +115,12 @@ utxoAddress :: UTXO -> Address
 utxoAddress UTXO{..} = case utxoCredential of
     PubKeyCredential pkh -> pubKeyHashAddress pkh
     ScriptCredential vh -> scriptHashAddress vh
+
+datumWithHash :: Data -> (DatumHash, Datum)
+datumWithHash d = (datumHash dt, dt)
+  where
+    dt :: Datum
+    dt = Datum . BuiltinData $ d    
 
 {- | Construct DatumHash-Datum pair of given UTXO
 
@@ -246,225 +234,37 @@ with ::
     UTXO
 with dat u = u{utxoData = Just . datafy $ dat}
 
-createdIn :: TxId -> UTXO -> UTXO
-createdIn tid u = u{utxoTxId = Just tid}
+outputOf :: TxId -> UTXO -> UTXO
+outputOf tid u = u{utxoTxId = Just tid}
 
 refIndex :: Integer -> UTXO -> UTXO
 refIndex tidx u = u{utxoTxIdx = Just tidx}
 
-toPubKey ::
+amount :: Value -> UTXO -> UTXO
+amount val u = u{utxoValue = val}
+
+ofCredential :: Credential -> UTXO -> UTXO
+ofCredential cred u = u{utxoCredential = cred}
+
+ofPubKey :: PubKeyHash -> UTXO -> UTXO
+ofPubKey (PubKeyCredential -> cred) u = u{utxoCredential = cred}
+
+ofScript :: ValidatorHash -> UTXO -> UTXO
+ofScript (ScriptCredential -> cred) u = u{utxoCredential = cred}
+
+to ::
     forall (a :: Type).
     (Builder a) =>
-    PubKeyHash ->
-    Value ->
     (UTXO -> UTXO) ->
     a
-toPubKey (PubKeyCredential -> cred) = toCredential cred
+to f = pack . output . f $ UTXO (PubKeyCredential "") mempty Nothing Nothing Nothing
 
-toScript ::
+from ::
     forall (a :: Type).
     (Builder a) =>
-    ValidatorHash ->
-    Value ->
     (UTXO -> UTXO) ->
     a
-toScript (ScriptCredential -> cred) = toCredential cred
-
-toCredential ::
-    forall (a :: Type).
-    (Builder a) =>
-    Credential ->
-    Value ->
-    (UTXO -> UTXO) ->
-    a
-toCredential cred val f = pack . output . f $ UTXO cred val Nothing Nothing Nothing
-
-fromPubKey ::
-    forall (a :: Type).
-    (Builder a) =>
-    PubKeyHash ->
-    Value ->
-    (UTXO -> UTXO) ->
-    a
-fromPubKey (PubKeyCredential -> cred) = fromCredential cred
-
-fromScript ::
-    forall (a :: Type).
-    (Builder a) =>
-    ValidatorHash ->
-    Value ->
-    (UTXO -> UTXO) ->
-    a
-fromScript (ScriptCredential -> cred) = fromCredential cred
-
-fromCredential ::
-    forall (a :: Type).
-    (Builder a) =>
-    Credential ->
-    Value ->
-    (UTXO -> UTXO) ->
-    a
-fromCredential cred val f = pack . input . f $ UTXO cred val Nothing Nothing Nothing
-
-{- | Add input UTXO from Credential.
-
- @since 1.1.0
--}
-inputFromCredential ::
-    forall (a :: Type).
-    (Builder a) =>
-    Credential ->
-    Value ->
-    a
-inputFromCredential (PubKeyCredential pkh) = inputFromPubKey pkh
-inputFromCredential (ScriptCredential vh) = inputFromScript vh
-
-{- | Add output UTXO to Credential.
-
- @since 1.1.0
--}
-outputToCredential ::
-    forall (a :: Type).
-    (Builder a) =>
-    Credential ->
-    Value ->
-    a
-outputToCredential (PubKeyCredential pkh) = outputToPubKey pkh
-outputToCredential (ScriptCredential vh) = outputToScript vh
-
-{- | Add input UTXO from Credential with Datum.
-
- @since 1.1.0
--}
-inputFromCredentialWith ::
-    forall (a :: Type) (b :: Type) (p :: S -> Type).
-    (Builder a, PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
-    Credential ->
-    Value ->
-    b ->
-    a
-inputFromCredentialWith (PubKeyCredential pkh) val = inputFromPubKeyWith pkh val
-inputFromCredentialWith (ScriptCredential vh) val = inputFromScriptWith vh val
-
-{- | Add output UTXO to Credential with Datum.
-
- @since 1.1.0
--}
-outputToCredentialWith ::
-    forall (a :: Type) (b :: Type) (p :: S -> Type).
-    (Builder a, PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
-    Credential ->
-    Value ->
-    b ->
-    a
-outputToCredentialWith (PubKeyCredential pkh) val = outputToPubKeyWith pkh val
-outputToCredentialWith (ScriptCredential vh) val = outputToScriptWith vh val
-
-{- | Add input UTXO from PubKey.
-
- @since 1.1.0
--}
-inputFromPubKey ::
-    forall (a :: Type).
-    (Builder a) =>
-    PubKeyHash ->
-    Value ->
-    a
-inputFromPubKey pkh = pack . input . pubUTXOGeneral pkh
-
-{- | Add output UTXO to PubKey.
-
- @since 1.1.0
--}
-outputToPubKey ::
-    forall (a :: Type).
-    (Builder a) =>
-    PubKeyHash ->
-    Value ->
-    a
-outputToPubKey pkh = pack . output . pubUTXOGeneral pkh
-
-{- | Add input UTXO from PubKey with Datum.
-
- @since 1.1.0
--}
-inputFromPubKeyWith ::
-    forall (a :: Type) (b :: Type) (p :: S -> Type).
-    (Builder a, PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
-    PubKeyHash ->
-    Value ->
-    b ->
-    a
-inputFromPubKeyWith pkh val = pack . input . pubUTXOGeneralWith pkh val
-
-{- | Add output UTXO to PubKey with Datum.
-
- @since 1.1.0
--}
-outputToPubKeyWith ::
-    forall (a :: Type) (b :: Type) (p :: S -> Type).
-    (Builder a, PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
-    PubKeyHash ->
-    Value ->
-    b ->
-    a
-outputToPubKeyWith pkh val = pack . output . pubUTXOGeneralWith pkh val
-
-{- | Add input UTXO from ValidatorHash.
-
- @since 1.1.0
--}
-inputFromScript ::
-    forall (a :: Type).
-    (Builder a) =>
-    ValidatorHash ->
-    Value ->
-    a
-inputFromScript vh = pack . input . scriptUTXOGeneral vh
-
-{- | Add input UTXO from ValidatorHash with Datum.
-
- @since 1.1.0
--}
-inputFromScriptWith ::
-    forall (a :: Type) (b :: Type) (p :: S -> Type).
-    (Builder a, PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
-    ValidatorHash ->
-    Value ->
-    b ->
-    a
-inputFromScriptWith vh val = pack . input . scriptUTXOGeneralWith vh val
-
-{- | Add output UTXO to ValidatorHash.
-
- @since 1.1.0
--}
-outputToScript ::
-    forall (a :: Type).
-    (Builder a) =>
-    ValidatorHash ->
-    Value ->
-    a
-outputToScript vh = pack . output . scriptUTXOGeneral vh
-
-{- | Add output UTXO to ValidatorHash with Datum.
-
- @since 1.1.0
--}
-outputToScriptWith ::
-    forall (a :: Type) (b :: Type) (p :: S -> Type).
-    (Builder a, PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
-    ValidatorHash ->
-    Value ->
-    b ->
-    a
-outputToScriptWith vh val = pack . output . scriptUTXOGeneralWith vh val
-
-datumWithHash :: Data -> (DatumHash, Datum)
-datumWithHash d = (datumHash dt, dt)
-  where
-    dt :: Datum
-    dt = Datum . BuiltinData $ d
+from f = pack . input . f $ UTXO (PubKeyCredential "") mempty Nothing Nothing Nothing
 
 input ::
     UTXO ->
@@ -475,46 +275,6 @@ output ::
     UTXO ->
     BaseBuilder
 output x = mempty{bbOutputs = pure x}
-
-{- | Construct @UTXO@ from PubKeyHash.
-
- @since 1.1.0
--}
-pubUTXOGeneral :: PubKeyHash -> Value -> UTXO
-pubUTXOGeneral pkh val = UTXO (PubKeyCredential pkh) val Nothing Nothing Nothing
-
-{- | Construct @UTXO@ from PubKeyHash with Datum.
-
- @since 1.1.0
--}
-pubUTXOGeneralWith ::
-    forall (b :: Type) (p :: S -> Type).
-    (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
-    PubKeyHash ->
-    Value ->
-    b ->
-    UTXO
-pubUTXOGeneralWith pkh val x = UTXO (PubKeyCredential pkh) val (Just . datafy $ x) Nothing Nothing
-
-{- | Construct @UTXO@ from ValidatorHash.
-
- @since 1.1.0
--}
-scriptUTXOGeneral :: ValidatorHash -> Value -> UTXO
-scriptUTXOGeneral vh val = UTXO (ScriptCredential vh) val Nothing Nothing Nothing
-
-{- | Construct @UTXO@ from ValidatorHash with Datum.
-
- @since 1.1.0
--}
-scriptUTXOGeneralWith ::
-    forall (b :: Type) (p :: S -> Type).
-    (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
-    ValidatorHash ->
-    Value ->
-    b ->
-    UTXO
-scriptUTXOGeneralWith vh val x = UTXO (ScriptCredential vh) val (Just . datafy $ x) Nothing Nothing
 
 {- | Provide base @TxInfo@ to Continuation Monad.
 
@@ -565,8 +325,9 @@ yieldInInfoDatums ::
     Acc UTXO ->
     ContextConfig ->
     ContT ScriptContext Maybe ([TxInInfo], [(DatumHash, Datum)])
-yieldInInfoDatums (toList -> inputs) config =
-    return $ createTxInInfo &&& createDatumPairs $ inputs
+yieldInInfoDatums (toList -> inputs) config
+  | length (nub takenIdx) /= length takenIdx = lift Nothing
+  | otherwise = return $ createTxInInfo &&& createDatumPairs $ inputs
   where
     createTxInInfo :: [UTXO] -> [TxInInfo]
     createTxInInfo = mkTxInInfo 1

@@ -18,8 +18,7 @@ module Plutarch.Context.Spending (
     SpendingBuilder (..),
 
     -- * Inputs
-    inputFromValidatorWith,
-    inputFromValidator,
+    fromValidator,
 
     -- * builder
     buildSpending,
@@ -27,23 +26,20 @@ module Plutarch.Context.Spending (
 
 import Control.Monad.Cont (ContT (runContT), MonadTrans (lift))
 import Data.Foldable (Foldable (toList))
-import Data.Kind (Type)
-import Plutarch (S)
-import Plutarch.Builtin (PIsData)
-import Plutarch.Context.Base (
-    BaseBuilder (bbDatums, bbInputs, bbMints, bbOutputs, bbSignatures),
-    Builder (..),
-    UTXO,
-    scriptUTXOGeneral,
-    scriptUTXOGeneralWith,
-    yieldBaseTxInfo,
-    yieldExtraDatums,
-    yieldInInfoDatums,
-    yieldMint,
-    yieldOutDatums,
- )
-import Plutarch.Context.Config (ContextConfig, configTxId)
-import Plutarch.Lift (PUnsafeLiftDecl (..))
+import Plutarch.Context.Base --(
+ --    BaseBuilder (bbDatums, bbInputs, bbMints, bbOutputs, bbSignatures),
+ --    Builder (..),
+ --    UTXO,
+ --    scriptUTXOGeneral,
+ --    scriptUTXOGeneralWith,
+ --    yieldBaseTxInfo,
+ --    yieldExtraDatums,
+ --    yieldInInfoDatums,
+ --    yieldMint,
+ --    yieldOutDatums,
+ -- )
+import Plutarch.Context.Config (ContextConfig)
+import PlutusLedgerApi.V1 (Credential (..))
 import PlutusLedgerApi.V1.Contexts (
     ScriptContext (ScriptContext),
     ScriptPurpose (Spending),
@@ -54,10 +50,9 @@ import PlutusLedgerApi.V1.Contexts (
         txInfoOutputs,
         txInfoSignatories
     ),
-    TxOutRef (TxOutRef),
+    txInInfoResolved,
+    txInInfoOutRef,
  )
-import PlutusLedgerApi.V1.Scripts (ValidatorHash)
-import PlutusLedgerApi.V1.Value (Value)
 
 {- | A context builder for spending. Corresponds broadly to validators, and to
  'PlutusLedgerApi.V1.Contexts.Spending' specifically.
@@ -89,36 +84,13 @@ instance Semigroup SpendingBuilder where
 instance Monoid SpendingBuilder where
     mempty = SB mempty Nothing
 
-{- | Updates the input of the validator that is being validated.
- This function will override what the previous "input from validator,"
- if one exists.
-
- @since 1.1.0
--}
-inputFromValidator ::
-    ValidatorHash ->
-    Value ->
-    SpendingBuilder
-inputFromValidator vh val =
-    mempty
-        { sbValidatorInput = Just $ scriptUTXOGeneral vh val
-        }
-
-{- | Equivalent to @inputFromValidator@ but with Datum.
-
- @since 1.1.0
--}
-inputFromValidatorWith ::
-    forall (d :: Type) (p :: S -> Type).
-    (PUnsafeLiftDecl p, PLifted p ~ d, PIsData p) =>
-    ValidatorHash ->
-    Value ->
-    d ->
-    SpendingBuilder
-inputFromValidatorWith vh val d =
-    mempty
-        { sbValidatorInput = Just $ scriptUTXOGeneralWith vh val d
-        }
+fromValidator ::
+  (UTXO -> UTXO) ->
+  SpendingBuilder
+fromValidator f =
+  mempty
+      { sbValidatorInput = Just $ f (UTXO (PubKeyCredential "") mempty Nothing Nothing Nothing)
+      }
 
 {- | Builds @ScriptContext@ according to given configuration and
  @SpendingBuilder@.
@@ -136,10 +108,10 @@ buildSpending ::
 buildSpending config builder = flip runContT Just $
     case sbValidatorInput builder of
         Nothing -> lift Nothing
-        Just (pure -> vInUTXO) -> do
+        Just vInUTXO -> do
             let bb = unpack builder
 
-            (ins, inDat) <- yieldInInfoDatums (bbInputs bb <> vInUTXO) config
+            (ins, inDat) <- yieldInInfoDatums (bbInputs bb <> pure vInUTXO) config
             (outs, outDat) <- yieldOutDatums (bbOutputs bb)
             mintedValue <- yieldMint (bbMints bb)
             extraDat <- yieldExtraDatums (bbDatums bb)
@@ -153,5 +125,6 @@ buildSpending config builder = flip runContT Just $
                         , txInfoMint = mintedValue
                         , txInfoSignatories = toList $ bbSignatures bb
                         }
+                spendingInInfo = head $ filter (\(txInInfoResolved -> x) -> x == utxoToTxOut vInUTXO) ins
 
-            return $ ScriptContext txinfo (Spending (TxOutRef (configTxId config) $ toInteger (length ins)))
+            return $ ScriptContext txinfo (Spending (txInInfoOutRef spendingInInfo))
