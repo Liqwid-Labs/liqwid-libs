@@ -104,10 +104,10 @@ fromValidator f =
 buildSpending ::
     ContextConfig ->
     SpendingBuilder ->
-    Maybe ScriptContext
-buildSpending config builder = flip runContT Just $
+    Either String ScriptContext
+buildSpending config builder = flip runContT Right $
     case sbValidatorInput builder of
-        Nothing -> lift Nothing
+        Nothing -> lift $ Left "No validator input specifid"
         Just vInUTXO -> do
             let bb = unpack builder
 
@@ -125,6 +125,10 @@ buildSpending config builder = flip runContT Just $
                         , txInfoMint = mintedValue
                         , txInfoSignatories = toList $ bbSignatures bb
                         }
-                spendingInInfo = head $ filter (\(txInInfoResolved -> x) -> x == utxoToTxOut vInUTXO) ins
+                spendingInInfo = filter (\(txInInfoResolved -> x) -> x == utxoToTxOut vInUTXO) ins
+                
+            case spendingInInfo of
+              [] -> lift $ Left "UTXO Input not found"
+              (x:_) -> return $ ScriptContext txinfo (Spending (txInInfoOutRef x))
 
-            return $ ScriptContext txinfo (Spending (txInInfoOutRef spendingInInfo))
+

@@ -13,13 +13,7 @@ import BaseBuilder (
     genHashByteString,
  )
 import Data.Maybe (isNothing)
-import Plutarch.Context (
-    SpendingBuilder,
-    buildSpending,
-    defaultConfig,
-    inputFromValidator,
-    inputFromValidatorWith,
- )
+import Plutarch.Context
 import PlutusLedgerApi.V1 (
     Address (Address),
     Credential (ScriptCredential),

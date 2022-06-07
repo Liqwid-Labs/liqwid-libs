@@ -22,15 +22,15 @@ module Plutarch.Context.Base (
     UTXO (..),
 
     -- * Modular constructors
-    ofCredential,
-    ofPubKey,
-    ofScript,
-    to,
-    outputOf,
-    with,
-    from,
-    amount,
-    refIndex,
+    output,
+    input,
+    credential,
+    pubKey,
+    script,
+    withTxId,
+    withDatum,
+    withValue,
+    withRefIndex,
 
     -- * Others
     signedWith,
@@ -71,7 +71,6 @@ import PlutusLedgerApi.V1.Address (
     scriptHashAddress,
  )
 import PlutusLedgerApi.V1.Contexts (
-    ScriptContext (..),
     TxId (..),
     TxInInfo (TxInInfo),
     TxInfo (..),
@@ -226,61 +225,55 @@ datafy ::
     Data
 datafy x = plift (pforgetData (pdata (pconstant x)))
 
-with ::
+withDatum ::
     forall (b :: Type) (p :: S -> Type).
     (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
     b ->
     UTXO ->
     UTXO
-with dat u = u{utxoData = Just . datafy $ dat}
+withDatum dat u = u{utxoData = Just . datafy $ dat}
 
-outputOf :: TxId -> UTXO -> UTXO
-outputOf tid u = u{utxoTxId = Just tid}
+withTxId :: TxId -> UTXO -> UTXO
+withTxId tid u = u{utxoTxId = Just tid}
 
-refIndex :: Integer -> UTXO -> UTXO
-refIndex tidx u = u{utxoTxIdx = Just tidx}
+withRefIndex :: Integer -> UTXO -> UTXO
+withRefIndex tidx u = u{utxoTxIdx = Just tidx}
 
-amount :: Value -> UTXO -> UTXO
-amount val u = u{utxoValue = val}
+withValue :: Value -> UTXO -> UTXO
+withValue val u = u{utxoValue = val}
 
-ofCredential :: Credential -> UTXO -> UTXO
-ofCredential cred u = u{utxoCredential = cred}
+credential :: Credential -> UTXO -> UTXO
+credential cred u = u{utxoCredential = cred}
 
-ofPubKey :: PubKeyHash -> UTXO -> UTXO
-ofPubKey (PubKeyCredential -> cred) u = u{utxoCredential = cred}
+pubKey :: PubKeyHash -> UTXO -> UTXO
+pubKey (PubKeyCredential -> cred) u = u{utxoCredential = cred}
 
-ofScript :: ValidatorHash -> UTXO -> UTXO
-ofScript (ScriptCredential -> cred) u = u{utxoCredential = cred}
-
-to ::
-    forall (a :: Type).
-    (Builder a) =>
-    (UTXO -> UTXO) ->
-    a
-to f = pack . output . f $ UTXO (PubKeyCredential "") mempty Nothing Nothing Nothing
-
-from ::
-    forall (a :: Type).
-    (Builder a) =>
-    (UTXO -> UTXO) ->
-    a
-from f = pack . input . f $ UTXO (PubKeyCredential "") mempty Nothing Nothing Nothing
-
-input ::
-    UTXO ->
-    BaseBuilder
-input x = mempty{bbInputs = pure x}
+script :: ValidatorHash -> UTXO -> UTXO
+script (ScriptCredential -> cred) u = u{utxoCredential = cred}
 
 output ::
-    UTXO ->
-    BaseBuilder
-output x = mempty{bbOutputs = pure x}
+    forall (a :: Type).
+    (Builder a) =>
+    (UTXO -> UTXO) ->
+    a
+output f = pack . g . f $ UTXO (PubKeyCredential "") mempty Nothing Nothing Nothing
+  where
+    g x = mempty{bbOutputs = pure x}
+
+input ::
+    forall (a :: Type).
+    (Builder a) =>
+    (UTXO -> UTXO) ->
+    a
+input f = pack . g . f $ UTXO (PubKeyCredential "") mempty Nothing Nothing Nothing
+  where
+    g x = mempty{bbInputs = pure x}
 
 {- | Provide base @TxInfo@ to Continuation Monad.
 
  @since 1.1.0
 -}
-yieldBaseTxInfo :: ContextConfig -> ContT ScriptContext Maybe TxInfo
+yieldBaseTxInfo :: ContextConfig -> ContT a (Either String) TxInfo
 yieldBaseTxInfo config =
     return $
         TxInfo
@@ -302,7 +295,7 @@ yieldBaseTxInfo config =
 -}
 yieldMint ::
     Acc Value ->
-    ContT ScriptContext Maybe Value
+    ContT a (Either String) Value
 yieldMint (toList -> vals) =
     return $ mconcat vals
 
@@ -312,7 +305,7 @@ yieldMint (toList -> vals) =
 -}
 yieldExtraDatums ::
     Acc Data ->
-    ContT ScriptContext Maybe [(DatumHash, Datum)]
+    ContT a (Either String) [(DatumHash, Datum)]
 yieldExtraDatums (toList -> ds) =
     return $ datumWithHash <$> ds
 
@@ -324,9 +317,9 @@ yieldExtraDatums (toList -> ds) =
 yieldInInfoDatums ::
     Acc UTXO ->
     ContextConfig ->
-    ContT ScriptContext Maybe ([TxInInfo], [(DatumHash, Datum)])
+    ContT a (Either String) ([TxInInfo], [(DatumHash, Datum)])
 yieldInInfoDatums (toList -> inputs) config
-  | length (nub takenIdx) /= length takenIdx = lift Nothing
+  | length (nub takenIdx) /= length takenIdx = lift $ Left "Duplicate Indices"
   | otherwise = return $ createTxInInfo &&& createDatumPairs $ inputs
   where
     createTxInInfo :: [UTXO] -> [TxInInfo]
@@ -354,7 +347,7 @@ yieldInInfoDatums (toList -> inputs) config
 -}
 yieldOutDatums ::
     Acc UTXO ->
-    ContT ScriptContext Maybe ([TxOut], [(DatumHash, Datum)])
+    ContT a (Either String) ([TxOut], [(DatumHash, Datum)])
 yieldOutDatums (toList -> outputs) =
     return $ createTxInInfo &&& createDatumPairs $ outputs
   where

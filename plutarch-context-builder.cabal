@@ -90,6 +90,7 @@ library
     Plutarch.Context.Config
     Plutarch.Context.Minting
     Plutarch.Context.Spending
+    Plutarch.Context.TxInfo
 
   build-depends:
     , acc
@@ -101,13 +102,19 @@ library
 
 -- Tests
 
-test-suite test
+-- test-suite test
+--   import:         common-tests
+--   type:           exitcode-stdio-1.0
+--   main-is:        Main.hs
+--   other-modules:
+--     BaseBuilder
+--     Minting
+--     Spending
+
+--   hs-source-dirs: test/
+
+test-suite sample
   import:         common-tests
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
-  other-modules:
-    BaseBuilder
-    Minting
-    Spending
-
-  hs-source-dirs: test/
+  hs-source-dirs: sample/

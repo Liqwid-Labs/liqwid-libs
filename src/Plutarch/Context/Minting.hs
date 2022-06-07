@@ -99,8 +99,8 @@ uniformCurrencySymbol (symbols -> xs)
 buildMinting ::
     ContextConfig ->
     MintingBuilder ->
-    Maybe ScriptContext
-buildMinting config builder = flip runContT Just $
+    Either String ScriptContext
+buildMinting config builder = flip runContT Right $
     do
         let bb = unpack builder
 
@@ -121,4 +121,4 @@ buildMinting config builder = flip runContT Just $
 
         case uniformCurrencySymbol mintedValue of
             Just c -> return $ ScriptContext txinfo (Minting c)
-            Nothing -> lift Nothing
+            Nothing -> lift $ Left "Duplicate currency symbol"

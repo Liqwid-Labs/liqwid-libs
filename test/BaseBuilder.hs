@@ -21,25 +21,9 @@ import Control.Applicative (Applicative (liftA2))
 import qualified Data.ByteString.Char8 as C (ByteString, pack)
 import Data.ByteString.Hash (sha2_256)
 import Plutarch.Api.V1 (datumHash)
-import Plutarch.Context (
-    Builder,
-    extraData,
-    inputFromCredential,
-    inputFromCredentialWith,
-    inputFromPubKey,
-    inputFromPubKeyWith,
-    inputFromScript,
-    inputFromScriptWith,
-    mint,
-    outputToCredential,
-    outputToCredentialWith,
-    outputToPubKey,
-    outputToPubKeyWith,
-    outputToScript,
-    outputToScriptWith,
-    signedWith,
- )
+import Plutarch.Context 
 import PlutusLedgerApi.V1 (
+    TxId(..),
     Address (Address),
     Credential (..),
     CurrencySymbol,
@@ -72,49 +56,41 @@ import PlutusLedgerApi.V1.Value (
     currencySymbol,
     tokenName,
  )
-import Test.Tasty.QuickCheck (
-    Arbitrary (arbitrary),
-    Gen,
-    Property,
-    Testable (property),
-    chooseAny,
-    conjoin,
-    elements,
-    listOf1,
-    (.&&.),
- )
+import Test.Tasty.QuickCheck
+
+data UTXOComponents
+  = OfCredential Credential
+  | OfPubKey PubKeyHash
+  | OfScript ValidatorHash
+  | AmountOf Value
+  | OutputOf TxId
+  | RefIndexOf Integer
+  | With Integer
+  deriving stock (Show, Eq)
 
 data BuilderInterface
-    = InputFromPubKey PubKeyHash Value
-    | InputFromPubKeyWith PubKeyHash Value Integer
-    | InputFromScript ValidatorHash Value
-    | InputFromScriptWith ValidatorHash Value Integer
-    | OutputToPubKey PubKeyHash Value
-    | OutputToPubKeyWith PubKeyHash Value Integer
-    | OutputToScript ValidatorHash Value
-    | OutputToScriptWith ValidatorHash Value Integer
-    | InputFromCredential Credential Value
-    | InputFromCredentialWith Credential Value Integer
-    | OutputToCredential Credential Value
-    | OutputToCredentialWith Credential Value Integer
+    = To [UTXOComponents]
+    | From [UTXOComponents]
     | SignedWith PubKeyHash
     | Mint Value
     | ExtraData Integer
     deriving stock (Show, Eq)
 
+toUTXO :: [UTXOComponents] -> (UTXO -> UTXO)
+toUTXO xs = foldr (.) id $ go <$> xs
+  where
+    go :: UTXOComponents -> (UTXO -> UTXO)
+    go (OfCredential cred) = credential cred
+    go (OfPubKey pkh) = pubKey pkh
+    go (OfScript vh) = script vh
+    go (AmountOf val) = amountOf val
+    go (OutputOf tid) = outputOf tid
+    go (RefIndexOf tidx) = refIndexOf tidx
+    go (With dat) = with dat
+
 toBuilder :: Builder a => BuilderInterface -> a
-toBuilder (InputFromPubKey pkh val) = inputFromPubKey pkh val
-toBuilder (InputFromPubKeyWith pkh val dat) = inputFromPubKeyWith pkh val dat
-toBuilder (InputFromScript vh val) = inputFromScript vh val
-toBuilder (InputFromScriptWith vh val dat) = inputFromScriptWith vh val dat
-toBuilder (OutputToPubKey pkh val) = outputToPubKey pkh val
-toBuilder (OutputToPubKeyWith pkh val dat) = outputToPubKeyWith pkh val dat
-toBuilder (OutputToScript vh val) = outputToScript vh val
-toBuilder (OutputToScriptWith vh val dat) = outputToScriptWith vh val dat
-toBuilder (InputFromCredential cred val) = inputFromCredential cred val
-toBuilder (InputFromCredentialWith cred val dat) = inputFromCredentialWith cred val dat
-toBuilder (OutputToCredential cred val) = outputToCredential cred val
-toBuilder (OutputToCredentialWith cred val dat) = outputToCredentialWith cred val dat
+toBuilder (To (toUTXO -> comps)) = to comps
+toBuilder (From (toUTXO -> comps)) = from comps
 toBuilder (SignedWith pkh) = signedWith pkh
 toBuilder (Mint val) = mint val
 toBuilder (ExtraData dat) = extraData dat
@@ -159,23 +135,28 @@ instance Arbitrary BuilderInterface where
     arbitrary = do
         pkh <- PubKeyHash . toBuiltin <$> genHashByteString
         vh <- ValidatorHash . toBuiltin <$> genHashByteString
+        txId <- TxId . toBuiltin <$> genHashByteString
+        txIdx <- arbitrary
         cred <- genCredential
         val <- genAnyValue
         dat <- arbitrary
 
+        possession <- elements
+                      [ OfCredential cred
+                      , OfPubKey pkh
+                      , OfScript vh
+                      ]
+
+        other <- sublistOf
+                 [ OutputOf txId
+                 , AmountOf val
+                 , RefIndexOf txIdx
+                 , With dat
+                 ]
+                 
         elements
-            [ InputFromPubKey pkh val
-            , InputFromPubKeyWith pkh val dat
-            , InputFromScript vh val
-            , InputFromScriptWith vh val dat
-            , OutputToPubKey pkh val
-            , OutputToPubKeyWith pkh val dat
-            , OutputToScript vh val
-            , OutputToScriptWith vh val dat
-            , InputFromCredential cred val
-            , InputFromCredentialWith cred val dat
-            , OutputToCredential cred val
-            , OutputToCredentialWith cred val dat
+            [ From (possession:other)
+            , To (possession:other)
             , SignedWith pkh
             , Mint val
             , ExtraData dat
@@ -211,7 +192,7 @@ check (addr, val) os
             )
             os
 
-checkWithDatum :: (ToData a) => (Address, Value, a) -> [TxOut] -> Bool
+checkWithDatum :: ToData a => (Address, Value, a) -> [TxOut] -> Bool
 checkWithDatum (addr, val, dat) os
     | null filtered = False
     | otherwise = True
@@ -248,46 +229,20 @@ baseRules context infs = (conjoin $ go <$> infs) .&&. mintingRule
     datumPairs = txInfoData . scriptContextTxInfo $ context
 
     pkToAddr = (flip Address Nothing) . PubKeyCredential
-    vhashToAddr = (flip Address Nothing) . ScriptCredential
+    vhToAddr = (flip Address Nothing) . ScriptCredential
 
     mintingRule = minted infs == (txInfoMint . scriptContextTxInfo $ context)
 
-    go (InputFromPubKey (pkToAddr -> addr) val) =
-        property $
-            check (addr, val) ins
-    go (InputFromPubKeyWith (pkToAddr -> addr) val dat) =
-        property $
-            checkWithDatum (addr, val, dat) ins
-                && datumExists datumPairs dat
-    go (InputFromScript (vhashToAddr -> addr) val) =
-        property $
-            check (addr, val) ins
-    go (InputFromScriptWith (vhashToAddr -> addr) val dat) =
-        property $
-            checkWithDatum (addr, val, dat) ins
-                && datumExists datumPairs dat
-    go (OutputToPubKey (pkToAddr -> addr) val) =
-        property $
-            check (addr, val) outs
-    go (OutputToPubKeyWith (pkToAddr -> addr) val dat) =
-        property $
-            checkWithDatum (addr, val, dat) outs
-                && datumExists datumPairs dat
-    go (OutputToScript (vhashToAddr -> addr) val) =
-        property $
-            check (addr, val) outs
-    go (OutputToScriptWith (vhashToAddr -> addr) val dat) =
-        property $
-            checkWithDatum (addr, val, dat) outs
-                && datumExists datumPairs dat
-    go (InputFromCredential (PubKeyCredential pkh) val) = go $ InputFromPubKey pkh val
-    go (InputFromCredential (ScriptCredential vh) val) = go $ InputFromScript vh val
-    go (InputFromCredentialWith (PubKeyCredential pkh) val dat) = go $ InputFromPubKeyWith pkh val dat
-    go (InputFromCredentialWith (ScriptCredential vh) val dat) = go $ InputFromScriptWith vh val dat
-    go (OutputToCredential (PubKeyCredential pkh) val) = go $ OutputToPubKey pkh val
-    go (OutputToCredential (ScriptCredential vh) val) = go $ OutputToScript vh val
-    go (OutputToCredentialWith (PubKeyCredential pkh) val dat) = go $ OutputToPubKeyWith pkh val dat
-    go (OutputToCredentialWith (ScriptCredential vh) val dat) = go $ OutputToScriptWith vh val dat
+    utxoRules utxo =
+      check (Address (utxoCredential utxo) Nothing, utxoValue utxo)
+
+    go (To xs) = property $ 
+      check (Address (utxoCredential utxo) Nothing, utxoValue utxo) outs-- .&&.
+--      property (maybe True checkDat (utxoData utxo))
+      where
+        utxo = toUTXO xs $ (UTXO (PubKeyCredential "") mempty Nothing Nothing Nothing)
+--        checkDat d = checkWithDatum (Address (utxoCredential utxo) Nothing, utxoValue utxo, d) outs
+    go (From xs) = property True
     go (SignedWith pk) =
         property $
             let signers = txInfoSignatories . scriptContextTxInfo $ context
