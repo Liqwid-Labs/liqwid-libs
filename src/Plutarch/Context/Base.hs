@@ -40,6 +40,7 @@ module Plutarch.Context.Base (
     -- * Modular constructors
     with,
     createdIn,
+    refIndex,
     toCredential,
     toPubKey,
     toScript,
@@ -119,7 +120,8 @@ data UTXO = UTXO
     { utxoCredential :: Credential
     , utxoValue :: Value
     , utxoData :: Maybe Data
-    , utxoOrigin :: Maybe TxId
+    , utxoTxId :: Maybe TxId
+    , utxoTxIdx :: Maybe Integer
     }
     deriving stock (Show)
 
@@ -245,7 +247,10 @@ with ::
 with dat u = u{utxoData = Just . datafy $ dat}
 
 createdIn :: TxId -> UTXO -> UTXO
-createdIn tid u = u{utxoOrigin = Just tid}
+createdIn tid u = u{utxoTxId = Just tid}
+
+refIndex :: Integer -> UTXO -> UTXO
+refIndex tidx u = u{utxoTxIdx = Just tidx}
 
 toPubKey ::
     forall (a :: Type).
@@ -254,7 +259,7 @@ toPubKey ::
     Value ->
     (UTXO -> UTXO) ->
     a
-toPubKey pkh val f = pack . output . f $ UTXO (PubKeyCredential pkh) val Nothing Nothing
+toPubKey (PubKeyCredential -> cred) = toCredential cred
 
 toScript ::
     forall (a :: Type).
@@ -263,7 +268,7 @@ toScript ::
     Value ->
     (UTXO -> UTXO) ->
     a
-toScript vh val f = pack . output . f $ UTXO (ScriptCredential vh) val Nothing Nothing
+toScript (ScriptCredential -> cred) = toCredential cred
 
 toCredential ::
     forall (a :: Type).
@@ -272,7 +277,7 @@ toCredential ::
     Value ->
     (UTXO -> UTXO) ->
     a
-toCredential cred val f = pack . output . f $ UTXO cred val Nothing Nothing
+toCredential cred val f = pack . output . f $ UTXO cred val Nothing Nothing Nothing
 
 fromPubKey ::
     forall (a :: Type).
@@ -281,7 +286,7 @@ fromPubKey ::
     Value ->
     (UTXO -> UTXO) ->
     a
-fromPubKey pkh val f = pack . input . f $ UTXO (PubKeyCredential pkh) val Nothing Nothing
+fromPubKey (PubKeyCredential -> cred) = fromCredential cred
 
 fromScript ::
     forall (a :: Type).
@@ -290,7 +295,7 @@ fromScript ::
     Value ->
     (UTXO -> UTXO) ->
     a
-fromScript vh val f = pack . input . f $ UTXO (ScriptCredential vh) val Nothing Nothing
+fromScript (ScriptCredential -> cred) = fromCredential cred
 
 fromCredential ::
     forall (a :: Type).
@@ -299,7 +304,7 @@ fromCredential ::
     Value ->
     (UTXO -> UTXO) ->
     a
-fromCredential cred val f = pack . input . f $ UTXO cred val Nothing Nothing
+fromCredential cred val f = pack . input . f $ UTXO cred val Nothing Nothing Nothing
 
 {- | Add input UTXO from Credential.
 
@@ -476,7 +481,7 @@ output x = mempty{bbOutputs = pure x}
  @since 1.1.0
 -}
 pubUTXOGeneral :: PubKeyHash -> Value -> UTXO
-pubUTXOGeneral pkh val = UTXO (PubKeyCredential pkh) val Nothing Nothing
+pubUTXOGeneral pkh val = UTXO (PubKeyCredential pkh) val Nothing Nothing Nothing
 
 {- | Construct @UTXO@ from PubKeyHash with Datum.
 
@@ -489,14 +494,14 @@ pubUTXOGeneralWith ::
     Value ->
     b ->
     UTXO
-pubUTXOGeneralWith pkh val x = UTXO (PubKeyCredential pkh) val (Just . datafy $ x) Nothing
+pubUTXOGeneralWith pkh val x = UTXO (PubKeyCredential pkh) val (Just . datafy $ x) Nothing Nothing
 
 {- | Construct @UTXO@ from ValidatorHash.
 
  @since 1.1.0
 -}
 scriptUTXOGeneral :: ValidatorHash -> Value -> UTXO
-scriptUTXOGeneral vh val = UTXO (ScriptCredential vh) val Nothing Nothing
+scriptUTXOGeneral vh val = UTXO (ScriptCredential vh) val Nothing Nothing Nothing
 
 {- | Construct @UTXO@ from ValidatorHash with Datum.
 
@@ -509,7 +514,7 @@ scriptUTXOGeneralWith ::
     Value ->
     b ->
     UTXO
-scriptUTXOGeneralWith vh val x = UTXO (ScriptCredential vh) val (Just . datafy $ x) Nothing
+scriptUTXOGeneralWith vh val x = UTXO (ScriptCredential vh) val (Just . datafy $ x) Nothing Nothing
 
 {- | Provide base @TxInfo@ to Continuation Monad.
 
@@ -565,12 +570,18 @@ yieldInInfoDatums (toList -> inputs) config =
   where
     createTxInInfo :: [UTXO] -> [TxInInfo]
     createTxInInfo = mkTxInInfo 1
+
+    takenIdx = catMaybes $ utxoTxIdx <$> inputs
     
     mkTxInInfo :: Integer -> [UTXO] -> [TxInInfo]
     mkTxInInfo _ [] = []
-    mkTxInInfo ind (utxo@(UTXO{..}) : xs) =
-        let ref = TxOutRef (maybe (configTxId config) id utxoOrigin) ind
-         in TxInInfo ref (utxoToTxOut utxo) : mkTxInInfo (ind + 1) xs
+    mkTxInInfo ind (utxo@(UTXO{..}): xs)
+      | elem ind takenIdx = mkTxInInfo (ind + 1) $ utxo:xs
+      | otherwise = case utxoTxIdx of
+          Just x -> TxInInfo (ref x) (utxoToTxOut utxo) : mkTxInInfo (ind) xs
+          Nothing -> TxInInfo (ref ind) (utxoToTxOut utxo) : mkTxInInfo (ind + 1) xs
+      where
+        ref = TxOutRef (maybe (configTxId config) id utxoTxId)
             
     createDatumPairs :: [UTXO] -> [(DatumHash, Datum)]
     createDatumPairs xs = catMaybes $ utxoDatumPair <$> xs
