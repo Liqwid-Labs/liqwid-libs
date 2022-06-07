@@ -1,4 +1,4 @@
-module Main(main) where
+module Main (main) where
 
 import GHC.IO.Encoding
 import Plutarch.Context
@@ -7,22 +7,29 @@ import PlutusPrelude
 
 test :: Builder a => a
 test =
-  mconcat
-  [ input
-    $ pubKey "aabb"
-    . withValue (singleton "cc" "hello" 123)
-    . withRefIndex 5
-  , input
-    $ pubKey "eeee"
-    . withValue (singleton "cc" "hello" 123)
-    . withDatum (123 :: Integer)
-  , output
-    $ script "cccc"
-    . withValue (singleton "dd" "world" 123)
-  ]
+    mconcat
+        [ input $
+            pubKey "aabb"
+                . withValue (singleton "cc" "hello" 123)
+                . withRefIndex 5
+        , input $
+            pubKey "eeee"
+                . withValue (singleton "cc" "hello" 123)
+                . withDatum (123 :: Integer)
+                . withTxId "eeff"
+        , output $
+            script "cccc"
+                . withValue (singleton "dd" "world" 123)
+        , mint $ singleton "aaaa" "hello" 333
+        ]
 
 main :: IO ()
 main = do
-  setLocaleEncoding utf8
-  print $ pretty $ spends <$> buildTxInfo defaultConfig test
-  print $ pretty $ buildSpending defaultConfig (test <> fromValidator (pubKey "aabb" . withValue (singleton "cc" "hello" 123)))
+    setLocaleEncoding utf8
+    let a = buildMinting test
+        b = buildSpending (test <> withSpending (pubKey "aabb" . withValue (singleton "cc" "hello" 123)))
+    print $ pretty $ a
+    print $ pretty $ b
+
+    print $ (scriptContextTxInfo <$> a) == (scriptContextTxInfo <$> b)
+    print $ txInfoId . scriptContextTxInfo <$> a

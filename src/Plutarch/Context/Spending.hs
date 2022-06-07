@@ -18,7 +18,7 @@ module Plutarch.Context.Spending (
     SpendingBuilder (..),
 
     -- * Inputs
-    fromValidator,
+    withSpending,
 
     -- * builder
     buildSpending,
@@ -26,19 +26,19 @@ module Plutarch.Context.Spending (
 
 import Control.Monad.Cont (ContT (runContT), MonadTrans (lift))
 import Data.Foldable (Foldable (toList))
-import Plutarch.Context.Base --(
- --    BaseBuilder (bbDatums, bbInputs, bbMints, bbOutputs, bbSignatures),
- --    Builder (..),
- --    UTXO,
- --    scriptUTXOGeneral,
- --    scriptUTXOGeneralWith,
- --    yieldBaseTxInfo,
- --    yieldExtraDatums,
- --    yieldInInfoDatums,
- --    yieldMint,
- --    yieldOutDatums,
- -- )
-import Plutarch.Context.Config (ContextConfig)
+import Plutarch.Context.Base -- (
+--    BaseBuilder (bbDatums, bbInputs, bbMints, bbOutputs, bbSignatures),
+--    Builder (..),
+--    UTXO,
+--    scriptUTXOGeneral,
+--    scriptUTXOGeneralWith,
+--    yieldBaseTxInfo,
+--    yieldExtraDatums,
+--    yieldInInfoDatums,
+--    yieldMint,
+--    yieldOutDatums,
+-- )
+
 import PlutusLedgerApi.V1 (Credential (..))
 import PlutusLedgerApi.V1.Contexts (
     ScriptContext (ScriptContext),
@@ -50,8 +50,8 @@ import PlutusLedgerApi.V1.Contexts (
         txInfoOutputs,
         txInfoSignatories
     ),
-    txInInfoResolved,
     txInInfoOutRef,
+    txInInfoResolved,
  )
 
 {- | A context builder for spending. Corresponds broadly to validators, and to
@@ -84,13 +84,13 @@ instance Semigroup SpendingBuilder where
 instance Monoid SpendingBuilder where
     mempty = SB mempty Nothing
 
-fromValidator ::
-  (UTXO -> UTXO) ->
-  SpendingBuilder
-fromValidator f =
-  mempty
-      { sbValidatorInput = Just $ f (UTXO (PubKeyCredential "") mempty Nothing Nothing Nothing)
-      }
+withSpending ::
+    (UTXO -> UTXO) ->
+    SpendingBuilder
+withSpending f =
+    mempty
+        { sbValidatorInput = Just $ f (UTXO (PubKeyCredential "") mempty Nothing Nothing Nothing)
+        }
 
 {- | Builds @ScriptContext@ according to given configuration and
  @SpendingBuilder@.
@@ -102,20 +102,19 @@ fromValidator f =
  @since 1.1.0
 -}
 buildSpending ::
-    ContextConfig ->
     SpendingBuilder ->
     Either String ScriptContext
-buildSpending config builder = flip runContT Right $
+buildSpending builder = flip runContT Right $
     case sbValidatorInput builder of
         Nothing -> lift $ Left "No validator input specifid"
         Just vInUTXO -> do
             let bb = unpack builder
 
-            (ins, inDat) <- yieldInInfoDatums (bbInputs bb <> pure vInUTXO) config
+            (ins, inDat) <- yieldInInfoDatums (bbInputs bb) builder
             (outs, outDat) <- yieldOutDatums (bbOutputs bb)
             mintedValue <- yieldMint (bbMints bb)
             extraDat <- yieldExtraDatums (bbDatums bb)
-            base <- yieldBaseTxInfo config
+            base <- yieldBaseTxInfo builder
 
             let txinfo =
                     base
@@ -126,9 +125,7 @@ buildSpending config builder = flip runContT Right $
                         , txInfoSignatories = toList $ bbSignatures bb
                         }
                 spendingInInfo = filter (\(txInInfoResolved -> x) -> x == utxoToTxOut vInUTXO) ins
-                
+
             case spendingInInfo of
-              [] -> lift $ Left "UTXO Input not found"
-              (x:_) -> return $ ScriptContext txinfo (Spending (txInInfoOutRef x))
-
-
+                [] -> lift $ Left "UTXO Input not found"
+                (x : _) -> return $ ScriptContext txinfo (Spending (txInInfoOutRef x))

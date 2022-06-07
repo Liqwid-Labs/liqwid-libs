@@ -36,6 +36,9 @@ module Plutarch.Context.Base (
     signedWith,
     mint,
     extraData,
+    txId,
+    fee,
+    timeRange,
 
     -- * Builder components
     utxoToTxOut,
@@ -51,14 +54,11 @@ import Control.Arrow (Arrow ((&&&)))
 import Control.Monad.Cont (ContT, lift)
 import Data.Foldable (Foldable (toList))
 import Data.Kind (Type)
-import Data.Maybe (catMaybes)
 import Data.List (nub)
+import Data.Maybe (catMaybes, fromMaybe)
 import Plutarch (S)
 import Plutarch.Api.V1 (datumHash)
 import Plutarch.Builtin (PIsData, pdata, pforgetData)
-import Plutarch.Context.Config (
-    ContextConfig (configFee, configTimeRange, configTxId),
- )
 import Plutarch.Lift (PUnsafeLiftDecl (..), pconstant, plift)
 import PlutusCore.Data (Data)
 import PlutusLedgerApi.V1 (
@@ -78,11 +78,13 @@ import PlutusLedgerApi.V1.Contexts (
     TxOutRef (TxOutRef),
  )
 import PlutusLedgerApi.V1.Crypto (PubKeyHash)
+import PlutusLedgerApi.V1.Interval (Interval, always)
 import PlutusLedgerApi.V1.Scripts (
     Datum (Datum),
     DatumHash,
     ValidatorHash,
  )
+import PlutusLedgerApi.V1.Time (POSIXTime)
 import PlutusLedgerApi.V1.Value (Value)
 
 {- | 'UTXO' is used to represent any input or output of a transaction in the builders.
@@ -119,7 +121,7 @@ datumWithHash :: Data -> (DatumHash, Datum)
 datumWithHash d = (datumHash dt, dt)
   where
     dt :: Datum
-    dt = Datum . BuiltinData $ d    
+    dt = Datum . BuiltinData $ d
 
 {- | Construct DatumHash-Datum pair of given UTXO
 
@@ -168,17 +170,32 @@ data BaseBuilder = BB
     , bbSignatures :: Acc PubKeyHash
     , bbDatums :: Acc Data
     , bbMints :: Acc Value
+    , bbFee :: Value
+    , bbTimeRange :: Interval POSIXTime
+    , bbTxId :: TxId
     }
     deriving stock (Show)
 
 -- | @since 1.1.0
 instance Semigroup BaseBuilder where
-    BB ins outs sigs dats ms <> BB ins' outs' sigs' dats' ms' =
-        BB (ins <> ins') (outs <> outs') (sigs <> sigs') (dats <> dats') (ms <> ms')
+    BB ins outs sigs dats ms fval range tid <> BB ins' outs' sigs' dats' ms' fval' range' tid' =
+        BB
+            (ins <> ins')
+            (outs <> outs')
+            (sigs <> sigs')
+            (dats <> dats')
+            (ms <> ms')
+            (fval <> fval')
+            (choose bbTimeRange range range')
+            (choose bbTxId tid tid')
+      where
+        choose f a b
+            | f mempty == b = a
+            | otherwise = b
 
 -- | @since 1.1.0
 instance Monoid BaseBuilder where
-    mempty = BB mempty mempty mempty mempty mempty
+    mempty = BB mempty mempty mempty mempty mempty mempty always (TxId "")
 
 -- | @since 1.1.0
 instance Builder BaseBuilder where
@@ -224,6 +241,27 @@ datafy ::
     a ->
     Data
 datafy x = plift (pforgetData (pdata (pconstant x)))
+
+txId ::
+    forall (a :: Type).
+    (Builder a) =>
+    TxId ->
+    a
+txId tid = pack $ mempty{bbTxId = tid}
+
+fee ::
+    forall (a :: Type).
+    (Builder a) =>
+    Value ->
+    a
+fee val = pack $ mempty{bbFee = val}
+
+timeRange ::
+    forall (a :: Type).
+    (Builder a) =>
+    Interval POSIXTime ->
+    a
+timeRange r = pack $ mempty{bbTimeRange = r}
 
 withDatum ::
     forall (b :: Type) (p :: S -> Type).
@@ -273,20 +311,21 @@ input f = pack . g . f $ UTXO (PubKeyCredential "") mempty Nothing Nothing Nothi
 
  @since 1.1.0
 -}
-yieldBaseTxInfo :: ContextConfig -> ContT a (Either String) TxInfo
-yieldBaseTxInfo config =
+yieldBaseTxInfo ::
+    (Builder b) => b -> ContT a (Either String) TxInfo
+yieldBaseTxInfo (unpack -> bb) =
     return $
         TxInfo
             { txInfoInputs = mempty
             , txInfoOutputs = mempty
-            , txInfoFee = configFee config
+            , txInfoFee = bbFee bb
             , txInfoMint = mempty
             , txInfoDCert = mempty
             , txInfoWdrl = mempty
-            , txInfoValidRange = configTimeRange config
+            , txInfoValidRange = bbTimeRange bb
             , txInfoSignatories = mempty
             , txInfoData = mempty
-            , txInfoId = configTxId config
+            , txInfoId = bbTxId bb
             }
 
 {- | Provide total mints to Continuation Monad.
@@ -315,28 +354,29 @@ yieldExtraDatums (toList -> ds) =
  @since 1.1.0
 -}
 yieldInInfoDatums ::
+    (Builder b) =>
     Acc UTXO ->
-    ContextConfig ->
+    b ->
     ContT a (Either String) ([TxInInfo], [(DatumHash, Datum)])
-yieldInInfoDatums (toList -> inputs) config
-  | length (nub takenIdx) /= length takenIdx = lift $ Left "Duplicate Indices"
-  | otherwise = return $ createTxInInfo &&& createDatumPairs $ inputs
+yieldInInfoDatums (toList -> inputs) (unpack -> bb)
+    | length (nub takenIdx) /= length takenIdx = lift $ Left "Duplicate Indices"
+    | otherwise = return $ createTxInInfo &&& createDatumPairs $ inputs
   where
     createTxInInfo :: [UTXO] -> [TxInInfo]
     createTxInInfo = mkTxInInfo 1
 
     takenIdx = catMaybes $ utxoTxIdx <$> inputs
-    
+
     mkTxInInfo :: Integer -> [UTXO] -> [TxInInfo]
     mkTxInInfo _ [] = []
-    mkTxInInfo ind (utxo@(UTXO{..}): xs)
-      | elem ind takenIdx = mkTxInInfo (ind + 1) $ utxo:xs
-      | otherwise = case utxoTxIdx of
-          Just x -> TxInInfo (ref x) (utxoToTxOut utxo) : mkTxInInfo (ind) xs
-          Nothing -> TxInInfo (ref ind) (utxoToTxOut utxo) : mkTxInInfo (ind + 1) xs
+    mkTxInInfo ind (utxo@(UTXO{..}) : xs)
+        | elem ind takenIdx = mkTxInInfo (ind + 1) $ utxo : xs
+        | otherwise = case utxoTxIdx of
+            Just x -> TxInInfo (ref x) (utxoToTxOut utxo) : mkTxInInfo (ind) xs
+            Nothing -> TxInInfo (ref ind) (utxoToTxOut utxo) : mkTxInInfo (ind + 1) xs
       where
-        ref = TxOutRef (maybe (configTxId config) id utxoTxId)
-            
+        ref = TxOutRef $ fromMaybe (bbTxId bb) utxoTxId
+
     createDatumPairs :: [UTXO] -> [(DatumHash, Datum)]
     createDatumPairs xs = catMaybes $ utxoDatumPair <$> xs
 

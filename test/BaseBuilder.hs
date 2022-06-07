@@ -21,9 +21,8 @@ import Control.Applicative (Applicative (liftA2))
 import qualified Data.ByteString.Char8 as C (ByteString, pack)
 import Data.ByteString.Hash (sha2_256)
 import Plutarch.Api.V1 (datumHash)
-import Plutarch.Context 
+import Plutarch.Context
 import PlutusLedgerApi.V1 (
-    TxId(..),
     Address (Address),
     Credential (..),
     CurrencySymbol,
@@ -34,6 +33,7 @@ import PlutusLedgerApi.V1 (
     PubKeyHash (PubKeyHash),
     ScriptContext (scriptContextTxInfo),
     ToData (..),
+    TxId (..),
     TxInInfo (txInInfoResolved),
     TxInfo (
         txInfoData,
@@ -59,14 +59,14 @@ import PlutusLedgerApi.V1.Value (
 import Test.Tasty.QuickCheck
 
 data UTXOComponents
-  = OfCredential Credential
-  | OfPubKey PubKeyHash
-  | OfScript ValidatorHash
-  | AmountOf Value
-  | OutputOf TxId
-  | RefIndexOf Integer
-  | With Integer
-  deriving stock (Show, Eq)
+    = OfCredential Credential
+    | OfPubKey PubKeyHash
+    | OfScript ValidatorHash
+    | AmountOf Value
+    | OutputOf TxId
+    | RefIndexOf Integer
+    | With Integer
+    deriving stock (Show, Eq)
 
 data BuilderInterface
     = To [UTXOComponents]
@@ -141,22 +141,24 @@ instance Arbitrary BuilderInterface where
         val <- genAnyValue
         dat <- arbitrary
 
-        possession <- elements
-                      [ OfCredential cred
-                      , OfPubKey pkh
-                      , OfScript vh
-                      ]
+        possession <-
+            elements
+                [ OfCredential cred
+                , OfPubKey pkh
+                , OfScript vh
+                ]
 
-        other <- sublistOf
-                 [ OutputOf txId
-                 , AmountOf val
-                 , RefIndexOf txIdx
-                 , With dat
-                 ]
-                 
+        other <-
+            sublistOf
+                [ OutputOf txId
+                , AmountOf val
+                , RefIndexOf txIdx
+                , With dat
+                ]
+
         elements
-            [ From (possession:other)
-            , To (possession:other)
+            [ From (possession : other)
+            , To (possession : other)
             , SignedWith pkh
             , Mint val
             , ExtraData dat
@@ -234,14 +236,15 @@ baseRules context infs = (conjoin $ go <$> infs) .&&. mintingRule
     mintingRule = minted infs == (txInfoMint . scriptContextTxInfo $ context)
 
     utxoRules utxo =
-      check (Address (utxoCredential utxo) Nothing, utxoValue utxo)
+        check (Address (utxoCredential utxo) Nothing, utxoValue utxo)
 
-    go (To xs) = property $ 
-      check (Address (utxoCredential utxo) Nothing, utxoValue utxo) outs-- .&&.
---      property (maybe True checkDat (utxoData utxo))
+    go (To xs) =
+        property $
+            check (Address (utxoCredential utxo) Nothing, utxoValue utxo) outs -- .&&.
+            --      property (maybe True checkDat (utxoData utxo))
       where
         utxo = toUTXO xs $ (UTXO (PubKeyCredential "") mempty Nothing Nothing Nothing)
---        checkDat d = checkWithDatum (Address (utxoCredential utxo) Nothing, utxoValue utxo, d) outs
+    --        checkDat d = checkWithDatum (Address (utxoCredential utxo) Nothing, utxoValue utxo, d) outs
     go (From xs) = property True
     go (SignedWith pk) =
         property $

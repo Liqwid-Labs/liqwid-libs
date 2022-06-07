@@ -87,7 +87,6 @@ library
   exposed-modules: Plutarch.Context
   other-modules:
     Plutarch.Context.Base
-    Plutarch.Context.Config
     Plutarch.Context.Minting
     Plutarch.Context.Spending
     Plutarch.Context.TxInfo

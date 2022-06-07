@@ -35,7 +35,6 @@ import Plutarch.Context.Base (
     yieldOutDatums,
  )
 
-import Plutarch.Context.Config (ContextConfig)
 import PlutusLedgerApi.V1.Contexts (
     ScriptContext (ScriptContext),
     ScriptPurpose (Minting),
@@ -97,18 +96,17 @@ uniformCurrencySymbol (symbols -> xs)
  @since 1.1.0
 -}
 buildMinting ::
-    ContextConfig ->
     MintingBuilder ->
     Either String ScriptContext
-buildMinting config builder = flip runContT Right $
+buildMinting builder = flip runContT Right $
     do
         let bb = unpack builder
 
-        (ins, inDat) <- yieldInInfoDatums (bbInputs bb) config
+        (ins, inDat) <- yieldInInfoDatums (bbInputs bb) builder
         (outs, outDat) <- yieldOutDatums (bbOutputs bb)
         mintedValue <- yieldMint (bbMints bb)
         extraDat <- yieldExtraDatums (bbDatums bb)
-        base <- yieldBaseTxInfo config
+        base <- yieldBaseTxInfo builder
 
         let txinfo =
                 base
@@ -121,4 +119,4 @@ buildMinting config builder = flip runContT Right $
 
         case uniformCurrencySymbol mintedValue of
             Just c -> return $ ScriptContext txinfo (Minting c)
-            Nothing -> lift $ Left "Duplicate currency symbol"
+            Nothing -> lift $ Left "Duplicate currency symbol or No minted value"
