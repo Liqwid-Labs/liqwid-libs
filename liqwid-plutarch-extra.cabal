@@ -28,11 +28,11 @@ common common-lang
     -Wall -Wcompat -Wincomplete-uni-patterns
     -Wincomplete-record-updates -Wredundant-constraints
     -Wmissing-export-lists -Wmissing-deriving-strategies -Werror
+    -Wno-partial-type-signatures
 
   build-depends:
-    , base            ^>=4.16
+    , base      ^>=4.16
     , plutarch
-    , plutarch-extra
 
   default-extensions:
     BangPatterns
@@ -52,6 +52,7 @@ common common-lang
     MultiParamTypeClasses
     NumericUnderscores
     OverloadedStrings
+    PackageImports
     ScopedTypeVariables
     StandaloneDeriving
     TupleSections
@@ -75,6 +76,7 @@ library
     Plutarch.Extra.Function
     Plutarch.Extra.Functor
     Plutarch.Extra.Identity
+    Plutarch.Extra.List
     Plutarch.Extra.Map
     Plutarch.Extra.Maybe
     Plutarch.Extra.Numeric
@@ -88,6 +90,7 @@ library
 
   build-depends:
     , generics-sop
+    , plutarch-extra
     , plutus-tx
     , tagged
 
@@ -99,11 +102,14 @@ test-suite liqwid-plutarch-extra-test
   main-is:        Spec.hs
   ghc-options:    -O2 -threaded -rtsopts -with-rtsopts=-N
   build-depends:
+    , containers
     , liqwid-plutarch-extra
+    , mtl
     , plutarch-quickcheck
     , QuickCheck
     , quickcheck-instances
     , tasty
     , tasty-quickcheck
 
+  other-modules:  Spec.Extra.List
   hs-source-dirs: test
