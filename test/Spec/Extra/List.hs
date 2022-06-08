@@ -4,6 +4,8 @@
 
 module Spec.Extra.List (tests) where
 
+--------------------------------------------------------------------------------
+
 import Test.Tasty (TestTree)
 import Test.Tasty.QuickCheck (
     Arbitrary (arbitrary),
@@ -29,6 +31,7 @@ import Plutarch (PMatch (pmatch), Term, phoistAcyclic, plam, (#), (#$), type (:-
 import Plutarch.Api.V1 (PMaybeData (..))
 import Plutarch.Bool (PBool, PEq ((#==)), (#<))
 import Plutarch.Builtin (PBuiltinList, PBuiltinPair, pfstBuiltin, psndBuiltin)
+import Plutarch.Extra.Functor (pfmap)
 import Plutarch.Extra.Maybe (pmaybeToMaybeData)
 import Plutarch.Integer (PInteger)
 import Plutarch.Lift (pconstant, plift)
@@ -40,7 +43,6 @@ import Control.Monad.Cont (cont, runCont)
 
 --------------------------------------------------------------------------------
 
-import Plutarch.Extra.Functor (pfmap)
 import Plutarch.Extra.List (pbinarySearchBy, phalve, pisUniq, pmergeBy, pmsort, pnubSort)
 
 --------------------------------------------------------------------------------

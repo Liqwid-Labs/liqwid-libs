@@ -31,8 +31,9 @@ common common-lang
     -Wno-partial-type-signatures
 
   build-depends:
-    , base      ^>=4.16
+    , base       ^>=4.16
     , plutarch
+    , plutus-tx
 
   default-extensions:
     BangPatterns
@@ -92,7 +93,6 @@ library
   build-depends:
     , generics-sop
     , plutarch-extra
-    , plutus-tx
     , tagged
 
   hs-source-dirs:  src
@@ -112,5 +112,8 @@ test-suite liqwid-plutarch-extra-test
     , tasty
     , tasty-quickcheck
 
-  other-modules:  Spec.Extra.List
+  other-modules:
+    Spec.Extra.List
+    Spec.Extra.Map
+
   hs-source-dirs: test
