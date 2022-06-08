@@ -85,6 +85,7 @@ library
     Plutarch.Extra.State
     Plutarch.Extra.Sum
     Plutarch.Extra.Tagged
+    Plutarch.Extra.TermCont
     Plutarch.Extra.These
     Plutarch.Extra.Traversable
 

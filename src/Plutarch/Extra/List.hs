@@ -17,6 +17,7 @@ module Plutarch.Extra.List (
     pbinarySearchBy,
     pbinarySearch,
     plookupTuple,
+    module Extra,
 ) where
 
 import Data.Kind (Type)
@@ -38,6 +39,10 @@ import Plutarch.Api.V1.Tuple (PTuple)
 import Plutarch.Bool (PBool (..), PEq (..), POrd (..), pif)
 import Plutarch.Builtin (PAsData, PBuiltinPair, PIsData, pfromData, pfstBuiltin, psndBuiltin)
 import Plutarch.DataRepr (pfield)
+import "plutarch-extra" Plutarch.Extra.List as Extra (
+    pcheckSorted,
+    preverse,
+ )
 import Plutarch.Extra.TermCont (pletC)
 import Plutarch.List (PIsListLike, PListLike (..), plength, precList, psingleton)
 import Plutarch.Maybe (PMaybe (PJust, PNothing))
