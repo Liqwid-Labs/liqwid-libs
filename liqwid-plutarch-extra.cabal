@@ -31,8 +31,9 @@ common common-lang
     -Wno-partial-type-signatures
 
   build-depends:
-    , base       ^>=4.16
+    , base               ^>=4.16
     , plutarch
+    , plutus-ledger-api
     , plutus-tx
 
   default-extensions:

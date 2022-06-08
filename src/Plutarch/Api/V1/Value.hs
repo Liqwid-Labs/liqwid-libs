@@ -1,10 +1,17 @@
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Plutarch.Api.V1.Value (
     psingletonValue,
     passetClassValue,
     pvalueOf,
     padaOf,
+    psymbolValueOf,
+    passetClassValueOf',
+    pgeqByClass,
+    pgeqBySymbol,
+    pgeqByClass',
+    paddValue,
 ) where
 
 import Plutarch (
@@ -18,7 +25,7 @@ import Plutarch (
     type (:-->),
  )
 import Plutarch.Api.V1 (
-    AmountGuarantees,
+    AmountGuarantees (..),
     KeyGuarantees,
     PCurrencySymbol,
     PMap (PMap),
@@ -26,14 +33,18 @@ import Plutarch.Api.V1 (
     PValue (PValue),
  )
 import Plutarch.Api.V1.AssetClass (PAssetClass)
-import Plutarch.Builtin (pdata, pfromData, ppairDataBuiltin)
+import Plutarch.Bool (PBool, POrd ((#<=)))
+import Plutarch.Builtin (pdata, pfromData, ppairDataBuiltin, psndBuiltin)
 import Plutarch.DataRepr (pfield)
-import Plutarch.Extra.Map (plookup)
+import qualified Plutarch.Extra.List
+import Plutarch.Extra.Map (plookup, punionWith)
+import Plutarch.Extra.Maybe (pexpectJustC)
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.Integer (PInteger)
 import Plutarch.Lift (pconstant)
-import Plutarch.List (psingleton)
+import Plutarch.List (pfoldr, psingleton)
 import Plutarch.Maybe (PMaybe (PJust, PNothing))
+import PlutusLedgerApi.V1.Value (AssetClass (..))
 
 psingletonValue ::
     forall (s :: S) (keys :: KeyGuarantees) (amounts :: AmountGuarantees).
@@ -77,3 +88,95 @@ padaOf ::
     forall (s :: S) (keys :: KeyGuarantees) (amounts :: AmountGuarantees).
     Term s (PValue keys amounts :--> PInteger)
 padaOf = phoistAcyclic $ plam $ \v -> pvalueOf # v # pconstant "" # pconstant ""
+
+{- | Get the sum of all values belonging to a particular CurrencySymbol.
+
+   @since 1.0.0
+-}
+psymbolValueOf ::
+    forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
+    Term s (PCurrencySymbol :--> PValue keys amounts :--> PInteger)
+psymbolValueOf =
+    phoistAcyclic $
+        plam $ \sym value'' -> unTermCont $ do
+            PValue value' <- pmatchC value''
+            PMap value <- pmatchC value'
+            m' <- pexpectJustC 0 (Plutarch.Extra.List.plookup # pdata sym # value)
+            PMap m <- pmatchC (pfromData m')
+            pure $ pfoldr # plam (\x v -> pfromData (psndBuiltin # x) + v) # 0 # m
+
+{- | Extract amount from PValue belonging to a Haskell-level AssetClass.
+
+   @since 1.0.0
+-}
+passetClassValueOf' ::
+    forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
+    AssetClass ->
+    Term s (PValue keys amounts :--> PInteger)
+passetClassValueOf' (AssetClass (sym, token)) =
+    phoistAcyclic $ plam $ \value -> pvalueOf # value # pconstant sym # pconstant token
+
+{- | Return '>=' on two values comparing by only a particular AssetClass.
+
+   @since 1.0.0
+-}
+pgeqByClass ::
+    forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
+    Term s (PCurrencySymbol :--> PTokenName :--> PValue keys amounts :--> PValue keys amounts :--> PBool)
+pgeqByClass =
+    phoistAcyclic $
+        plam $ \cs tn a b ->
+            pvalueOf # b # cs # tn #<= pvalueOf # a # cs # tn
+
+{- | Return '>=' on two values comparing by only a particular CurrencySymbol.
+
+   @since 1.0.0
+-}
+pgeqBySymbol ::
+    forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
+    Term s (PCurrencySymbol :--> PValue keys amounts :--> PValue keys amounts :--> PBool)
+pgeqBySymbol =
+    phoistAcyclic $
+        plam $ \cs a b ->
+            psymbolValueOf # cs # b #<= psymbolValueOf # cs # a
+
+{- | Return '>=' on two values comparing by only a particular Haskell-level AssetClass.
+
+   @since 1.0.0
+-}
+pgeqByClass' ::
+    forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
+    AssetClass ->
+    Term s (PValue keys amounts :--> PValue keys amounts :--> PBool)
+pgeqByClass' ac =
+    phoistAcyclic $
+        plam $ \a b ->
+            passetClassValueOf' ac # b #<= passetClassValueOf' ac # a
+
+-- | Compute the guarantees known after adding two values.
+type family AddGuarantees (a :: AmountGuarantees) (b :: AmountGuarantees) where
+    AddGuarantees 'Positive 'Positive = 'Positive
+    AddGuarantees _ _ = 'NoGuarantees
+
+{- | Add two 'PValue's together.
+
+   @since 1.0.0
+-}
+paddValue ::
+    forall (keys :: KeyGuarantees) (as :: AmountGuarantees) (bs :: AmountGuarantees) (s :: S).
+    Term s (PValue keys as :--> PValue keys bs :--> PValue keys (AddGuarantees as bs))
+paddValue = phoistAcyclic $
+    plam $ \a' b' -> unTermCont $ do
+        PValue a <- pmatchC a'
+        PValue b <- pmatchC b'
+        pure $
+            pcon
+                ( PValue $
+                    punionWith
+                        # plam
+                            ( \a'' b'' ->
+                                punionWith # plam (+) # a'' # b''
+                            )
+                        # a
+                        # b
+                )
