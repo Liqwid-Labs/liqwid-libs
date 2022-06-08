@@ -146,6 +146,7 @@
               pkgs'.cabal-install
               pkgs'.hlint
               pkgs'.haskellPackages.cabal-fmt
+              pkgs'.haskellPackages.apply-refact
               (fourmoluFor system)
               pkgs'.nixpkgs-fmt
               (plutarch.hlsFor compiler-nix-name system)

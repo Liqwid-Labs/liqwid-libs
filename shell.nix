@@ -32,6 +32,7 @@ with import ./nix { };
       cabal-install
       haskellPackages.fourmolu
       haskellPackages.cabal-fmt
+      haskellPackages.apply-refact
       fd
       entr
       git
