@@ -1,3 +1,5 @@
+_Note, 2022-06-11_: This repo is alpha level software. Stability or correctness should not be assumed.
+
 # `liqwid-plutarch-extra`
 
 ## What is this?
