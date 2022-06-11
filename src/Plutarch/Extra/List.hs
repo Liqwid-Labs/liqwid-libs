@@ -15,6 +15,8 @@ module Plutarch.Extra.List (
     pfirstJust,
     plookup,
     plookupTuple,
+    pisSortedBy,
+    pisSorted,
     module Extra,
 ) where
 
@@ -34,7 +36,7 @@ import Plutarch (
     type (:-->),
  )
 import Plutarch.Api.V1.Tuple (PTuple)
-import Plutarch.Bool (PBool (..), PEq (..), POrd (..), pif)
+import Plutarch.Bool (PBool (..), PEq (..), POrd (..), pif, (#||))
 import Plutarch.Builtin (PAsData, PBuiltinPair, PIsData, pfromData, pfstBuiltin, psndBuiltin)
 import Plutarch.DataRepr (pfield)
 import "plutarch-extra" Plutarch.Extra.List as Extra (
@@ -42,6 +44,7 @@ import "plutarch-extra" Plutarch.Extra.List as Extra (
     preverse,
  )
 import Plutarch.Extra.TermCont (pletC)
+import Plutarch.Lift (pconstant)
 import Plutarch.List (PIsListLike, PListLike (..), plength, pmap, precList, psingleton)
 import Plutarch.Maybe (PMaybe (PJust, PNothing))
 import Prelude hiding (last)
@@ -310,3 +313,32 @@ plookupTuple =
             pmatch (pfind' (\p -> (pfield @"_0" # pfromData p) #== k) # xs) $ \case
                 PNothing -> pcon PNothing
                 PJust p -> pcon (PJust (pfield @"_1" # pfromData p))
+
+pisSortedBy ::
+    (PIsListLike list a) =>
+    Term s ((a :--> a :--> PBool) :--> (a :--> a :--> PBool) :--> list a :--> PBool)
+pisSortedBy = phoistAcyclic $
+    plam $ \eq lt l -> pif (pnull # l) (pconstant True) $
+        unTermCont $ do
+            h <- pletC $ phead # l
+            t <- pletC $ ptail # l
+            pure $ go # eq # lt # h # t
+  where
+    go = pfix #$ plam $ \self' eq lt x xs ->
+        plet (self' # eq # lt) $ \self ->
+            pif
+                (pnull # xs)
+                (pconstant True)
+                $ plet (phead # xs) $ \x' ->
+                    pif
+                        (eq # x # x' #|| lt # x # x')
+                        (self # x' #$ ptail # xs)
+                        (pconstant False)
+
+pisSorted ::
+    (PIsListLike list a, POrd a) =>
+    Term s (list a :--> PBool)
+pisSorted = phoistAcyclic $ pisSortedBy # eq # lt
+  where
+    eq = phoistAcyclic $ plam (#==)
+    lt = phoistAcyclic $ plam (#<)

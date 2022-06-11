@@ -8,11 +8,8 @@ module Plutarch.Extra.Map (
     pkeys,
     pupdate,
     pmap,
-    punionWith,
-    pkeysEqual,
-
-    -- * PlutusTx Utilities.
-    update,
+    pkvPairKey,
+    pkvPairLt,
 ) where
 
 import Data.Foldable (foldl')
@@ -27,11 +24,10 @@ import Plutarch (
     pto,
     unTermCont,
     (#),
-    (#$),
     type (:-->),
  )
 import Plutarch.Api.V1.AssocMap (KeyGuarantees, PMap (PMap))
-import Plutarch.Bool (PBool (PFalse), PEq ((#==)), POrd ((#<)), pif, pnot)
+import Plutarch.Bool (PBool, PEq ((#==)), POrd ((#<)), pif)
 import Plutarch.Builtin (
     PAsData,
     PBuiltinList (PCons, PNil),
@@ -45,14 +41,12 @@ import Plutarch.Builtin (
     psndBuiltin,
  )
 import Plutarch.Extra.Functor (pfmap)
-import Plutarch.Extra.List (pmapMaybe, pmsortBy)
-import qualified Plutarch.Extra.List
+import Plutarch.Extra.List (pmapMaybe)
 import Plutarch.Extra.TermCont (pletC, pmatchC)
-import Plutarch.List (pany, pconcat, pfilter, pfind, plength, plistEquals)
+import Plutarch.List (pfind)
 import qualified Plutarch.List
 import Plutarch.Maybe (PMaybe (PJust, PNothing))
 import Plutarch.Trace (ptraceError)
-import qualified PlutusTx.AssocMap as AssocMap
 
 -- | @since 1.0.0
 plookup ::
@@ -165,89 +159,19 @@ pmap = phoistAcyclic $
                         )
                     # ps
 
-{- | Union two maps using a merge function on collisions.
-
-    TODO(Emily): this function is kinda suspect. I feel like a lot of optimizations could be done here
-    TODO: optimize this
-
-    @since 1.0.0
--}
-punionWith ::
-    forall (k :: S -> Type) (v :: S -> Type) (keys :: KeyGuarantees) (s :: S).
-    PIsData v =>
-    Term
-        s
-        ( (v :--> v :--> v)
-            :--> PMap keys k v
-            :--> PMap keys k v
-            :--> PMap keys k v
-        )
-punionWith = phoistAcyclic $
-    plam $ \f xs' ys' -> unTermCont $ do
-        PMap xs <- pmatchC xs'
-        PMap ys <- pmatchC ys'
-        let ls =
-                Plutarch.List.pmap
-                    # plam
-                        ( \p -> unTermCont $ do
-                            pf <- pletC $ pfstBuiltin # p
-                            pure $
-                                pmatch (Plutarch.Extra.List.plookup # pf # ys) $ \case
-                                    PJust v ->
-                                        -- Data conversions here are silly, aren't they?
-                                        ppairDataBuiltin # pf # pdata (f # pfromData (psndBuiltin # p) # pfromData v)
-                                    PNothing -> p
-                        )
-                    # xs
-            rs =
-                pfilter
-                    # plam
-                        ( \p ->
-                            pnot #$ pany # plam (\p' -> pfstBuiltin # p' #== pfstBuiltin # p) # xs
-                        )
-                    # ys
-        pure $ pcon (PMap $ pconcat # ls # rs)
-
-{- | True if both maps have exactly the same keys.
-     Using @'#=='@ is not sufficient, because keys returned are not ordered.
-
-    @since 1.0.0
--}
-pkeysEqual ::
-    forall (k :: S -> Type) (a :: S -> Type) (b :: S -> Type) (keys :: KeyGuarantees) (s :: S).
-    (POrd k, PIsData k) =>
-    Term s (PMap keys k a :--> PMap keys k b :--> PBool)
-pkeysEqual = phoistAcyclic $
-    plam $ \p q -> unTermCont $ do
-        pks <- pletC $ pkeys # p
-        qks <- pletC $ pkeys # q
-
-        pure $
-            pif
-                (plength # pks #== plength # qks)
-                ( unTermCont $ do
-                    let comp = phoistAcyclic $ plam $ \(pfromData -> x) (pfromData -> y) -> x #< y
-                        spks = pmsortBy # comp # pks
-                        sqks = pmsortBy # comp # qks
-
-                    pure $ plistEquals # spks # sqks
-                )
-                (pcon PFalse)
-
---------------------------------------------------------------------------------
--- Haskell level utilities.
-
-{- | / O(n) /. The expression @'updateMap' f k v@ will update the value @x@ at key @k@.
-    If @f x@ is Nothing, the key-value pair will be deleted from the map, otherwise the
-     value will be updated.
+{- | Get the key of a key-value pair.
 
      @since 1.0.0
 -}
-update :: Eq k => (v -> Maybe v) -> k -> AssocMap.Map k v -> AssocMap.Map k v
-update f k =
-    AssocMap.mapMaybeWithKey
-        ( \k' v ->
-            if k' == k
-                then f v
-                else Just v
-        )
+pkvPairKey :: (PIsData k) => Term s (PBuiltinPair (PAsData k) (PAsData v) :--> k)
+pkvPairKey = phoistAcyclic $ plam $ \(pfromData . (pfstBuiltin #) -> key) -> key
+
+{- | Compare two key-value pairs by their keys, return true if the first key is less than the second one.
+
+      @since 1.0.0
+-}
+pkvPairLt ::
+    (PIsData k, POrd k) =>
+    Term s (PBuiltinPair (PAsData k) (PAsData v) :--> PBuiltinPair (PAsData k) (PAsData v) :--> PBool)
+pkvPairLt = phoistAcyclic $
+    plam $ \((pkvPairKey #) -> keyA) ((pkvPairKey #) -> keyB) -> keyA #< keyB

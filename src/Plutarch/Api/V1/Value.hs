@@ -11,7 +11,7 @@ module Plutarch.Api.V1.Value (
     pgeqByClass,
     pgeqBySymbol,
     pgeqByClass',
-    paddValue,
+    AddGuarantees,
 ) where
 
 import Plutarch (
@@ -37,7 +37,7 @@ import Plutarch.Bool (PBool, POrd ((#<=)))
 import Plutarch.Builtin (pdata, pfromData, ppairDataBuiltin, psndBuiltin)
 import Plutarch.DataRepr (pfield)
 import qualified Plutarch.Extra.List
-import Plutarch.Extra.Map (plookup, punionWith)
+import Plutarch.Extra.Map (plookup)
 import Plutarch.Extra.Maybe (pexpectJustC)
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.Integer (PInteger)
@@ -46,6 +46,10 @@ import Plutarch.List (pfoldr, psingleton)
 import Plutarch.Maybe (PMaybe (PJust, PNothing))
 import PlutusLedgerApi.V1.Value (AssetClass (..))
 
+{- | Create a `PValue` that only contains specific amount tokens of the given symbol and name.
+
+   @since 1.0.0
+-}
 psingletonValue ::
     forall (s :: S) (keys :: KeyGuarantees) (amounts :: AmountGuarantees).
     Term s (PCurrencySymbol :--> PTokenName :--> PInteger :--> PValue keys amounts)
@@ -57,7 +61,10 @@ psingletonValue = phoistAcyclic $
         outer <- pletC (pcon . PMap $ psingleton # outerPair)
         pure . pcon . PValue $ outer
 
--- | @since 1.0.0
+{- | Create a `PValue` that only contains specific amount tokens of the given assetclass.
+
+   @since 1.0.0
+-}
 passetClassValue ::
     forall (s :: S) (keys :: KeyGuarantees) (amounts :: AmountGuarantees).
     Term s (PAssetClass :--> PInteger :--> PValue keys amounts)
@@ -67,7 +74,10 @@ passetClassValue = phoistAcyclic $
         tn <- pletC (pfield @"tokenName" # ac)
         pure $ psingletonValue # pfromData cs # pfromData tn # i
 
--- | @since 1.0.0
+{- | Get the amount of tokens which have the given symbol and name from a `PValue`.
+
+   @since 1.0.0
+-}
 pvalueOf ::
     forall (s :: S) (keys :: KeyGuarantees) (amounts :: AmountGuarantees).
     Term s (PValue keys amounts :--> PCurrencySymbol :--> PTokenName :--> PInteger)
@@ -83,7 +93,10 @@ pvalueOf = phoistAcyclic $
                     PNothing -> 0
                     PJust res -> res
 
--- | @since 1.0.0
+{- | Get the amount of ada of a `PValue`.
+
+   @since 1.0.0
+-}
 padaOf ::
     forall (s :: S) (keys :: KeyGuarantees) (amounts :: AmountGuarantees).
     Term s (PValue keys amounts :--> PInteger)
@@ -153,30 +166,10 @@ pgeqByClass' ac =
         plam $ \a b ->
             passetClassValueOf' ac # b #<= passetClassValueOf' ac # a
 
--- | Compute the guarantees known after adding two values.
-type family AddGuarantees (a :: AmountGuarantees) (b :: AmountGuarantees) where
-    AddGuarantees 'Positive 'Positive = 'Positive
-    AddGuarantees _ _ = 'NoGuarantees
-
-{- | Add two 'PValue's together.
+{- | Compute the guarantees known after adding two values.
 
    @since 1.0.0
 -}
-paddValue ::
-    forall (keys :: KeyGuarantees) (as :: AmountGuarantees) (bs :: AmountGuarantees) (s :: S).
-    Term s (PValue keys as :--> PValue keys bs :--> PValue keys (AddGuarantees as bs))
-paddValue = phoistAcyclic $
-    plam $ \a' b' -> unTermCont $ do
-        PValue a <- pmatchC a'
-        PValue b <- pmatchC b'
-        pure $
-            pcon
-                ( PValue $
-                    punionWith
-                        # plam
-                            ( \a'' b'' ->
-                                punionWith # plam (+) # a'' # b''
-                            )
-                        # a
-                        # b
-                )
+type family AddGuarantees (a :: AmountGuarantees) (b :: AmountGuarantees) where
+    AddGuarantees 'Positive 'Positive = 'Positive
+    AddGuarantees _ _ = 'NoGuarantees

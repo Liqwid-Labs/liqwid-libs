@@ -70,6 +70,7 @@ library
     Plutarch.Api.V1.AssetClass
     Plutarch.Api.V1.ScriptContext
     Plutarch.Api.V1.Value
+    Plutarch.Api.V1.Value.Unsorted
     Plutarch.Extra.Applicative
     Plutarch.Extra.Bool
     Plutarch.Extra.Category
@@ -80,6 +81,8 @@ library
     Plutarch.Extra.Identity
     Plutarch.Extra.List
     Plutarch.Extra.Map
+    Plutarch.Extra.Map.Sorted
+    Plutarch.Extra.Map.Unsorted
     Plutarch.Extra.Maybe
     Plutarch.Extra.Numeric
     Plutarch.Extra.Profunctor
