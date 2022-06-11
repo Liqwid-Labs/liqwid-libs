@@ -1,9 +1,9 @@
+{-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Plutarch.Extra.List (
     pnotNull,
     pmergeBy,
-    phalve,
     pmsortBy,
     pmsort,
     pnubSortBy,
@@ -14,8 +14,6 @@ module Plutarch.Extra.List (
     pfind',
     pfirstJust,
     plookup,
-    pbinarySearchBy,
-    pbinarySearch,
     plookupTuple,
     module Extra,
 ) where
@@ -44,9 +42,8 @@ import "plutarch-extra" Plutarch.Extra.List as Extra (
     preverse,
  )
 import Plutarch.Extra.TermCont (pletC)
-import Plutarch.List (PIsListLike, PListLike (..), plength, precList, psingleton)
+import Plutarch.List (PIsListLike, PListLike (..), plength, pmap, precList, psingleton)
 import Plutarch.Maybe (PMaybe (PJust, PNothing))
-import Plutarch.Pair (PPair (..))
 import Prelude hiding (last)
 
 {- | True if a list is not empty.
@@ -96,36 +93,6 @@ pmergeBy = phoistAcyclic $ pfix #$ plam go
                             (pcons # ah #$ self # comp # at # b)
                             (pcons # bh #$ self # comp # a # bt)
 
-{- | Split a list in half without any dividing.
-
-   @since 1.0.0
--}
-phalve ::
-    forall (a :: S -> Type) (s :: S) list.
-    (PIsListLike list a) =>
-    Term s (list a :--> PPair (list a) (list a))
-phalve = phoistAcyclic $ plam $ \l -> go # l # l
-  where
-    go = phoistAcyclic $ pfix # plam go'
-    go' self xs ys =
-        pif
-            (pnull # ys)
-            (pcon $ PPair pnil xs)
-            ( unTermCont $ do
-                yt <- pletC $ ptail # ys
-
-                xh <- pletC $ phead # xs
-                xt <- pletC $ ptail # xs
-
-                pure $
-                    pif (pnull # yt) (pcon $ PPair (psingleton # xh) xt) $
-                        unTermCont $ do
-                            yt' <- pletC $ ptail # yt
-                            pure $
-                                pmatch (self # xt # yt') $ \(PPair first last) ->
-                                    pcon $ PPair (pcons # xh # first) last
-            )
-
 {- | / O(nlogn) /. Merge sort, bottom-up version, given a custom comparator.
 
    Assuming the comparator returns true if first value is less than the second one,
@@ -135,31 +102,39 @@ phalve = phoistAcyclic $ plam $ \l -> go # l # l
    @since 1.0.0
 -}
 pmsortBy ::
-    forall (a :: S -> Type) (s :: S) list.
-    (PIsListLike list a) =>
-    Term
-        s
-        ( (a :--> a :--> PBool)
-            :--> list a
-            :--> list a
-        )
-pmsortBy = phoistAcyclic $ pfix #$ plam go
+    forall s a l.
+    (PIsListLike l a, PIsListLike l (l a)) =>
+    Term s ((a :--> a :--> PBool) :--> l a :--> l a)
+pmsortBy = phoistAcyclic $
+    plam $ \comp xs ->
+        mergeAll # comp # (pmap # psingleton # xs)
   where
-    go self comp xs = pif (pnull # xs) pnil $
-        pif (pnull #$ ptail # xs) xs $
-            pmatch (phalve # xs) $ \(PPair fh sh) ->
-                let sfh = self # comp # fh
-                    ssh = self # comp # sh
-                 in pmergeBy # comp # sfh # ssh
+    mergeAll :: Term _ ((a :--> a :--> PBool) :--> l (l a) :--> l a)
+    mergeAll = phoistAcyclic $
+        pfix #$ plam $ \self comp xs ->
+            pif (pnull # xs) pnil $
+                let y = phead # xs
+                    ys = ptail # xs
+                 in pif (pnull # ys) y $
+                        self # comp #$ mergePairs # comp # xs
+    mergePairs :: Term _ ((a :--> a :--> PBool) :--> l (l a) :--> l (l a))
+    mergePairs = phoistAcyclic $
+        pfix #$ plam $ \self comp xs ->
+            pif (pnull # xs) pnil $
+                let y = phead # xs
+                 in plet (ptail # xs) $ \ys ->
+                        pif (pnull # ys) xs $
+                            let z = phead # ys
+                                zs = ptail # ys
+                             in pcons # (pmergeBy # comp # y # z) # (self # comp # zs)
 
 {- | A special case of 'pmsortBy' which requires elements have 'POrd' instance.
 
    @since 1.0.0
 -}
 pmsort ::
-    forall (a :: S -> Type) (s :: S) list.
-    (POrd a, PIsListLike list a) =>
-    Term s (list a :--> list a)
+    (POrd a, PIsListLike l a, PIsListLike l (l a)) =>
+    Term s (l a :--> l a)
 pmsort = phoistAcyclic $ pmsortBy # comp
   where
     comp = phoistAcyclic $ plam (#<)
@@ -173,7 +148,7 @@ pmsort = phoistAcyclic $ pmsortBy # comp
 -}
 pnubSortBy ::
     forall (a :: S -> Type) (s :: S) list.
-    (PIsListLike list a) =>
+    (PIsListLike list a, PIsListLike list (list a)) =>
     Term
         s
         ( (a :--> a :--> PBool)
@@ -210,7 +185,7 @@ pnubSortBy = phoistAcyclic $
 -}
 pnubSort ::
     forall (a :: S -> Type) (s :: S) list.
-    (PIsListLike list a, POrd a) =>
+    (PIsListLike list a, PIsListLike list (list a), POrd a) =>
     Term s (list a :--> list a)
 pnubSort = phoistAcyclic $ pnubSortBy # eq # comp
   where
@@ -223,7 +198,7 @@ pnubSort = phoistAcyclic $ pnubSortBy # eq # comp
 -}
 pisUniqBy ::
     forall (a :: S -> Type) (s :: S) list.
-    (PIsListLike list a) =>
+    (PIsListLike list a, PIsListLike list (list a)) =>
     Term
         s
         ( (a :--> a :--> PBool)
@@ -242,7 +217,7 @@ pisUniqBy = phoistAcyclic $
 -}
 pisUniq ::
     forall (a :: S -> Type) (s :: S) list.
-    (POrd a, PIsListLike list a) =>
+    (POrd a, PIsListLike list a, PIsListLike list (list a)) =>
     Term s (list a :--> PBool)
 pisUniq = phoistAcyclic $ pisUniqBy # eq # comp
   where
@@ -335,73 +310,3 @@ plookupTuple =
             pmatch (pfind' (\p -> (pfield @"_0" # pfromData p) #== k) # xs) $ \case
                 PNothing -> pcon PNothing
                 PJust p -> pcon (PJust (pfield @"_1" # pfromData p))
-
-{- | /O(logn)/. Search for a target in a list using binary search. The list should be sorted in in ascending order.
-
-    The first parameter is a equalator, which should return true if the two given values are equal.
-    The second parameter is a comparator, which should returns true if the first value is less than the second value.
-    The third parameter is the target which is being search for.
-
-     @since 1.0.0
--}
-pbinarySearchBy ::
-    forall (a :: S -> Type) (b :: S -> Type) (s :: S) l.
-    (PIsListLike l a) =>
-    Term
-        s
-        ( (a :--> b :--> PBool)
-            :--> (a :--> b :--> PBool)
-            :--> b
-            :--> l a
-            :--> PMaybe a
-        )
-pbinarySearchBy = phoistAcyclic $ pfix # go
-  where
-    go = phoistAcyclic $
-        plam $ \self eq comp target inp ->
-            pif
-                (pnull # inp)
-                (pcon PNothing)
-                $ pmatch
-                    (phalve # inp)
-                    $ \(PPair fh sh) ->
-                        pif
-                            (pnull # sh)
-                            ( let x = phead # fh
-                               in pif
-                                    (eq # x # target)
-                                    (pcon $ PJust x)
-                                    (pcon PNothing)
-                            )
-                            $ plet (phead # sh) $ \mid ->
-                                pif
-                                    (eq # mid # target)
-                                    (pcon $ PJust mid)
-                                    $ pif
-                                        (comp # mid # target)
-                                        ( let next =
-                                                ptail # sh
-                                           in self # eq # comp # target # next
-                                        )
-                                        $ self # eq # comp # target # fh
-
-{- | A special version of 'pbinarySearchBy', given a term to convert list element type @a@ to another type @b@,
-     and type @b@ has 'POrd' instance.
-
-     @since 1.0.0
--}
-pbinarySearch ::
-    forall (a :: S -> Type) (b :: S -> Type) (s :: S) l.
-    (POrd b, PIsListLike l a) =>
-    Term
-        s
-        ( (a :--> b)
-            :--> b
-            :--> l a
-            :--> PMaybe a
-        )
-pbinarySearch = phoistAcyclic $
-    plam $ \conv target list ->
-        let eq = plam $ \x y -> (conv # x) #== y
-            comp = plam $ \x y -> (conv # x) #< y
-         in pbinarySearchBy # eq # comp # target # list
