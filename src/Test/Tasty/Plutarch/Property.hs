@@ -111,7 +111,7 @@ peqProperty expected gen shr comp =
                 Left e -> unexpectedError e
                 Right s' -> sameAsExpected s'
 
-{- | Have the same functionalities as 'peqProperty' but allow generating 
+{- | Have the same functionalities as 'peqProperty' but allow generating
  expeceted result using a Haskell function.
 
  @since 1.0.2
