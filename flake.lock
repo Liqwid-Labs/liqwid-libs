@@ -1892,17 +1892,17 @@
         "plutarch": "plutarch_2"
       },
       "locked": {
-        "lastModified": 1654293728,
-        "narHash": "sha256-6Pd410I03CetLM4YYrJmMldOYDyqGPATlmorhKKWU0Q=",
+        "lastModified": 1655113586,
+        "narHash": "sha256-hv9tzB3IGvga6/SBDnk16S3Sfp03tvtkWd8COW0It30=",
         "owner": "liqwid-labs",
         "repo": "plutarch-quickcheck",
-        "rev": "cd7df08176e0ee5111980ead903764979d920147",
+        "rev": "a560e12b4809c0f292c96e81189e1b2cf2e7f7eb",
         "type": "github"
       },
       "original": {
         "owner": "liqwid-labs",
-        "ref": "staging",
         "repo": "plutarch-quickcheck",
+        "rev": "a560e12b4809c0f292c96e81189e1b2cf2e7f7eb",
         "type": "github"
       }
     },
