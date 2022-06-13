@@ -30,6 +30,7 @@ with import ./nix { };
       stack
       cabal-install
       haskellPackages.fourmolu
+      haskellPackages.apply-refact
       entr
       git
       ghc

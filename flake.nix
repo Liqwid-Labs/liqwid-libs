@@ -146,6 +146,7 @@
               pkgs'.nixpkgs-fmt
               (plutarch.hlsFor compiler-nix-name system)
               pkgs'.gnumake
+              pkgs'.haskellPackages.apply-refact
             ];
           };
         }); in
