@@ -33,9 +33,9 @@ import Test.QuickCheck (
     Gen,
     chooseAny,
     listOf,
+    oneof,
     shuffle,
     suchThat,
-    oneof
  )
 
 -- | Generate a set of unique keys.
