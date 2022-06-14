@@ -1,33 +1,44 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 
 module Spec.Extra.List (tests) where
 
 --------------------------------------------------------------------------------
 
+import Test.QuickCheck (
+    Arbitrary (..),
+    Gen,
+    Property,
+    listOf1,
+    orderedList,
+    suchThat,
+ )
 import Test.Tasty (TestTree)
+import Test.Tasty.Plutarch.Property (classifiedPropertyNative, peqPropertyNative')
 import Test.Tasty.QuickCheck (
     testProperty,
  )
 
 --------------------------------------------------------------------------------
 
+import Control.Monad (join)
 import Data.List (nub, sort)
 import qualified Data.Set as S
+import Data.Universe (Finite, Universe)
+import qualified GHC.Generics as GHC
 import Prelude hiding (last)
 
 --------------------------------------------------------------------------------
 
-import Plutarch (Term, plam, (#))
+import Plutarch (Term, phoistAcyclic, plam, (#), type (:-->))
 import Plutarch.Bool ((#<))
-import Plutarch.Builtin (PBuiltinList)
+import Plutarch.Builtin (PBuiltinList, PBuiltinPair, pfstBuiltin, psndBuiltin)
 import Plutarch.Integer (PInteger)
-import Plutarch.Lift (pconstant, plift)
 
 --------------------------------------------------------------------------------
 
---------------------------------------------------------------------------------
-
-import Plutarch.Extra.List (pisUniq, pmergeBy, pmsort, pnubSort)
+import Plutarch.Extra.List (pisSorted, pisUniq, pmergeBy, pmsort, pnubSort)
 
 --------------------------------------------------------------------------------
 
@@ -36,37 +47,30 @@ tests =
     [ testProperty "'pmsort' sorts a list properly" prop_msortCorrect
     , testProperty "'pmerge' merges two sorted lists into one sorted list" prop_mergeCorrect
     , testProperty "'pnubSort' sorts a list and remove duplicate elements" prop_nubSortProperly
-    , testProperty "'pisUniq' can tell whether all elements in a list are unique" prop_uniqueList
+    , testProperty "'pisUniq' can tell whether all elements in a list are unique" prop_determineIsUniqueListCorrect
+    , testProperty "'pisSorted' can distinguish sorted and unsorted list" prop_determineIsListSortedCorrect
     ]
 
 --------------------------------------------------------------------------------
--- Prperties.
 
--- | Yield true if 'pmsort' sorts a given list correctly.
-prop_msortCorrect :: [Integer] -> Bool
-prop_msortCorrect l = sorted == expected
+-- | The property of `pmsort` to make a list sorted in ascending order.
+prop_msortCorrect :: Property
+prop_msortCorrect = peqPropertyNative' expected arbitrary shrink pmsort
   where
-    -- Expected sorted list, using 'Data.List.sort'.
-    expected :: [Integer]
-    expected = sort l
+    expected :: [Integer] -> [Integer]
+    expected = sort
 
-    --
-
-    psorted :: Term s (PBuiltinList PInteger)
-    psorted = pmsort # pconstant l
-
-    sorted :: [Integer]
-    sorted = plift psorted
-
--- | Yield true if 'pmerge' merges two list into a ordered list correctly.
-prop_mergeCorrect :: [Integer] -> [Integer] -> Bool
-prop_mergeCorrect a b = merged == expected
+-- | The property of 'pmergeBy' to merge two ordered list into one ordered list.
+prop_mergeCorrect :: Property
+prop_mergeCorrect = peqPropertyNative' expected generator shrink definition
   where
-    -- Sorted list a and b
-    sa = sort a
-    sb = sort b
+    generator :: Gen ([Integer], [Integer])
+    generator = (,) <$> orderedList <*> orderedList
 
-    -- Merge two lists which are assumed to be ordered.
+    expected :: ([Integer], [Integer]) -> [Integer]
+    expected = uncurry merge
+
+    -- Merge two lists which are assumed to be in ascending ordered.
     merge :: [Integer] -> [Integer] -> [Integer]
     merge xs [] = xs
     merge [] ys = ys
@@ -74,47 +78,71 @@ prop_mergeCorrect a b = merged == expected
         | x <= y = x : merge xs sy
         | otherwise = y : merge sx ys
 
-    expected :: [Integer]
-    expected = merge sa sb
+    definition ::
+        Term
+            _
+            ( PBuiltinPair
+                (PBuiltinList PInteger)
+                (PBuiltinList PInteger)
+                :--> PBuiltinList PInteger
+            )
+    definition = phoistAcyclic $
+        plam $ \pair ->
+            let a = pfstBuiltin # pair
+                b = psndBuiltin # pair
+                lt = phoistAcyclic $ plam (#<)
+             in pmergeBy # lt # a # b
 
-    --
-
-    pmerged :: Term _ (PBuiltinList PInteger)
-    pmerged = pmergeBy # plam (#<) # pconstant sa # pconstant sb
-
-    merged :: [Integer]
-    merged = plift pmerged
-
-{- | Yield true if 'pnubSort' sorts and removes
-   duplicate elements from a given list.
--}
-prop_nubSortProperly :: [Integer] -> Bool
-prop_nubSortProperly l = nubbed == expected
+-- | The property of 'pnubSort'to sort and removes duplicate elements from a given list.
+prop_nubSortProperly :: Property
+prop_nubSortProperly = peqPropertyNative' expected arbitrary shrink pnubSort
   where
-    -- Sort and list and then nub it.
-    expected :: [Integer]
-    expected = nub $ sort l
+    expected :: [Integer] -> [Integer]
+    expected = nub . sort
 
-    --
-
-    pnubbed :: Term _ (PBuiltinList PInteger)
-    pnubbed = pnubSort # pconstant l
-
-    nubbed :: [Integer]
-    nubbed = plift pnubbed
-
-{- | Yield true if 'isUnique' can correctly determine
-   whether a given list only contains unique elements or not.
+{- | The property of 'isUnique' to correctly determine whether
+  a given list only contains unique elements or not.
 -}
-prop_uniqueList :: [Integer] -> Bool
-prop_uniqueList l = isUnique == expected
+prop_determineIsUniqueListCorrect :: Property
+prop_determineIsUniqueListCorrect = peqPropertyNative' expected arbitrary shrink pisUniq
   where
     -- Convert input list to a set.
     -- If the set's size equals to list's size,
     --   the list only contains unique elements.
-    expected :: Bool
-    expected = S.size (S.fromList l) == length l
+    expected :: [Integer] -> Bool
+    expected l = S.size (S.fromList l) == length l
 
-    --
+data ListSortedCase
+    = SortedList
+    | UnsortedList
+    deriving stock (GHC.Generic)
+    deriving stock (Show, Enum, Bounded, Eq)
+    deriving anyclass (Universe, Finite)
 
-    isUnique = plift $ pisUniq # pconstant l
+prop_determineIsListSortedCorrect :: Property
+prop_determineIsListSortedCorrect =
+    classifiedPropertyNative generator shrink expected classifier pisSorted
+  where
+    genNotSorted :: (Ord a, Arbitrary a) => Gen [a]
+    genNotSorted = join <$> listOf1 genUnorderedSeq
+      where
+        genUnorderedSeq = do
+            a <- arbitrary
+            b <- arbitrary `suchThat` (> a)
+            notMid <-
+                arbitrary
+                    `suchThat` (\x -> not $ a <= x && x <= b)
+            return [a, notMid, b]
+
+    generator :: ListSortedCase -> Gen [Integer]
+    generator SortedList = orderedList
+    generator UnsortedList = genNotSorted
+
+    expected :: [Integer] -> Maybe Bool
+    expected l = Just $ sort l == l
+
+    classifier :: [Integer] -> ListSortedCase
+    classifier l =
+        if sort l == l
+            then SortedList
+            else UnsortedList

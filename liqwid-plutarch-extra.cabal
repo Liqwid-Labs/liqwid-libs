@@ -107,17 +107,25 @@ test-suite liqwid-plutarch-extra-test
   main-is:        Spec.hs
   ghc-options:    -O2 -threaded -rtsopts -with-rtsopts=-N
   build-depends:
+    , bytestring
     , containers
     , liqwid-plutarch-extra
     , mtl
     , plutarch-quickcheck
+    , plutus-core
     , QuickCheck
     , quickcheck-instances
     , tasty
     , tasty-quickcheck
+    , universe
 
   other-modules:
+    Spec.Api.V1.Value
+    Spec.Api.V1.Value.Unsorted
     Spec.Extra.List
     Spec.Extra.Map
+    Spec.Extra.Map.Sorted
+    Spec.Extra.Map.Unsorted
+    Spec.Utils
 
   hs-source-dirs: test

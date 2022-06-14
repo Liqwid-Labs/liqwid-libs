@@ -5,7 +5,7 @@ module Spec.Extra.Map (tests) where
 
 --------------------------------------------------------------------------------
 
-import Test.Tasty (TestTree)
+import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (
     Arbitrary (arbitrary),
     Property,
@@ -36,12 +36,18 @@ import Control.Monad.Cont (cont, runCont)
 
 --------------------------------------------------------------------------------
 
-import Plutarch.Extra.Map (pupdate, update)
+import Plutarch.Extra.Map (pupdate)
+import qualified Spec.Extra.Map.Sorted as Sorted
+import qualified Spec.Extra.Map.Unsorted as Unsorted
 
 --------------------------------------------------------------------------------
 
 tests :: [TestTree]
-tests = [testProperty "'pupdate' updates assoc maps as 'update' does" prop_updateAssocMapParity]
+tests =
+    [ testProperty "'pupdate' updates assoc maps as 'update' does" prop_updateAssocMapParity
+    , testGroup "sorted map" Sorted.tests
+    , testGroup "unsorted map" Unsorted.tests
+    ]
 
 --------------------------------------------------------------------------------
 
@@ -75,7 +81,7 @@ prop_updateAssocMapParity =
 
                 -- Given the key and the updated value, test the parity
                 parity key updatedValue =
-                    let native = update (const updatedValue) key initialMap
+                    let native = updateMap (const updatedValue) key initialMap
 
                         plutarch :: AssocMap.Map Integer Integer
                         plutarch =
@@ -109,3 +115,16 @@ prop_updateAssocMapParity =
                 )
         )
         id
+
+{- | / O(n) /. The expression @'updateMap' f k v@ will update the value @x@ at key @k@.
+    If @f x@ is Nothing, the key-value pair will be deleted from the map, otherwise the
+     value will be updated.
+-}
+updateMap :: Eq k => (v -> Maybe v) -> k -> AssocMap.Map k v -> AssocMap.Map k v
+updateMap f k =
+    AssocMap.mapMaybeWithKey
+        ( \k' v ->
+            if k' == k
+                then f v
+                else Just v
+        )
