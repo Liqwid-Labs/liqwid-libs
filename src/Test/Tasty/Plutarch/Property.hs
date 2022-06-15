@@ -17,6 +17,9 @@ module Test.Tasty.Plutarch.Property (
     -- * Basic properties
     peqProperty,
 
+    -- * Basic properties with native Haskell
+    peqPropertyNative',
+
     -- * Properties that always should fail
     alwaysFailProperty,
 
@@ -103,6 +106,42 @@ peqProperty expected gen shr comp =
         Property
     go precompiled input =
         let s = compile (precompiled # expected # pconstant input)
+            (res, _, logs) = evalScript s
+         in counterexample (prettyLogs logs) $ case res of
+                Left e -> unexpectedError e
+                Right s' -> sameAsExpected s'
+
+{- | Have the same functionalities as 'peqProperty' but allow generating
+ expeceted result using a Haskell function.
+
+ @since 1.0.2
+-}
+peqPropertyNative' ::
+    forall (a :: Type) (b :: Type) (c :: S -> Type) (d :: S -> Type).
+    ( Show a
+    , PLifted c ~ a
+    , PLifted d ~ b
+    , PEq d
+    , PUnsafeLiftDecl c
+    , PUnsafeLiftDecl d
+    ) =>
+    -- | Given an input value, returns the expected value.
+    (a -> b) ->
+    Gen a ->
+    (a -> [a]) ->
+    (forall (s :: S). Term s (c :--> d)) ->
+    Property
+peqPropertyNative' getExpected gen shr comp =
+    forAllShrinkShow gen shr showInput (go (peqTemplate comp))
+  where
+    go ::
+        (forall (s' :: S). Term s' (d :--> c :--> PBool)) ->
+        a ->
+        Property
+    go precompiled input =
+        let expected :: Term s' d
+            expected = pconstant $ getExpected input
+            s = compile (precompiled # expected # pconstant input)
             (res, _, logs) = evalScript s
          in counterexample (prettyLogs logs) $ case res of
                 Left e -> unexpectedError e
