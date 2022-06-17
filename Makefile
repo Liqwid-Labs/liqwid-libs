@@ -52,7 +52,7 @@ watch: requires_nix_shell
 
 
 test: requires_nix_shell
-	cabal v2-test
+	cabal v2-test --test-options="--quickcheck-tests 10_000"
 
 ghci: requires_nix_shell
 	cabal v2-repl $(GHC_FLAGS) liqwid-plutarch-extra

@@ -14,7 +14,7 @@
   inputs.haskell-language-server.url = "github:haskell/haskell-language-server";
   inputs.haskell-language-server.flake = false;
 
-  inputs.plutarch-quickcheck.url = "github:liqwid-labs/plutarch-quickcheck?ref=staging";
+  inputs.plutarch-quickcheck.url = "github:liqwid-labs/plutarch-quickcheck?rev=a560e12b4809c0f292c96e81189e1b2cf2e7f7eb";
 
   outputs = inputs@{ self, nixpkgs, nixpkgs-latest, haskell-nix, plutarch, ... }:
     let

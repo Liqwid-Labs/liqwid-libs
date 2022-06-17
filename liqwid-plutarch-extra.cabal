@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               liqwid-plutarch-extra
-version:            1.0.0
+version:            1.1.0
 synopsis:           A collection of Plutarch extras from Liqwid Labs
 description:        Several useful data types and functions for Plutarch.
 homepage:           https://github.com/Liqwid-Labs/liqwid-plutarch-extra
@@ -28,11 +28,13 @@ common common-lang
     -Wall -Wcompat -Wincomplete-uni-patterns
     -Wincomplete-record-updates -Wredundant-constraints
     -Wmissing-export-lists -Wmissing-deriving-strategies -Werror
+    -Wno-partial-type-signatures
 
   build-depends:
-    , base            ^>=4.16
+    , base               ^>=4.16
     , plutarch
-    , plutarch-extra
+    , plutus-ledger-api
+    , plutus-tx
 
   default-extensions:
     BangPatterns
@@ -52,6 +54,7 @@ common common-lang
     MultiParamTypeClasses
     NumericUnderscores
     OverloadedStrings
+    PackageImports
     ScopedTypeVariables
     StandaloneDeriving
     TupleSections
@@ -67,6 +70,7 @@ library
     Plutarch.Api.V1.AssetClass
     Plutarch.Api.V1.ScriptContext
     Plutarch.Api.V1.Value
+    Plutarch.Api.V1.Value.Unsorted
     Plutarch.Extra.Applicative
     Plutarch.Extra.Bool
     Plutarch.Extra.Category
@@ -75,7 +79,10 @@ library
     Plutarch.Extra.Function
     Plutarch.Extra.Functor
     Plutarch.Extra.Identity
+    Plutarch.Extra.List
     Plutarch.Extra.Map
+    Plutarch.Extra.Map.Sorted
+    Plutarch.Extra.Map.Unsorted
     Plutarch.Extra.Maybe
     Plutarch.Extra.Numeric
     Plutarch.Extra.Profunctor
@@ -83,12 +90,13 @@ library
     Plutarch.Extra.State
     Plutarch.Extra.Sum
     Plutarch.Extra.Tagged
+    Plutarch.Extra.TermCont
     Plutarch.Extra.These
     Plutarch.Extra.Traversable
 
   build-depends:
     , generics-sop
-    , plutus-tx
+    , plutarch-extra
     , tagged
 
   hs-source-dirs:  src
@@ -99,11 +107,25 @@ test-suite liqwid-plutarch-extra-test
   main-is:        Spec.hs
   ghc-options:    -O2 -threaded -rtsopts -with-rtsopts=-N
   build-depends:
+    , bytestring
+    , containers
     , liqwid-plutarch-extra
+    , mtl
     , plutarch-quickcheck
+    , plutus-core
     , QuickCheck
     , quickcheck-instances
     , tasty
     , tasty-quickcheck
+    , universe
+
+  other-modules:
+    Spec.Api.V1.Value
+    Spec.Api.V1.Value.Unsorted
+    Spec.Extra.List
+    Spec.Extra.Map
+    Spec.Extra.Map.Sorted
+    Spec.Extra.Map.Unsorted
+    Spec.Utils
 
   hs-source-dirs: test
