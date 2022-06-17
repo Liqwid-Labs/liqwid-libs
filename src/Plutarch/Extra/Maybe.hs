@@ -45,7 +45,7 @@ import Plutarch.Trace (ptraceError)
 
 {- | Extracts the element out of a 'PJust' and throws an error if its argument is 'PNothing'.
 
-    @since 1.0.0
+    @since 1.1.0
 -}
 pfromJust ::
     forall (a :: S -> Type) (s :: S).
@@ -71,7 +71,7 @@ ptraceIfNothing err t = pmatch t $ \case
 
 {- | Yields true if the given 'PMaybe' value is of form @'PJust' _@.
 
-    @since 1.0.0
+    @since 1.1.0
 -}
 pisJust ::
     forall (a :: S -> Type) (s :: S).
@@ -84,7 +84,7 @@ pisJust = phoistAcyclic $
 
 {- | Extract a 'PMaybe' by providing a default value in case of 'PJust'.
 
-    @since 1.0.0
+    @since 1.1.0
 -}
 pmaybe ::
     forall (a :: S -> Type) (s :: S).
@@ -99,7 +99,7 @@ pmaybe = phoistAcyclic $
 
 {- | Extracts the element out of a 'PDJust' and throws an error if its argument is 'PDNothing'.
 
-    @since 1.0.0
+    @since 1.1.0
 -}
 pfromDJust ::
     forall (a :: S -> Type) (s :: S).
@@ -112,7 +112,7 @@ pfromDJust = phoistAcyclic $
 
 {- | Yield True if a given 'PMaybeData' is of form @'PDJust' _@.
 
-    @since 1.0.0
+    @since 1.1.0
 -}
 pisDJust ::
     forall (a :: S -> Type) (s :: S).
@@ -127,7 +127,7 @@ pisDJust = phoistAcyclic $
 
 {- | Copnsturct a 'PMaybeData' given a 'PMaybe'. Could be useful if you want to "lift" from 'PMaybe' to 'Maybe'.
 
-    @since 1.0.0
+    @since 1.1.0
 -}
 pmaybeToMaybeData ::
     forall (a :: S -> Type) (s :: S).
@@ -143,7 +143,7 @@ pmaybeToMaybeData = phoistAcyclic $
 
 {- | Escape with a particular value on expecting 'Just'. For use in monadic context.
 
-    @since 1.0.0
+    @since 1.1.0
 -}
 pexpectJustC ::
     forall (a :: S -> Type) (r :: S -> Type) (s :: S).

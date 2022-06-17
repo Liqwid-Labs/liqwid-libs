@@ -34,7 +34,7 @@ import Plutarch.List (plength, plistEquals)
 
 {- | / O(nlogn) /. Sort a `PMap` by the keys of each key-value pairs, in an ascending order.
 
-    @since 1.0.0
+    @since 1.1.0
 -}
 psort ::
     forall (k :: S -> Type) (v :: S -> Type) (s :: S).
@@ -47,7 +47,7 @@ psort = phoistAcyclic $
 {- | / O(nlogn) /. True if both maps have exactly the same keys.
      Using @'#=='@ is not sufficient, because keys returned are not ordered.
 
-    @since 1.0.0
+    @since 1.1.0
 -}
 pkeysEqual ::
     forall (k :: S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S).
@@ -72,7 +72,7 @@ pkeysEqual = phoistAcyclic $
 
 {- | / O(nlogn) /. Union two maps using a merge function on collisions.
 
-    @since 1.0.0
+    @since 1.1.0
 -}
 punionWith ::
     forall (k :: S -> Type) (v :: S -> Type) (s :: S).

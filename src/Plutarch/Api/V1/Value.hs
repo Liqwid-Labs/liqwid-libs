@@ -104,7 +104,7 @@ padaOf = phoistAcyclic $ plam $ \v -> pvalueOf # v # pconstant "" # pconstant ""
 
 {- | Get the sum of all values belonging to a particular CurrencySymbol.
 
-   @since 1.0.0
+   @since 1.1.0
 -}
 psymbolValueOf ::
     forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
@@ -120,7 +120,7 @@ psymbolValueOf =
 
 {- | Extract amount from PValue belonging to a Haskell-level AssetClass.
 
-   @since 1.0.0
+   @since 1.1.0
 -}
 passetClassValueOf' ::
     forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
@@ -131,7 +131,7 @@ passetClassValueOf' (AssetClass (sym, token)) =
 
 {- | Return '>=' on two values comparing by only a particular AssetClass.
 
-   @since 1.0.0
+   @since 1.1.0
 -}
 pgeqByClass ::
     forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
@@ -143,7 +143,7 @@ pgeqByClass =
 
 {- | Return '>=' on two values comparing by only a particular CurrencySymbol.
 
-   @since 1.0.0
+   @since 1.1.0
 -}
 pgeqBySymbol ::
     forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
@@ -155,7 +155,7 @@ pgeqBySymbol =
 
 {- | Return '>=' on two values comparing by only a particular Haskell-level AssetClass.
 
-   @since 1.0.0
+   @since 1.1.0
 -}
 pgeqByClass' ::
     forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
@@ -168,7 +168,7 @@ pgeqByClass' ac =
 
 {- | Compute the guarantees known after adding two values.
 
-   @since 1.0.0
+   @since 1.1.0
 -}
 type family AddGuarantees (a :: AmountGuarantees) (b :: AmountGuarantees) where
     AddGuarantees 'Positive 'Positive = 'Positive

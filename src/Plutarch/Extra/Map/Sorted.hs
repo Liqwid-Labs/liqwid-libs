@@ -36,7 +36,7 @@ import Plutarch.List (PListLike (..), plistEquals)
 
 {- | / O(n) /. True if both maps have exactly the same keys.
 
-    @since 1.0.0
+    @since 1.1.0
 -}
 pkeysEqual ::
     forall (k :: S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S).
@@ -50,7 +50,7 @@ pkeysEqual =
 
 {- | / O(n) /. Union two maps using a merge function on collisions.
 
-    @since 1.0.0
+    @since 1.1.0
 -}
 punionWith ::
     forall (k :: S -> Type) (v :: S -> Type) (s :: S).

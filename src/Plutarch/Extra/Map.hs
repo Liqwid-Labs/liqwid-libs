@@ -99,7 +99,7 @@ pmapFromList = pcon . PMap . foldl' go (pcon PNil)
         p <- pletC (ppairDataBuiltin # k' # v')
         pure . pcon . PCons p $ acc
 
--- | @since 1.0.0
+-- | @since 1.1.0
 pkeys ::
     forall (k :: S -> Type) (v :: S -> Type) (keys :: KeyGuarantees) (s :: S).
     Term s (PMap keys k v :--> PBuiltinList (PAsData k))
@@ -110,7 +110,7 @@ pkeys = phoistAcyclic $
 
 {- | / O(n) /. Update the value at a given key in a `PMap`, have the same functionalities as 'Data.Map.update'.
 
-     @since 1.0.0
+     @since 1.1.0
 -}
 pupdate ::
     forall (k :: S -> Type) (v :: S -> Type) (keys :: KeyGuarantees) (s :: S).
@@ -138,7 +138,7 @@ pupdate = phoistAcyclic $
 
 {- | / O(n) /. Map a function over all values in a 'PMap'.
 
-     @since 1.0.0
+     @since 1.1.0
 -}
 pmap ::
     forall (k :: S -> Type) (a :: S -> Type) (b :: S -> Type) (keys :: KeyGuarantees) (s :: S).

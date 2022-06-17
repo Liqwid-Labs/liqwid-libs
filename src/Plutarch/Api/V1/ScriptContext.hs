@@ -96,7 +96,7 @@ pownInput = phoistAcyclic $
 
 {- | Determines if a given UTXO is spent.
 
-    @since 1.0.0
+    @since 1.1.0
 -}
 pisUTXOSpent :: Term s (PTxOutRef :--> PBuiltinList (PAsData PTxInInfo) :--> PBool)
 pisUTXOSpent = phoistAcyclic $
@@ -104,7 +104,7 @@ pisUTXOSpent = phoistAcyclic $
 
 {- | Sum of all value at input.
 
-    @since 1.0.0
+    @since 1.1.0
 -}
 pvalueSpent ::
     forall (s :: S).
@@ -131,7 +131,7 @@ pvalueSpent = phoistAcyclic $
      When using this as an authority check, you __MUST__ ensure the authority
      knows how to ensure its end of the contract.
 
-    @since 1.0.0
+    @since 1.1.0
 -}
 pisTokenSpent :: forall {s :: S}. Term s (PAssetClass :--> PBuiltinList (PAsData PTxInInfo) :--> PBool)
 pisTokenSpent =
@@ -150,7 +150,7 @@ pisTokenSpent =
 
 {- | Find the TxInInfo by a TxOutRef.
 
-    @since 1.0.0
+    @since 1.1.0
 -}
 pfindTxInByTxOutRef :: Term s (PTxOutRef :--> PBuiltinList (PAsData PTxInInfo) :--> PMaybe PTxInInfo)
 pfindTxInByTxOutRef = phoistAcyclic $
@@ -169,7 +169,7 @@ pfindTxInByTxOutRef = phoistAcyclic $
 
 {- | Check if a PubKeyHash signs this transaction.
 
-    @since 1.0.0
+    @since 1.1.0
 -}
 ptxSignedBy :: Term s (PBuiltinList (PAsData PPubKeyHash) :--> PAsData PPubKeyHash :--> PBool)
 ptxSignedBy = phoistAcyclic $
@@ -177,7 +177,7 @@ ptxSignedBy = phoistAcyclic $
 
 {- | Find a datum with the given hash.
 
-    @since 1.0.0
+    @since 1.1.0
 -}
 pfindDatum :: Term s (PDatumHash :--> PBuiltinList (PAsData (PTuple PDatumHash PDatum)) :--> PMaybe PDatum)
 pfindDatum = phoistAcyclic $
@@ -185,7 +185,7 @@ pfindDatum = phoistAcyclic $
 
 {- | Find a datum with the given hash, and `ptryFrom` it.
 
-    @since 1.0.0
+    @since 1.1.0
 -}
 ptryFindDatum ::
     forall (a :: S -> Type) (s :: S).

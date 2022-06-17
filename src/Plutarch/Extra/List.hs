@@ -51,7 +51,7 @@ import Prelude hiding (last)
 
 {- | True if a list is not empty.
 
-   @since 1.0.0
+   @since 1.1.0
 -}
 pnotNull ::
     forall (a :: S -> Type) (s :: S) list.
@@ -67,7 +67,7 @@ pnotNull =
 {- | / O(n) /. Merge two lists which are assumed to be ordered, given a custom comparator.
     The comparator should return true if first value is less than the second one.
 
-   @since 1.0.0
+   @since 1.1.0
 -}
 pmergeBy ::
     forall (a :: S -> Type) (s :: S) list.
@@ -102,7 +102,7 @@ pmergeBy = phoistAcyclic $ pfix #$ plam go
     the list elements will be arranged in ascending order, keeping duplicates in the order
     they appeared in the input.
 
-   @since 1.0.0
+   @since 1.1.0
 -}
 pmsortBy ::
     forall s a l.
@@ -133,7 +133,7 @@ pmsortBy = phoistAcyclic $
 
 {- | A special case of 'pmsortBy' which requires elements have 'POrd' instance.
 
-   @since 1.0.0
+   @since 1.1.0
 -}
 pmsort ::
     (POrd a, PIsListLike l a, PIsListLike l (l a)) =>
@@ -147,7 +147,7 @@ pmsort = phoistAcyclic $ pmsortBy # comp
     The first parameter is a equalator, which should return true if the two given values are equal.
     The second parameter is a comparator, which should returns true if the first value is less than the second value.
 
-    @since 1.0.0
+    @since 1.1.0
 -}
 pnubSortBy ::
     forall (a :: S -> Type) (s :: S) list.
@@ -184,7 +184,7 @@ pnubSortBy = phoistAcyclic $
 
 {- | Special version of 'pnubSortBy', which requires elements have 'POrd' instance.
 
-   @since 1.0.0
+   @since 1.1.0
 -}
 pnubSort ::
     forall (a :: S -> Type) (s :: S) list.
@@ -216,7 +216,7 @@ pisUniqBy = phoistAcyclic $
 
 {- | A special case of 'pisUniqBy' which requires elements have 'POrd' instance.
 
-   @since 1.0.0
+   @since 1.1.0
 -}
 pisUniq ::
     forall (a :: S -> Type) (s :: S) list.
@@ -229,7 +229,7 @@ pisUniq = phoistAcyclic $ pisUniqBy # eq # comp
 
 {- | A special version of `pmap` which allows list elements to be thrown out.
 
-    @since 1.0.0
+    @since 1.1.0
 -}
 pmapMaybe ::
     forall (a :: S -> Type) (s :: S) list.
@@ -267,7 +267,7 @@ pfind' p =
 
 {- | Get the first element that maps to a 'PJust' in a list.
 
-     @since 1.0.0
+     @since 1.1.0
 -}
 pfirstJust ::
     forall (a :: S -> Type) (b :: S -> Type) (s :: S) list.
@@ -287,7 +287,7 @@ pfirstJust =
 
 {- | /O(n)/. Find the value for a given key in an associative list.
 
-     @since 1.0.0
+     @since 1.1.0
 -}
 plookup ::
     forall (a :: S -> Type) (b :: S -> Type) (s :: S) list.
@@ -302,7 +302,7 @@ plookup =
 
 {- | /O(n)/. Find the value for a given key in an assoclist which uses 'PTuple's.
 
-     @since 1.0.0
+     @since 1.1.0
 -}
 plookupTuple ::
     (PEq a, PIsListLike list (PAsData (PTuple a b)), PIsData a, PIsData b) =>
@@ -314,6 +314,10 @@ plookupTuple =
                 PNothing -> pcon PNothing
                 PJust p -> pcon (PJust (pfield @"_1" # pfromData p))
 
+{- | O(n). Returns true if the given list is sorted.
+
+     @since 1.1.0
+-}
 pisSortedBy ::
     (PIsListLike list a) =>
     Term s ((a :--> a :--> PBool) :--> (a :--> a :--> PBool) :--> list a :--> PBool)
@@ -335,6 +339,10 @@ pisSortedBy = phoistAcyclic $
                         (self # x' #$ ptail # xs)
                         (pconstant False)
 
+{- | Special version of 'pisSortedBy'.
+
+     @since 1.1.0
+-}
 pisSorted ::
     (PIsListLike list a, POrd a) =>
     Term s (list a :--> PBool)

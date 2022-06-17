@@ -20,7 +20,7 @@ import qualified Plutarch.Extra.Map.Unsorted as UnsortedMap
 
 {- | / O(n^2*logn) /. Sort a 'PValue'.
 
-   @since 1.0.0
+   @since 1.1.0
 -}
 psort ::
     forall (a :: AmountGuarantees) (s :: S).
