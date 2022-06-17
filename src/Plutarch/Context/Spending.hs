@@ -22,6 +22,7 @@ module Plutarch.Context.Spending (
 
     -- * builder
     buildSpending,
+    buildSpendingUnsafe,
 ) where
 
 import Control.Monad.Cont (ContT (runContT), MonadTrans (lift))
@@ -129,3 +130,9 @@ buildSpending builder = flip runContT Right $
             case spendingInInfo of
                 [] -> lift $ Left "UTXO Input not found"
                 (x : _) -> return $ ScriptContext txinfo (Spending (txInInfoOutRef x))
+
+-- | Builds spending context; it throwing error when builder fails.
+buildSpendingUnsafe ::
+    SpendingBuilder ->
+    ScriptContext
+buildSpendingUnsafe = either error id . buildSpending  

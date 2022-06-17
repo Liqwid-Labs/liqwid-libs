@@ -20,6 +20,7 @@ module Plutarch.Context.Minting (
 
     -- * builder
     buildMinting,
+    buildMintingUnsafe,
 ) where
 
 import Control.Monad.Cont (ContT (runContT))
@@ -120,3 +121,9 @@ buildMinting builder = flip runContT Right $
         case uniformCurrencySymbol mintedValue of
             Just c -> return $ ScriptContext txinfo (Minting c)
             Nothing -> lift $ Left "Duplicate currency symbol or No minted value"
+
+-- | Builds minting context; it throwing error when builder fails.
+buildMintingUnsafe ::
+    MintingBuilder ->
+    ScriptContext
+buildMintingUnsafe = either error id . buildMinting    

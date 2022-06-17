@@ -1,16 +1,31 @@
+{-# LANGUAGE ViewPatterns #-}
 module Plutarch.Context.TxInfo (
-    buildTxInfo,
     spends,
     mints,
+    
+    buildTxInfo,
+    buildTxInfoUnsafe,
 ) where
 
-import Control.Monad.Cont
-import Data.Foldable (Foldable (toList))
+import Control.Monad.Cont ( ContT(runContT) )
+import Data.Foldable ( Foldable(toList) )
 import Plutarch.Context.Base
+    ( yieldBaseTxInfo,
+      yieldExtraDatums,
+      yieldInInfoDatums,
+      yieldMint,
+      yieldOutDatums,
+      BaseBuilder(bbSignatures, bbInputs, bbOutputs, bbMints, bbDatums),
+      Builder(unpack) )
 import PlutusLedgerApi.V1
-
-buildTxInfo :: BaseBuilder -> Either String TxInfo
-buildTxInfo builder = flip runContT Right $ do
+    ( TxInfo(txInfoInputs, txInfoOutputs, txInfoData, txInfoMint,
+             txInfoSignatories),
+      TxInInfo(txInInfoOutRef),
+      ScriptContext(ScriptContext),
+      ScriptPurpose(Spending) )
+    
+buildTxInfo :: Builder a => a -> Either String TxInfo
+buildTxInfo (unpack -> builder) = flip runContT Right $ do
     let bb = unpack builder
 
     (ins, inDat) <- yieldInInfoDatums (bbInputs bb) builder
@@ -29,6 +44,9 @@ buildTxInfo builder = flip runContT Right $ do
                 }
 
     return txinfo
+
+buildTxInfoUnsafe :: Builder a => a -> TxInfo
+buildTxInfoUnsafe = either error id . buildTxInfo
 
 spends :: TxInfo -> [ScriptContext]
 spends txinfo =
