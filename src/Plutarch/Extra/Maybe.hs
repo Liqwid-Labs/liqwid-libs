@@ -137,20 +137,3 @@ pmaybeToMaybeData = phoistAcyclic $
     plam $ \t -> pmatch t $ \case
         PNothing -> pcon $ PDNothing pdnil
         PJust x -> pcon $ PDJust $ pdcons @"_0" # pdata x # pdnil
-
---------------------------------------------------------------------------------
--- TermCont-based combinators.
-
-{- | Escape with a particular value on expecting 'Just'. For use in monadic context.
-
-    @since 1.1.0
--}
-pexpectJustC ::
-    forall (a :: S -> Type) (r :: S -> Type) (s :: S).
-    Term s r ->
-    Term s (PMaybe a) ->
-    TermCont @r s (Term s a)
-pexpectJustC escape ma = tcont $ \f ->
-    pmatch ma $ \case
-        PJust v -> f v
-        PNothing -> escape

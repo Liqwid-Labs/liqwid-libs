@@ -46,7 +46,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 - `pisJust`
 - `pisDJust`
 - `pfromMaybe`  -> `pmaybe`
-- `tcexpectJust` -> `pexpectJustC`
+- `tcexpectJust` (in `Plutarch.Extra.Maybe`) -> `pexpectJustC` (in `Plutarch.Extra.TermCont`)
 - `pmaybeToMaybeData`
 
 #### List (`Plutarch.Extra.List`)
@@ -68,6 +68,8 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 - Re-exports from `plutarch-extra` 
 - `tcassert` -> `passertC`
 - `pguardWithC`
+- 'pguardShowC'
+- `tcexpectJust` (in `Plutarch.Extra.Maybe`) -> `pexpectJustC` (in `Plutarch.Extra.TermCont`)
 
 #### Script Context (`Plutarch.Api.V1.ScriptContext`)
 
