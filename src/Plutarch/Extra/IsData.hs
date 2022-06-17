@@ -1,0 +1,168 @@
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
+
+module Plutarch.Extra.IsData (
+    -- * PlutusTx ToData/FromData derive-wrappers
+    ProductIsData (..),
+    EnumIsData (..),
+
+    -- * Plutarch PIsData/PlutusType derive-wrappers
+    PEnumData (..),
+    PConstantViaDataList (PConstantViaDataList),
+
+    -- * Functions for PEnumData types
+    pmatchEnum,
+    pmatchEnumFromData,
+) where
+
+--------------------------------------------------------------------------------
+
+import Data.Coerce (coerce)
+import Data.Proxy (Proxy (..))
+import Generics.SOP (
+    All,
+    IsProductType,
+    hcmap,
+    hcollapse,
+    hctraverse,
+    mapIK,
+    mapKI,
+    productTypeFrom,
+    productTypeTo,
+    unI,
+ )
+import qualified Generics.SOP as SOP
+import Plutarch (PlutusType (pcon', pmatch'))
+import Plutarch.Builtin (PIsData (pdataImpl, pfromDataImpl), pasInt)
+import Plutarch.Extra.TermCont (pletC)
+import Plutarch.Lift (PConstantDecl (..))
+import Plutarch.Prelude
+import Plutarch.Unsafe (punsafeCoerce)
+import PlutusLedgerApi.V1 (BuiltinData (BuiltinData))
+import PlutusTx (Data (List), FromData (..), ToData (..), fromData, toData)
+import Prelude
+
+--------------------------------------------------------------------------------
+-- ProductIsData
+
+{- |
+  Wrapper for deriving 'ToData', 'FromData' using the 'List' constructor of Data to represent a Product type.
+
+  Uses 'gProductToBuiltinData', 'gproductFromBuiltinData'.
+-}
+newtype ProductIsData a = ProductIsData {unProductIsData :: a}
+
+-- | Variant of 'PConstantViaData' using the List repr from 'ProductIsData'
+newtype PConstantViaDataList (h :: Type) (p :: PType) = PConstantViaDataList h
+
+-- | Generically convert a Product-Type to 'BuiltinData' with the 'List' repr
+gProductToBuiltinData ::
+    (IsProductType a repr, All ToData repr) => a -> BuiltinData
+gProductToBuiltinData x =
+    BuiltinData $ List $ hcollapse $ hcmap (Proxy @ToData) (mapIK toData) $ productTypeFrom x
+
+-- | Generically convert a Product-type from a 'BuiltinData' 'List' repr
+gProductFromBuiltinData ::
+    forall (a :: Type) (repr :: [Type]).
+    (IsProductType a repr, All FromData repr) =>
+    BuiltinData ->
+    Maybe a
+gProductFromBuiltinData (BuiltinData (List xs)) = do
+    prod <- SOP.fromList @repr xs
+    productTypeTo <$> hctraverse (Proxy @FromData) (unI . mapKI fromData) prod
+gProductFromBuiltinData _ = Nothing
+
+instance
+    (PlutusTx.FromData h, PlutusTx.ToData h, PLift p) =>
+    PConstantDecl (PConstantViaDataList h p)
+    where
+    type PConstantRepr (PConstantViaDataList h p) = [PlutusTx.Data]
+    type PConstanted (PConstantViaDataList h p) = p
+    pconstantToRepr (PConstantViaDataList x) = case PlutusTx.toData x of
+        (PlutusTx.List xs) -> xs
+        _ -> error "ToData repr is not a List!"
+    pconstantFromRepr = coerce (PlutusTx.fromData @h . PlutusTx.List)
+
+instance (IsProductType a repr, All ToData repr) => ToData (ProductIsData a) where
+    toBuiltinData = coerce (gProductToBuiltinData @a)
+
+instance (IsProductType a repr, All FromData repr) => FromData (ProductIsData a) where
+    fromBuiltinData = coerce (gProductFromBuiltinData @a)
+
+--------------------------------------------------------------------------------
+-- PEnumData
+
+-- | Wrapper for deriving 'ToData', 'FromData' using an Integer representation via 'Enum'
+newtype EnumIsData a = EnumIsData a
+
+-- | Wrapper for deriving `PlutusType` & `PIsData` via a ToData repr derived with `EnumIsData`
+newtype PEnumData (a :: PType) (s :: S) = PEnumData (a s)
+    deriving (Enum, Bounded) via (a s)
+
+instance (Enum a) => ToData (EnumIsData a) where
+    toBuiltinData = coerce $ toBuiltinData . toInteger . fromEnum @a
+
+instance (Enum a) => FromData (EnumIsData a) where
+    fromBuiltinData = coerce $ fmap (toEnum @a . fromInteger) . fromBuiltinData @Integer
+
+instance
+    ( forall s. Enum (a s)
+    , forall s. Bounded (a s)
+    ) =>
+    PlutusType (PEnumData a)
+    where
+    type PInner (PEnumData a) _ = PInteger
+    pmatch' = pmatchEnum
+    pcon' = fromInteger . toInteger . fromEnum
+
+instance forall (a :: PType). PIsData (PEnumData a) where
+    pfromDataImpl d =
+        punsafeCoerce (pfromDataImpl @PInteger $ punsafeCoerce d)
+
+    pdataImpl x =
+        pdataImpl $ pto x
+
+-- | Pattern match over the integer-repr of a Bounded Enum type
+pmatchEnum ::
+    forall (a :: Type) (b :: PType) (s :: S).
+    (Bounded a, Enum a) =>
+    Term s PInteger ->
+    (a -> Term s b) ->
+    Term s b
+pmatchEnum x f = unTermCont $ do
+    x' <- pletC x
+
+    let cases :: [a]
+        cases = [minBound .. pred maxBound]
+
+        branch :: a -> Term s b -> Term s b
+        branch n =
+            pif
+                (x' #== (fromInteger . toInteger . fromEnum $ n))
+                (f n)
+
+    pure $ foldr branch (f maxBound) cases
+
+-- | Pattern match PData as a Bounded Enum. Useful for Redeemers
+pmatchEnumFromData ::
+    forall (a :: Type) (b :: PType) (s :: S).
+    (Bounded a, Enum a) =>
+    Term s PData ->
+    (Maybe a -> Term s b) ->
+    Term s b
+pmatchEnumFromData d f = unTermCont $ do
+    x <- pletC $ pasInt # d
+
+    let cases :: [a]
+        cases = [minBound .. maxBound]
+
+        branch :: a -> Term s b -> Term s b
+        branch n =
+            pif
+                (x #== (fromInteger . toInteger . fromEnum $ n))
+                (f $ Just n)
+
+    pure $ foldr branch (f Nothing) cases
