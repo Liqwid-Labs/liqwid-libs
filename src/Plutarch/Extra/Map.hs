@@ -99,7 +99,10 @@ pmapFromList = pcon . PMap . foldl' go (pcon PNil)
         p <- pletC (ppairDataBuiltin # k' # v')
         pure . pcon . PCons p $ acc
 
--- | @since 1.1.0
+{- | Get the keys of a given map, the order of the keys is preserved.
+
+      @since 1.1.0
+-}
 pkeys ::
     forall (k :: S -> Type) (v :: S -> Type) (keys :: KeyGuarantees) (s :: S).
     Term s (PMap keys k v :--> PBuiltinList (PAsData k))
@@ -161,14 +164,14 @@ pmap = phoistAcyclic $
 
 {- | Get the key of a key-value pair.
 
-     @since 1.0.0
+     @since 1.1.0
 -}
 pkvPairKey :: (PIsData k) => Term s (PBuiltinPair (PAsData k) (PAsData v) :--> k)
 pkvPairKey = phoistAcyclic $ plam $ \(pfromData . (pfstBuiltin #) -> key) -> key
 
 {- | Compare two key-value pairs by their keys, return true if the first key is less than the second one.
 
-      @since 1.0.0
+      @since 1.1.0
 -}
 pkvPairLt ::
     (PIsData k, POrd k) =>

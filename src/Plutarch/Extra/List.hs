@@ -253,7 +253,7 @@ pmapMaybe = phoistAcyclic $
 
 {- | Get the first element that matches a predicate or return Nothing.
 
-     @since 1.0.0
+     @since 1.1.0
 -}
 pfind' ::
     forall (a :: S -> Type) (s :: S) list.
