@@ -16,7 +16,6 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 - `pupdate`
 - `pmapMap` -> `pmap`
-- `update` (Haskell-level `pupdate`)
 
 #### AssocMap (`Plutarch.Extra.Map.Sorted`)
 
@@ -79,3 +78,4 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 - `ptxSignedBy`
 - `ptryFindDatum`
 - `pfindDatum`
+- `pfindTxInByTxOutRef`
