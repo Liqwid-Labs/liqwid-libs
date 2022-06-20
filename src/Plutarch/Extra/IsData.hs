@@ -52,19 +52,29 @@ import Prelude
   Wrapper for deriving 'ToData', 'FromData' using the 'List' constructor of Data to represent a Product type.
 
   Uses 'gProductToBuiltinData', 'gproductFromBuiltinData'.
+
+  @since 1.1.0
 -}
 newtype ProductIsData a = ProductIsData {unProductIsData :: a}
 
 -- | Variant of 'PConstantViaData' using the List repr from 'ProductIsData'
 newtype PConstantViaDataList (h :: Type) (p :: PType) = PConstantViaDataList h
 
--- | Generically convert a Product-Type to 'BuiltinData' with the 'List' repr
+{- |
+  Generically convert a Product-Type to 'BuiltinData' with the 'List' repr.
+
+  @since 1.1.0
+-}
 gProductToBuiltinData ::
     (IsProductType a repr, All ToData repr) => a -> BuiltinData
 gProductToBuiltinData x =
     BuiltinData $ List $ hcollapse $ hcmap (Proxy @ToData) (mapIK toData) $ productTypeFrom x
 
--- | Generically convert a Product-type from a 'BuiltinData' 'List' repr
+{- |
+  Generically convert a Product-type from a 'BuiltinData' 'List' repr.
+
+  @since 1.1.0
+-}
 gProductFromBuiltinData ::
     forall (a :: Type) (repr :: [Type]).
     (IsProductType a repr, All FromData repr) =>
@@ -95,10 +105,18 @@ instance (IsProductType a repr, All FromData repr) => FromData (ProductIsData a)
 --------------------------------------------------------------------------------
 -- PEnumData
 
--- | Wrapper for deriving 'ToData', 'FromData' using an Integer representation via 'Enum'
+{- |
+  Wrapper for deriving 'ToData', 'FromData' using an Integer representation via 'Enum'.
+
+  @since 1.1.0
+-}
 newtype EnumIsData a = EnumIsData a
 
--- | Wrapper for deriving `PlutusType` & `PIsData` via a ToData repr derived with `EnumIsData`
+{- |
+  Wrapper for deriving `PlutusType` & `PIsData` via a ToData repr derived with `EnumIsData`.
+
+  @since 1.1.0
+-}
 newtype PEnumData (a :: PType) (s :: S) = PEnumData (a s)
     deriving (Enum, Bounded) via (a s)
 
@@ -125,7 +143,11 @@ instance forall (a :: PType). PIsData (PEnumData a) where
     pdataImpl x =
         pdataImpl $ pto x
 
--- | Pattern match over the integer-repr of a Bounded Enum type
+{- |
+  Pattern match over the integer-repr of a Bounded Enum type.
+
+  @since 1.1.0
+-}
 pmatchEnum ::
     forall (a :: Type) (b :: PType) (s :: S).
     (Bounded a, Enum a) =>
@@ -146,7 +168,11 @@ pmatchEnum x f = unTermCont $ do
 
     pure $ foldr branch (f maxBound) cases
 
--- | Pattern match PData as a Bounded Enum. Useful for Redeemers
+{- |
+  Pattern match PData as a Bounded Enum. Useful for Redeemers.
+
+  @since 1.1.0
+-}
 pmatchEnumFromData ::
     forall (a :: Type) (b :: PType) (s :: S).
     (Bounded a, Enum a) =>
