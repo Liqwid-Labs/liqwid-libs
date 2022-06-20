@@ -8,6 +8,11 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        tasks:
+          - plutarch-context-builder
+          - formatCheck
 
     steps:
       - uses: actions/checkout@v2.4.0
@@ -25,5 +30,5 @@ jobs:
       #     name: mlabs
       #     authToken: ${{ secrets.CACHIX_KEY }}
 
-      - run: nix build .#check.x86_64-linux
-        name: check build
+      - run: nix build .#checks.x86_64-linux.${{ matrix.tasks }}
+        name: Run '${{ matrix.tasks }}'      

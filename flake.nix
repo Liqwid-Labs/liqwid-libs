@@ -180,6 +180,7 @@
         self.flake.${system}.checks
         // {
           formatCheck = formatCheckFor system;
+          plutarch-context-builder = self.flake.${system}.packages."plutarch-context-builder:lib:plutarch-context-builder";
         }
       );
       check = perSystem (system:
