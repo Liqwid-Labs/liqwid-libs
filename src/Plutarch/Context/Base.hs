@@ -63,10 +63,7 @@ import Plutarch.Api.V1 (datumHash)
 import Plutarch.Builtin (PIsData, pdata, pforgetData)
 import Plutarch.Lift (PUnsafeLiftDecl (..), pconstant, plift)
 import PlutusCore.Data (Data)
-import PlutusLedgerApi.V1 (
-    BuiltinData (BuiltinData),
-    Credential (..),
- )
+import PlutusLedgerApi.V1 (BuiltinData (BuiltinData), Credential (..))
 import PlutusLedgerApi.V1.Address (
     Address,
     pubKeyHashAddress,
