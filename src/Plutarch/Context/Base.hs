@@ -31,6 +31,7 @@ module Plutarch.Context.Base (
     withDatum,
     withValue,
     withRefIndex,
+    withOutRef,
 
     -- * Others
     signedWith,
@@ -276,6 +277,9 @@ withTxId tid u = u{utxoTxId = Just tid}
 
 withRefIndex :: Integer -> UTXO -> UTXO
 withRefIndex tidx u = u{utxoTxIdx = Just tidx}
+
+withOutRef :: TxOutRef -> UTXO -> UTXO
+withOutRef (TxOutRef tid idx) = withTxId tid . withRefIndex idx
 
 withValue :: Value -> UTXO -> UTXO
 withValue val u = u{utxoValue = val}
