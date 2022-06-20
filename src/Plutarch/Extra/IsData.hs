@@ -85,6 +85,7 @@ gProductFromBuiltinData (BuiltinData (List xs)) = do
     productTypeTo <$> hctraverse (Proxy @FromData) (unI . mapKI fromData) prod
 gProductFromBuiltinData _ = Nothing
 
+-- | @since 1.1.0
 instance
     (PlutusTx.FromData h, PlutusTx.ToData h, PLift p) =>
     PConstantDecl (PConstantViaDataList h p)
@@ -96,9 +97,11 @@ instance
         _ -> error "ToData repr is not a List!"
     pconstantFromRepr = coerce (PlutusTx.fromData @h . PlutusTx.List)
 
+-- | @since 1.1.0
 instance (IsProductType a repr, All ToData repr) => ToData (ProductIsData a) where
     toBuiltinData = coerce (gProductToBuiltinData @a)
 
+-- | @since 1.1.0
 instance (IsProductType a repr, All FromData repr) => FromData (ProductIsData a) where
     fromBuiltinData = coerce (gProductFromBuiltinData @a)
 
@@ -118,14 +121,23 @@ newtype EnumIsData a = EnumIsData a
   @since 1.1.0
 -}
 newtype PEnumData (a :: PType) (s :: S) = PEnumData (a s)
-    deriving (Enum, Bounded) via (a s)
+    deriving
+        ( -- | @since 1.1.0
+          Enum
+        , -- | @since 1.1.0
+          Bounded
+        )
+        via (a s)
 
+-- | @since 1.1.0
 instance (Enum a) => ToData (EnumIsData a) where
     toBuiltinData = coerce $ toBuiltinData . toInteger . fromEnum @a
 
+-- | @since 1.1.0
 instance (Enum a) => FromData (EnumIsData a) where
     fromBuiltinData = coerce $ fmap (toEnum @a . fromInteger) . fromBuiltinData @Integer
 
+-- | @since 1.1.0
 instance
     ( forall s. Enum (a s)
     , forall s. Bounded (a s)
@@ -136,6 +148,7 @@ instance
     pmatch' = pmatchEnum
     pcon' = fromInteger . toInteger . fromEnum
 
+-- | @since 1.1.0
 instance forall (a :: PType). PIsData (PEnumData a) where
     pfromDataImpl d =
         punsafeCoerce (pfromDataImpl @PInteger $ punsafeCoerce d)
