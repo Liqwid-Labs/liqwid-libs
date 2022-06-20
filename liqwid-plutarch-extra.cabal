@@ -79,6 +79,7 @@ library
     Plutarch.Extra.Function
     Plutarch.Extra.Functor
     Plutarch.Extra.Identity
+    Plutarch.Extra.IsData
     Plutarch.Extra.List
     Plutarch.Extra.Map
     Plutarch.Extra.Map.Sorted
