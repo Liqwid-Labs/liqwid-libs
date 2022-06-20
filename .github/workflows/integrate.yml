@@ -5,7 +5,7 @@ on:
       - "**.hs"
       - "**.nix"
       - "flake.lock"
-      - "agora.cabal"
+      - "liqwid-plutarch-extra.cabal"
     branches:
       - main
       - staging
@@ -15,7 +15,7 @@ on:
       - "**.hs"
       - "**.nix"
       - "flake.lock"
-      - "agora.cabal"
+      - "liqwid-plutarch-extra.cabal"      
 
 jobs:
   build:
