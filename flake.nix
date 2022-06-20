@@ -186,6 +186,7 @@
         // {
           formatCheck = formatCheckFor system;
           testSuite = self.flake.${system}.packages."liqwid-plutarch-extra:test:liqwid-plutarch-extra-test";
+          liqwid-plutarch-extra = self.flake.${system}.packages."liqwid-plutarch-extra:lib:liqwid-plutarch-extra";
         }
       );
       check = perSystem (system:
