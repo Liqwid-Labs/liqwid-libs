@@ -12,6 +12,7 @@ module Plutarch.Extra.IsData (
     -- * Plutarch PIsData/PlutusType derive-wrappers
     PEnumData (..),
     PConstantViaDataList (PConstantViaDataList),
+    DerivePConstantViaEnum (..),
 
     -- * Functions for PEnumData types
     pmatchEnum,
@@ -39,7 +40,21 @@ import Plutarch (PlutusType (pcon', pmatch'))
 import Plutarch.Builtin (PIsData (pdataImpl, pfromDataImpl), pasInt)
 import Plutarch.Extra.TermCont (pletC)
 import Plutarch.Lift (PConstantDecl (..))
-import Plutarch.Prelude
+import Plutarch.Prelude (
+    PData,
+    PEq ((#==)),
+    PInteger,
+    PLift,
+    PType,
+    PlutusType (..),
+    S,
+    Term,
+    Type,
+    pif,
+    pto,
+    unTermCont,
+    (#),
+ )
 import Plutarch.Unsafe (punsafeCoerce)
 import PlutusLedgerApi.V1 (BuiltinData (BuiltinData))
 import PlutusTx (Data (List), FromData (..), ToData (..), fromData, toData)
@@ -155,6 +170,22 @@ instance forall (a :: PType). PIsData (PEnumData a) where
 
     pdataImpl x =
         pdataImpl $ pto x
+
+{- |
+  Wrapper for deriving `PConstantDecl` using an Integer representation via 'Enum'.
+
+  @since 1.1.0
+-}
+newtype DerivePConstantViaEnum (h :: Type) (p :: PType)
+    = DerivePConstantEnum h
+
+-- | @since 1.1.0
+instance (PLift p, Enum h) => PConstantDecl (DerivePConstantViaEnum h p) where
+    type PConstantRepr (DerivePConstantViaEnum h p) = Integer
+    type PConstanted (DerivePConstantViaEnum h p) = p
+
+    pconstantToRepr = toInteger . fromEnum @h . coerce
+    pconstantFromRepr = Just . coerce . toEnum @h . fromInteger
 
 {- |
   Pattern match over the integer-repr of a Bounded Enum type.
