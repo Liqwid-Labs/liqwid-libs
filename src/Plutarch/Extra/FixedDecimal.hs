@@ -13,7 +13,6 @@ import Plutarch.Api.V1.Value
 import Plutarch.Bool
 import Plutarch.Integer
 import Plutarch.Prelude
-import Plutarch.Unsafe
 
 decimalUnit :: Term s PInteger
 decimalUnit = 1000000
@@ -48,11 +47,11 @@ deriving via
 instance Num (Term s PFixedDecimal) where
     (+) = (+)
     (-) = (-)
-    (punsafeCoerce -> x) * (punsafeCoerce -> y) =
-        punsafeCoerce $ pdiv # (x * y) # decimalUnit
+    (pto -> x) * (pto -> y) =
+        pcon . PFixedDecimal $ pdiv # (x * y) # decimalUnit
     abs = abs
     signum = signum
-    fromInteger = punsafeCoerce . (* decimalUnit) . pconstant
+    fromInteger = pcon . PFixedDecimal . (* decimalUnit) . pconstant
 
 -- TODO: This should be moved to either to plutarch-numeric or other module
 class DivideSemigroup a where
@@ -63,8 +62,8 @@ class (DivideSemigroup a) => DivideMonoid a where
 
 -- | @since 1.0.0
 instance DivideSemigroup (Term s PFixedDecimal) where
-    divide (punsafeCoerce -> x) (punsafeCoerce -> y) =
-        punsafeCoerce $ pdiv # (x * decimalUnit) # y
+    divide (pto -> x) (pto -> y) =
+        pcon . PFixedDecimal $ pdiv # (x * decimalUnit) # y
 
 -- | @since 1.0.0
 instance DivideMonoid (Term s PFixedDecimal) where
@@ -76,5 +75,5 @@ decimalToAdaValue ::
     Term s (PFixedDecimal :--> PValue keys amounts)
 decimalToAdaValue =
     phoistAcyclic $
-        plam $ \(punsafeCoerce -> dec) ->
+        plam $ \(pto -> dec) ->
             psingletonValue # pconstant "" # pconstant "" # dec
