@@ -10,15 +10,28 @@ module Plutarch.Extra.FixedDecimal (
     decimalToAdaValue,
 ) where
 
-import Data.Proxy
-import GHC.TypeLits
-import Plutarch.Api.V1
-import Plutarch.Api.V1.Value
-import Plutarch.Bool
-import Plutarch.Integer
-import Plutarch.Prelude
+import Data.Proxy (Proxy (Proxy))
+import GHC.TypeLits (KnownNat, Nat, natVal)
+import Plutarch.Api.V1 (AmountGuarantees, KeyGuarantees, PValue)
+import Plutarch.Api.V1.Value (psingletonValue)
+import Plutarch.Bool (PEq, POrd)
+import Plutarch.Integer (PInteger, PIntegral (pdiv))
+import Plutarch.Prelude (
+    DerivePNewtype (..),
+    PCon (pcon),
+    PlutusType,
+    S,
+    Term,
+    pconstant,
+    phoistAcyclic,
+    plam,
+    pto,
+    (#),
+    (#$),
+    type (:-->),
+ )
 
-{- | Fixed width decimal. Decimal point is at 1,000,000.
+{- | Fixed width decimal. Decimal point will be given through typelit.
  This would be used for representing Ada value with some Lovelace changes.
 
  @since 1.0.0
@@ -58,7 +71,7 @@ instance KnownNat u => Num (Term s (PFixedDecimal u)) where
 class DivideSemigroup a where
     divide :: a -> a -> a
 
-class (DivideSemigroup a) => DivideMonoid a where
+class DivideSemigroup a => DivideMonoid a where
     one :: a
 
 -- | @since 1.0.0
@@ -73,8 +86,10 @@ instance KnownNat u => DivideMonoid (Term s (PFixedDecimal u)) where
 -- | @since 1.0.0
 decimalToAdaValue ::
     forall (s :: S) (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (unit :: Nat).
+    KnownNat unit =>
     Term s (PFixedDecimal unit :--> PValue keys amounts)
 decimalToAdaValue =
     phoistAcyclic $
         plam $ \(pto -> dec) ->
-            psingletonValue # pconstant "" # pconstant "" # dec
+            let adaValue = (pdiv # dec # (pconstant (natVal (Proxy @unit)))) * pconstant 1000000
+             in psingletonValue # pconstant "" # pconstant "" #$ adaValue
