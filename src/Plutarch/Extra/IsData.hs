@@ -1,5 +1,6 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -156,6 +157,7 @@ instance (Enum a) => FromData (EnumIsData a) where
 instance
     ( forall s. Enum (a s)
     , forall s. Bounded (a s)
+    , forall s. Eq (a s)
     ) =>
     PlutusType (PEnumData a)
     where
@@ -187,6 +189,10 @@ instance (PLift p, Enum h) => PConstantDecl (DerivePConstantViaEnum h p) where
     pconstantToRepr = toInteger . fromEnum @h . coerce
     pconstantFromRepr = Just . coerce . toEnum @h . fromInteger
 
+-- | Safely enumerate all the cases.
+safeCases :: forall a. (Bounded a, Enum a) => [a]
+safeCases = enumFrom minBound
+
 {- |
   Pattern match over the integer-repr of a Bounded Enum type.
 
@@ -201,16 +207,13 @@ pmatchEnum ::
 pmatchEnum x f = unTermCont $ do
     x' <- pletC x
 
-    let cases :: [a]
-        cases = [minBound .. pred maxBound]
-
-        branch :: a -> Term s b -> Term s b
+    let branch :: a -> Term s b -> Term s b
         branch n =
             pif
                 (x' #== (fromInteger . toInteger . fromEnum $ n))
                 (f n)
 
-    pure $ foldr branch (f maxBound) cases
+    pure $ foldr branch (f maxBound) safeCases
 
 {- |
   Pattern match PData as a Bounded Enum. Useful for Redeemers.
@@ -226,13 +229,10 @@ pmatchEnumFromData ::
 pmatchEnumFromData d f = unTermCont $ do
     x <- pletC $ pasInt # d
 
-    let cases :: [a]
-        cases = [minBound .. maxBound]
-
-        branch :: a -> Term s b -> Term s b
+    let branch :: a -> Term s b -> Term s b
         branch n =
             pif
                 (x #== (fromInteger . toInteger . fromEnum $ n))
                 (f $ Just n)
 
-    pure $ foldr branch (f Nothing) cases
+    pure $ foldr branch (f Nothing) safeCases
