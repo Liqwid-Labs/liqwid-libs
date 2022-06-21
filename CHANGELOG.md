@@ -2,12 +2,6 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-## 1.0.0 -- 2022-05-24
-
-### Added
-
-* First release
-
 ## 1.1.0 -- 2022-06-17
 
 ### Added
@@ -79,3 +73,9 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 - `ptryFindDatum`
 - `pfindDatum`
 - `pfindTxInByTxOutRef`
+
+## 1.0.0 -- 2022-05-24
+
+### Added
+
+* First release
