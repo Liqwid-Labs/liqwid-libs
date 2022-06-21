@@ -76,6 +76,7 @@ library
     Plutarch.Extra.Category
     Plutarch.Extra.Comonad
     Plutarch.Extra.Const
+    Plutarch.Extra.FixedDecimal
     Plutarch.Extra.Function
     Plutarch.Extra.Functor
     Plutarch.Extra.Identity
