@@ -1,5 +1,6 @@
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Plutarch.Api.V1.ScriptContext (
     pownTxOutRef,
@@ -14,6 +15,7 @@ module Plutarch.Api.V1.ScriptContext (
     ptryFindDatum,
     pfindDatum,
     pfindTxInByTxOutRef,
+    pvalidatorHashFromAddress,
 ) where
 
 import Data.Kind (Type)
@@ -21,6 +23,8 @@ import Plutarch (PCon (..), S, Term, phoistAcyclic, plam, plet, pmatch, pto, unT
 import Plutarch.Api.V1 (
     AmountGuarantees (..),
     KeyGuarantees (..),
+    PAddress,
+    PCredential (..),
     PDatum,
     PDatumHash,
     PPubKeyHash,
@@ -31,6 +35,7 @@ import Plutarch.Api.V1 (
     PTxInfo,
     PTxOut (..),
     PTxOutRef,
+    PValidatorHash,
     PValue,
  )
 import Plutarch.Api.V1.AssetClass (PAssetClass (..), passetClassValueOf)
@@ -198,3 +203,16 @@ ptryFindDatum = phoistAcyclic $
             PJust datum -> unTermCont $ do
                 (datum', _) <- ptryFromC (pto datum)
                 pure $ pcon (PJust datum')
+
+{- | Find a validatorhash from given address.
+
+    @since 1.1.0
+-}
+pvalidatorHashFromAddress ::
+    forall (s :: S).
+    Term s (PAddress :--> PMaybe PValidatorHash)
+pvalidatorHashFromAddress = phoistAcyclic $
+    plam $ \addr ->
+        pmatch (pfromData $ pfield @"credential" # addr) $ \case
+            PScriptCredential ((pfield @"_0" #) -> vh) -> pcon $ PJust vh
+            _ -> pcon $ PNothing
