@@ -87,6 +87,7 @@ library
     Plutarch.Extra.Map.Unsorted
     Plutarch.Extra.Maybe
     Plutarch.Extra.Numeric
+    Plutarch.Extra.Other
     Plutarch.Extra.Profunctor
     Plutarch.Extra.Record
     Plutarch.Extra.State
