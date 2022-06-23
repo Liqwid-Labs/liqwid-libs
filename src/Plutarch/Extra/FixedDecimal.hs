@@ -12,8 +12,6 @@ module Plutarch.Extra.FixedDecimal (
     DivideMonoid (..),
     decimalToAdaValue,
     fromPInteger,
-    fromPInteger',
-    toPInteger',
     toPInteger,
 ) where
 
@@ -151,18 +149,7 @@ fromPInteger ::
     KnownNat unit =>
     Term s (PInteger :--> PFixedDecimal unit)
 fromPInteger =
-    phoistAcyclic $ plam $ \z -> fromPInteger' z
-
-{- | Convert @PInteger@ to @PFixedDecimal@ in Haskell level.
-
- @since 1.0.0
--}
-fromPInteger' ::
-    forall (unit :: Nat) (s :: S).
-    KnownNat unit =>
-    Term s PInteger ->
-    Term s (PFixedDecimal unit)
-fromPInteger' z = pcon . PFixedDecimal $ pconstant (natVal (Proxy @unit)) * z
+    phoistAcyclic $ plam $ \z -> pcon . PFixedDecimal $ pconstant (natVal (Proxy @unit)) * z
 
 {- | Convert @PFixedDecimal@ to @Integer@. Values that are smaller than 1 will be lost.
 
@@ -173,15 +160,4 @@ toPInteger ::
     KnownNat unit =>
     Term s (PFixedDecimal unit :--> PInteger)
 toPInteger =
-    phoistAcyclic $ plam $ \d -> toPInteger' d
-
-{- | Identical to @toPInteger@ but Haskell level.
-
- @since 1.0.0
--}
-toPInteger' ::
-    forall (unit :: Nat) (s :: S).
-    KnownNat unit =>
-    Term s (PFixedDecimal unit) ->
-    Term s PInteger
-toPInteger' d = pdiv # pto d # (pconstant (natVal (Proxy @unit)))
+    phoistAcyclic $ plam $ \d -> pdiv # pto d # (pconstant (natVal (Proxy @unit)))
