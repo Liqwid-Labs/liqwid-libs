@@ -1,6 +1,7 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -10,6 +11,7 @@ module Plutarch.Extra.Other (
     DerivePNewtype' (..),
 ) where
 
+import Control.Arrow (first)
 import Data.Coerce (Coercible)
 import Data.Kind (Constraint, Type)
 import qualified Generics.SOP as SOP
@@ -23,10 +25,11 @@ import Plutarch (
     pto,
  )
 import Plutarch.Bool (PEq, POrd)
-import Plutarch.Builtin (PIsData)
+import Plutarch.Builtin (PAsData, PData, PIsData)
 import Plutarch.DataRepr (PDataFields (..))
 import Plutarch.Integer (PIntegral)
-import Plutarch.Internal (S (SI))
+import Plutarch.Internal (S (SI), punsafeCoerce)
+import Plutarch.TryFrom (PTryFrom (..))
 
 -- Plutarch deriving wrappers
 
@@ -91,3 +94,26 @@ instance (PDataFields b) => PDataFields (DerivePNewtype a b) where
 
 -- | @since 1.1.0
 deriving via (DerivePNewtype a (PNewtypeOf a)) instance (PNewtypeHas PDataFields a) => PDataFields (DerivePNewtype' a)
+
+-- | @since 1.1.0
+deriving via
+    (DerivePNewtype a (PNewtypeOf a))
+    instance
+        ( PNewtypeOf a ~ b
+        , TermCoercible a b
+        , PTryFrom c b
+        ) =>
+        PTryFrom c (DerivePNewtype' a)
+
+-- | @since 1.1.0
+instance
+    ( PNewtypeOf a ~ b
+    , PTryFrom PData (PAsData b)
+    ) =>
+    PTryFrom PData (PAsData (DerivePNewtype' a))
+    where
+    type
+        PTryFromExcess PData (PAsData (DerivePNewtype' a)) =
+            PTryFromExcess PData (PAsData (PNewtypeOf a))
+    ptryFrom' d k =
+        ptryFrom' @_ @(PAsData (PNewtypeOf a)) d $ k . first punsafeCoerce
