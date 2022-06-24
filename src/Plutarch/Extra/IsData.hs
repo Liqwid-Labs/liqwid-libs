@@ -12,7 +12,7 @@ module Plutarch.Extra.IsData (
 
     -- * Plutarch PIsData/PlutusType derive-wrappers
     PEnumData (..),
-    PConstantViaDataList (PConstantViaDataList),
+    DerivePConstantViaDataList (..),
     DerivePConstantViaEnum (..),
 
     -- * Functions for PEnumData types
@@ -74,7 +74,7 @@ import Prelude
 newtype ProductIsData a = ProductIsData {unProductIsData :: a}
 
 -- | Variant of 'PConstantViaData' using the List repr from 'ProductIsData'
-newtype PConstantViaDataList (h :: Type) (p :: PType) = PConstantViaDataList h
+newtype DerivePConstantViaDataList (h :: Type) (p :: PType) = DerivePConstantViaDataList h
 
 {- |
   Generically convert a Product-Type to 'BuiltinData' with the 'List' repr.
@@ -104,11 +104,11 @@ gProductFromBuiltinData _ = Nothing
 -- | @since 1.1.0
 instance
     (PlutusTx.FromData h, PlutusTx.ToData h, PLift p) =>
-    PConstantDecl (PConstantViaDataList h p)
+    PConstantDecl (DerivePConstantViaDataList h p)
     where
-    type PConstantRepr (PConstantViaDataList h p) = [PlutusTx.Data]
-    type PConstanted (PConstantViaDataList h p) = p
-    pconstantToRepr (PConstantViaDataList x) = case PlutusTx.toData x of
+    type PConstantRepr (DerivePConstantViaDataList h p) = [PlutusTx.Data]
+    type PConstanted (DerivePConstantViaDataList h p) = p
+    pconstantToRepr (DerivePConstantViaDataList x) = case PlutusTx.toData x of
         (PlutusTx.List xs) -> xs
         _ -> error "ToData repr is not a List!"
     pconstantFromRepr = coerce (PlutusTx.fromData @h . PlutusTx.List)
