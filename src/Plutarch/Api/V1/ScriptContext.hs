@@ -3,6 +3,10 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Plutarch.Api.V1.ScriptContext (
+    paddressFromValidatorHash,
+    paddressFromValidatorHash',
+    paddressFromPubKeyHash,
+    paddressFromPubKeyHash',
     pownTxOutRef,
     pownTxInfo,
     pownValue,
@@ -23,13 +27,15 @@ import Plutarch (PCon (..), S, Term, phoistAcyclic, plam, plet, pmatch, pto, unT
 import Plutarch.Api.V1 (
     AmountGuarantees (..),
     KeyGuarantees (..),
-    PAddress,
+    PAddress (PAddress),
     PCredential (..),
     PDatum,
     PDatumHash,
+    PMaybeData (PDJust, PDNothing),
     PPubKeyHash,
     PScriptContext,
     PScriptPurpose (PSpending),
+    PStakingCredential,
     PTuple,
     PTxInInfo (..),
     PTxInfo,
@@ -41,7 +47,7 @@ import Plutarch.Api.V1 (
 import Plutarch.Api.V1.AssetClass (PAssetClass (..), passetClassValueOf)
 import Plutarch.Bool (PBool, POrd (..), pif, (#==))
 import Plutarch.Builtin (PAsData, PBuiltinList, PData, pdata, pfromData)
-import Plutarch.DataRepr (pfield)
+import Plutarch.DataRepr (pdcons, pdnil, pfield)
 import Plutarch.Extra.List (pfirstJust, plookupTuple)
 import Plutarch.Extra.Maybe (pisJust)
 import Plutarch.Extra.TermCont (pletC, pmatchC, ptryFromC)
@@ -216,3 +222,55 @@ pvalidatorHashFromAddress = phoistAcyclic $
         pmatch (pfromData $ pfield @"credential" # addr) $ \case
             PScriptCredential ((pfield @"_0" #) -> vh) -> pcon $ PJust vh
             _ -> pcon $ PNothing
+
+{- | Construct an address (without a staking credential) from a @PValidatorHash@
+
+    @since 1.1.0
+-}
+paddressFromValidatorHash ::
+    forall (s :: S).
+    Term s (PValidatorHash :--> PAddress)
+paddressFromValidatorHash = plam $ \valHash ->
+    pcon . PAddress $
+        pdcons # pdata (pcon $ PScriptCredential (pdcons # pdata valHash # pdnil))
+            #$ pdcons # pdata (pcon $ PDNothing pdnil)
+            #$ pdnil
+
+{- | Construct an address (with a staking credential) from a @PValidatorHash@
+
+    @since 1.1.0
+-}
+paddressFromValidatorHash' ::
+    forall (s :: S).
+    Term s (PValidatorHash :--> PStakingCredential :--> PAddress)
+paddressFromValidatorHash' = plam $ \valHash stakingCred ->
+    pcon . PAddress $
+        pdcons # pdata (pcon $ PScriptCredential (pdcons # pdata valHash # pdnil))
+            #$ pdcons # pdata (pcon $ PDJust (pdcons # pdata stakingCred # pdnil))
+            #$ pdnil
+
+{- | Constuct an address (without a staking credential) from a @PPubKeyHash@
+
+    @since 1.1.0
+-}
+paddressFromPubKeyHash ::
+    forall (s :: S).
+    Term s (PPubKeyHash :--> PAddress)
+paddressFromPubKeyHash = plam $ \pkh ->
+    pcon . PAddress $
+        pdcons # pdata (pcon $ PPubKeyCredential (pdcons # pdata pkh # pdnil))
+            #$ pdcons # pdata (pcon $ PDNothing pdnil)
+            #$ pdnil
+
+{- | Constuct an address (with a staking credential) from a @PPubKeyHash@
+
+    @since 1.1.0
+-}
+paddressFromPubKeyHash' ::
+    forall (s :: S).
+    Term s (PPubKeyHash :--> PStakingCredential :--> PAddress)
+paddressFromPubKeyHash' = plam $ \pkh stakingCred ->
+    pcon . PAddress $
+        pdcons # pdata (pcon $ PPubKeyCredential (pdcons # pdata pkh # pdnil))
+            #$ pdcons # pdata (pcon $ PDJust (pdcons # pdata stakingCred # pdnil))
+            #$ pdnil
