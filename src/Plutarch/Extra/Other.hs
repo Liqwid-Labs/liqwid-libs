@@ -9,6 +9,7 @@
 module Plutarch.Extra.Other (
     -- * Plutarch deriving wrappers
     DerivePNewtype' (..),
+    DerivePConstantViaNewtype' (..),
 ) where
 
 import Control.Arrow (first)
@@ -29,6 +30,7 @@ import Plutarch.Builtin (PAsData, PData, PIsData)
 import Plutarch.DataRepr (PDataFields (..))
 import Plutarch.Integer (PIntegral)
 import Plutarch.Internal (S (SI), punsafeCoerce)
+import Plutarch.Lift (DerivePConstantViaNewtype, PConstantDecl, PLift, PUnsafeLiftDecl (PLifted))
 import Plutarch.TryFrom (PTryFrom (..))
 
 -- Plutarch deriving wrappers
@@ -117,3 +119,21 @@ instance
             PTryFromExcess PData (PAsData (PNewtypeOf a))
     ptryFrom' d k =
         ptryFrom' @_ @(PAsData (PNewtypeOf a)) d $ k . first punsafeCoerce
+
+{- | Convenience wrapper for 'DerivePConstantViaNewtype', by automatically picking the type under a newtype to derive via.
+
+ @since 1.1.0
+-}
+newtype DerivePConstantViaNewtype' (h :: Type) (p :: PType) = DerivePConstantViaNewtype' h
+
+-- | @since 1.1.0
+deriving via
+    (DerivePConstantViaNewtype h p (PNewtypeOf p))
+    instance
+        ( PNewtypeOf p ~ ip
+        , PLift ip
+        , PLift p
+        , Coercible h (DerivePConstantViaNewtype h p ip)
+        , Coercible h (PLifted ip)
+        ) =>
+        PConstantDecl (DerivePConstantViaNewtype' h p)
