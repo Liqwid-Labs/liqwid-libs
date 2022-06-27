@@ -234,6 +234,7 @@ paddressFromValidatorHash = plam $ \valHash stakingCred ->
         pdcons # pdata (pcon $ PScriptCredential (pdcons # pdata valHash # pdnil))
             #$ pdcons # pdata stakingCred
             #$ pdnil
+
 {- | Constuct an address (with a staking credential) from a @PPubKeyHash@
 and maybe a @PStakingCredential
 
