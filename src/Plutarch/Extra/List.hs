@@ -232,13 +232,13 @@ pisUniq = phoistAcyclic $ pisUniqBy # eq # comp
     @since 1.1.0
 -}
 pmapMaybe ::
-    forall (a :: S -> Type) (s :: S) list.
-    (PIsListLike list a) =>
+    forall list (a :: S -> Type) (b :: S -> Type) (s :: S).
+    (PIsListLike list a, PIsListLike list b) =>
     Term
         s
-        ( (a :--> PMaybe a)
+        ( (a :--> PMaybe b)
             :--> list a
-            :--> list a
+            :--> list b
         )
 pmapMaybe = phoistAcyclic $
     pfix #$ plam $ \self f l -> pif (pnull # l) pnil $
