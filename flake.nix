@@ -144,6 +144,7 @@
             # We use the ones from Nixpkgs, since they are cached reliably.
             # Eventually we will probably want to build these with haskell.nix.
             nativeBuildInputs = [
+              pkgs'.entr
               pkgs'.fd
               pkgs'.cabal-install
               pkgs'.hlint

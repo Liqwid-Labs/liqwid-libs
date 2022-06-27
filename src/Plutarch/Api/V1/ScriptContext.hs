@@ -3,6 +3,8 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Plutarch.Api.V1.ScriptContext (
+    paddressFromValidatorHash,
+    paddressFromPubKeyHash,
     pownTxOutRef,
     pownTxInfo,
     pownValue,
@@ -23,13 +25,15 @@ import Plutarch (PCon (..), S, Term, phoistAcyclic, plam, plet, pmatch, pto, unT
 import Plutarch.Api.V1 (
     AmountGuarantees (..),
     KeyGuarantees (..),
-    PAddress,
+    PAddress (PAddress),
     PCredential (..),
     PDatum,
     PDatumHash,
+    PMaybeData,
     PPubKeyHash,
     PScriptContext,
     PScriptPurpose (PSpending),
+    PStakingCredential,
     PTuple,
     PTxInInfo (..),
     PTxInfo,
@@ -41,7 +45,7 @@ import Plutarch.Api.V1 (
 import Plutarch.Api.V1.AssetClass (PAssetClass (..), passetClassValueOf)
 import Plutarch.Bool (PBool, POrd (..), pif, (#==))
 import Plutarch.Builtin (PAsData, PBuiltinList, PData, pdata, pfromData)
-import Plutarch.DataRepr (pfield)
+import Plutarch.DataRepr (pdcons, pdnil, pfield)
 import Plutarch.Extra.List (pfirstJust, plookupTuple)
 import Plutarch.Extra.Maybe (pisJust)
 import Plutarch.Extra.TermCont (pletC, pmatchC, ptryFromC)
@@ -204,7 +208,7 @@ ptryFindDatum = phoistAcyclic $
                 (datum', _) <- ptryFromC (pto datum)
                 pure $ pcon (PJust datum')
 
-{- | Find a validatorhash from given address.
+{- | Find a validatorhash from a given address.
 
     @since 1.1.0
 -}
@@ -216,3 +220,31 @@ pvalidatorHashFromAddress = phoistAcyclic $
         pmatch (pfromData $ pfield @"credential" # addr) $ \case
             PScriptCredential ((pfield @"_0" #) -> vh) -> pcon $ PJust vh
             _ -> pcon $ PNothing
+
+{- | Construct an address from a @PValidatorHash@ and maybe a
+@PStakingCredential@
+
+    @since 1.1.0
+-}
+paddressFromValidatorHash ::
+    forall (s :: S).
+    Term s (PValidatorHash :--> PMaybeData PStakingCredential :--> PAddress)
+paddressFromValidatorHash = plam $ \valHash stakingCred ->
+    pcon . PAddress $
+        pdcons # pdata (pcon $ PScriptCredential (pdcons # pdata valHash # pdnil))
+            #$ pdcons # pdata stakingCred
+            #$ pdnil
+
+{- | Constuct an address (with a staking credential) from a @PPubKeyHash@
+and maybe a @PStakingCredential
+
+    @since 1.1.0
+-}
+paddressFromPubKeyHash ::
+    forall (s :: S).
+    Term s (PPubKeyHash :--> PMaybeData PStakingCredential :--> PAddress)
+paddressFromPubKeyHash = plam $ \pkh stakingCred ->
+    pcon . PAddress $
+        pdcons # pdata (pcon $ PPubKeyCredential (pdcons # pdata pkh # pdnil))
+            #$ pdcons # pdata stakingCred
+            #$ pdnil
