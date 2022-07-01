@@ -26,10 +26,13 @@ import Plutarch (
     S,
     Term,
     pcon,
+    pfix,
     phoistAcyclic,
     plam,
+    pmatch,
     unTermCont,
     (#),
+    (#$),
     type (:-->),
  )
 import Plutarch.Api.V1.Maybe (PMaybeData (PDJust, PDNothing))
@@ -102,24 +105,28 @@ instance PTraversable PMaybeData where
 -- | @since 1.0.0
 instance PTraversable PList where
     ptraverse = phoistAcyclic $
-        plam $ \f xs -> unTermCont $ do
-            t <- pmatchC (puncons # xs)
-            case t of
-                PNothing -> pure $ ppure # pnil
-                PJust t' -> do
-                    PPair thead ttail <- pmatchC t'
-                    pure $ pliftA2 # pcons # (f # thead) # (ptraverse # f # ttail)
+        pfix
+            #$ plam
+            $ \r f xs ->
+                pmatch (puncons # xs) $ \case
+                    PNothing -> ppure # pnil
+                    PJust t' -> do
+                        pmatch t' $ \case
+                            PPair thead ttail ->
+                                pliftA2 # pcons # (f # thead) # (r # f # ttail)
 
 -- | @since 1.0.0
 instance PTraversable PBuiltinList where
     ptraverse = phoistAcyclic $
-        plam $ \f xs -> unTermCont $ do
-            t <- pmatchC (puncons # xs)
-            case t of
-                PNothing -> pure $ ppure # pnil
-                PJust t' -> do
-                    PPair thead ttail <- pmatchC t'
-                    pure $ pliftA2 # pcons # (f # thead) # (ptraverse # f # ttail)
+        pfix
+            #$ plam
+            $ \r f xs ->
+                pmatch (puncons # xs) $ \case
+                    PNothing -> ppure # pnil
+                    PJust t' -> do
+                        pmatch t' $ \case
+                            PPair thead ttail ->
+                                pliftA2 # pcons # (f # thead) # (r # f # ttail)
 
 -- | @since 1.0.0
 instance PTraversable (PPair a) where
