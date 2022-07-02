@@ -1,15 +1,8 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NoFieldSelectors #-}
 
--- | Benchmarking Plutarch code, with a focus on running on many different inputs.
+-- | Benchmarking with a focus on running on many different input sizes and inputs.
 module Test.Benchmark.Sized (
-  ImplMetaData (..),
-  mkImplMetaData,
-  CostAxis (..),
-  Cost (..),
-  Costs (..),
-  sampleScript,
-  sampleTerm,
   SSamples (..),
   DomainSize (..),
   SDomainGen (..),
@@ -18,89 +11,14 @@ module Test.Benchmark.Sized (
   benchSizes,
 ) where
 
-import Codec.Serialise (serialise)
 import Control.Monad.ST (ST)
 import Control.Monad.ST.Class (MonadST, liftST)
-import Data.ByteString.Lazy qualified as LBS
 import Data.HashTable.ST.Basic qualified as HashTable
 import Data.Hashable (Hashable)
-import Data.Text (Text)
-import Data.Vector.Unboxed (Vector)
-import Data.Vector.Unboxed qualified as Vector
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
-import Plutarch (compile)
-import Plutarch.Evaluate (evalScript)
-import PlutusCore.Evaluation.Machine.ExBudget (ExRestrictingBudget (ExRestrictingBudget))
-import PlutusCore.Evaluation.Machine.Exception (ErrorWithCause (..), EvaluationError (InternalEvaluationError, UserEvaluationError))
-import PlutusLedgerApi.V1 (
-  ExBudget (ExBudget),
-  ExCPU (..),
-  ExMemory (..),
-  Script,
- )
 import System.Random (RandomGen, mkStdGen)
 import System.Random.Stateful (STGenM, applySTGen, newSTGenM)
-import UntypedPlutusCore.Evaluation.Machine.Cek (CekUserError (CekEvaluationFailure, CekOutOfExError))
-
-data ImplMetaData = ImplMetaData
-  { name :: Text
-  -- ^ Name of the implementation. Make sure it's unique.
-  , scriptSize :: Int
-  -- ^ Size of the script without inputs.
-  }
-  deriving stock (Show, Eq, Ord, Generic)
-
-mkImplMetaData ::
-  -- | Name of the implementation. Make sure it's unique.
-  Text ->
-  -- | The implementation without any inputs
-  ClosedTerm a ->
-  ImplMetaData
-mkImplMetaData name term = ImplMetaData {name, scriptSize}
-  where
-    scriptSize = fromIntegral . LBS.length . serialise $ compile term
-
-data CostAxis = CPU | Mem deriving stock (Show, Eq, Ord, Generic)
-
--- | Based on Int, since the Plutus budget types are Int internally as well
-newtype Cost (a :: CostAxis) = Cost Int deriving stock (Show, Eq, Ord, Generic)
-
-data Costs
-  = Costs
-      { cpuCost :: Cost 'CPU
-      , memCost :: Cost 'Mem
-      }
-  | BudgetExceeded {exceededAxis :: CostAxis}
-  deriving stock (Show, Eq, Ord, Generic)
-
-sampleScript :: Script -> Costs
-sampleScript script =
-  case res of
-    Right _ -> Costs {cpuCost, memCost}
-    Left (ErrorWithCause evalErr _) ->
-      case evalErr of
-        InternalEvaluationError _ -> error "Internal evaluation-error!"
-        UserEvaluationError e ->
-          case e of
-            CekEvaluationFailure -> error "Script failed for non-budget reason!"
-            CekOutOfExError (ExRestrictingBudget (ExBudget rcpu rmem)) ->
-              if rcpu < 0
-                then BudgetExceeded CPU
-                else
-                  if rmem < 0
-                    then BudgetExceeded Mem
-                    else
-                      error $
-                        "Got CekOutOfExError, but ExRestrictingBudget contains "
-                          <> "neither negative CPU nor negative Memory!"
-  where
-    (res, ExBudget (ExCPU rawCpu) (ExMemory rawMem), _traces) = evalScript script
-    cpuCost = Cost $ fromIntegral rawCpu
-    memCost = Cost $ fromIntegral rawMem
-
-sampleTerm :: ClosedTerm a -> Costs
-sampleTerm term = sampleScript $ compile term
 
 -- | Holds samples for a certain input size
 data SSamples s = SSamples
