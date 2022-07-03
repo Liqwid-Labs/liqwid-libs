@@ -6,19 +6,22 @@ module Test.Benchmark.Sized (
   SSample (..),
   DomainSize (..),
   SDomainGen (..),
-  mkSDomainPureGen,
+  mkSDomainPureSTGen,
   mkSDomainSTGen,
+  sizedPureRandomGen,
   benchSizes,
 ) where
 
+import Control.Monad.Reader (MonadReader (ask), ReaderT)
 import Control.Monad.ST (ST)
 import Control.Monad.ST.Class (MonadST, liftST)
+import Control.Monad.Trans (lift)
 import Data.HashTable.ST.Basic qualified as HashTable
 import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import System.Random (RandomGen, mkStdGen)
-import System.Random.Stateful (STGenM, applySTGen, newSTGenM)
+import System.Random.Stateful (RandomGenM (applyRandomGenM), STGenM, applySTGen, newSTGenM)
 
 -- | Holds sample and metadata for a certain input size
 data SSample s = SSample
@@ -49,9 +52,11 @@ data SDomainGen (m :: Type -> Type) (a :: Type) = SDomainGen
   , randomGen :: Int -> m a
   -- ^ Random input generator, given the input size.
   -- You can use 'Test.QuickCheck.generate :: Gen a -> IO a' here.
+  -- Make sure to keep the your random seed state in the monadic context,
+  -- see also 'sizedPureRandomGen'.
   }
 
--- | Make SDomainGen using a STGen. Random seed originates here.
+-- | Make SDomainGen based on STGenM. Random seed originates here.
 mkSDomainSTGen ::
   forall m a.
   ( Monad m
@@ -67,7 +72,7 @@ mkSDomainSTGen cardinalityOfSize exhaustiveGen stRandomGen = do
   pure $ SDomainGen {cardinalityOfSize, exhaustiveGen, randomGen}
 
 -- | Make SDomainGen using a pure random gen. Random seed originates here.
-mkSDomainPureGen ::
+mkSDomainPureSTGen ::
   forall m a.
   ( Monad m
   , MonadST m
@@ -76,23 +81,55 @@ mkSDomainPureGen ::
   Maybe (Int -> [a]) ->
   (forall (g :: Type). RandomGen g => Int -> g -> (a, g)) ->
   m (SDomainGen m a)
-mkSDomainPureGen cardinalityOfSize exhaustiveGen pureRandomGen =
+mkSDomainPureSTGen cardinalityOfSize exhaustiveGen pureRandomGen =
   mkSDomainSTGen cardinalityOfSize exhaustiveGen (applySTGen . pureRandomGen)
 
--- | Benchmark for various input sizes. Handles small input sizes correctly.
---
--- Output contains a list of samples for each input size.
---
--- This list should be not be kept in memory, better process
--- it into arrays right away, or write to file.
--- TODO An actual Stream might be a better choice
+{- | Adapt a size-parametrized pure random gen for use in 'SSample'.
+
+Solves the problem of keeping the random seed state var (like 'STGenM')
+in a monadic context.
+
+Usage with IO:
+@
+let gen = SDomainGen _ _ (sizedPureRandomGen $ \n -> genWord8)
+g <- newIOGenM (mkStdGen 42)
+ssamples <- runReaderT (benchSizes gen _sampleFun _inputs _desiredSamplesPerInput) g
+print ssamples
+@
+
+Usage with ST:
+@
+let gen = SDomainGen _ _ (sizedPureRandomGen $ \n -> genWord8)
+g <- liftST $ newSTGenM (mkStdGen 42)
+ssamples <- liftST $ runReaderT (benchSizes gen _sampleFun _inputs _desiredSamplesPerInput) g
+print ssamples
+@
+-}
+sizedPureRandomGen ::
+  forall (g :: Type) (r :: Type) (m :: Type -> Type) (a :: Type).
+  ( RandomGenM g r m
+  , MonadST m
+  ) =>
+  (Int -> r -> (a, r)) ->
+  Int ->
+  ReaderT g m a
+sizedPureRandomGen pureRandomGen size =
+  ask >>= lift . applyRandomGenM (pureRandomGen size)
+
+{- | Benchmark for various input sizes. Handles small input sizes correctly.
+
+ Output contains a list of samples for each input size.
+
+ This list should be not be kept in memory, better process
+ it into arrays right away, or write to file.
+ TODO An actual Stream might be a better choice
+-}
 benchSizes ::
   forall (a :: Type) (m :: Type -> Type) (s :: Type).
   ( Eq a
   , Ord a
   , Show a -- TODO print input when exception happens
   , Hashable a
-  , Monad m
   , MonadST m
   ) =>
   -- | Size-dependent input domain generator.
