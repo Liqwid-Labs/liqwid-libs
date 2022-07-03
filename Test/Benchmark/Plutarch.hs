@@ -5,7 +5,13 @@ module Test.Benchmark.Plutarch (
 
 import Data.Text (Text)
 import Plutarch (compile)
-import Test.Benchmark.Plutus (Costs, ImplMetaData, mkScriptImplMetaData, sampleScript)
+import Test.Benchmark.Plutus (
+  BudgetExceeded,
+  Costs,
+  ImplMetaData,
+  mkScriptImplMetaData,
+  sampleScript,
+ )
 
 mkTermImplMetaData ::
   -- | Name of the implementation. Make sure it's unique.
@@ -15,5 +21,5 @@ mkTermImplMetaData ::
   ImplMetaData
 mkTermImplMetaData name term = mkScriptImplMetaData name $ compile term
 
-sampleTerm :: ClosedTerm a -> Costs
+sampleTerm :: ClosedTerm a -> Either BudgetExceeded Costs
 sampleTerm term = sampleScript $ compile term

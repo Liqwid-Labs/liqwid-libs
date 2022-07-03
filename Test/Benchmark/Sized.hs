@@ -3,7 +3,7 @@
 
 -- | Benchmarking with a focus on running on many different input sizes and inputs.
 module Test.Benchmark.Sized (
-  SSamples (..),
+  SSample (..),
   DomainSize (..),
   SDomainGen (..),
   mkSDomainPureGen,
@@ -20,20 +20,14 @@ import Numeric.Natural (Natural)
 import System.Random (RandomGen, mkStdGen)
 import System.Random.Stateful (STGenM, applySTGen, newSTGenM)
 
--- | Holds samples for a certain input size
-data SSamples s = SSamples
+-- | Holds sample and metadata for a certain input size
+data SSample s = SSample
   { inputSize :: Int
   , coverage :: Maybe Float
-  -- ^ Number of samples / Number of possible inputs at that size
-  , numSamples :: Int
-  -- ^ Number of contained samples.
-  , samples :: [s]
-  -- ^ List of samples.
-  --
-  -- This list should be not be kept in memory, better process
-  -- it into arrays right away.
-  -- TODO Hopefully it gets garbage-collected while generating lazily.
-  -- An actual Stream might be a better choice
+  -- ^ Sample size / Number of possible inputs at that size
+  , sampleSize :: Int
+  -- ^ Sample size.
+  , sample :: s
   }
   deriving stock (Show, Generic)
 
@@ -86,8 +80,14 @@ mkSDomainPureGen cardinalityOfSize exhaustiveGen pureRandomGen =
   mkSDomainSTGen cardinalityOfSize exhaustiveGen (applySTGen . pureRandomGen)
 
 -- | Benchmark for various input sizes. Handles small input sizes correctly.
+--
+-- Output contains a list of samples for each input size.
+--
+-- This list should be not be kept in memory, better process
+-- it into arrays right away, or write to file.
+-- TODO An actual Stream might be a better choice
 benchSizes ::
-  forall (a :: Type) (m :: Type -> Type) (sample :: Type).
+  forall (a :: Type) (m :: Type -> Type) (s :: Type).
   ( Eq a
   , Ord a
   , Show a -- TODO print input when exception happens
@@ -98,12 +98,12 @@ benchSizes ::
   -- | Size-dependent input domain generator.
   SDomainGen m a ->
   -- | Sampling function.
-  (a -> sample) ->
+  (a -> s) ->
   -- | The input sizes to benchmark with. Usually something like @[0..n]@.
   [Int] ->
   -- | Desired number of samples per input size
   Int ->
-  m [SSamples sample]
+  m [SSample [s]]
 benchSizes
   SDomainGen
     { cardinalityOfSize
@@ -115,11 +115,11 @@ benchSizes
   desiredSamplesPerInput =
     mapM benchInputSize sizes
     where
-      benchInputSize :: Int -> m (SSamples sample)
+      benchInputSize :: Int -> m (SSample [s])
       benchInputSize inputSize = do
         inputs <- genInputs
-        let samples = fmap sampleFun inputs
-        pure $ SSamples {inputSize, coverage, numSamples = numInputs, samples}
+        let sample = fmap sampleFun inputs
+        pure $ SSample {inputSize, coverage, sampleSize = numInputs, sample}
         where
           -- TODO for high coverage significantly above 50%, should probably generate exhaustively and drop some inputs
           coverage = case cardinality of
