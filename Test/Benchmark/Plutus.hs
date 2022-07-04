@@ -51,7 +51,8 @@ mkScriptImplMetaData name script = ImplMetaData {name, scriptSize}
 data CostAxis = CPU | Mem deriving stock (Show, Eq, Ord, Generic)
 
 -- | Based on Int, since the Plutus budget types are Int internally as well
-newtype Cost (a :: CostAxis) = Cost Int deriving stock (Show, Eq, Ord, Generic)
+newtype Cost (a :: CostAxis) = Cost {value :: Int}
+  deriving stock (Show, Eq, Ord, Generic)
 
 data Costs = Costs
   { cpuCost :: Cost 'CPU
@@ -86,11 +87,15 @@ sampleScript script =
     cpuCost = Cost $ fromIntegral rawCpu
     memCost = Cost $ fromIntegral rawMem
 
--- | 'costVec' doesn't take extra space due to column storage of Vector.Unboxed
+{- | Holds unboxed Vectors of Double, for use with statistics libraries.
+
+ 'costVec' doesn't take extra space due to column storage of 'Vector.Unboxed'.
+-}
 data CostVectors = CostVectors
   { cpuVec :: Vector Double
   , memVec :: Vector Double
   , costVec :: Vector (Double, Double)
+  -- ^ (CPU, Mem)
   }
 
 {- | Convert 'benchSizes' result for statistics libraries.
