@@ -17,7 +17,7 @@ import Data.Maybe (isNothing)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import System.Random (RandomGen, StdGen, mkStdGen)
-import System.Random.Stateful (StateGenM, applyRandomGenM, runStateGenT_, uniformRM)
+import System.Random.Stateful (StateGenM (StateGenM), applyRandomGenM, runStateGenT_, uniformRM)
 
 -- | Holds sample and metadata for a certain input size
 data SSample s = SSample
@@ -103,10 +103,10 @@ benchSizes
   sizes
   desiredSamplesPerInputSize =
     -- using StateGenM to be able to freeze the seed. MonadRandom can't do this..
-    runStateGenT_ (mkStdGen 42) $ \g -> mapM (benchInputSize g) sizes
+    runStateGenT_ (mkStdGen 42) $ const $ mapM benchInputSize sizes
     where
-      benchInputSize :: StateGenM StdGen -> Int -> StateT StdGen m (SSample [se])
-      benchInputSize g inputSize = do
+      benchInputSize :: Int -> StateT StdGen m (SSample [se])
+      benchInputSize inputSize = do
         inputs <- genInputs
         let sample = fmap sampleFun inputs
         pure $ SSample {inputSize, coverage, sampleSize = numInputs, sample}
@@ -117,7 +117,7 @@ benchSizes
               Just $ fromIntegral numInputs / fromIntegral card
           cardinality = cardinalityOfSize inputSize
           (numInputs, genInputs) = case cardinality of
-            HugeDomainCardinality -> (desiredSamplesPerInputSize, genRandom g)
+            HugeDomainCardinality -> (desiredSamplesPerInputSize, genRandom)
             DomainCardinality card ->
               if card <= fromIntegral desiredSamplesPerInputSize
                 then
@@ -127,18 +127,18 @@ benchSizes
                 else
                   ( desiredSamplesPerInputSize
                   , if coverage > Just 0.5
-                      then genRandomSubset g card
-                      else genRandom g
+                      then genRandomSubset card
+                      else genRandom
                   )
           -- coverage close to 1 would have extreme slowdown if we didn't do this
-          genRandomSubset :: StateGenM StdGen -> Natural -> StateT StdGen m [a]
-          genRandomSubset g card = do
+          genRandomSubset :: Natural -> StateT StdGen m [a]
+          genRandomSubset card = do
             let dropNum = fromIntegral card - numInputs
             -- fill a hashtable with dropNum indices into exhaustiveGen output
             ht <- liftST $ HashTable.newSized inputSize
             let loop (-1) = pure ()
                 loop n = do
-                  input :: Int <- uniformRM (0, fromIntegral card - 1) g
+                  input :: Int <- uniformRM (0, fromIntegral card - 1) StateGenM
                   isNew <-
                     -- just abusing this mutable hashtable as a set
                     -- lookup and insert at the same time
@@ -153,12 +153,12 @@ benchSizes
             es' <- flip filterM es $ \(ix, _) ->
               liftST $ isNothing <$> HashTable.lookup ht ix
             pure $ snd <$> es'
-          genRandom :: StateGenM StdGen -> StateT StdGen m [a]
-          genRandom g = do
+          genRandom :: StateT StdGen m [a]
+          genRandom = do
             ht <- liftST $ HashTable.newSized inputSize
             let loop 0 = pure []
                 loop n = do
-                  input <- applyRandomGenM (randomGen inputSize) g
+                  input <- applyRandomGenM (randomGen inputSize) StateGenM
                   isNew <-
                     -- just abusing this mutable hashtable as a set
                     -- lookup and insert at the same time
