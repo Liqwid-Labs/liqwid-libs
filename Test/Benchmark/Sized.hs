@@ -121,7 +121,7 @@ benchSizes
             DomainCardinality card ->
               if card <= fromIntegral desiredSamplesPerInputSize
                 then
-                  ( inputSize
+                  ( fromIntegral card
                   , pure $ verifyCard card $ exhaustiveGen inputSize
                   )
                 else
