@@ -27,6 +27,7 @@ import PlutusLedgerApi.V1 (
   ExMemory (..),
   Script,
  )
+import Test.Benchmark.Cost (CostVectors (..))
 import Test.Benchmark.Sized (SSample (SSample), sample, sampleSize)
 import UntypedPlutusCore.Evaluation.Machine.Cek (CekUserError (CekEvaluationFailure, CekOutOfExError))
 
@@ -87,17 +88,6 @@ sampleScript script =
     cpuCost = Cost $ fromIntegral rawCpu
     memCost = Cost $ fromIntegral rawMem
 
-{- | Holds unboxed Vectors of Double, for use with statistics libraries.
-
- 'costVec' doesn't take extra space due to column storage of 'Vector.Unboxed'.
--}
-data CostVectors = CostVectors
-  { cpuVec :: Vector Double
-  , memVec :: Vector Double
-  , costVec :: Vector (Double, Double)
-  -- ^ (CPU, Mem)
-  }
-
 {- | Convert 'benchSizes' result for statistics libraries.
 
  Statistics libraries love Vectors of Doubles for some reason.
@@ -106,12 +96,13 @@ data CostVectors = CostVectors
 -}
 costSampleToVectors ::
   SSample [Either BudgetExceeded Costs] ->
-  SSample (Either BudgetExceeded CostVectors)
+  SSample (Either BudgetExceeded (CostVectors CostAxis))
 costSampleToVectors ssample@SSample {sampleSize, sample = eCosts} =
   let eCostVecs = toVecs <$> sequence eCosts
       toVecs costs =
-        let costVec@(V_2 _ cpuVec memVec) = toVec costs
-         in CostVectors {cpuVec, memVec, costVec}
+        -- Vector.Unboxed stores in columns
+        let V_2 _ cpuVec memVec = toVec costs
+         in CostVectors [(CPU, cpuVec), (Mem, memVec)]
       toVec :: [Costs] -> Vector (Double, Double)
       toVec = Vector.fromListN sampleSize . map costsToPair
       costsToPair (Costs (Cost cpu) (Cost mem)) =

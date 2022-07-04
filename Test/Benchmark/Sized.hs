@@ -33,7 +33,7 @@ data SSample s = SSample
   -- ^ Sample size.
   , sample :: s
   }
-  deriving stock (Show, Generic)
+  deriving stock (Show, Generic, Functor, Foldable, Traversable)
 
 data DomainCardinality
   = DomainCardinality Natural
