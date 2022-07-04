@@ -10,6 +10,7 @@ module Test.Benchmark.Cost (
 ) where
 
 import Control.Foldl qualified as Foldl
+import Data.Csv (ToNamedRecord, namedRecord, toNamedRecord, (.=))
 import Data.Maybe (fromJust)
 import Data.Vector.Unboxed (Vector)
 import Data.Vector.Unboxed qualified as Vector
@@ -24,7 +25,17 @@ data SimpleStats = SimpleStats
   , meanVal :: Double
   , maxVal :: Double
   , stddev :: Double
-  } deriving stock (Show, Eq, Generic)
+  }
+  deriving stock (Show, Eq, Generic)
+
+instance ToNamedRecord SimpleStats where
+  toNamedRecord (SimpleStats {..}) =
+    namedRecord
+      [ "min" .= minVal
+      , "mean" .= meanVal
+      , "max" .= maxVal
+      , "stddev" .= stddev
+      ]
 
 vecSimpleStats :: Vector Double -> SimpleStats
 vecSimpleStats vec = flip Foldl.fold (Vector.toList vec) $ do

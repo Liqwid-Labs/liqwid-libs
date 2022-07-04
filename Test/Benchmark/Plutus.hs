@@ -12,7 +12,10 @@ module Test.Benchmark.Plutus (
 ) where
 
 import Codec.Serialise (serialise)
+import Control.Monad (void)
 import Data.ByteString.Lazy qualified as LBS
+import Data.Csv (ToNamedRecord, namedRecord, toNamedRecord, (.=))
+import Data.HashMap.Strict qualified as HashMap
 import Data.Text (Text)
 import Data.Vector.Unboxed (Vector)
 import Data.Vector.Unboxed qualified as Vector
@@ -27,7 +30,7 @@ import PlutusLedgerApi.V1 (
   ExMemory (..),
   Script,
  )
-import Test.Benchmark.Cost (CostVectors (..))
+import Test.Benchmark.Cost (CostVectors (..), SimpleStats)
 import Test.Benchmark.Sized (SSample (SSample), sample, sampleSize)
 import UntypedPlutusCore.Evaluation.Machine.Cek (CekUserError (CekEvaluationFailure, CekOutOfExError))
 
@@ -108,3 +111,19 @@ costSampleToVectors ssample@SSample {sampleSize, sample = eCosts} =
       costsToPair (Costs (Cost cpu) (Cost mem)) =
         (fromIntegral cpu, fromIntegral mem)
    in ssample {sample = eCostVecs}
+
+instance ToNamedRecord (SSample (Either BudgetExceeded SimpleStats)) where
+  toNamedRecord ssample@(SSample {sample = Left (BudgetExceeded axis)}) =
+    namedRecord $
+      HashMap.toList (toNamedRecord (void ssample))
+        <> ["budget" .= (show axis <> "!")]
+        <> [ "min" .= ("" :: String)
+           , "mean" .= ("" :: String)
+           , "max" .= ("" :: String)
+           , "stddev" .= ("" :: String)
+           ]
+  toNamedRecord ssample@(SSample {sample = Right simpleStats}) =
+    namedRecord $
+      HashMap.toList (toNamedRecord (void ssample))
+        <> HashMap.toList (toNamedRecord simpleStats)
+        <> ["budget" .= ("" :: String)]

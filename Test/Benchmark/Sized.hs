@@ -1,4 +1,5 @@
 {-# LANGUAGE NoFieldSelectors #-}
+{-# LANGUAGE RecordWildCards #-}
 
 -- | Benchmarking with a focus on running on many different input sizes and inputs.
 module Test.Benchmark.Sized (
@@ -11,6 +12,7 @@ module Test.Benchmark.Sized (
 import Control.Monad (filterM)
 import Control.Monad.ST.Class (MonadST, liftST)
 import Control.Monad.State.Strict (StateT)
+import Data.Csv (ToNamedRecord, namedRecord, toNamedRecord, (.=))
 import Data.HashTable.ST.Basic qualified as HashTable
 import Data.Hashable (Hashable)
 import Data.Maybe (isNothing)
@@ -18,6 +20,7 @@ import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import System.Random (RandomGen, StdGen, mkStdGen)
 import System.Random.Stateful (StateGenM (StateGenM), applyRandomGenM, runStateGenT_, uniformRM)
+import Text.Printf (printf)
 
 -- | Holds sample and metadata for a certain input size
 data SSample s = SSample
@@ -29,6 +32,14 @@ data SSample s = SSample
   , sample :: s
   }
   deriving stock (Show, Generic, Functor, Foldable, Traversable)
+
+instance ToNamedRecord (SSample ()) where
+  toNamedRecord (SSample {..}) =
+    namedRecord
+      [ "input size" .= inputSize
+      , "coverage" .= (maybe "" (\c -> printf "%.f%%" (c*100)) coverage :: String)
+      , "sample size" .= sampleSize
+      ]
 
 data DomainCardinality
   = DomainCardinality Natural
