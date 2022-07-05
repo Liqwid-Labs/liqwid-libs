@@ -120,6 +120,7 @@ test-suite liqwid-plutarch-extra-test
     , QuickCheck
     , quickcheck-instances
     , tasty
+    , tasty-hunit
     , tasty-quickcheck
     , universe
 
@@ -130,6 +131,7 @@ test-suite liqwid-plutarch-extra-test
     Spec.Extra.Map
     Spec.Extra.Map.Sorted
     Spec.Extra.Map.Unsorted
+    Spec.Extra.Traversable
     Spec.Utils
 
   hs-source-dirs: test
