@@ -11,7 +11,7 @@ module Test.Benchmark.Sized (
   benchSizesRandomNonUniform,
 ) where
 
-import Control.Monad (filterM, replicateM)
+import Control.Monad (filterM, replicateM, forM)
 import Control.Monad.ST.Class (MonadST, liftST)
 import Control.Monad.State.Strict (StateT)
 import Data.Csv (ToNamedRecord, namedRecord, toNamedRecord, (.=))
@@ -197,6 +197,22 @@ benchInputSizeUniversal
                   else genRandomDedup sampleSize (randomGen inputSize)
               )
 
+verifyCard :: Natural -> Int -> [a] -> [a]
+verifyCard card inputSize = go (fromIntegral card :: Integer)
+  where
+    go n (x : xs) = x : go (n - 1) xs
+    go n [] =
+      if n == 0
+        then []
+        else
+          error $
+            "cardinalityOfSize on inputSize "
+              <> show inputSize
+              <> " was "
+              <> show card
+              <> ", this is off by "
+              <> show n
+
 {- | Benchmark input sizes using random inputs only.
 
  Deduplicates the randomly generated inputs, so only suitable for uniform
@@ -244,24 +260,21 @@ benchSizesRandom
 {- | Benchmark input sizes using random inputs only.
 
  This does not deduplicate the inputs. Only use this if you are after
- non-uniform distributions.
+ non-uniform distributions. Caches results for inputs to increase performance
+ for the intended non-uniform usage.
 
  Output contains a list of samples for each input size.
 
  The list of sample elements '[s]' should be not be kept in memory, better
  process it into arrays right away, or write to file.
-
- TODO Could use a hashtable to cache results for the same inputs, if speedup is needed.
 -}
 benchSizesRandomNonUniform ::
   forall (a :: Type) (m :: Type -> Type) (se :: Type).
   ( Eq a
   , Ord a
-  , Show a -- TODO print input when exception happens
+  , Show a
   , Hashable a
-  , -- TODO could hide that ST is being used, but need effects anyway for displaying progress later
-    --   so at least a Monad constraint will probably be involved
-    MonadST m
+  , MonadST m
   ) =>
   -- | Size-dependent random input generator
   (forall (g :: Type). RandomGen g => Int -> g -> (a, g)) ->
@@ -276,34 +289,22 @@ benchSizesRandomNonUniform
   randomGen
   sampleFun
   sampleSizePerInputSize
-  sizes =
-    -- using StateGenM to be able to freeze the seed. MonadRandom can't do this..
+  sizes = do
     runStateGenT_ (mkStdGen 42) . const $
       mapM (benchInputSize sampleSizePerInputSize) sizes
     where
       benchInputSize sampleSize inputSize = do
+        ht <- liftST $ HashTable.newSized sampleSize
         inputs <-
           replicateM
             sampleSize
             (applyRandomGenM (randomGen inputSize) StateGenM)
-        let sample = fmap sampleFun inputs
+        sample <- forM inputs $ \input -> do
+          liftST $
+            HashTable.mutate ht input $ \case
+              Nothing -> let se = sampleFun input in (Just se, se)
+              jse@(Just se) -> (jse, se)
         pure $ SSample {inputSize, coverage = Nothing, sampleSize, sample}
-
-verifyCard :: Natural -> Int -> [a] -> [a]
-verifyCard card inputSize = go (fromIntegral card :: Integer)
-  where
-    go n (x : xs) = x : go (n - 1) xs
-    go n [] =
-      if n == 0
-        then []
-        else
-          error $
-            "cardinalityOfSize on inputSize "
-              <> show inputSize
-              <> " was "
-              <> show card
-              <> ", this is off by "
-              <> show n
 
 genRandomDedup ::
   forall g a m.
