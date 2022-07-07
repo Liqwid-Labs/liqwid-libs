@@ -34,6 +34,7 @@ import Test.Benchmark.Cost (CostVectors (..), SimpleStats)
 import Test.Benchmark.Sized (SSample (SSample), sample, sampleSize)
 import UntypedPlutusCore.Evaluation.Machine.Cek (CekUserError (CekEvaluationFailure, CekOutOfExError))
 
+-- TODO add script hash, maybe also git commit hash, mtime
 data ImplMetaData = ImplMetaData
   { name :: Text
   -- ^ Name of the implementation. Make sure it's unique.
