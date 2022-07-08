@@ -15,13 +15,18 @@ module Test.Benchmark.Cost (
   vecSimpleStats,
   cvSimpleStats,
   samplesToPerAxisStats,
+  writeCSVs,
 ) where
 
 import Control.Foldl qualified as Foldl
-import Control.Monad (void)
+import Control.Monad (forM_, void)
+import Data.ByteString.Lazy qualified as ByteString
 import Data.Csv (
   DefaultOrdered (headerOrder),
+  EncodeOptions (encUseCrLf),
   ToNamedRecord,
+  defaultEncodeOptions,
+  encodeDefaultOrderedByNameWith,
   header,
   namedRecord,
   toNamedRecord,
@@ -29,11 +34,12 @@ import Data.Csv (
  )
 import Data.HashMap.Strict qualified as HashMap
 import Data.Maybe (fromJust)
-import Data.Text (Text, pack)
+import Data.Text (Text, pack, unpack)
 import Data.Vector.Unboxed (Vector)
 import Data.Vector.Unboxed qualified as Vector
 import GHC.Generics (Generic)
 import Optics (sequenceOf, traversed, (%%))
+import Path (Dir, Path, Rel, parseRelFile, toFilePath, (</>))
 import Test.Benchmark.Sized (SSample (SSample), sample, sampleSize)
 
 class CostAxis a where
@@ -170,3 +176,11 @@ samplesToPerAxisStats vecsFun statsFun ssamples =
   where
     scvs = fmap (costSampleToVectors vecsFun) ssamples
     sAllStats = (fmap . fmap . fmap . fmap) statsFun scvs
+
+writeCSVs :: (CostAxis a, DefaultOrdered stats, ToNamedRecord stats) => Path Rel Dir -> Text -> AxisMap a [stats] -> IO ()
+writeCSVs dir name statsPerAxis = do
+  let AxisMap pairs =
+        encodeDefaultOrderedByNameWith defaultEncodeOptions {encUseCrLf = False} <$> statsPerAxis
+  forM_ pairs $ \(axis, csvData) -> do
+    file <- parseRelFile . unpack $ name <> " " <> axisName axis <> ".csv"
+    ByteString.writeFile (toFilePath $ dir </> file) csvData
