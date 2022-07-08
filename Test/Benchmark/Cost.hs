@@ -12,7 +12,6 @@ module Test.Benchmark.Cost (
   BudgetExceeded (..),
   CostVector (..),
   SimpleStats (..),
-  simpleStatsHeader,
   vecSimpleStats,
   cvSimpleStats,
   samplesToPerAxisStats,
@@ -21,7 +20,7 @@ module Test.Benchmark.Cost (
 import Control.Foldl qualified as Foldl
 import Control.Monad (void)
 import Data.Csv (
-  Header,
+  DefaultOrdered (headerOrder),
   ToNamedRecord,
   header,
   namedRecord,
@@ -87,6 +86,15 @@ instance ToNamedRecord SimpleStats where
       , "stddev" .= stddev
       ]
 
+instance DefaultOrdered SimpleStats where
+  headerOrder _ =
+    header
+      [ "min"
+      , "mean"
+      , "max"
+      , "stddev"
+      ]
+
 instance
   CostAxis axis =>
   ToNamedRecord (SSample (Either (BudgetExceeded axis) SimpleStats))
@@ -106,18 +114,14 @@ instance
         <> ["budget" .= ("" :: String)]
         <> HashMap.toList (toNamedRecord simpleStats)
 
-simpleStatsHeader :: Header
-simpleStatsHeader =
-  header
-    [ "input size"
-    , "coverage"
-    , "sample size"
-    , "budget"
-    , "min"
-    , "mean"
-    , "max"
-    , "stddev"
-    ]
+instance
+  CostAxis axis =>
+  DefaultOrdered (SSample (Either (BudgetExceeded axis) SimpleStats))
+  where
+  headerOrder ssample =
+    headerOrder (void ssample)
+      <> header ["budget"]
+      <> headerOrder (undefined :: SimpleStats)
 
 vecSimpleStats :: CostVector -> SimpleStats
 vecSimpleStats (CostVector vec) = flip Foldl.fold (Vector.toList vec) $ do

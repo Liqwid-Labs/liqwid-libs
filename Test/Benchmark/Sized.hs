@@ -14,7 +14,7 @@ module Test.Benchmark.Sized (
 import Control.Monad (filterM, forM, replicateM)
 import Control.Monad.ST.Class (MonadST, liftST)
 import Control.Monad.State.Strict (StateT)
-import Data.Csv (ToNamedRecord, namedRecord, toNamedRecord, (.=))
+import Data.Csv (DefaultOrdered (headerOrder), ToNamedRecord, header, namedRecord, toNamedRecord, (.=))
 import Data.HashTable.ST.Basic qualified as HashTable
 import Data.Hashable (Hashable)
 import Data.Maybe (isNothing)
@@ -47,6 +47,14 @@ instance ToNamedRecord (SSample ()) where
       , "coverage"
           .= (maybe "" (\c -> printf "%.f%%" (c * 100)) coverage :: String)
       , "sample size" .= sampleSize
+      ]
+
+instance DefaultOrdered (SSample ()) where
+  headerOrder _ =
+    header
+      [ "input size"
+      , "coverage"
+      , "sample size"
       ]
 
 data Cardinality
