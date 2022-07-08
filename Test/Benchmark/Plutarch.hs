@@ -9,6 +9,7 @@ import Test.Benchmark.Plutus (
   BudgetExceeded,
   Costs,
   ImplMetaData,
+  PlutusCostAxis,
   mkScriptImplMetaData,
   sampleScript,
  )
@@ -21,5 +22,5 @@ mkTermImplMetaData ::
   ImplMetaData
 mkTermImplMetaData name term = mkScriptImplMetaData name $ compile term
 
-sampleTerm :: ClosedTerm a -> Either BudgetExceeded Costs
+sampleTerm :: ClosedTerm a -> Either (BudgetExceeded PlutusCostAxis) Costs
 sampleTerm term = sampleScript $ compile term

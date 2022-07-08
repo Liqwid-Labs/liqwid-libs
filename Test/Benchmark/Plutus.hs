@@ -3,36 +3,48 @@
 module Test.Benchmark.Plutus (
   ImplMetaData (..),
   mkScriptImplMetaData,
-  CostAxis (..),
+  PlutusCostAxis (..),
   Cost (..),
   BudgetExceeded (..),
   Costs (..),
   sampleScript,
-  costSampleToVectors,
+  statsByAxis,
 ) where
 
 import Codec.Serialise (serialise)
-import Control.Monad (void)
 import Data.ByteString.Lazy qualified as LBS
-import Data.Csv (ToNamedRecord, namedRecord, toNamedRecord, (.=))
-import Data.HashMap.Strict qualified as HashMap
 import Data.Text (Text)
 import Data.Vector.Unboxed (Vector)
 import Data.Vector.Unboxed qualified as Vector
 import Data.Vector.Unboxed.Base (Vector (V_2))
 import GHC.Generics (Generic)
 import Plutarch.Evaluate (evalScript)
-import PlutusCore.Evaluation.Machine.ExBudget (ExRestrictingBudget (ExRestrictingBudget))
-import PlutusCore.Evaluation.Machine.Exception (ErrorWithCause (..), EvaluationError (InternalEvaluationError, UserEvaluationError))
+import PlutusCore.Evaluation.Machine.ExBudget (
+  ExRestrictingBudget (ExRestrictingBudget),
+ )
+import PlutusCore.Evaluation.Machine.Exception (
+  ErrorWithCause (..),
+  EvaluationError (InternalEvaluationError, UserEvaluationError),
+ )
 import PlutusLedgerApi.V1 (
   ExBudget (ExBudget),
   ExCPU (..),
   ExMemory (..),
   Script,
  )
-import Test.Benchmark.Cost (CostVectors (..), SimpleStats)
-import Test.Benchmark.Sized (SSample (SSample), sample, sampleSize)
-import UntypedPlutusCore.Evaluation.Machine.Cek (CekUserError (CekEvaluationFailure, CekOutOfExError))
+import Test.Benchmark.Cost (
+  AxisMap (AxisMap),
+  BudgetExceeded (BudgetExceeded),
+  CostAxis,
+  CostVector (..),
+  SimpleStats,
+  samplesToPerAxisStats,
+  vecSimpleStats,
+ )
+import Test.Benchmark.Sized (SSample)
+import UntypedPlutusCore.Evaluation.Machine.Cek (
+  CekUserError (CekEvaluationFailure, CekOutOfExError),
+ )
 
 -- TODO add script hash, maybe also git commit hash, mtime
 data ImplMetaData = ImplMetaData
@@ -53,10 +65,12 @@ mkScriptImplMetaData name script = ImplMetaData {name, scriptSize}
   where
     scriptSize = fromIntegral . LBS.length . serialise $ script
 
-data CostAxis = CPU | Mem deriving stock (Show, Eq, Ord, Generic)
+data PlutusCostAxis = CPU | Mem
+  deriving stock (Show, Eq, Ord, Enum, Bounded, Generic)
+instance CostAxis PlutusCostAxis
 
 -- | Based on Int, since the Plutus budget types are Int internally as well
-newtype Cost (a :: CostAxis) = Cost {value :: Int}
+newtype Cost (a :: PlutusCostAxis) = Cost {value :: Int}
   deriving stock (Show, Eq, Ord, Generic)
 
 data Costs = Costs
@@ -65,9 +79,7 @@ data Costs = Costs
   }
   deriving stock (Show, Eq, Generic)
 
-newtype BudgetExceeded = BudgetExceeded {exceededAxis :: CostAxis} deriving stock (Show, Eq, Generic)
-
-sampleScript :: Script -> Either BudgetExceeded Costs
+sampleScript :: Script -> Either (BudgetExceeded PlutusCostAxis) Costs
 sampleScript script =
   case res of
     Right _ -> pure $ Costs {cpuCost, memCost}
@@ -92,39 +104,22 @@ sampleScript script =
     cpuCost = Cost $ fromIntegral rawCpu
     memCost = Cost $ fromIntegral rawMem
 
-{- | Convert 'benchSizes' result for statistics libraries.
+plutusCostsToVecs :: Int -> [Costs] -> AxisMap PlutusCostAxis CostVector
+plutusCostsToVecs sampleSize costs =
+  AxisMap [(CPU, CostVector cpuVec), (Mem, CostVector memVec)]
+  where
+    -- Vector.Unboxed stores in columns
+    V_2 _ cpuVec memVec = toVec costs
+    toVec :: [Costs] -> Vector (Double, Double)
+    toVec = Vector.fromListN sampleSize . map costsToPair
+    costsToPair (Costs (Cost cpu) (Cost mem)) =
+      (fromIntegral cpu, fromIntegral mem)
 
- Statistics libraries love Vectors of Doubles for some reason.
- Composing this with 'benchSizes' also ensures that no references
- to the list are kept, allowing immediate GC on it.
--}
-costSampleToVectors ::
-  SSample [Either BudgetExceeded Costs] ->
-  SSample (Either BudgetExceeded (CostVectors CostAxis))
-costSampleToVectors ssample@SSample {sampleSize, sample = eCosts} =
-  let eCostVecs = toVecs <$> sequence eCosts
-      toVecs costs =
-        -- Vector.Unboxed stores in columns
-        let V_2 _ cpuVec memVec = toVec costs
-         in CostVectors [(CPU, cpuVec), (Mem, memVec)]
-      toVec :: [Costs] -> Vector (Double, Double)
-      toVec = Vector.fromListN sampleSize . map costsToPair
-      costsToPair (Costs (Cost cpu) (Cost mem)) =
-        (fromIntegral cpu, fromIntegral mem)
-   in ssample {sample = eCostVecs}
-
-instance ToNamedRecord (SSample (Either BudgetExceeded SimpleStats)) where
-  toNamedRecord ssample@(SSample {sample = Left (BudgetExceeded axis)}) =
-    namedRecord $
-      HashMap.toList (toNamedRecord (void ssample))
-        <> ["budget" .= (show axis <> "!")]
-        <> [ "min" .= ("" :: String)
-           , "mean" .= ("" :: String)
-           , "max" .= ("" :: String)
-           , "stddev" .= ("" :: String)
-           ]
-  toNamedRecord ssample@(SSample {sample = Right simpleStats}) =
-    namedRecord $
-      HashMap.toList (toNamedRecord (void ssample))
-        <> HashMap.toList (toNamedRecord simpleStats)
-        <> ["budget" .= ("" :: String)]
+-- | Postprocesses 'benchSizes..' output into per-axis statistics.
+statsByAxis ::
+  [SSample [Either (BudgetExceeded PlutusCostAxis) Costs]] ->
+  AxisMap
+    PlutusCostAxis
+    [SSample (Either (BudgetExceeded PlutusCostAxis) SimpleStats)]
+statsByAxis =
+  samplesToPerAxisStats plutusCostsToVecs vecSimpleStats

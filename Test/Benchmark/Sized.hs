@@ -11,7 +11,7 @@ module Test.Benchmark.Sized (
   benchSizesRandomNonUniform,
 ) where
 
-import Control.Monad (filterM, replicateM, forM)
+import Control.Monad (filterM, forM, replicateM)
 import Control.Monad.ST.Class (MonadST, liftST)
 import Control.Monad.State.Strict (StateT)
 import Data.Csv (ToNamedRecord, namedRecord, toNamedRecord, (.=))
@@ -21,7 +21,12 @@ import Data.Maybe (isNothing)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import System.Random (RandomGen, StdGen, mkStdGen)
-import System.Random.Stateful (StateGenM (StateGenM), applyRandomGenM, runStateGenT_, uniformRM)
+import System.Random.Stateful (
+  StateGenM (StateGenM),
+  applyRandomGenM,
+  runStateGenT_,
+  uniformRM,
+ )
 import Text.Printf (printf)
 
 -- | Holds sample and metadata for a certain input size
@@ -39,7 +44,8 @@ instance ToNamedRecord (SSample ()) where
   toNamedRecord (SSample {..}) =
     namedRecord
       [ "input size" .= inputSize
-      , "coverage" .= (maybe "" (\c -> printf "%.f%%" (c * 100)) coverage :: String)
+      , "coverage"
+          .= (maybe "" (\c -> printf "%.f%%" (c * 100)) coverage :: String)
       , "sample size" .= sampleSize
       ]
 
@@ -78,8 +84,8 @@ data SUniversalGen (a :: Type) = SUniversalGen
   , randomGen :: forall (g :: Type). RandomGen g => Int -> g -> (a, g)
   -- ^ Random input generator, given the input size.
   --
-  -- For a comfortable interface, use something like 'System.Random.Stateful.runStateGen'
-  -- or the MonadRandom package.
+  -- For a comfortable interface, use something like
+  -- 'System.Random.Stateful.runStateGen' or the MonadRandom package.
   --
   -- See 'Test.Benchmark.QuickCheck' for how to use QuickCheck generators here.
   -- You probably want either an uniform distribution, or a distribution that
@@ -104,8 +110,9 @@ benchSizesUniversal ::
   , Ord a
   , Show a -- TODO print input when exception happens
   , Hashable a
-  , -- TODO could hide that ST is being used, but need effects anyway for displaying progress later
-    --   so at least a Monad constraint will probably be involved
+  , -- TODO could hide that ST is being used, but need effects anyway for
+    -- displaying progress later so at least a Monad constraint will probably be
+    -- involved
     MonadST m
   ) =>
   -- | Size-dependent input domain generator.
@@ -134,7 +141,13 @@ benchSizesUniversal
   sizes =
     -- using StateGenM to be able to freeze the seed. MonadRandom can't do this..
     runStateGenT_ (mkStdGen 42) . const $
-      mapM (benchInputSizeUniversal domainGen sampleFun desiredSampleSizePerInputSize) sizes
+      mapM
+        ( benchInputSizeUniversal
+            domainGen
+            sampleFun
+            desiredSampleSizePerInputSize
+        )
+        sizes
 
 benchInputSizeUniversal ::
   forall (a :: Type) (m :: Type -> Type) (se :: Type).
@@ -216,8 +229,7 @@ verifyCard card inputSize = go (fromIntegral card :: Integer)
 {- | Benchmark input sizes using random inputs only.
 
  Deduplicates the randomly generated inputs, so only suitable for uniform
- distributions. As long as the random gen eventually generates all possible inputs,
- the deduplication forces uniformness.
+ distributions.
 
  Output contains a list of samples for each input size.
 
