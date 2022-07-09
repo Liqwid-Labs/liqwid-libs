@@ -1,5 +1,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE NoFieldSelectors #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | Benchmarking with a focus on running on many different input sizes and inputs.
 module Test.Benchmark.Sized (
@@ -21,6 +23,7 @@ import Data.Maybe (isNothing)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import System.Random (RandomGen, StdGen, mkStdGen)
+import Optics.TH (makeFieldLabelsNoPrefix)
 import System.Random.Stateful (
   StateGenM (StateGenM),
   applyRandomGenM,
@@ -38,7 +41,9 @@ data SSample s = SSample
   -- ^ Sample size.
   , sample :: s
   }
-  deriving stock (Show, Generic, Functor, Foldable, Traversable)
+  deriving stock (Eq, Show, Generic, Functor, Foldable, Traversable)
+
+makeFieldLabelsNoPrefix ''SSample
 
 instance ToNamedRecord (SSample ()) where
   toNamedRecord (SSample {..}) =
@@ -58,9 +63,11 @@ instance DefaultOrdered (SSample ()) where
       ]
 
 data Cardinality
-  = Cardinality Natural
+  = Cardinality {exact :: Natural}
   | HugeCardinality
   deriving stock (Eq, Ord, Show, Generic)
+
+makeFieldLabelsNoPrefix ''Cardinality
 
 {- | Universal size-dependent input generator.
 
@@ -100,6 +107,8 @@ data SUniversalGen (a :: Type) = SUniversalGen
   -- represents real-world inputs. Keep that in mind when reusing QuickCheck
   -- generators, they might not have been written with that in mind.
   }
+
+makeFieldLabelsNoPrefix ''SUniversalGen
 
 {- | Benchmark for various input sizes. Handles small input sizes correctly.
 

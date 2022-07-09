@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE NoFieldSelectors #-}
 
 module Test.Benchmark.Plutus (
@@ -18,6 +20,7 @@ import Data.Vector.Unboxed (Vector)
 import Data.Vector.Unboxed qualified as Vector
 import Data.Vector.Unboxed.Base (Vector (V_2))
 import GHC.Generics (Generic)
+import Optics.TH (makeFieldLabelsNoPrefix)
 import Plutarch.Evaluate (evalScript)
 import PlutusCore.Evaluation.Machine.ExBudget (
   ExRestrictingBudget (ExRestrictingBudget),
@@ -55,6 +58,8 @@ data ImplMetaData = ImplMetaData
   }
   deriving stock (Show, Eq, Ord, Generic)
 
+makeFieldLabelsNoPrefix ''ImplMetaData
+
 mkScriptImplMetaData ::
   -- | Name of the implementation. Make sure it's unique.
   Text ->
@@ -73,11 +78,15 @@ instance CostAxis PlutusCostAxis
 newtype Cost (a :: PlutusCostAxis) = Cost {value :: Int}
   deriving stock (Show, Eq, Ord, Generic)
 
+makeFieldLabelsNoPrefix ''Cost
+
 data Costs = Costs
   { cpuCost :: Cost 'CPU
   , memCost :: Cost 'Mem
   }
   deriving stock (Show, Eq, Generic)
+
+makeFieldLabelsNoPrefix ''Costs
 
 sampleScript :: Script -> Either (BudgetExceeded PlutusCostAxis) Costs
 sampleScript script =

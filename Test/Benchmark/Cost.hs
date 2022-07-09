@@ -1,6 +1,9 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE NoFieldSelectors #-}
 
 module Test.Benchmark.Cost (
@@ -15,7 +18,8 @@ module Test.Benchmark.Cost (
   vecSimpleStats,
   cvSimpleStats,
   samplesToPerAxisStats,
-  writeCSVs,
+  writePerAxisCSVs,
+  rankOnPerAxisStat,
 ) where
 
 import Control.Foldl qualified as Foldl
@@ -32,17 +36,24 @@ import Data.Csv (
   toNamedRecord,
   (.=),
  )
+import Data.Foldable (foldl')
+import Data.Function (on)
 import Data.HashMap.Strict qualified as HashMap
+import Data.List (sortBy)
+import Data.List.NonEmpty (NonEmpty ((:|)), groupWith)
 import Data.Maybe (fromJust)
 import Data.Text (Text, pack, unpack)
 import Data.Vector.Unboxed (Vector)
 import Data.Vector.Unboxed qualified as Vector
 import GHC.Generics (Generic)
+import GHC.Records (HasField)
 import Optics (sequenceOf, traversed, (%%))
+import Optics.TH (makeFieldLabelsNoPrefix)
 import Path (Dir, Path, Rel, parseRelFile, toFilePath, (</>))
-import Test.Benchmark.Sized (SSample (SSample), sample, sampleSize)
+import Test.Benchmark.Common (ImplData (ImplData, name, val), MultiImplData (MultiImplData, name, names, val))
+import Test.Benchmark.Sized (SSample (SSample), coverage, inputSize, sample, sampleSize)
 
-class CostAxis a where
+class Eq a => CostAxis a where
   axisName :: a -> Text
   axes :: [a]
   default axisName :: Show a => a -> Text
@@ -55,10 +66,12 @@ class CostAxis a where
  All axes always have a value in this Map. If you want a subset of your axes,
  use a different type.
 -}
-newtype AxisMap a b = AxisMap [(a, b)]
+newtype AxisMap a b = AxisMap { pairs :: [(a, b)]}
   deriving stock (Functor)
 
-instance (CostAxis a, Eq a) => Applicative (AxisMap a) where
+makeFieldLabelsNoPrefix ''AxisMap
+
+instance (CostAxis a) => Applicative (AxisMap a) where
   pure x = AxisMap $ map (,x) axes
   f <*> b =
     AxisMap $
@@ -66,7 +79,7 @@ instance (CostAxis a, Eq a) => Applicative (AxisMap a) where
         (\axis -> (axis, axisLookup axis f $ axisLookup axis b))
         axes
 
-axisLookup :: (CostAxis a, Eq a) => a -> AxisMap a b -> b
+axisLookup :: (CostAxis a) => a -> AxisMap a b -> b
 axisLookup axis (AxisMap pairs) = fromJust $ lookup axis pairs
 
 newtype BudgetExceeded axis = BudgetExceeded {exceededAxis :: axis}
@@ -82,6 +95,8 @@ data SimpleStats = SimpleStats
   , stddev :: Double
   }
   deriving stock (Show, Eq, Generic)
+
+makeFieldLabelsNoPrefix ''SimpleStats
 
 instance ToNamedRecord SimpleStats where
   toNamedRecord (SimpleStats {..}) =
@@ -177,10 +192,94 @@ samplesToPerAxisStats vecsFun statsFun ssamples =
     scvs = fmap (costSampleToVectors vecsFun) ssamples
     sAllStats = (fmap . fmap . fmap . fmap) statsFun scvs
 
-writeCSVs :: (CostAxis a, DefaultOrdered stats, ToNamedRecord stats) => Path Rel Dir -> Text -> AxisMap a [stats] -> IO ()
-writeCSVs dir name statsPerAxis = do
+-- | Rank multiple implementations by some statistic.
+rankOnPerAxisStat ::
+  forall (axis :: Type) (stats :: Type) (s :: Type).
+  (CostAxis axis, Eq axis, Ord s) =>
+  -- | Selects the statistic value to rank by from the stats.
+  (stats -> s) ->
+  -- | Per implementation: per axis: size-specific samples containing the stats
+  MultiImplData
+    [ImplData (AxisMap axis [SSample (Either (BudgetExceeded axis) stats)])] ->
+  MultiImplData
+    (AxisMap axis [SSample [ImplData (Either (BudgetExceeded axis) s)]])
+rankOnPerAxisStat sel MultiImplData {name, names, val = statsPerImpl} =
+  MultiImplData {name, names, val = sorted}
+  where
+    -- raise the axis mapping to the top level
+    raisedMap ::
+      AxisMap axis [ImplData [SSample (Either (BudgetExceeded axis) stats)]]
+    raisedMap = sequenceOf (traversed %% traversed) statsPerImpl
+
+    -- lower the impl name to each SSample
+    loweredName ::
+      AxisMap axis [ImplData (SSample (Either (BudgetExceeded axis) stats))]
+    loweredName = concat <$> (fmap . fmap) sequence raisedMap
+
+    -- swap the impl name into the SSample.
+    -- Now we have multiple SSamples for each input size in the per-axis list.
+    swapped ::
+      AxisMap axis [SSample (ImplData (Either (BudgetExceeded axis) stats))]
+    swapped = (fmap . fmap) seqTupSamp loweredName
+    -- a workaround for Applicative on SSample not being possible
+    seqTupSamp ::
+      forall (a :: Type). ImplData (SSample a) -> SSample (ImplData a)
+    seqTupSamp implData =
+      implData.val
+        { sample =
+            ImplData
+              { name = implData.name
+              , val = implData.val.sample
+              }
+        }
+
+    -- We merge the SSamples for each input size, keeping the minimum coverage
+    -- and sample size values.
+    merged :: AxisMap axis [SSample [ImplData (Either (BudgetExceeded axis) stats)]]
+    merged = fmap (fmap mergeSSamples . groupWith (.inputSize)) swapped
+
+    mergeSSamples :: forall (a :: Type). NonEmpty (SSample a) -> SSample [a]
+    mergeSSamples (s0 :| ss) = foldl' mergeTwo (fmap (: []) s0) ss
+    mergeTwo :: forall (a :: Type). SSample [a] -> SSample a -> SSample [a]
+    mergeTwo sAccum s =
+      if sAccum.inputSize /= s.inputSize
+        then error "tried to merge SSamples with differing input size"
+        else
+          SSample
+            { inputSize = sAccum.inputSize
+            , sampleSize = min sAccum.sampleSize s.sampleSize
+            , coverage = min sAccum.coverage s.coverage
+            , sample = s.sample : sAccum.sample
+            }
+
+    -- Use sel to focus on a single stat
+    selected = (fmap . fmap . fmap . fmap . fmap . fmap) sel merged
+    -- Sort the list in each SSample by this stat
+    sorted = (fmap . fmap . fmap) (sortBy (cmp `on` (.val))) selected
+    -- BudgetExceeded is always considered bigger, compared to an actual value
+    -- (contrary to how Either compares by default)
+    cmp (Left _) (Right _) = GT
+    cmp (Right _) (Left _) = LT
+    cmp (Left _) (Left _) = EQ
+    cmp (Right a) (Right b) = compare a b
+
+-- | Write named data from an 'AxisMap' to CSV files.
+writePerAxisCSVs ::
+  ( CostAxis a
+  , DefaultOrdered d
+  , ToNamedRecord d
+  , HasField "name" n Text
+  , HasField "val" n (AxisMap a [d])
+  ) =>
+  -- | Output directory path.
+  Path Rel Dir ->
+  -- | Either ImplData or MultiImplData from 'Test.Benchmark.Common'.
+  n ->
+  IO ()
+writePerAxisCSVs dir named = do
   let AxisMap pairs =
-        encodeDefaultOrderedByNameWith defaultEncodeOptions {encUseCrLf = False} <$> statsPerAxis
+        encodeDefaultOrderedByNameWith defaultEncodeOptions {encUseCrLf = False}
+          <$> named.val
   forM_ pairs $ \(axis, csvData) -> do
-    file <- parseRelFile . unpack $ name <> " " <> axisName axis <> ".csv"
+    file <- parseRelFile . unpack $ named.name <> " " <> axisName axis <> ".csv"
     ByteString.writeFile (toFilePath $ dir </> file) csvData
