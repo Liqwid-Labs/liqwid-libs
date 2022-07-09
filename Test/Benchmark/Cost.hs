@@ -43,7 +43,7 @@ import Data.Foldable (foldl')
 import Data.Function (on)
 import Data.HashMap.Strict qualified as HashMap
 import Data.List (sortBy)
-import Data.List.NonEmpty (NonEmpty ((:|)), groupWith)
+import Data.List.NonEmpty (NonEmpty ((:|)), groupAllWith)
 import Data.Maybe (fromJust)
 import Data.String (IsString (fromString))
 import Data.Text (Text, pack, unpack)
@@ -164,7 +164,7 @@ instance
   toNamedRecord ssample@(SSample {sample = ranks}) =
     namedRecord $
       HashMap.toList (toNamedRecord (void ssample))
-       <> zipWith
+        <> zipWith
           (\place implData -> fromString (show place) .= implData)
           [1 :: Int ..]
           ranks
@@ -281,7 +281,7 @@ rankOnPerAxisStat comparisonName sel MultiImplData {name, implNames, val = stats
     -- We merge the SSamples for each input size, keeping the minimum coverage
     -- and sample size values.
     merged :: AxisMap axis [SSample [ImplData (Either (BudgetExceeded axis) stats)]]
-    merged = fmap (fmap mergeSSamples . groupWith (.inputSize)) swapped
+    merged = fmap (fmap mergeSSamples . groupAllWith (.inputSize)) swapped
 
     mergeSSamples :: forall (a :: Type). NonEmpty (SSample a) -> SSample [a]
     mergeSSamples (s0 :| ss) = foldl' mergeTwo (fmap (: []) s0) ss

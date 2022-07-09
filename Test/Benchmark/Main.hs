@@ -32,7 +32,10 @@ parseOptions = Opt.execParser p
             <> Opt.progDesc "Run benchmarks, write results to output directory."
         )
 
--- | Passes the benchmark output directory to the argument.
+{- | Passes the benchmark output directory to the argument.
+
+ Ensures that the output dir exists and is a dir.
+-}
 benchMain :: (Path Rel Dir -> IO ()) -> IO ()
 benchMain run = do
   options <- parseOptions
@@ -50,4 +53,5 @@ benchMain run = do
   - needs to keep track of dependencies: a comparison of multiple
     benchmark-outputs needs to make sure those benchmarks are run, no matter what
     the filters were, but the benchmarks shouldn't be run more than once
+  - write out metadata for the impls: script hashes, commit hashes, generation time
 -}
