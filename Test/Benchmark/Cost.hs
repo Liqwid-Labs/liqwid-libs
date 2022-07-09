@@ -20,6 +20,7 @@ module Test.Benchmark.Cost (
   samplesToPerAxisStats,
   writePerAxisCSVs,
   rankOnPerAxisStat,
+  writeComparisonPerAxisCSVs,
 ) where
 
 import Control.Foldl qualified as Foldl
@@ -28,8 +29,10 @@ import Data.ByteString.Lazy qualified as ByteString
 import Data.Csv (
   DefaultOrdered (headerOrder),
   EncodeOptions (encUseCrLf),
+  ToField (toField),
   ToNamedRecord,
   defaultEncodeOptions,
+  encodeByNameWith,
   encodeDefaultOrderedByNameWith,
   header,
   namedRecord,
@@ -42,7 +45,9 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.List (sortBy)
 import Data.List.NonEmpty (NonEmpty ((:|)), groupWith)
 import Data.Maybe (fromJust)
+import Data.String (IsString (fromString))
 import Data.Text (Text, pack, unpack)
+import Data.Text.Encoding (encodeUtf8)
 import Data.Vector.Unboxed (Vector)
 import Data.Vector.Unboxed qualified as Vector
 import GHC.Generics (Generic)
@@ -50,8 +55,25 @@ import GHC.Records (HasField)
 import Optics (sequenceOf, traversed, (%%))
 import Optics.TH (makeFieldLabelsNoPrefix)
 import Path (Dir, Path, Rel, parseRelFile, toFilePath, (</>))
-import Test.Benchmark.Common (ImplData (ImplData, name, val), MultiImplData (MultiImplData, name, names, val))
-import Test.Benchmark.Sized (SSample (SSample), coverage, inputSize, sample, sampleSize)
+import Test.Benchmark.Common (
+  ImplData (ImplData, name, val),
+  MultiImplComparisonData (
+    MultiImplComparisonData,
+    comparisonName,
+    implNames,
+    name,
+    val
+  ),
+  MultiImplData (MultiImplData, implNames, name, val),
+  ToTitle (toTitle),
+ )
+import Test.Benchmark.Sized (
+  SSample (SSample),
+  coverage,
+  inputSize,
+  sample,
+  sampleSize,
+ )
 
 class Eq a => CostAxis a where
   axisName :: a -> Text
@@ -66,8 +88,8 @@ class Eq a => CostAxis a where
  All axes always have a value in this Map. If you want a subset of your axes,
  use a different type.
 -}
-newtype AxisMap a b = AxisMap { pairs :: [(a, b)]}
-  deriving stock (Functor)
+newtype AxisMap a b = AxisMap {pairs :: [(a, b)]}
+  deriving stock (Show, Functor, Generic)
 
 makeFieldLabelsNoPrefix ''AxisMap
 
@@ -136,6 +158,27 @@ instance
         <> HashMap.toList (toNamedRecord simpleStats)
 
 instance
+  (CostAxis axis, ToField s) =>
+  ToNamedRecord (SSample [ImplData (Either (BudgetExceeded axis) s)])
+  where
+  toNamedRecord ssample@(SSample {sample = ranks}) =
+    namedRecord $
+      HashMap.toList (toNamedRecord (void ssample))
+       <> zipWith
+          (\place implData -> fromString (show place) .= implData)
+          [1 :: Int ..]
+          ranks
+
+instance
+  ( CostAxis axis
+  , ToField s
+  ) =>
+  ToField (Either (BudgetExceeded axis) s)
+  where
+  toField (Left (BudgetExceeded axis)) = encodeUtf8 (axisName axis) <> "!"
+  toField (Right s) = toField s
+
+instance
   CostAxis axis =>
   DefaultOrdered (SSample (Either (BudgetExceeded axis) SimpleStats))
   where
@@ -196,15 +239,17 @@ samplesToPerAxisStats vecsFun statsFun ssamples =
 rankOnPerAxisStat ::
   forall (axis :: Type) (stats :: Type) (s :: Type).
   (CostAxis axis, Eq axis, Ord s) =>
+  -- | Name of the ranking value, i.e. "mean" or "worst case"
+  Text ->
   -- | Selects the statistic value to rank by from the stats.
   (stats -> s) ->
   -- | Per implementation: per axis: size-specific samples containing the stats
   MultiImplData
     [ImplData (AxisMap axis [SSample (Either (BudgetExceeded axis) stats)])] ->
-  MultiImplData
+  MultiImplComparisonData
     (AxisMap axis [SSample [ImplData (Either (BudgetExceeded axis) s)]])
-rankOnPerAxisStat sel MultiImplData {name, names, val = statsPerImpl} =
-  MultiImplData {name, names, val = sorted}
+rankOnPerAxisStat comparisonName sel MultiImplData {name, implNames, val = statsPerImpl} =
+  MultiImplComparisonData {name, implNames, comparisonName, val = sorted}
   where
     -- raise the axis mapping to the top level
     raisedMap ::
@@ -220,11 +265,11 @@ rankOnPerAxisStat sel MultiImplData {name, names, val = statsPerImpl} =
     -- Now we have multiple SSamples for each input size in the per-axis list.
     swapped ::
       AxisMap axis [SSample (ImplData (Either (BudgetExceeded axis) stats))]
-    swapped = (fmap . fmap) seqTupSamp loweredName
+    swapped = (fmap . fmap) sequenceSamp loweredName
     -- a workaround for Applicative on SSample not being possible
-    seqTupSamp ::
+    sequenceSamp ::
       forall (a :: Type). ImplData (SSample a) -> SSample (ImplData a)
-    seqTupSamp implData =
+    sequenceSamp implData =
       implData.val
         { sample =
             ImplData
@@ -263,23 +308,49 @@ rankOnPerAxisStat sel MultiImplData {name, names, val = statsPerImpl} =
     cmp (Left _) (Left _) = EQ
     cmp (Right a) (Right b) = compare a b
 
--- | Write named data from an 'AxisMap' to CSV files.
+-- | Write per-axis titled data to CSV files.
 writePerAxisCSVs ::
   ( CostAxis a
   , DefaultOrdered d
   , ToNamedRecord d
-  , HasField "name" n Text
+  , ToTitle n
   , HasField "val" n (AxisMap a [d])
   ) =>
   -- | Output directory path.
   Path Rel Dir ->
-  -- | Either ImplData or MultiImplData from 'Test.Benchmark.Common'.
+  -- | See the types in 'Test.Benchmark.Common'.
   n ->
   IO ()
-writePerAxisCSVs dir named = do
+writePerAxisCSVs dir titled = do
   let AxisMap pairs =
         encodeDefaultOrderedByNameWith defaultEncodeOptions {encUseCrLf = False}
-          <$> named.val
+          <$> titled.val
   forM_ pairs $ \(axis, csvData) -> do
-    file <- parseRelFile . unpack $ named.name <> " " <> axisName axis <> ".csv"
+    file <- parseRelFile . unpack $ toTitle titled <> " " <> axisName axis <> ".csv"
+    ByteString.writeFile (toFilePath $ dir </> file) csvData
+
+{- | Write per-axis implementation comparison data to CSV files.
+
+ This exists because 'DefaultOrdered' for the column headers can't be
+ implemented in this case, since the number of compared implementations isn't
+ fixed, and we need one column per rank.
+-}
+writeComparisonPerAxisCSVs ::
+  ( CostAxis a
+  , ToNamedRecord d
+  ) =>
+  -- | Output directory path.
+  Path Rel Dir ->
+  -- | The comparison data.
+  MultiImplComparisonData (AxisMap a [d]) ->
+  IO ()
+writeComparisonPerAxisCSVs dir compData = do
+  let AxisMap pairs =
+        encodeByNameWith defaultEncodeOptions {encUseCrLf = False} header'
+          <$> compData.val
+      header' =
+        headerOrder (undefined :: SSample ())
+          <> header (map (fromString . show) [1 .. (length compData.implNames)])
+  forM_ pairs $ \(axis, csvData) -> do
+    file <- parseRelFile . unpack $ toTitle compData <> " " <> axisName axis <> ".csv"
     ByteString.writeFile (toFilePath $ dir </> file) csvData
