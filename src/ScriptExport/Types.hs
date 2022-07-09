@@ -26,36 +26,36 @@ import Servant qualified
 
 {- | Query data for getting script info.
 
-     @since 0.2.0
+     @since 1.0.0
 -}
 data ScriptQuery = ScriptQuery
   { name :: Text
   , paramsPayload :: Aeson.Value
   }
   deriving anyclass
-    ( -- | @since 0.2.0
+    ( -- | @since 1.0.0
       Aeson.ToJSON
-    , -- | @since 0.2.0
+    , -- | @since 1.0.0
       Aeson.FromJSON
     )
   deriving stock
-    ( -- | @since 0.2.0
+    ( -- | @since 1.0.0
       Show
-    , -- | @since 0.2.0
+    , -- | @since 1.0.0
       Eq
-    , -- | @since 0.2.0
+    , -- | @since 1.0.0
       GHC.Generic
-    , -- | @since 0.2.0
+    , -- | @since 1.0.0
       Ord
     )
   deriving anyclass
-    ( -- | @since 0.2.0
+    ( -- | @since 1.0.0
       Hashable
     )
 
 {- | Run a query on Builders.
 
-     @since 0.2.0
+     @since 1.0.0
 -}
 runQuery :: ScriptQuery -> Builders -> Servant.Handler Aeson.Value
 runQuery s =
@@ -67,19 +67,19 @@ runQuery s =
 
 {- | Represents a list of named pure functions.
 
-     @since 0.2.0
+     @since 1.0.0
 -}
 newtype Builders = Builders
   { getBuilders :: Map Text (Aeson.Value -> Servant.Handler Aeson.Value)
   }
 
--- | @since 0.2.0
+-- | @since 1.0.0
 instance Default Builders where
   def = Builders Map.empty
 
 {- | Insert a pure function into the Builders map.
 
-     @since 0.2.0
+     @since 1.0.0
 -}
 insertBuilder ::
   forall p s.
@@ -106,7 +106,7 @@ insertBuilder k = coerce . Map.insert k . throughJSON
 
 {- | Get a list of the available builders.
 
-     @since 0.2.0
+     @since 1.0.0
 -}
 toList :: Builders -> [Text]
 toList = Map.keys . getBuilders

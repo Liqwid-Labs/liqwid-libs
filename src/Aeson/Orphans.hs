@@ -1,5 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
+{- | Module     : Aeson.Orphans
+     Maintainer : emi@haskell.fyi
+     Description: Aeson orphan instances for script export types.
+
+     Aeson orphan instances for script export types.
+-}
 module Aeson.Orphans (AsBase16Bytes (..)) where
 
 --------------------------------------------------------------------------------

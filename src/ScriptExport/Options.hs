@@ -1,9 +1,8 @@
-{- |
-Module     : ScriptExport.Options
-Maintainer : emi@haskell.fyi
-Description: Command line options for 'plutarch-script-export'.
+{- | Module     : ScriptExport.Options
+     Maintainer : emi@haskell.fyi
+     Description: Command line options for 'plutarch-script-export'.
 
-Command line options for 'plutarch-script-export'.
+     Command line options for 'plutarch-script-export'.
 -}
 module ScriptExport.Options (Options (..), parseOptions) where
 

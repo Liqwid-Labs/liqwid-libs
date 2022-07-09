@@ -36,7 +36,7 @@ import PlutusLedgerApi.V1.Scripts (ScriptHash)
 
 {- | Bundle containing a 'Validator' and its hash.
 
-     @since 0.2.0
+     @since 1.0.0
 -}
 data ScriptInfo = ScriptInfo
   { cborHex :: Text
@@ -47,17 +47,17 @@ data ScriptInfo = ScriptInfo
   -- ^ Hash of the validator.
   }
   deriving stock
-    ( -- | @since 0.2.0
+    ( -- | @since 1.0.0
       Show
-    , -- | @since 0.2.0
+    , -- | @since 1.0.0
       Eq
-    , -- | @since 0.2.0
+    , -- | @since 1.0.0
       GHC.Generic
     )
   deriving anyclass
-    ( -- | @since 0.2.0
+    ( -- | @since 1.0.0
       Aeson.ToJSON
-    , -- | @since 0.2.0
+    , -- | @since 1.0.0
       Aeson.FromJSON
     )
 
@@ -73,7 +73,7 @@ mkScriptInfo script =
 
 {- | Create a 'ScriptInfo' given a Plutarch term of a policy.
 
-     @since 0.2.0
+     @since 1.0.0
 -}
 mkPolicyInfo :: ClosedTerm PMintingPolicy -> ScriptInfo
 mkPolicyInfo term =
@@ -81,7 +81,7 @@ mkPolicyInfo term =
 
 {- | Create a 'ScriptInfo' given a Plutarch term of a validator.
 
-     @since 0.2.0
+     @since 1.0.0
 -}
 mkValidatorInfo :: ClosedTerm PValidator -> ScriptInfo
 mkValidatorInfo term =

@@ -1,8 +1,8 @@
 {- | Module     : API
-   Maintainer : emi@haskell.fyi
-   Description: API for script exporter.
+     Maintainer : emi@haskell.fyi
+     Description: API for script exporter.
 
-   API for script exporter.
+     API for script exporter.
 -}
 module Data.Cache.Cached (
   cached,
@@ -19,6 +19,8 @@ import System.Clock (TimeSpec)
 
 {- | 'cachedFor' but items last forever.
      Uses a HashMap under the hood.
+
+     @since 1.0.0
 -}
 cached ::
   forall
@@ -33,6 +35,8 @@ cached f = cachedForM Nothing (pure . f)
 
 {- | 'cachedFor' but items last forever.
      Uses a HashMap under the hood.
+
+     @since 1.0.0
 -}
 cachedM ::
   forall
@@ -48,6 +52,8 @@ cachedM = cachedForM Nothing
 {- | Create a cached version of a function tainting result with MonadIO context.
      If a 'TimeSpec' is passed, then items will be cached for that long.
      Uses a HashMap under the hood.
+
+     @since 1.0.0
 -}
 cachedForM ::
   forall
