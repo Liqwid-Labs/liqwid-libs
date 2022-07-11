@@ -16,6 +16,7 @@ module Test.Benchmark.Plutus (
 import Codec.Serialise (serialise)
 import Data.ByteString.Lazy qualified as LBS
 import Data.Text (Text)
+import Data.Text qualified as Text
 import Data.Vector.Unboxed (Vector)
 import Data.Vector.Unboxed qualified as Vector
 import Data.Vector.Unboxed.Base (Vector (V_2))
@@ -97,7 +98,10 @@ sampleScript script =
         InternalEvaluationError _ -> error "Internal evaluation-error!"
         UserEvaluationError e ->
           case e of
-            CekEvaluationFailure -> error "Script failed for non-budget reason!"
+            CekEvaluationFailure ->
+              error $
+                "Script failed for non-budget reason!\n"
+                  <> Text.unpack (Text.unlines traces)
             CekOutOfExError (ExRestrictingBudget (ExBudget rcpu rmem)) ->
               if rcpu < 0
                 then Left $ BudgetExceeded CPU
@@ -109,7 +113,7 @@ sampleScript script =
                         "Got CekOutOfExError, but ExRestrictingBudget contains "
                           <> "neither negative CPU nor negative Memory!"
   where
-    (res, ExBudget (ExCPU rawCpu) (ExMemory rawMem), _traces) = evalScript script
+    (res, ExBudget (ExCPU rawCpu) (ExMemory rawMem), traces) = evalScript script
     cpuCost = Cost $ fromIntegral rawCpu
     memCost = Cost $ fromIntegral rawMem
 
