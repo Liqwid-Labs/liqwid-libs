@@ -13,8 +13,6 @@ module Test.Benchmark.Plutus (
   statsByAxis,
 ) where
 
-import Codec.Serialise (serialise)
-import Data.ByteString.Lazy qualified as LBS
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Vector.Unboxed (Vector)
@@ -49,12 +47,13 @@ import Test.Benchmark.Sized (SSample)
 import UntypedPlutusCore.Evaluation.Machine.Cek (
   CekUserError (CekEvaluationFailure, CekOutOfExError),
  )
+import qualified PlutusLedgerApi.V1.Scripts as Scripts
 
 -- TODO add script hash, maybe also git commit hash, mtime
 data ImplMetaData = ImplMetaData
   { name :: Text
   -- ^ Name of the implementation. Make sure it's unique.
-  , scriptSize :: Int
+  , scriptSize :: Integer
   -- ^ Size of the script without inputs.
   }
   deriving stock (Show, Eq, Ord, Generic)
@@ -69,7 +68,7 @@ mkScriptImplMetaData ::
   ImplMetaData
 mkScriptImplMetaData name script = ImplMetaData {name, scriptSize}
   where
-    scriptSize = fromIntegral . LBS.length . serialise $ script
+    scriptSize = Scripts.scriptSize script
 
 data PlutusCostAxis = CPU | Mem
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic)
