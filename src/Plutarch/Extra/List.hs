@@ -35,7 +35,7 @@ import Plutarch (
     (#),
     (#$),
     type (:-->),
-     )
+ )
 import Plutarch.Api.V1.Tuple (PTuple)
 import Plutarch.Bool (PBool (..), PEq (..), POrd (..), pif, (#||))
 import Plutarch.Builtin (PAsData, PBuiltinPair, PIsData, pfromData, pfstBuiltin, psndBuiltin)
@@ -360,7 +360,8 @@ list.
   @since 1.1.0
 -}
 preplicate ::
-  PIsListLike f a =>
-  Term s (a :--> PInteger :--> f a)
-preplicate = plam $ flip plet $ \x ->
-  pfix # (plam $ \self n -> pif (n #<= 0) (pnil) (pcons # x # (self # (n-1))))
+    PIsListLike f a =>
+    Term s (a :--> PInteger :--> f a)
+preplicate = plam $
+    flip plet $ \x ->
+        pfix # (plam $ \self n -> pif (n #<= 0) (pnil) (pcons # x # (self # (n - 1))))
