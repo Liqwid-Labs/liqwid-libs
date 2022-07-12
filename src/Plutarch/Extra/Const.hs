@@ -5,7 +5,11 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Plutarch.Extra.Const (
+    -- * Type
     PConst (..),
+
+    -- * Helper functions
+    preconst,
 ) where
 
 import Data.Kind (Type)
@@ -25,6 +29,7 @@ import Plutarch (
 import Plutarch.Bool (PEq, POrd)
 import Plutarch.Builtin (PIsData)
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
+import Plutarch.Extra.Boring (PBoring (pboring))
 import Plutarch.Extra.Functor (
     PBifunctor (PSubcategoryLeft, PSubcategoryRight, pbimap, psecond),
     PFunctor (PSubcategory, pfmap),
@@ -32,6 +37,7 @@ import Plutarch.Extra.Functor (
 import Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Integer (PIntegral)
 import Plutarch.Show (PShow)
+import Plutarch.Unsafe (punsafeCoerce)
 
 {- | A value of type @a@ pretending to a be a value of type @b@.
 
@@ -121,3 +127,19 @@ instance
     PApplicative (PConst a)
     where
     ppure = phoistAcyclic $ plam $ \_ -> pcon . PConst $ mempty
+
+-- | @since 1.2.0
+instance (PBoring a) => PBoring (PConst a b) where
+    pboring = pcon . PConst $ pboring
+
+{- | Since 'PConst' is only /pretending/ to be a value of another type, we can
+ change what we \'pretend to be\' without having to rebuild. Essentially, this
+ is 'punsafeCoerce', but because we're only changing a tag, we're not worried.
+
+ @since 1.2.0
+-}
+preconst ::
+    forall (c :: S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S).
+    Term s (PConst a b) ->
+    Term s (PConst a c)
+preconst = punsafeCoerce

@@ -31,6 +31,7 @@ import Plutarch (
 import Plutarch.Bool (PEq, POrd)
 import Plutarch.Builtin (PAsData, PData, PIsData)
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
+import Plutarch.Extra.Boring (PBoring (pboring))
 import Plutarch.Extra.Comonad (
     PComonad (pextract),
     PExtend (pextend),
@@ -254,3 +255,7 @@ deriving newtype instance
 deriving newtype instance
     (PlutusTx.UnsafeFromData underlying) =>
     PlutusTx.UnsafeFromData (Tagged tag underlying)
+
+-- | @since 1.2.0
+instance (PBoring underlying) => PBoring (Tagged tag underlying) where
+    pboring = ppure # pboring
