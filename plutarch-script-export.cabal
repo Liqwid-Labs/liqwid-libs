@@ -91,7 +91,6 @@ common deps
     , bytestring
     , cache
     , cardano-binary
-    , cardano-prelude
     , clock
     , containers
     , data-default
