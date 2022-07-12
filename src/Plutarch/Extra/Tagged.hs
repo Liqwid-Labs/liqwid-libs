@@ -38,7 +38,10 @@ import Plutarch.Extra.Comonad (
  )
 import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap))
 import Plutarch.Extra.TermCont (pmatchC)
-import Plutarch.Extra.Traversable (PTraversable (ptraverse))
+import Plutarch.Extra.Traversable (
+    PSemiTraversable (psemitraverse, psemitraverse_),
+    PTraversable (ptraverse, ptraverse_),
+ )
 import Plutarch.Integer (PIntegral)
 import Plutarch.Lift (
     PConstantDecl (PConstantRepr, PConstanted, pconstantFromRepr, pconstantToRepr),
@@ -199,10 +202,19 @@ instance PApplicative (PTagged tag) where
 
 -- | @since 1.0.0
 instance PTraversable (PTagged tag) where
-    ptraverse = phoistAcyclic $
+    ptraverse = psemitraverse
+    ptraverse_ = psemitraverse_
+
+-- | @since 1.2.0
+instance PSemiTraversable (PTagged tag) where
+    psemitraverse = phoistAcyclic $
         plam $ \f t -> unTermCont $ do
             PTagged t' <- pmatchC t
             pure $ pfmap # plam (pcon . PTagged) # (f # t')
+    psemitraverse_ = phoistAcyclic $
+        plam $ \f t -> unTermCont $ do
+            PTagged t' <- pmatchC t
+            pure $ f # t'
 
 -- | @since 1.0.0
 instance
@@ -257,5 +269,5 @@ deriving newtype instance
     PlutusTx.UnsafeFromData (Tagged tag underlying)
 
 -- | @since 1.2.0
-instance (PBoring underlying) => PBoring (Tagged tag underlying) where
+instance (PBoring underlying) => PBoring (PTagged tag underlying) where
     pboring = ppure # pboring
