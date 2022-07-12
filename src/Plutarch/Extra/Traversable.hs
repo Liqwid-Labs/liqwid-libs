@@ -1,4 +1,3 @@
-{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -70,8 +69,6 @@ class (PFunctor t) => PTraversable (t :: (S -> Type) -> S -> Type) where
         , PSubcategory t b
         ) =>
         Term s ((a :--> f b) :--> t a :--> f (t b))
-    default ptraverse :: _
-    ptraverse = psemitraverse_
 
     -- | This avoids re-building the input 'PTraversable' if we end up throwing
     -- it away anyway. In the case where we only care about the effect, and

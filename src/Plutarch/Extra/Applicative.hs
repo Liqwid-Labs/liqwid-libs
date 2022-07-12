@@ -12,8 +12,13 @@ module Plutarch.Extra.Applicative (
     (#<*>),
     (#*>),
     (#<*),
+    preplicateA,
+    preplicateA_,
+    pwhen,
+    punless,
 ) where
 
+import Plutarch.Extra.Boring (PBoring (pboring))
 import Data.Kind (Type)
 import Plutarch (
     S,
@@ -23,7 +28,7 @@ import Plutarch (
     plam,
     unTermCont,
     (#),
-    type (:-->),
+    type (:-->), pfix, (#$)
  )
 import Plutarch.Api.V1.Maybe (PMaybeData (PDJust, PDNothing))
 import Plutarch.Builtin (PBuiltinList, pdata, pfromData)
@@ -32,9 +37,12 @@ import Plutarch.Either (PEither (PLeft, PRight))
 import Plutarch.Extra.Function (papply, pconst)
 import Plutarch.Extra.Functor (PFunctor (PSubcategory))
 import Plutarch.Extra.TermCont (pletC, pmatchC)
-import Plutarch.List (PList, pconcat, pcons, pmap, pnil, puncons)
+import Plutarch.List (PList, pconcat, pcons, pmap, pnil, puncons, 
+  PListLike (PElemConstraint))
 import Plutarch.Maybe (PMaybe (PJust, PNothing))
 import Plutarch.Pair (PPair (PPair))
+import Plutarch.Integer (PInteger)
+import Plutarch.Bool (pif, (#<=), PBool)
 
 -- | @since 1.0.0
 class (PFunctor f) => PApply (f :: (S -> Type) -> S -> Type) where
@@ -169,3 +177,56 @@ t #*> t' = pliftA2 # plam (\_ x -> x) # t # t'
     Term s (f b) ->
     Term s (f a)
 t #<* t' = pliftA2 # pconst # t # t'
+
+-- | 'preplicateA' @n@ @comp@ repeats @comp@ @n@ times (0 if @n@ is negative), 
+-- collects the results into a 'PListLike', and returns a single computation 
+-- producing them all.
+--
+-- = Notes
+--
+-- The type of the 'PListLike' is left flexible: you can set it using
+-- @TypeApplications@. We put that type parameter first to make this easier.
+--
+-- @since 1.2.0
+preplicateA :: forall (ell :: (S -> Type) -> S -> Type) 
+                      (f :: (S -> Type) -> S -> Type) 
+                      (a :: S -> Type) 
+                      (s :: S) . 
+  (PApplicative f, PListLike ell, PElemConstraint ell a, 
+    PSubcategory f (ell a), PSubcategory f a) =>
+  Term s (PInteger :--> f a :--> f (ell a))
+preplicateA = phoistAcyclic $ pfix #$ plam $ \self count comp -> 
+  pif (0 #<= count) (ppure # pnil) (pliftA2 # pcons # comp # (self # (count - 1) # comp))
+
+-- | As 'preplicateA', but ignores the results.
+--
+-- @since 1.2.0
+preplicateA_ :: forall (f :: (S -> Type) -> S -> Type)
+                       (b :: S -> Type)
+                       (s :: S) . 
+  (PApplicative f, PBoring b, PSubcategory f b) => 
+  Term s (PInteger :--> f b :--> f b)
+preplicateA_ = phoistAcyclic $ pfix #$ plam $ \self count comp -> 
+  pif (0 #<= count) (ppure # pboring) (comp #*> (self # (count - 1) # comp))
+
+-- | 'pwhen' @b@ @comp@ executes @comp@ if @b@ is 'PTrue', and does nothing
+-- otherwise.
+--
+-- @since 1.2.0
+pwhen :: forall (f :: (S -> Type) -> S -> Type) 
+                (b :: S -> Type)
+                (s :: S) . 
+  (PApplicative f, PBoring b, PSubcategory f b) => 
+  Term s (PBool :--> f b :--> f b)
+pwhen = phoistAcyclic $ plam $ \b comp -> pif b comp (ppure # pboring)
+
+-- | 'punless' @b@ @comp@ executes @comp@ if @b@ is 'PFalse', and does nothing
+-- otherwise.
+--
+-- @since 1.2.0
+punless :: forall (f :: (S -> Type) -> S -> Type)
+                  (b :: S -> Type)
+                  (s :: S) . 
+  (PApplicative f, PBoring b, PSubcategory f b) => 
+  Term s (PBool :--> f b :--> f b)
+punless = phoistAcyclic $ plam $ \b comp -> pif b (ppure # pboring) comp

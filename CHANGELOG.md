@@ -11,6 +11,10 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 - `preconst` for `PConst`, which allows safe coercions between different
   'pretend' types.
 - `PSemiTraversable` instance for `PTagged`.
+- `preplicateA` and `preplicateA_`, allowing for repeated execution of
+  `PApplicative`.
+- `pwhen` and `punless`, mirroring their Haskell counterparts.
+- `preplicate`, mirroring its Haskell counterpart.
 
 ### Modified
 

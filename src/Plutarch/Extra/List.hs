@@ -357,11 +357,10 @@ pisSorted = phoistAcyclic $ pisSortedBy # eq # lt
 @n@ copies of that term. Non-positive integers yield an empty
 list.
 
-  @since 1.1.0
+  @since 1.2.0
 -}
 preplicate ::
     PIsListLike f a =>
-    Term s (a :--> PInteger :--> f a)
-preplicate = plam $
-    flip plet $ \x ->
-        pfix # (plam $ \self n -> pif (n #<= 0) (pnil) (pcons # x # (self # (n - 1))))
+    Term s (PInteger :--> a :--> f a)
+preplicate = phoistAcyclic $ pfix #$ plam $ \self count x -> 
+  pif (count #<= 0) pnil (pcons # x # (self # (count - 1) # x))
