@@ -2,6 +2,35 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 1.2.0 -- 2022-07-12
+
+### Added
+
+- `PBoring` type class, representing singleton types.
+- Instances of `PBoring` for various types.
+- `preconst` for `PConst`, which allows safe coercions between different
+  'pretend' types.
+- `PSemiTraversable` instance for `PTagged`.
+- `preplicateA` and `preplicateA_`, allowing for repeated execution of
+  `PApplicative`.
+- `pwhen` and `punless`, mirroring their Haskell counterparts.
+- `preplicate`, mirroring its Haskell counterpart.
+
+### Modified
+
+- `PFunctor` now has a `pfconst` method as a back-end for `#$>` and `#<$`. This
+  has a default implementation in terms of `pfmap`.
+- `pvoid` can now replace every location with any `PBoring`, not just `PUnit`.
+- `PTraversable` now has a `ptraverse_` method, which allows us to avoid
+  rebuilding the `PTraversable` if we don't need it anymore. This allows much
+  better folding, for example.
+- `PSemiTraversable` now has a `psemitraverse_` method, with similar benefits to
+  `ptraverse_`.
+- `psemifold`, `psemifoldMap` and `psemifoldComonad` gained a `PSubcategory t a` 
+  constraint, as the 'container' is guaranteed non-empty in such a case.
+- Significant performance improvements for `PTraversable` and `PSemiTraversable`
+  instances.
+
 ## 1.1.0 -- 2022-06-17
 
 ### Added

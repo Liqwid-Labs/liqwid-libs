@@ -24,6 +24,7 @@ import Plutarch (
 import Plutarch.Bool (PEq, POrd)
 import Plutarch.Builtin (PIsData)
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
+import Plutarch.Extra.Boring (PBoring (pboring))
 import Plutarch.Extra.Comonad (
     PComonad (pextract),
     PExtend (pextend),
@@ -120,3 +121,7 @@ instance PApply PIdentity where
 -- | @since 1.0.0
 instance PApplicative PIdentity where
     ppure = phoistAcyclic $ plam $ pcon . PIdentity
+
+-- | @since 1.2.0
+instance (PBoring a) => PBoring (PIdentity a) where
+    pboring = ppure # pboring

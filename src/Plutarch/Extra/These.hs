@@ -44,12 +44,13 @@ import Plutarch.DataRepr (
  )
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
 import Plutarch.Extra.Bool (pcompare)
+import Plutarch.Extra.Boring (pboring)
 import Plutarch.Extra.Functor (
     PBifunctor (PSubcategoryLeft, PSubcategoryRight, pbimap, psecond),
     PFunctor (PSubcategory, pfmap),
  )
 import Plutarch.Extra.TermCont (pletC, pmatchC)
-import Plutarch.Extra.Traversable (PTraversable (ptraverse))
+import Plutarch.Extra.Traversable (PTraversable (ptraverse, ptraverse_))
 import Plutarch.Show (PShow)
 
 {- | A data type which contains an @a@, a @b@, or both. This uses a
@@ -171,14 +172,17 @@ instance PTraversable (PThese a) where
     ptraverse = phoistAcyclic $
         plam $ \f t -> unTermCont $ do
             t' <- pmatchC t
-            case t' of
-                PThis ta -> pure $ ppure # (pcon . PThis $ ta)
-                PThat tb -> do
-                    res <- pletC (f # tb)
-                    pure $ pfmap # plam (pcon . PThat) # res
-                PThese ta tb -> do
-                    res <- pletC (f # tb)
-                    pure $ pfmap # plam (pcon . PThese ta) # res
+            pure $ case t' of
+                PThis ta -> ppure # (pcon . PThis $ ta)
+                PThat tb -> pfmap # plam (pcon . PThat) # (f # tb)
+                PThese ta tb -> pfmap # plam (pcon . PThese ta) # (f # tb)
+    ptraverse_ = phoistAcyclic $
+        plam $ \f t -> unTermCont $ do
+            t' <- pmatchC t
+            pure $ case t' of
+                PThis _ -> ppure # pboring
+                PThat tb -> f # tb
+                PThese _ tb -> f # tb
 
 {- | As 'PThese', but using a 'PlutusCore.Data.Data' encoding instead.
 
