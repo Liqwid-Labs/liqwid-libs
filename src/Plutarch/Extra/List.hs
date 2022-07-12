@@ -362,5 +362,6 @@ list.
 preplicate ::
     PIsListLike f a =>
     Term s (PInteger :--> a :--> f a)
-preplicate = phoistAcyclic $ pfix #$ plam $ \self count x -> 
-  pif (count #<= 0) pnil (pcons # x # (self # (count - 1) # x))
+preplicate = phoistAcyclic $
+    pfix #$ plam $ \self count x ->
+        pif (count #<= 0) pnil (pcons # x # (self # (count - 1) # x))
