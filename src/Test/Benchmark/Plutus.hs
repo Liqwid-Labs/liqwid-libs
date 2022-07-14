@@ -34,6 +34,7 @@ import PlutusLedgerApi.V1 (
   ExMemory (..),
   Script,
  )
+import PlutusLedgerApi.V1.Scripts qualified as Scripts
 import Test.Benchmark.Cost (
   AxisMap (AxisMap),
   BudgetExceeded (BudgetExceeded),
@@ -47,7 +48,6 @@ import Test.Benchmark.Sized (SSample)
 import UntypedPlutusCore.Evaluation.Machine.Cek (
   CekUserError (CekEvaluationFailure, CekOutOfExError),
  )
-import qualified PlutusLedgerApi.V1.Scripts as Scripts
 
 -- TODO add script hash, maybe also git commit hash, mtime
 data ImplMetaData = ImplMetaData

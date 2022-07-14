@@ -1,7 +1,7 @@
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE NoFieldSelectors #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE NoFieldSelectors #-}
 
 -- | Benchmarking with a focus on running on many different input sizes and inputs.
 module Test.Benchmark.Sized (
@@ -22,8 +22,8 @@ import Data.Hashable (Hashable)
 import Data.Maybe (isNothing)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
-import System.Random (RandomGen, StdGen, mkStdGen)
 import Optics.TH (makeFieldLabelsNoPrefix)
+import System.Random (RandomGen, StdGen, mkStdGen)
 import System.Random.Stateful (
   StateGenM (StateGenM),
   applyRandomGenM,
