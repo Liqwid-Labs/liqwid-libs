@@ -19,10 +19,13 @@ module Plutarch.Extra.Traversable (
     -- ** Specialized folds
     plength,
     psum,
+    pany,
+    pall,
 ) where
 
 import Data.Kind (Type)
 import Plutarch (
+    PType,
     S,
     Term,
     pcon,
@@ -36,6 +39,7 @@ import Plutarch (
     type (:-->),
  )
 import Plutarch.Api.V1.Maybe (PMaybeData (PDJust, PDNothing))
+import Plutarch.Bool (PBool)
 import Plutarch.Builtin (PBuiltinList, pdata, pfromData)
 import Plutarch.DataRepr (pdcons, pdnil, pfield)
 import Plutarch.Either (PEither (PLeft, PRight))
@@ -49,6 +53,12 @@ import Plutarch.Extra.Comonad (PComonad (pextract))
 import Plutarch.Extra.Const (PConst (PConst), preconst)
 import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap))
 import Plutarch.Extra.Identity (PIdentity (PIdentity))
+import Plutarch.Extra.Monoid (
+    PAll (PAll),
+    PAny (PAny),
+    pgetAll,
+    pgetAny,
+ )
 import Plutarch.Extra.Sum (PSum (PSum))
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.Integer (PInteger)
@@ -456,3 +466,23 @@ psum = phoistAcyclic $ plam $ \t -> pfoldComonad # go # t
         forall (s' :: S).
         Term s' (a :--> PSum a)
     go = phoistAcyclic $ plam $ pcon . PSum
+
+-- | @since 1.3.0
+pany ::
+    forall (t :: PType -> PType) (a :: PType) (s :: S).
+    (PTraversable t, PSubcategory t a) =>
+    Term s ((a :--> PBool) :--> t a :--> PBool)
+pany = phoistAcyclic $
+    plam $ \f ->
+        (pgetAny #)
+            . (pfoldMap # plam (pcon . PAny . (f #)) #)
+
+-- | @since 1.3.0
+pall ::
+    forall (t :: PType -> PType) (a :: PType) (s :: S).
+    (PTraversable t, PSubcategory t a) =>
+    Term s ((a :--> PBool) :--> t a :--> PBool)
+pall = phoistAcyclic $
+    plam $ \f ->
+        (pgetAll #)
+            . (pfoldMap # plam (pcon . PAll . (f #)) #)
