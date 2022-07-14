@@ -1,23 +1,22 @@
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE UndecidableInstances #-}
+{- | Pre-compiling Plutarch functions and applying them.
 
+ Speeds up benchmarking and testing.
+-}
 module Test.Benchmark.Precompile (
   compile',
   toScript,
-  apply,
-  exploitUnsafety,
+  applyCompiledTerm,
+  (##),
 ) where
 
 import Data.Text qualified as Text
-import Debug.Trace (traceShow)
 import Plutarch (compile)
 import Plutarch.Evaluate (evalScript)
 import PlutusLedgerApi.V1.Scripts (Script (Script))
-import Unsafe.Coerce (unsafeCoerce)
-import UntypedPlutusCore (Program (_progAnn, _progVer))
-import UntypedPlutusCore.Core.Type (Program (Program, _progTerm))
+import UntypedPlutusCore (Program (Program, _progAnn, _progTerm, _progVer))
 import UntypedPlutusCore.Core.Type qualified as UplcType
 
+-- | Apply a function to an argument on the compiled 'Script' level.
 applyScript :: Script -> Script -> Script
 applyScript f a =
   if fVer /= aVer
@@ -33,6 +32,7 @@ applyScript f a =
     (Script Program {_progTerm = fTerm, _progVer = fVer}) = f
     (Script Program {_progTerm = aTerm, _progVer = aVer}) = a
 
+-- | Evaluate a 'Script' with errors resulting in exceptions.
 eval :: Script -> Script
 eval s =
   case res of
@@ -41,57 +41,38 @@ eval s =
   where
     (res, _, traces) = evalScript s
 
--- differences to the other variant:
+-- | Type-safe wrapper for compiled Plutarch functions.
+newtype CompiledTerm (a :: S -> Type) = CompiledTerm Script
 
-newtype CompiledTerm (s :: S) (a :: S -> Type) = CompiledTerm Script
-
-compile' :: forall (a :: S -> Type) (s :: S). ClosedTerm a -> CompiledTerm s a
+-- | Compile a closed Plutarch 'Term' to a 'CompiledTerm'.
+compile' ::
+  forall (a :: S -> Type).
+  (forall (s :: S). Term s a) ->
+  CompiledTerm a
 compile' t = CompiledTerm $ compile t
 
-toScript :: forall (a :: S -> Type) (s :: S). CompiledTerm s a -> Script
+-- | Convert a 'CompiledTerm' to a 'Script'.
+toScript :: forall (a :: S -> Type). CompiledTerm a -> Script
 toScript (CompiledTerm script) = script
 
-applyCompiledTerm ::
-  forall (a :: S -> Type) (b :: S -> Type) (s :: S).
-  CompiledTerm s (a :--> b) ->
-  Term s a ->
-  CompiledTerm s b
-applyCompiledTerm (CompiledTerm sf) a =
-  CompiledTerm $ applyScript sf (eval $ compile $ unsafeCoerce a)
+{- | Apply a 'CompiledTerm' to a closed Plutarch 'Term'.
 
-class ApplyN (b :: Type) (pb :: S -> Type) s | s pb -> b, b -> pb s where
-  apply ::
-    forall (pa :: S -> Type).
-    CompiledTerm s (pa :--> pb) ->
-    Term s pa ->
-    b
-
-instance (ApplyN c pc s) => ApplyN (Term s px -> c) (px :--> pc) s where
-  apply ::
-    forall (pa :: S -> Type).
-    CompiledTerm s (pa :--> px :--> pc) ->
-    Term s pa ->
-    Term s px ->
-    c
-  apply f x = apply (applyCompiledTerm f x)
-
-instance {-# OVERLAPPABLE #-} (b ~ CompiledTerm s pb) => ApplyN b pb s where
-  apply = applyCompiledTerm
-
-{- | This subverts type safety, making use of the unsafeCoerce in 'applyCompiledTerm'.
-
- It only seems to lead to the error "Cannot evaluate an open term", nothing
- severe seems to happen.
+ Evaluates the argument before applying.
 -}
-exploitUnsafety :: forall (s :: S). Term s PUnit
-exploitUnsafety =
-  plet
-    (pconstant 23 :: Term s PInteger)
-    ( \x ->
-        traceShow
-          ( evalScript $
-              toScript $
-                applyCompiledTerm (compile' (plam pshow)) x
-          )
-          (pconstant ())
-    )
+applyCompiledTerm ::
+  forall (a :: S -> Type) (b :: S -> Type).
+  CompiledTerm (a :--> b) ->
+  (forall (s :: S). Term s a) ->
+  CompiledTerm b
+applyCompiledTerm (CompiledTerm sf) a =
+  CompiledTerm $ applyScript sf (eval $ compile a)
+
+-- | Alias for 'applyCompiledTerm'.
+(##) ::
+  forall (a :: S -> Type) (b :: S -> Type).
+  CompiledTerm (a :--> b) ->
+  (forall (s :: S). Term s a) ->
+  CompiledTerm b
+(##) = applyCompiledTerm
+
+infixl 8 ##
