@@ -17,6 +17,7 @@ module Plutarch.Extra.List (
     plookupTuple,
     pisSortedBy,
     pisSorted,
+    preplicate,
     module Extra,
 ) where
 
@@ -47,6 +48,7 @@ import Plutarch.Extra.TermCont (pletC)
 import Plutarch.Lift (pconstant)
 import Plutarch.List (PIsListLike, PListLike (..), plength, pmap, precList, psingleton)
 import Plutarch.Maybe (PMaybe (PJust, PNothing))
+import Plutarch.Prelude (PInteger)
 import Prelude hiding (last)
 
 {- | True if a list is not empty.
@@ -350,3 +352,16 @@ pisSorted = phoistAcyclic $ pisSortedBy # eq # lt
   where
     eq = phoistAcyclic $ plam (#==)
     lt = phoistAcyclic $ plam (#<)
+
+{- | Given an integer @n@ and a term, produce a list containing
+@n@ copies of that term. Non-positive integers yield an empty
+list.
+
+  @since 1.2.0
+-}
+preplicate ::
+    PIsListLike f a =>
+    Term s (PInteger :--> a :--> f a)
+preplicate = phoistAcyclic $
+    pfix #$ plam $ \self count x ->
+        pif (count #<= 0) pnil (pcons # x # (self # (count - 1) # x))

@@ -42,13 +42,13 @@ import Plutarch.Builtin (
  )
 import Plutarch.DataRepr (pdcons, pdnil, pfield)
 import Plutarch.Either (PEither (PLeft, PRight))
+import Plutarch.Extra.Boring (PBoring (pboring))
 import Plutarch.Extra.Function (pconst, pidentity)
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.Lift (PUnsafeLiftDecl)
 import Plutarch.List (PList, pmap)
 import Plutarch.Maybe (PMaybe (PJust, PNothing))
 import Plutarch.Pair (PPair (PPair))
-import Plutarch.Unit (PUnit (PUnit))
 
 {- | Describes a Plutarch-level covariant endofunctor. However, unlike in
  Haskell, the endofunctor is defined over a subcategory of @Plut@, rather than
@@ -75,6 +75,8 @@ import Plutarch.Unit (PUnit (PUnit))
  @since 1.0.0
 -}
 class PFunctor (f :: (S -> Type) -> S -> Type) where
+    {-# MINIMAL pfmap #-}
+
     -- | Describes the subcategory of @Plut@ that @f@ is an endofunctor on. Put
     -- another way, this describes what kind of types @f@ is \'parametric
     -- over\'.
@@ -92,6 +94,17 @@ class PFunctor (f :: (S -> Type) -> S -> Type) where
         forall (a :: S -> Type) (b :: S -> Type) (s :: S).
         (PSubcategory f a, PSubcategory f b) =>
         Term s ((a :--> b) :--> f a :--> f b)
+
+    -- | Replace all values to be computed with a fixed value. Defaults to
+    -- @'pfmap' 'pconst'@, but could be more efficient for some 'PFunctor's.
+    --
+    -- @since 1.2.0
+    {-# INLINEABLE pfconst #-}
+    pfconst ::
+        forall (a :: S -> Type) (b :: S -> Type) (s :: S).
+        (PSubcategory f a, PSubcategory f b) =>
+        Term s (a :--> f b :--> f a)
+    pfconst = phoistAcyclic $ plam $ \x ys -> pfmap # (pconst # x) # ys
 
 -- | @since 1.0.0
 instance PFunctor PMaybe where
@@ -141,7 +154,7 @@ instance PFunctor (PEither e) where
     type PSubcategory (PEither e) = Top
     pfmap = psecond
 
-{- | Replace all locations in the input with the same value.
+{- | Infix, 'Term'-lifted version of 'pfconst'.
 
  @since 1.0.0
 -}
@@ -151,7 +164,7 @@ instance PFunctor (PEither e) where
     Term s a ->
     Term s (f b) ->
     Term s (f a)
-x #<$ f = pfmap # (pconst # x) # f
+x #<$ f = pfconst # x # f
 
 infixl 4 #<$
 
@@ -197,14 +210,14 @@ infixl 1 #<&>
 
 {- | Erases every location in the input.
 
- @since 1.0.0
+ @since 1.2.0
 -}
 pvoid ::
-    forall (f :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
-    (PFunctor f, PSubcategory f a, PSubcategory f PUnit) =>
+    forall (f :: (S -> Type) -> S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S).
+    (PFunctor f, PSubcategory f a, PSubcategory f b, PBoring b) =>
     Term s (f a) ->
-    Term s (f PUnit)
-pvoid t = t #$> pcon PUnit
+    Term s (f b)
+pvoid t = pfconst # pboring # t
 
 {- | Similar to 'PFunctor', but is covariant in /two/ parameters instead of one.
  This means that types like 'PEither' don't need to be partially applied, as

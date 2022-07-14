@@ -25,6 +25,7 @@ import Plutarch (
 import Plutarch.Bool (PEq, POrd)
 import Plutarch.Builtin (PIsData)
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
+import Plutarch.Extra.Boring (PBoring (pboring))
 import Plutarch.Extra.Comonad (PComonad (pextract), PExtend (pextend))
 import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap))
 import Plutarch.Extra.TermCont (pmatchC)
@@ -123,3 +124,7 @@ instance PApply PSum where
 -- | @since 1.0.0
 instance PApplicative PSum where
     ppure = phoistAcyclic $ plam $ pcon . PSum
+
+-- | @since 1.2.0
+instance (PBoring a) => PBoring (PSum a) where
+    pboring = ppure # pboring

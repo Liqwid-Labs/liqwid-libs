@@ -2,6 +2,8 @@ _Note, 2022-06-11_: This repo is alpha level software. Stability or correctness 
 
 # `liqwid-plutarch-extra`
 
+Public discussion and assistance can be found on [discord](https://discord.gg/yGkjxrYueB) @ #liqwid-plutarch-extra
+
 ## What is this?
 
 ## What _exactly_ does this do for me?
