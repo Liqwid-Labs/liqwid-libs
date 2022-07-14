@@ -1,7 +1,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Benchmark.Precompile2 (compile', toScript, apply) where
+module Test.Benchmark.Precompile2 (compile', toScript, apply, applyCompiledTerm, (##)) where
 
 import Data.Text qualified as Text
 import Plutarch (compile)
@@ -52,6 +52,15 @@ applyCompiledTerm ::
   CompiledTerm b
 applyCompiledTerm (CompiledTerm sf) a =
   CompiledTerm $ applyScript sf (eval $ compile a)
+
+(##) ::
+  forall (a :: S -> Type) (b :: S -> Type).
+  CompiledTerm (a :--> b) ->
+  ClosedTerm a ->
+  CompiledTerm b
+(##) = applyCompiledTerm
+
+infixl 8 ##
 
 class ApplyN (b :: Type) (pb :: S -> Type) s | s pb -> b where
   apply :: forall (pa :: S -> Type). CompiledTerm (pa :--> pb) -> Term s pa -> b
