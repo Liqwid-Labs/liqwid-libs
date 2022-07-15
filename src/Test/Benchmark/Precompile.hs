@@ -1,18 +1,34 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use camelCase" #-}
+
 {- | Pre-compiling Plutarch functions and applying them.
 
  Speeds up benchmarking and testing.
 -}
 module Test.Benchmark.Precompile (
+  applyScript,
+  CompiledTerm,
   compile',
   toScript,
   applyCompiledTerm,
   (##),
+  applyCompiledTerm',
+  (##~),
+  LiftError (..),
+  pliftCompiled',
+  pliftCompiled,
 ) where
 
+import Control.Lens ((^?))
 import Data.Text qualified as Text
+import GHC.Stack (HasCallStack)
 import Plutarch (compile)
-import Plutarch.Evaluate (evalScript)
-import PlutusLedgerApi.V1.Scripts (Script (Script))
+import Plutarch.Evaluate (EvalError, evalScript)
+import Plutarch.Lift (PConstantDecl (pconstantFromRepr), PUnsafeLiftDecl (PLifted))
+import PlutusCore.Builtin (KnownTypeError, readKnownConstant)
+import PlutusCore.Evaluation.Machine.Exception (_UnliftingErrorE)
+import PlutusLedgerApi.V1.Scripts (Script (Script, unScript))
 import UntypedPlutusCore (Program (Program, _progAnn, _progTerm, _progVer))
 import UntypedPlutusCore.Core.Type qualified as UplcType
 
@@ -57,7 +73,9 @@ toScript (CompiledTerm script) = script
 
 {- | Apply a 'CompiledTerm' to a closed Plutarch 'Term'.
 
- Evaluates the argument before applying.
+ Evaluates the argument before applying. You want this for benchmarking the
+ compiled function. Helps to avoid tainting the measurement by input
+ conversions.
 -}
 applyCompiledTerm ::
   forall (a :: S -> Type) (b :: S -> Type).
@@ -66,6 +84,20 @@ applyCompiledTerm ::
   CompiledTerm b
 applyCompiledTerm (CompiledTerm sf) a =
   CompiledTerm $ applyScript sf (eval $ compile a)
+
+{- | Apply a 'CompiledTerm' to a closed Plutarch 'Term'.
+
+ Does NOT evaluate the argument before applying. Using this seems to save verry
+ little overhead, not worth it for efficiency. Only use it to make argument
+ evaluation count for benchmarking.
+-}
+applyCompiledTerm' ::
+  forall (a :: S -> Type) (b :: S -> Type).
+  CompiledTerm (a :--> b) ->
+  (forall (s :: S). Term s a) ->
+  CompiledTerm b
+applyCompiledTerm' (CompiledTerm sf) a =
+  CompiledTerm $ applyScript sf (compile a)
 
 -- | Alias for 'applyCompiledTerm'.
 (##) ::
@@ -76,3 +108,53 @@ applyCompiledTerm (CompiledTerm sf) a =
 (##) = applyCompiledTerm
 
 infixl 8 ##
+
+-- | Alias for 'applyCompiledTerm\''.
+(##~) ::
+  forall (a :: S -> Type) (b :: S -> Type).
+  CompiledTerm (a :--> b) ->
+  (forall (s :: S). Term s a) ->
+  CompiledTerm b
+(##~) = applyCompiledTerm
+
+infixl 8 ##~
+
+{- | Error during script evaluation.
+
+ Copied from 'Plutarch.Lift' because the data constructors aren't exported there.
+-}
+data LiftError
+  = LiftError_EvalError EvalError
+  | LiftError_KnownTypeError KnownTypeError
+  | LiftError_FromRepr
+  deriving stock (Eq)
+
+{- | Convert a 'CompiledTerm' to the associated Haskell value. Fail otherwise.
+This will fully evaluate the arbitrary closed expression, and convert the resulting value.
+
+Copied and adapted from 'Plutarch.Lift'.
+-}
+pliftCompiled' :: forall p. PUnsafeLiftDecl p => CompiledTerm p -> Either LiftError (PLifted p)
+pliftCompiled' prog = case evalScript (toScript prog) of
+  (Right (unScript -> UplcType.Program _ _ term), _, _) ->
+    case readKnownConstant term of
+      Right r -> case pconstantFromRepr r of
+        Just h -> Right h
+        Nothing -> Left LiftError_FromRepr
+      Left e -> Left $ LiftError_KnownTypeError e
+  (Left e, _, _) -> Left $ LiftError_EvalError e
+
+{- | Like `pliftCompiled'` but throws on failure.
+
+ Copied and adapted from 'Plutarch.Lift'.
+-}
+pliftCompiled :: forall p. (HasCallStack, PLift p) => CompiledTerm p -> PLifted p
+pliftCompiled prog = case pliftCompiled' prog of
+  Right x -> x
+  Left LiftError_FromRepr -> error "plift failed: pconstantFromRepr returned 'Nothing'"
+  Left (LiftError_KnownTypeError e) ->
+    let unliftErrMaybe = e ^? _UnliftingErrorE
+     in error $
+          "plift failed: incorrect type: "
+            <> maybe "absurd evaluation failure" show unliftErrMaybe
+  Left (LiftError_EvalError e) -> error $ "plift failed: erring term: " <> show e
