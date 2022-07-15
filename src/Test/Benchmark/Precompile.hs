@@ -12,9 +12,13 @@ module Test.Benchmark.Precompile (
   compile',
   toScript,
   applyCompiledTerm,
-  (##),
   applyCompiledTerm',
+  applyCompiledTerm2,
+  applyCompiledTerm2',
+  (##),
   (##~),
+  (###),
+  (###~),
   LiftError (..),
   pliftCompiled',
   pliftCompiled,
@@ -87,7 +91,7 @@ applyCompiledTerm (CompiledTerm sf) a =
 
 {- | Apply a 'CompiledTerm' to a closed Plutarch 'Term'.
 
- Does NOT evaluate the argument before applying. Using this seems to save verry
+ Does NOT evaluate the argument before applying. Using this seems to save very
  little overhead, not worth it for efficiency. Only use it to make argument
  evaluation count for benchmarking.
 -}
@@ -98,6 +102,34 @@ applyCompiledTerm' ::
   CompiledTerm b
 applyCompiledTerm' (CompiledTerm sf) a =
   CompiledTerm $ applyScript sf (compile a)
+
+{- | Apply a 'CompiledTerm' to a 'CompiledTerm'.
+
+ Evaluates the argument before applying. You want this for benchmarking the
+ compiled function. Helps to avoid tainting the measurement by input
+ conversions.
+-}
+applyCompiledTerm2 ::
+  forall (a :: S -> Type) (b :: S -> Type).
+  CompiledTerm (a :--> b) ->
+  CompiledTerm a ->
+  CompiledTerm b
+applyCompiledTerm2 (CompiledTerm sf) (CompiledTerm sa) =
+  CompiledTerm $ applyScript sf (eval sa)
+
+{- | Apply a 'CompiledTerm' to a 'CompiledTerm'.
+
+ Does NOT evaluate the argument before applying. Using this seems to save very
+ little overhead, not worth it for efficiency. Only use it to make argument
+ evaluation count for benchmarking.
+-}
+applyCompiledTerm2' ::
+  forall (a :: S -> Type) (b :: S -> Type).
+  CompiledTerm (a :--> b) ->
+  CompiledTerm a ->
+  CompiledTerm b
+applyCompiledTerm2' (CompiledTerm sf) (CompiledTerm sa) =
+  CompiledTerm $ applyScript sf sa
 
 -- | Alias for 'applyCompiledTerm'.
 (##) ::
@@ -115,9 +147,29 @@ infixl 8 ##
   CompiledTerm (a :--> b) ->
   (forall (s :: S). Term s a) ->
   CompiledTerm b
-(##~) = applyCompiledTerm
+(##~) = applyCompiledTerm'
 
 infixl 8 ##~
+
+-- | Alias for 'applyCompiledTerm2'.
+(###) ::
+  forall (a :: S -> Type) (b :: S -> Type).
+  CompiledTerm (a :--> b) ->
+  CompiledTerm a ->
+  CompiledTerm b
+(###) = applyCompiledTerm2
+
+infixl 8 ###
+
+-- | Alias for 'applyCompiledTerm2\''.
+(###~) ::
+  forall (a :: S -> Type) (b :: S -> Type).
+  CompiledTerm (a :--> b) ->
+  CompiledTerm a ->
+  CompiledTerm b
+(###~) = applyCompiledTerm2'
+
+infixl 8 ###~
 
 {- | Error during script evaluation.
 
