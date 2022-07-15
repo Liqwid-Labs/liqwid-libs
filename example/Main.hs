@@ -6,8 +6,9 @@ import System.Random.Stateful (runStateGen, uniformRM)
 import Test.Benchmark.Common (ImplData (ImplData, val), multiImplData)
 import Test.Benchmark.Cost (meanVal, rankOnPerAxisStat, writeComparisonPerAxisCSVs, writePerAxisCSVs)
 import Test.Benchmark.Main (benchMain)
-import Test.Benchmark.Plutarch (mkTermImplMetaData, sampleTerm)
+import Test.Benchmark.Plutarch (mkTermImplMetaData, sampleTerm, sampleTerm')
 import Test.Benchmark.Plutus (statsByAxis)
+import Test.Benchmark.Precompile (CompiledTerm, compile', (##))
 import Test.Benchmark.Sized (
   Cardinality (Cardinality),
   SUniversalGen (SUniversalGen),
@@ -47,20 +48,25 @@ main = benchMain $ \dir -> do
           (\size -> Cardinality $ 10 ^ (fromIntegral size :: Int))
           (\size -> replicateM size [0 .. 9])
           (\size -> flip runStateGen (replicateM size . uniformRM (0, 9)))
+
+  let pfind3 :: CompiledTerm (PBuiltinList PInteger :--> PMaybe PInteger) =
+        compile' $ pfind # plam (#== 3)
   stats1 <-
     ImplData "find 3" . statsByAxis
       <$> benchSizesUniversal
         gen
-        (\list -> sampleTerm $ pfind # plam (#== 3) # pconstant list)
+        (\list -> sampleTerm' $ pfind3 ## pconstant list)
         10000
         [0 .. 10]
   writePerAxisCSVs dir stats1
 
+  let pfind4 :: CompiledTerm (PBuiltinList PInteger :--> PMaybe PInteger) =
+        compile' $ pfind # plam (#== 4)
   stats2 <-
     ImplData "find 4" . statsByAxis
       <$> benchSizesUniversal
         gen
-        (\list -> sampleTerm $ pfind # plam (#== 4) # pconstant list)
+        (\list -> sampleTerm' $ pfind4 ## pconstant list)
         10000
         [0 .. 10]
   writePerAxisCSVs dir stats2
