@@ -17,7 +17,6 @@ module Plutarch.Extra.Functor (
 import Data.Kind (Constraint, Type)
 import Generics.SOP (Top)
 import Plutarch (
-    PType,
     S,
     Term,
     pcon,
@@ -140,7 +139,7 @@ instance PFunctor PBuiltinList where
     pfmap = phoistAcyclic $ plam $ \f t -> pmap # f # t
 
 -- | @since 1.0.0
-instance forall (s :: KeyGuarantees) (k :: PType). (PIsData k) => PFunctor (PMap s k) where
+instance forall (s :: KeyGuarantees) (k :: S -> Type). (PIsData k) => PFunctor (PMap s k) where
     type PSubcategory (PMap s k) = PIsData
     pfmap = psecond
 

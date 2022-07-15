@@ -16,7 +16,6 @@ import qualified Generics.SOP as SOP
 import Plutarch (
     DerivePNewtype (..),
     POpaque,
-    PType,
     PlutusType (PInner),
     S,
     Term,
@@ -34,25 +33,25 @@ import Plutarch.Internal (S (SI))
 
  @since 1.1.0
 -}
-newtype DerivePNewtype' (a :: PType) (s :: S) = DerivePNewtype' (a s)
+newtype DerivePNewtype' (a :: S -> Type) (s :: S) = DerivePNewtype' (a s)
 
 {- | Coercion between a Haskell-level of a 'PType' & the 'Term' of another 'PType'.
 
  @since 1.1.0
 -}
-type TermCoercible :: PType -> PType -> Constraint
+type TermCoercible :: (S -> Type) -> (S -> Type) -> Constraint
 type TermCoercible a b = forall (s :: S). Coercible (a s) (Term s b)
 
 -- | Apply Constraint under a plutarch-level newtype.
-type PNewtypeHas :: (PType -> Constraint) -> PType -> Constraint
+type PNewtypeHas :: ((S -> Type) -> Constraint) -> (S -> Type) -> Constraint
 type PNewtypeHas c a = (c (PNewtypeOf a))
 
 -- | The SOP Code of a newtype over a given 'PType'.
-type family PNewtypeOf (a :: PType) :: PType where
+type family PNewtypeOf (a :: S -> Type) :: S -> Type where
     PNewtypeOf a = PNewtypeOfCode (SOP.Code (a 'SI))
 
 -- | The SOP Code of a newtype given the SOP Code of a 'PType'.
-type family PNewtypeOfCode (a :: [[Type]]) :: PType where
+type family PNewtypeOfCode (a :: [[Type]]) :: S -> Type where
     PNewtypeOfCode '[ '[Term s p]] = p
 
 -- | @since 1.1.0

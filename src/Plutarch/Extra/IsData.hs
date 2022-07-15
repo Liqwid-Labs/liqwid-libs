@@ -46,7 +46,6 @@ import Plutarch.Prelude (
     PEq ((#==)),
     PInteger,
     PLift,
-    PType,
     PlutusType (..),
     S,
     Term,
@@ -74,7 +73,7 @@ import Prelude
 newtype ProductIsData a = ProductIsData {unProductIsData :: a}
 
 -- | Variant of 'PConstantViaData' using the List repr from 'ProductIsData'
-newtype PConstantViaDataList (h :: Type) (p :: PType) = PConstantViaDataList h
+newtype PConstantViaDataList (h :: Type) (p :: S -> Type) = PConstantViaDataList h
 
 {- |
   Generically convert a Product-Type to 'BuiltinData' with the 'List' repr.
@@ -136,7 +135,7 @@ newtype EnumIsData a = EnumIsData a
 
   @since 1.1.0
 -}
-newtype PEnumData (a :: PType) (s :: S) = PEnumData (a s)
+newtype PEnumData (a :: S -> Type) (s :: S) = PEnumData (a s)
     deriving
         ( -- | @since 1.1.0
           Enum
@@ -166,7 +165,7 @@ instance
     pcon' = fromInteger . toInteger . fromEnum
 
 -- | @since 1.1.0
-instance forall (a :: PType). PIsData (PEnumData a) where
+instance forall (a :: S -> Type). PIsData (PEnumData a) where
     pfromDataImpl d =
         punsafeCoerce (pfromDataImpl @PInteger $ punsafeCoerce d)
 
@@ -178,7 +177,7 @@ instance forall (a :: PType). PIsData (PEnumData a) where
 
   @since 1.1.0
 -}
-newtype DerivePConstantViaEnum (h :: Type) (p :: PType)
+newtype DerivePConstantViaEnum (h :: Type) (p :: S -> Type)
     = DerivePConstantEnum h
 
 -- | @since 1.1.0
@@ -199,7 +198,7 @@ safeCases = enumFrom minBound
   @since 1.1.0
 -}
 pmatchEnum ::
-    forall (a :: Type) (b :: PType) (s :: S).
+    forall (a :: Type) (b :: S -> Type) (s :: S).
     (Bounded a, Enum a) =>
     Term s PInteger ->
     (a -> Term s b) ->
@@ -221,7 +220,7 @@ pmatchEnum x f = unTermCont $ do
   @since 1.1.0
 -}
 pmatchEnumFromData ::
-    forall (a :: Type) (b :: PType) (s :: S).
+    forall (a :: Type) (b :: S -> Type) (s :: S).
     (Bounded a, Enum a) =>
     Term s PData ->
     (Maybe a -> Term s b) ->

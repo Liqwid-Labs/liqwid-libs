@@ -13,9 +13,10 @@ module Plutarch.Extra.Record (
 
 import Control.Category (Category (..))
 import Data.Coerce (coerce)
+import Data.Kind (Type)
 import GHC.OverloadedLabels (IsLabel (..))
 import GHC.TypeLits (Symbol)
-import Plutarch (PCon (pcon), PType, PlutusType, S, Term)
+import Plutarch (PCon (pcon), PlutusType, S, Term)
 import Plutarch.Builtin (PAsData)
 import Plutarch.DataRepr (PDataRecord (PDCons), PLabeledType (..), pdnil)
 import Prelude (($))
@@ -55,7 +56,7 @@ Is the same as
 @
 -}
 mkRecordConstr ::
-    forall (r :: [PLabeledType]) (s :: S) (pt :: PType).
+    forall (r :: [PLabeledType]) (s :: S) (pt :: S -> Type).
     PlutusType pt =>
     -- | The constructor. This is just the Haskell-level constructor for the type.
     --   For 'Plutarch.Api.V1.Maybe.PMaybeData', this would
@@ -81,7 +82,7 @@ infix 7 .=
 
 -- | Cons a labeled type as a 'RecordMorphism'.
 (.=) ::
-    forall (sym :: Symbol) (a :: PType) (as :: [PLabeledType]) (s :: S).
+    forall (sym :: Symbol) (a :: S -> Type) (as :: [PLabeledType]) (s :: S).
     -- | The field name. You can use @-XOverloadedLabels@ to enable the syntax:
     --   @#hello ~ 'FieldName' "hello"@
     FieldName sym ->

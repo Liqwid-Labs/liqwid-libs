@@ -35,7 +35,7 @@ import Plutarch.Show (PShow)
   @since 1.1.0
 -}
 pguardWithC ::
-    forall (r :: PType) (pt :: PType) (s :: S).
+    forall (r :: S -> Type) (pt :: S -> Type) (s :: S).
     -- | Function to print in case of guard failure.
     --   Only gets included in binary when compiling with @development@ flag.
     (Term s pt -> Term s PString) ->
@@ -52,7 +52,7 @@ pguardWithC tracer checker object =
   @since 1.1.0
 -}
 pguardShowC ::
-    forall (r :: PType) (pt :: PType) (s :: S).
+    forall (r :: S -> Type) (pt :: S -> Type) (s :: S).
     PShow pt =>
     Term s PString ->
     (Term s pt -> Term s PBool) ->
