@@ -1,6 +1,7 @@
 module Test.Benchmark.Plutarch (
   mkTermImplMetaData,
   sampleTerm,
+  sampleTerm',
 ) where
 
 import Data.Text (Text)
@@ -13,6 +14,7 @@ import Test.Benchmark.Plutus (
   mkScriptImplMetaData,
   sampleScript,
  )
+import Test.Benchmark.Precompile (CompiledTerm, toScript)
 
 mkTermImplMetaData ::
   -- | Name of the implementation. Make sure it's unique.
@@ -24,3 +26,6 @@ mkTermImplMetaData name term = mkScriptImplMetaData name $ compile term
 
 sampleTerm :: ClosedTerm a -> Either (BudgetExceeded PlutusCostAxis) Costs
 sampleTerm term = sampleScript $ compile term
+
+sampleTerm' :: CompiledTerm a -> Either (BudgetExceeded PlutusCostAxis) Costs
+sampleTerm' = sampleScript . toScript
