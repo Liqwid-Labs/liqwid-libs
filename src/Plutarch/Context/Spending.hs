@@ -107,7 +107,7 @@ buildSpending ::
     Either String ScriptContext
 buildSpending builder = flip runContT Right $
     case sbValidatorInput builder of
-        Nothing -> lift $ Left "No validator input specifid"
+        Nothing -> lift $ Left "No validator input specified"
         Just vInUTXO -> do
             let bb = unpack builder
 
