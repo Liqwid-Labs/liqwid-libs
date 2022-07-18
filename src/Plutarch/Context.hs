@@ -8,13 +8,39 @@
  Base builder and other specific builders.
 -}
 module Plutarch.Context (
-    module Plutarch.Context.Base,
-    module Plutarch.Context.TxInfo,
-    module Plutarch.Context.Spending,
-    module Plutarch.Context.Minting,
+    B.Builder (..),
+    B.BaseBuilder (..),
+    B.UTXO (..),
+    B.output,
+    B.input,
+    B.credential,
+    B.pubKey,
+    B.script,
+    B.withTxId,
+    B.withDatum,
+    B.withValue,
+    B.withRefIndex,
+    B.withOutRef,
+    B.signedWith,
+    B.mint,
+    B.extraData,
+    B.txId,
+    B.fee,
+    B.timeRange,
+    S.SpendingBuilder (..),
+    S.withSpending,
+    S.buildSpending,
+    S.buildSpendingUnsafe,
+    M.MintingBuilder (..),
+    M.buildMinting,
+    M.buildMintingUnsafe,
+    T.spends,
+    T.mints,
+    T.buildTxInfo,
+    T.buildTxInfoUnsafe,
 ) where
 
-import Plutarch.Context.Base
-import Plutarch.Context.Minting
-import Plutarch.Context.Spending
-import Plutarch.Context.TxInfo
+import qualified Plutarch.Context.Base as B
+import qualified Plutarch.Context.Minting as M
+import qualified Plutarch.Context.Spending as S
+import qualified Plutarch.Context.TxInfo as T

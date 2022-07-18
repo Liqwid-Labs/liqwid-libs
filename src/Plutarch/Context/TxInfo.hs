@@ -1,29 +1,45 @@
 {-# LANGUAGE ViewPatterns #-}
+
+{- | Module: Plutarch.Context.TxInfo
+ Copyright: (C) Liqwid Labs 2022
+ Maintainer: Seungheon Oh <seungheon.ooh@gmail.com>
+ Portability: GHC only
+ Stability: Experimental
+
+ Builder for TxInfo and other utility functions that generates all
+ possible Script Context from TxInfo.
+-}
 module Plutarch.Context.TxInfo (
     spends,
     mints,
-    
     buildTxInfo,
     buildTxInfoUnsafe,
 ) where
 
-import Control.Monad.Cont ( ContT(runContT) )
-import Data.Foldable ( Foldable(toList) )
-import Plutarch.Context.Base
-    ( yieldBaseTxInfo,
-      yieldExtraDatums,
-      yieldInInfoDatums,
-      yieldMint,
-      yieldOutDatums,
-      BaseBuilder(bbSignatures, bbInputs, bbOutputs, bbMints, bbDatums),
-      Builder(unpack) )
-import PlutusLedgerApi.V1
-    ( TxInfo(txInfoInputs, txInfoOutputs, txInfoData, txInfoMint,
-             txInfoSignatories),
-      TxInInfo(txInInfoOutRef),
-      ScriptContext(ScriptContext),
-      ScriptPurpose(Spending) )
-    
+import Control.Monad.Cont (ContT (runContT))
+import Data.Foldable (Foldable (toList))
+import Plutarch.Context.Base (
+    BaseBuilder (bbDatums, bbInputs, bbMints, bbOutputs, bbSignatures),
+    Builder (unpack),
+    yieldBaseTxInfo,
+    yieldExtraDatums,
+    yieldInInfoDatums,
+    yieldMint,
+    yieldOutDatums,
+ )
+import PlutusLedgerApi.V1 (
+    ScriptContext (ScriptContext),
+    ScriptPurpose (Spending),
+    TxInInfo (txInInfoOutRef),
+    TxInfo (
+        txInfoData,
+        txInfoInputs,
+        txInfoMint,
+        txInfoOutputs,
+        txInfoSignatories
+    ),
+ )
+
 buildTxInfo :: Builder a => a -> Either String TxInfo
 buildTxInfo (unpack -> builder) = flip runContT Right $ do
     let bb = unpack builder

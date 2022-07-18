@@ -5,7 +5,6 @@
 
 {- | Module: Plutarch.Context.Minting
  Copyright: (C) Liqwid Labs 2022
- License: Proprietary
  Maintainer: Koz Ross <koz@mlabs.city>
  Portability: GHC only
  Stability: Experimental
@@ -126,4 +125,4 @@ buildMinting builder = flip runContT Right $
 buildMintingUnsafe ::
     MintingBuilder ->
     ScriptContext
-buildMintingUnsafe = either error id . buildMinting    
+buildMintingUnsafe = either error id . buildMinting

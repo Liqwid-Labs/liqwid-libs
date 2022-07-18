@@ -4,7 +4,6 @@
 
 {- | Module: Plutarch.Context.Spending
  Copyright: (C) Liqwid Labs 2022
- License: Proprietary
  Maintainer: Koz Ross <koz@mlabs.city>
  Portability: GHC only
  Stability: Experimental
@@ -135,4 +134,4 @@ buildSpending builder = flip runContT Right $
 buildSpendingUnsafe ::
     SpendingBuilder ->
     ScriptContext
-buildSpendingUnsafe = either error id . buildSpending  
+buildSpendingUnsafe = either error id . buildSpending

@@ -5,7 +5,6 @@
 
 {- | Module: Plutarch.Context.Base
  Copyright: (C) Liqwid Labs 2022
- License: Proprietary
  Maintainer: Seungheon Oh <seungheon.ooh@gmail.com>
  Portability: GHC only
  Stability: Experimental
@@ -147,9 +146,9 @@ utxoToTxOut utxo@(UTXO{..}) =
  It allows those builder to integrate base builder functionalities
  without any duplications.
 
- @unpack@ will sometimes loose data.
+ @unpack@ will sometimes lose data.
 
- Typeclass Rules:
+ Typeclass Laws:
  1. unpack . pack = id
 
  @since 1.1.0

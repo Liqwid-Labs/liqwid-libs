@@ -12,8 +12,8 @@ bug-reports:
 license:
 
 -- license-file:       LICENSE
-author:             Koz Ross
-maintainer:         Koz Ross <koz@mlabs.city>
+author:             Koz Ross, Seungheon Oh
+maintainer:         Koz Ross <koz@mlabs.city>, Seungheon Oh <seungheon.ooh@gmail.com>   
 copyright:          (C) 2022 Liqwid Labs
 category:           Plutarch
 build-type:         Simple
@@ -100,18 +100,7 @@ library
   hs-source-dirs:  src
 
 -- Tests
-
--- test-suite test
---   import:         common-tests
---   type:           exitcode-stdio-1.0
---   main-is:        Main.hs
---   other-modules:
---     BaseBuilder
---     Minting
---     Spending
-
---   hs-source-dirs: test/
-
+   
 test-suite sample
   import:         common-tests
   type:           exitcode-stdio-1.0
