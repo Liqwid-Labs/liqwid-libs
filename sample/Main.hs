@@ -5,7 +5,7 @@ import Plutarch.Context
 import PlutusLedgerApi.V1
 import PlutusPrelude
 
-test :: Builder a => a
+test :: (Monoid a, Builder a) => a
 test =
     mconcat
         [ input $
