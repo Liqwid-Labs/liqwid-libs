@@ -17,6 +17,9 @@ module Plutarch.Context.Minting (
     -- * Types
     MintingBuilder (..),
 
+    -- * Input
+    withMinting,
+
     -- * builder
     buildMinting,
     buildMintingUnsafe,
@@ -81,6 +84,9 @@ instance Builder MintingBuilder where
     pack = flip MB Nothing
     unpack = mbInner
 
+withMinting :: CurrencySymbol -> MintingBuilder -> MintingBuilder
+withMinting cs (MB inner _) = MB inner $ Just cs
+
 {- | Builds @ScriptContext@ according to given configuration and
  @MintingBuilder@.
 
@@ -120,7 +126,7 @@ buildMinting builder = flip runContT Right $
 
             case mintingInfo of
                 [] -> lift $ Left "Minting CS not found"
-                (_ : _) -> return $ ScriptContext txinfo (Minting mintingCS)
+                _ -> return $ ScriptContext txinfo (Minting mintingCS)
 
 -- | Builds minting context; it throwing error when builder fails.
 buildMintingUnsafe ::

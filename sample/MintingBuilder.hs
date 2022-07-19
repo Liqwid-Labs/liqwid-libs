@@ -1,6 +1,6 @@
 module MintingBuilder (specs) where
 
-import Plutarch.Context (MintingBuilder (mbMintingCS), buildMinting, mint)
+import Plutarch.Context (MintingBuilder, buildMinting, mint, withMinting)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
 
@@ -11,18 +11,18 @@ specs =
     testGroup
         "Minting Builder Unit Tests"
         [ testCase "MintingBuilder succeeds with single input" $
-            case buildMinting singleMint{mbMintingCS = Just "deadbeef"} of
+            case buildMinting $ withMinting "deadbeef" singleMint of
                 Left err -> assertFailure ("buildingMinting failed with error: " <> err)
                 Right _ -> pure ()
         , testCase "MintingBuilder fails if currency symbol can't be found" $
-            case buildMinting singleMint{mbMintingCS = Just "beefbeef"} of
+            case buildMinting $ withMinting "beefbeef" singleMint of
                 Left _ -> pure ()
                 Right _ ->
                     assertFailure
-                        ( "buildMinting should fail if an invalid CS is"
+                        ( "buildMinting should fail invalid CS is"
                             <> " passed, but it succeeded."
                         )
-        , testCase "MintingBuilder fails with zero inputs" $
+        , testCase "MintingBuilder fails with unspecified currency symbol" $
             case buildMinting mempty of
                 Left _ -> pure ()
                 Right _ ->
@@ -31,9 +31,9 @@ specs =
                             <> " but it passed."
                         )
         , testCase "MintingBuilder works with either of two Minting CS's" $
-            case buildMinting doubleMint{mbMintingCS = Just "deadbeef"} of
+            case buildMinting $ withMinting "deadbeef" doubleMint of
                 Left err -> assertFailure ("buildMinting failed with error " <> err)
-                Right _ -> case buildMinting doubleMint{mbMintingCS = Just "bebe"} of
+                Right _ -> case buildMinting $ withMinting "bebe" doubleMint of
                     Left err -> assertFailure ("buildMinting failed with error " <> err)
                     Right _ -> pure ()
         ]
