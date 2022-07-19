@@ -11,11 +11,11 @@ specs =
     testGroup
         "Minting Builder Unit Tests"
         [ testCase "MintingBuilder succeeds with single input" $
-            case buildMinting $ withMinting "deadbeef" singleMint of
+            case buildMinting $ singleMint <> withMinting "deadbeef" of
                 Left err -> assertFailure ("buildingMinting failed with error: " <> err)
                 Right _ -> pure ()
         , testCase "MintingBuilder fails if currency symbol can't be found" $
-            case buildMinting $ withMinting "beefbeef" singleMint of
+            case buildMinting $ singleMint <> withMinting "beefbeef" of
                 Left _ -> pure ()
                 Right _ ->
                     assertFailure
@@ -31,9 +31,9 @@ specs =
                             <> " but it passed."
                         )
         , testCase "MintingBuilder works with either of two Minting CS's" $
-            case buildMinting $ withMinting "deadbeef" doubleMint of
+            case buildMinting $ doubleMint <> withMinting "deadbeef" of
                 Left err -> assertFailure ("buildMinting failed with error " <> err)
-                Right _ -> case buildMinting $ withMinting "bebe" doubleMint of
+                Right _ -> case buildMinting $ doubleMint <> withMinting "bebe" of
                     Left err -> assertFailure ("buildMinting failed with error " <> err)
                     Right _ -> pure ()
         ]

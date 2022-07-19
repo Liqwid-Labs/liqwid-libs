@@ -84,8 +84,12 @@ instance Builder MintingBuilder where
     pack = flip MB Nothing
     unpack = mbInner
 
-withMinting :: CurrencySymbol -> MintingBuilder -> MintingBuilder
-withMinting cs (MB inner _) = MB inner $ Just cs
+{- | Set CurrencySymbol for building Minting ScriptContext.
+
+ @since 1.1.1
+-}
+withMinting :: CurrencySymbol -> MintingBuilder
+withMinting cs = MB mempty $ Just cs
 
 {- | Builds @ScriptContext@ according to given configuration and
  @MintingBuilder@.
