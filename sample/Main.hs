@@ -3,10 +3,27 @@ module Main (main) where
 import GHC.IO.Encoding
 import Plutarch.Context
 import PlutusLedgerApi.V1
-import PlutusPrelude
+import Test.Tasty (defaultMain, testGroup)
+import Test.Tasty.HUnit ((@?=), testCase)
+import qualified MintingBuilder
 
-test :: (Monoid a, Builder a) => a
-test =
+
+main :: IO ()
+main = do
+    setLocaleEncoding utf8
+    defaultMain . testGroup "Sample Tests" $
+      [ testCase "TxInfo matches with both Minting and Spending Script Purposes" $
+          (scriptContextTxInfo <$> a) @?= (scriptContextTxInfo <$> b)
+      , MintingBuilder.specs
+      ]
+      where
+        a = buildMinting generalSample{ mbMintingCS = Just "aaaa" }
+        b = buildSpending
+          (generalSample <> withSpending
+            (pubKey "aabb" . withValue (singleton "cc" "hello" 123)))
+
+generalSample :: (Monoid a, Builder a) => a
+generalSample  =
     mconcat
         [ input $
             pubKey "aabb"
@@ -22,14 +39,3 @@ test =
                 . withValue (singleton "dd" "world" 123)
         , mint $ singleton "aaaa" "hello" 333
         ]
-
-main :: IO ()
-main = do
-    setLocaleEncoding utf8
-    let a = buildMinting test
-        b = buildSpending (test <> withSpending (pubKey "aabb" . withValue (singleton "cc" "hello" 123)))
-    print $ pretty $ a
-    print $ pretty $ b
-
-    print $ (scriptContextTxInfo <$> a) == (scriptContextTxInfo <$> b)
-    print $ txInfoId . scriptContextTxInfo <$> a
