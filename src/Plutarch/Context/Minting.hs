@@ -49,7 +49,7 @@ import PlutusLedgerApi.V1.Contexts (
 import PlutusLedgerApi.V1.Value (
     CurrencySymbol,
     flattenValue,
-    )
+ )
 
 {- | A context builder for Minting. Corresponds to
  'Plutus.V1.Ledger.Contexts.Minting' specifically.
@@ -94,32 +94,33 @@ buildMinting ::
     MintingBuilder ->
     Either String ScriptContext
 buildMinting builder = flip runContT Right $
-  case mbMintingCS builder of
-    Nothing -> lift $ Left "No minting currency symbol specified"
-    Just mintingCS -> do
-        let bb = unpack builder
+    case mbMintingCS builder of
+        Nothing -> lift $ Left "No minting currency symbol specified"
+        Just mintingCS -> do
+            let bb = unpack builder
 
-        (ins, inDat) <- yieldInInfoDatums (bbInputs bb) builder
-        (outs, outDat) <- yieldOutDatums (bbOutputs bb)
-        mintedValue <- yieldMint (bbMints bb)
-        extraDat <- yieldExtraDatums (bbDatums bb)
-        base <- yieldBaseTxInfo builder
+            (ins, inDat) <- yieldInInfoDatums (bbInputs bb) builder
+            (outs, outDat) <- yieldOutDatums (bbOutputs bb)
+            mintedValue <- yieldMint (bbMints bb)
+            extraDat <- yieldExtraDatums (bbDatums bb)
+            base <- yieldBaseTxInfo builder
 
-        let txinfo =
-                base
-                    { txInfoInputs = ins
-                    , txInfoOutputs = outs
-                    , txInfoData = inDat <> outDat <> extraDat
-                    , txInfoMint = mintedValue
-                    , txInfoSignatories = toList $ bbSignatures bb
-                    }
-            mintingInfo = filter
-              (\(cs, _, _) -> cs == mintingCS )
-              $ flattenValue mintedValue
+            let txinfo =
+                    base
+                        { txInfoInputs = ins
+                        , txInfoOutputs = outs
+                        , txInfoData = inDat <> outDat <> extraDat
+                        , txInfoMint = mintedValue
+                        , txInfoSignatories = toList $ bbSignatures bb
+                        }
+                mintingInfo =
+                    filter
+                        (\(cs, _, _) -> cs == mintingCS)
+                        $ flattenValue mintedValue
 
-        case mintingInfo of
-          [] -> lift $ Left "Minting CS not found"
-          (_ : _ ) -> return $ ScriptContext txinfo (Minting mintingCS)
+            case mintingInfo of
+                [] -> lift $ Left "Minting CS not found"
+                (_ : _) -> return $ ScriptContext txinfo (Minting mintingCS)
 
 -- | Builds minting context; it throwing error when builder fails.
 buildMintingUnsafe ::

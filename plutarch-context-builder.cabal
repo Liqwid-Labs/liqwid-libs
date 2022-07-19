@@ -13,7 +13,9 @@ license:
 
 -- license-file:       LICENSE
 author:             Koz Ross, Seungheon Oh
-maintainer:         Koz Ross <koz@mlabs.city>, Seungheon Oh <seungheon.ooh@gmail.com>   
+maintainer:
+  Koz Ross <koz@mlabs.city>, Seungheon Oh <seungheon.ooh@gmail.com>   
+
 copyright:          (C) 2022 Liqwid Labs
 category:           Plutarch
 build-type:         Simple
@@ -100,7 +102,7 @@ library
   hs-source-dirs:  src
 
 -- Tests
-   
+
 test-suite sample
   import:         common-tests
   type:           exitcode-stdio-1.0
