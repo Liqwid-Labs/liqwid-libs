@@ -32,6 +32,7 @@ module Plutarch.Context (
     S.buildSpending,
     S.buildSpendingUnsafe,
     M.MintingBuilder (..),
+    M.withMinting,
     M.buildMinting,
     M.buildMintingUnsafe,
     T.spends,
