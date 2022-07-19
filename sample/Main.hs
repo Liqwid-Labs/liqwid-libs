@@ -1,29 +1,31 @@
 module Main (main) where
 
 import GHC.IO.Encoding
+import qualified MintingBuilder
 import Plutarch.Context
 import PlutusLedgerApi.V1
 import Test.Tasty (defaultMain, testGroup)
-import Test.Tasty.HUnit ((@?=), testCase)
-import qualified MintingBuilder
-
+import Test.Tasty.HUnit (testCase, (@?=))
 
 main :: IO ()
 main = do
     setLocaleEncoding utf8
     defaultMain . testGroup "Sample Tests" $
-      [ testCase "TxInfo matches with both Minting and Spending Script Purposes" $
-          (scriptContextTxInfo <$> a) @?= (scriptContextTxInfo <$> b)
-      , MintingBuilder.specs
-      ]
-      where
-        a = buildMinting generalSample{ mbMintingCS = Just "aaaa" }
-        b = buildSpending
-          (generalSample <> withSpending
-            (pubKey "aabb" . withValue (singleton "cc" "hello" 123)))
+        [ testCase "TxInfo matches with both Minting and Spending Script Purposes" $
+            (scriptContextTxInfo <$> a) @?= (scriptContextTxInfo <$> b)
+        , MintingBuilder.specs
+        ]
+  where
+    a = buildMinting generalSample{mbMintingCS = Just "aaaa"}
+    b =
+        buildSpending
+            ( generalSample
+                <> withSpending
+                    (pubKey "aabb" . withValue (singleton "cc" "hello" 123))
+            )
 
 generalSample :: (Monoid a, Builder a) => a
-generalSample  =
+generalSample =
     mconcat
         [ input $
             pubKey "aabb"

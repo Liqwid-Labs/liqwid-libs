@@ -107,6 +107,5 @@ test-suite sample
   import:         common-tests
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
-  other-modules:
-    MintingBuilder
+  other-modules:  MintingBuilder
   hs-source-dirs: sample/
