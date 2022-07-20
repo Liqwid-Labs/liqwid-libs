@@ -24,7 +24,7 @@ type family BindAll (ps :: [PLabeledType]) :: [Symbol] where
 
 {- | Same as `pletFields` but instead of specifiying fields, it will take all fields.
 
- @since 1.2.1
+ @since 1.3.0
 -}
 pletAll ::
     forall a s b ps bs.
@@ -40,7 +40,7 @@ pletAll = pletFields @(BindAll ps)
 
 {- | TermCont version of `pletAll`
 
- @since 1.2.1
+ @since 1.3.0
 -}
 pletAllC ::
     forall a s b ps bs.

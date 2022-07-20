@@ -2,6 +2,24 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 1.3.0 -- 2022-07-20
+
+### Added
+
+- `pmatchAll` and `pmatchAllC`, `pletFields` that gets all Plutarch record fields.
+- `Plutarch.Extra.MultiSig`, a basic N of M multisignature validation function.
+- `pscriptHashFromAddress`, gets script hash from an address.
+- `pisScriptAddress`, checks if given address is script address.
+- `pisPubKey`, checks if given credential is a pubkey hash.
+- `pfindOutputsToAddress`, finds all TxOuts sent to an Address.
+- `pfindTxOutDatum`, finds the data corresponding to a TxOut, if there is one.
+- `phasOnlyOneTokenOfCurrencySymbol`, checks if entire value only contain one token of given currency symbol.
+
+### Modified
+
+- Fixed `PApplicative` instances that previously not worked due to not using `pfix`.
+- Renamed `PType` to `S -> Type`.
+
 ## 1.2.0 -- 2022-07-12
 
 ### Added

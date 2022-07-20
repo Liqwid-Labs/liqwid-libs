@@ -1,5 +1,6 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Plutarch.Extra.Maybe (
     -- * Utility functions for working with 'PMaybe'
@@ -17,6 +18,10 @@ module Plutarch.Extra.Maybe (
 
     -- * TermCont-based combinators
     pexpectJustC,
+
+    -- * Assertions
+    mustBePJust,
+    mustBePDJust,
 ) where
 
 import Data.Kind (Type)
@@ -151,3 +156,23 @@ pexpectJustC escape ma = tcont $ \f ->
     pmatch ma $ \case
         PJust v -> f v
         PNothing -> escape
+
+{- | Extract the value stored in a PMaybe container.
+     If there's no value, throw an error with the given message.
+     @since 1.3.0
+-}
+mustBePJust :: forall a s. Term s (PString :--> PMaybe a :--> a)
+mustBePJust = phoistAcyclic $
+    plam $ \emsg mv' -> pmatch mv' $ \case
+        PJust v -> v
+        _ -> ptraceError emsg
+
+{- | Extract the value stored in a PMaybeData container.
+     If there's no value, throw an error with the given message.
+     @since 1.3.0
+-}
+mustBePDJust :: forall a s. (PIsData a) => Term s (PString :--> PMaybeData a :--> a)
+mustBePDJust = phoistAcyclic $
+    plam $ \emsg mv' -> pmatch mv' $ \case
+        PDJust ((pfield @"_0" #) -> v) -> v
+        _ -> ptraceError emsg

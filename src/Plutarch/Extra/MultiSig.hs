@@ -20,30 +20,45 @@ module Plutarch.Extra.MultiSig (
     MultiSig (..),
 ) where
 
-import Plutarch.Prelude
-
-import qualified GHC.Generics as GHC
+import qualified GHC.Generics as GHC (Generic)
 import Generics.SOP (Generic, I (I))
-import Plutarch.Api.V1 (
-    PPubKeyHash,
-    PTxInfo (..),
- )
+import Plutarch.Api.V1 (PPubKeyHash, PTxInfo (..))
 import Plutarch.DataRepr (
     DerivePConstantViaData (DerivePConstantViaData),
     PDataFields,
     PIsDataReprInstances (PIsDataReprInstances),
  )
 import Plutarch.Extra.TermCont (pletFieldsC)
-import Plutarch.Lift (
-    PConstantDecl,
-    PLifted,
-    PUnsafeLiftDecl,
+import Plutarch.Lift (PConstantDecl, PLifted, PUnsafeLiftDecl)
+import Plutarch.Prelude (
+    PAsData,
+    PBool,
+    PBuiltinList,
+    PDataRecord,
+    PInteger,
+    PIsData,
+    PIsDataRepr,
+    PLabeledType ((:=)),
+    POrd ((#<=)),
+    PlutusType,
+    S,
+    Term,
+    pconstant,
+    pelem,
+    pfield,
+    pfilter,
+    pfromData,
+    phoistAcyclic,
+    plam,
+    plength,
+    unTermCont,
+    (#),
+    (#$),
+    type (:-->),
  )
 import PlutusLedgerApi.V1.Crypto (PubKeyHash)
-import qualified PlutusTx
-import Prelude
-
---------------------------------------------------------------------------------
+import qualified PlutusTx (makeLift, unstableMakeIsData)
+import Prelude (Applicative (pure), Eq, Integer, Show, ($))
 
 {- | A MultiSig represents a proof that a particular set of signatures
      are present on a transaction.

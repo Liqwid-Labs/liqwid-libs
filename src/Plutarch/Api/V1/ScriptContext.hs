@@ -18,6 +18,11 @@ module Plutarch.Api.V1.ScriptContext (
     pfindDatum,
     pfindTxInByTxOutRef,
     pvalidatorHashFromAddress,
+    pscriptHashFromAddress,
+    pisScriptAddress,
+    pisPubKey,
+    pfindOutputsToAddress,
+    pfindTxOutDatum,
 ) where
 
 import Data.Kind (Type)
@@ -29,7 +34,7 @@ import Plutarch.Api.V1 (
     PCredential (..),
     PDatum,
     PDatumHash,
-    PMaybeData,
+    PMaybeData (..),
     PPubKeyHash,
     PScriptContext,
     PScriptPurpose (PSpending),
@@ -43,14 +48,14 @@ import Plutarch.Api.V1 (
     PValue,
  )
 import Plutarch.Api.V1.AssetClass (PAssetClass (..), passetClassValueOf)
-import Plutarch.Bool (PBool, POrd (..), pif, (#==))
+import Plutarch.Bool (PBool, POrd (..), pif, pnot, (#==))
 import Plutarch.Builtin (PAsData, PBuiltinList, PData, pdata, pfromData)
 import Plutarch.DataRepr (pdcons, pdnil, pfield)
 import Plutarch.Extra.List (pfirstJust, plookupTuple)
 import Plutarch.Extra.Maybe (pisJust)
 import Plutarch.Extra.TermCont (pletC, pmatchC, ptryFromC)
 import Plutarch.Lift (pconstant)
-import Plutarch.List (pelem, pfind, pfoldr)
+import Plutarch.List (pelem, pfilter, pfind, pfoldr)
 import Plutarch.Maybe (PMaybe (PJust, PNothing))
 import Plutarch.Trace (ptraceError)
 import Plutarch.TryFrom (PTryFrom)
@@ -248,3 +253,64 @@ paddressFromPubKeyHash = plam $ \pkh stakingCred ->
         pdcons # pdata (pcon $ PPubKeyCredential (pdcons # pdata pkh # pdnil))
             #$ pdcons # pdata stakingCred
             #$ pdnil
+
+{- | Get script hash from an Address.
+     @since 1.3.0
+-}
+pscriptHashFromAddress :: Term s (PAddress :--> PMaybe PValidatorHash)
+pscriptHashFromAddress = phoistAcyclic $
+    plam $ \addr ->
+        pmatch (pfromData $ pfield @"credential" # addr) $ \case
+            PScriptCredential ((pfield @"_0" #) -> h) -> pcon $ PJust h
+            _ -> pcon PNothing
+
+{- | Return true if the given address is a script address.
+     @since 1.3.0
+-}
+pisScriptAddress :: Term s (PAddress :--> PBool)
+pisScriptAddress = phoistAcyclic $
+    plam $ \addr -> pnot #$ pisPubKey #$ pfromData $ pfield @"credential" # addr
+
+{- | Return true if the given credential is a pub-key-hash.
+     @since 1.3.0
+-}
+pisPubKey :: Term s (PCredential :--> PBool)
+pisPubKey = phoistAcyclic $
+    plam $ \cred ->
+        pmatch cred $ \case
+            PScriptCredential _ -> pconstant False
+            _ -> pconstant True
+
+{- | Find all TxOuts sent to an Address
+     @since 1.3.0
+-}
+pfindOutputsToAddress ::
+    Term
+        s
+        ( PBuiltinList (PAsData PTxOut)
+            :--> PAddress
+            :--> PBuiltinList (PAsData PTxOut)
+        )
+pfindOutputsToAddress = phoistAcyclic $
+    plam $ \outputs address' -> unTermCont $ do
+        address <- pletC $ pdata address'
+        pure $
+            pfilter # plam (\(pfromData -> txOut) -> pfield @"address" # txOut #== address)
+                # outputs
+
+{- | Find the data corresponding to a TxOut, if there is one
+     @since 1.3.0
+-}
+pfindTxOutDatum ::
+    Term
+        s
+        ( PBuiltinList (PAsData (PTuple PDatumHash PDatum))
+            :--> PTxOut
+            :--> PMaybe PDatum
+        )
+pfindTxOutDatum = phoistAcyclic $
+    plam $ \datums out -> unTermCont $ do
+        datumHash' <- pmatchC $ pfromData $ pfield @"datumHash" # out
+        pure $ case datumHash' of
+            PDJust ((pfield @"_0" #) -> datumHash) -> pfindDatum # datumHash # datums
+            _ -> pcon PNothing
