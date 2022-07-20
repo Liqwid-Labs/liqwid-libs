@@ -12,7 +12,7 @@ module Plutarch.Extra.IsData (
 
     -- * Plutarch PIsData/PlutusType derive-wrappers
     PEnumData (..),
-    PConstantViaDataList (PConstantViaDataList),
+    DerivePConstantViaDataList (..),
     DerivePConstantViaEnum (..),
 
     -- * Functions for PEnumData types
@@ -23,6 +23,8 @@ module Plutarch.Extra.IsData (
 --------------------------------------------------------------------------------
 
 import Data.Coerce (coerce)
+import Data.Functor.Identity (Identity (..))
+import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (..))
 import Generics.SOP (
     All,
@@ -56,7 +58,7 @@ import Plutarch.Prelude (
     (#),
  )
 import Plutarch.Unsafe (punsafeCoerce)
-import PlutusLedgerApi.V1 (BuiltinData (BuiltinData))
+import PlutusLedgerApi.V1 (BuiltinData (BuiltinData), UnsafeFromData (unsafeFromBuiltinData))
 import PlutusTx (Data (List), FromData (..), ToData (..), fromData, toData)
 import Prelude
 
@@ -73,7 +75,7 @@ import Prelude
 newtype ProductIsData a = ProductIsData {unProductIsData :: a}
 
 -- | Variant of 'PConstantViaData' using the List repr from 'ProductIsData'
-newtype PConstantViaDataList (h :: Type) (p :: S -> Type) = PConstantViaDataList h
+newtype DerivePConstantViaDataList (h :: Type) (p :: S -> Type) = DerivePConstantViaDataList h
 
 {- |
   Generically convert a Product-Type to 'BuiltinData' with the 'List' repr.
@@ -100,14 +102,34 @@ gProductFromBuiltinData (BuiltinData (List xs)) = do
     productTypeTo <$> hctraverse (Proxy @FromData) (unI . mapKI fromData) prod
 gProductFromBuiltinData _ = Nothing
 
+{- |
+  Unsafe version of 'gProductFromBuiltinData'.
+
+  @since 1.1.0
+-}
+gProductFromBuiltinDataUnsafe ::
+    forall (a :: Type) (repr :: [Type]).
+    (IsProductType a repr, All UnsafeFromData repr) =>
+    BuiltinData ->
+    a
+gProductFromBuiltinDataUnsafe (BuiltinData (List xs)) =
+    let prod = fromJust $ SOP.fromList @repr xs
+     in productTypeTo $
+            runIdentity $
+                hctraverse
+                    (Proxy @UnsafeFromData)
+                    (unI . mapKI (Identity . unsafeFromBuiltinData . BuiltinData))
+                    prod
+gProductFromBuiltinDataUnsafe _ = error "invalid representation"
+
 -- | @since 1.1.0
 instance
     (PlutusTx.FromData h, PlutusTx.ToData h, PLift p) =>
-    PConstantDecl (PConstantViaDataList h p)
+    PConstantDecl (DerivePConstantViaDataList h p)
     where
-    type PConstantRepr (PConstantViaDataList h p) = [PlutusTx.Data]
-    type PConstanted (PConstantViaDataList h p) = p
-    pconstantToRepr (PConstantViaDataList x) = case PlutusTx.toData x of
+    type PConstantRepr (DerivePConstantViaDataList h p) = [PlutusTx.Data]
+    type PConstanted (DerivePConstantViaDataList h p) = p
+    pconstantToRepr (DerivePConstantViaDataList x) = case PlutusTx.toData x of
         (PlutusTx.List xs) -> xs
         _ -> error "ToData repr is not a List!"
     pconstantFromRepr = coerce (PlutusTx.fromData @h . PlutusTx.List)
@@ -115,6 +137,10 @@ instance
 -- | @since 1.1.0
 instance (IsProductType a repr, All ToData repr) => ToData (ProductIsData a) where
     toBuiltinData = coerce (gProductToBuiltinData @a)
+
+-- | @since 1.1.0
+instance (IsProductType a repr, All UnsafeFromData repr) => UnsafeFromData (ProductIsData a) where
+    unsafeFromBuiltinData = coerce (gProductFromBuiltinDataUnsafe @a)
 
 -- | @since 1.1.0
 instance (IsProductType a repr, All FromData repr) => FromData (ProductIsData a) where
@@ -151,6 +177,10 @@ instance (Enum a) => ToData (EnumIsData a) where
 -- | @since 1.1.0
 instance (Enum a) => FromData (EnumIsData a) where
     fromBuiltinData = coerce $ fmap (toEnum @a . fromInteger) . fromBuiltinData @Integer
+
+-- | @since 1.1.0
+instance (Enum a) => UnsafeFromData (EnumIsData a) where
+    unsafeFromBuiltinData = coerce . toEnum @a . fromInteger . unsafeFromBuiltinData @Integer
 
 -- | @since 1.1.0
 instance

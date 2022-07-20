@@ -18,6 +18,8 @@ module Plutarch.Extra.List (
     pisSortedBy,
     pisSorted,
     preplicate,
+    pisUniqBy',
+    pisUniq',
     module Extra,
 ) where
 
@@ -25,6 +27,7 @@ import Data.Kind (Type)
 import Plutarch (
     PCon (pcon),
     PMatch (pmatch),
+    PType,
     S,
     Term,
     pfix,
@@ -234,13 +237,13 @@ pisUniq = phoistAcyclic $ pisUniqBy # eq # comp
     @since 1.1.0
 -}
 pmapMaybe ::
-    forall (a :: S -> Type) (s :: S) list.
-    (PIsListLike list a) =>
+    forall list (a :: S -> Type) (b :: S -> Type) (s :: S).
+    (PIsListLike list a, PIsListLike list b) =>
     Term
         s
-        ( (a :--> PMaybe a)
+        ( (a :--> PMaybe b)
             :--> list a
-            :--> list a
+            :--> list b
         )
 pmapMaybe = phoistAcyclic $
     pfix #$ plam $ \self f l -> pif (pnull # l) pnil $
@@ -365,3 +368,36 @@ preplicate ::
 preplicate = phoistAcyclic $
     pfix #$ plam $ \self count x ->
         pif (count #<= 0) pnil (pcons # x # (self # (count - 1) # x))
+
+{- | Special version of 'pisUniq'', the list elements should have 'PEq' instance.
+
+ @since 1.3.0
+-}
+pisUniq' ::
+    forall (l :: PType -> PType) (a :: PType) (s :: S).
+    (PEq a, PIsListLike l a) =>
+    Term s (l a :--> PBool)
+pisUniq' = phoistAcyclic $ pisUniqBy' # phoistAcyclic (plam (#==))
+
+{- | Return true if all the elements in the given list are unique, given the equalator function.
+   The list is assumed to be ordered.
+
+ @since 1.3.0
+-}
+pisUniqBy' ::
+    forall (l :: PType -> PType) (a :: PType) (s :: S).
+    (PIsListLike l a) =>
+    Term s ((a :--> a :--> PBool) :--> l a :--> PBool)
+pisUniqBy' = phoistAcyclic $
+    plam $ \eq l ->
+        pif (pnull # l) (pconstant True) $
+            go # eq # (phead # l) # (ptail # l)
+  where
+    go :: Term _ ((a :--> a :--> PBool) :--> a :--> l a :--> PBool)
+    go = phoistAcyclic $
+        pfix #$ plam $ \self' eq x xs ->
+            plet (self' # eq) $ \self ->
+                pif (pnull # xs) (pconstant True) $
+                    plet (phead # xs) $ \x' ->
+                        pif (eq # x # x') (pconstant False) $
+                            self # x' #$ ptail # xs
