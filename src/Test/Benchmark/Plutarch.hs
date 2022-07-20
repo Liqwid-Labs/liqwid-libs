@@ -2,6 +2,8 @@ module Test.Benchmark.Plutarch (
   mkTermImplMetaData,
   sampleTerm,
   sampleTerm',
+  sampleTouchTerm,
+  sampleTouchTerm',
 ) where
 
 import Data.Text (Text)
@@ -14,7 +16,8 @@ import Test.Benchmark.Plutus (
   mkScriptImplMetaData,
   sampleScript,
  )
-import Test.Benchmark.Precompile (CompiledTerm, toScript)
+import Test.Benchmark.Precompile (CompiledTerm, toScript, (###~))
+import Test.Benchmark.PTouch (PTouch (ptouch), ptouch')
 
 mkTermImplMetaData ::
   -- | Name of the implementation. Make sure it's unique.
@@ -29,3 +32,9 @@ sampleTerm term = sampleScript $ compile term
 
 sampleTerm' :: CompiledTerm a -> Either (BudgetExceeded PlutusCostAxis) Costs
 sampleTerm' = sampleScript . toScript
+
+sampleTouchTerm :: PTouch a => ClosedTerm a -> Either (BudgetExceeded PlutusCostAxis) Costs
+sampleTouchTerm term = sampleScript $ compile $ ptouch # term
+
+sampleTouchTerm' :: PTouch a => CompiledTerm a -> Either (BudgetExceeded PlutusCostAxis) Costs
+sampleTouchTerm' = sampleScript . toScript . (ptouch' ###~)
