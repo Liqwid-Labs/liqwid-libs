@@ -88,6 +88,7 @@ library
     Plutarch.Extra.Map.Sorted
     Plutarch.Extra.Map.Unsorted
     Plutarch.Extra.Maybe
+    Plutarch.Extra.MultiSig
     Plutarch.Extra.Numeric
     Plutarch.Extra.Other
     Plutarch.Extra.Profunctor
