@@ -51,7 +51,6 @@ import Data.Text.Encoding (encodeUtf8)
 import Data.Vector.Unboxed (Vector)
 import Data.Vector.Unboxed qualified as Vector
 import GHC.Generics (Generic)
-import GHC.Records (HasField)
 import Optics (sequenceOf, traversed, (%%))
 import Optics.TH (makeFieldLabelsNoPrefix)
 import Path (Dir, Path, Rel, parseRelFile, toFilePath, (</>))
@@ -313,13 +312,11 @@ writePerAxisCSVs ::
   ( CostAxis a
   , DefaultOrdered d
   , ToNamedRecord d
-  , ToTitle n
-  , HasField "val" n (AxisMap a [d])
   ) =>
   -- | Output directory path.
   Path Rel Dir ->
-  -- | See the types in 'Test.Benchmark.Common'.
-  n ->
+  -- | The per-axis data.
+  ImplData (AxisMap a [d]) ->
   IO ()
 writePerAxisCSVs dir titled = do
   let AxisMap pairs =

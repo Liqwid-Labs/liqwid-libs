@@ -10,6 +10,7 @@ module Test.Benchmark.Plutus (
   BudgetExceeded (..),
   Costs (..),
   sampleScript,
+  statsByAxis',
   statsByAxis,
 ) where
 
@@ -35,6 +36,7 @@ import PlutusLedgerApi.V1 (
   Script,
  )
 import PlutusLedgerApi.V1.Scripts qualified as Scripts
+import Test.Benchmark.Common (ImplData)
 import Test.Benchmark.Cost (
   AxisMap (AxisMap),
   BudgetExceeded (BudgetExceeded),
@@ -50,6 +52,7 @@ import UntypedPlutusCore.Evaluation.Machine.Cek (
  )
 
 -- TODO add script hash, maybe also git commit hash, mtime
+-- TODO actually make use of this and write to some file
 data ImplMetaData = ImplMetaData
   { name :: Text
   -- ^ Name of the implementation. Make sure it's unique.
@@ -128,10 +131,20 @@ plutusCostsToVecs sampleSize costs =
       (fromIntegral cpu, fromIntegral mem)
 
 -- | Postprocesses 'benchSizes..' output into per-axis statistics.
-statsByAxis ::
+statsByAxis' ::
   [SSample [Either (BudgetExceeded PlutusCostAxis) Costs]] ->
   AxisMap
     PlutusCostAxis
     [SSample (Either (BudgetExceeded PlutusCostAxis) SimpleStats)]
-statsByAxis =
+statsByAxis' =
   samplesToPerAxisStats plutusCostsToVecs vecSimpleStats
+
+-- | Postprocesses 'benchSizes..' output into per-axis statistics.
+statsByAxis ::
+  ImplData [SSample [Either (BudgetExceeded PlutusCostAxis) Costs]] ->
+  ImplData
+    ( AxisMap
+        PlutusCostAxis
+        [SSample (Either (BudgetExceeded PlutusCostAxis) SimpleStats)]
+    )
+statsByAxis = fmap statsByAxis'

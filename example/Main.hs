@@ -3,11 +3,11 @@ module Main (main) where
 import Control.Monad (replicateM)
 import Data.Text (pack)
 import System.Random.Stateful (runStateGen, uniformRM)
-import Test.Benchmark.Common (ImplData (ImplData, val), multiImplData)
+import Test.Benchmark.Common (ImplData (ImplData), multiImplData)
 import Test.Benchmark.Cost (meanVal, rankOnPerAxisStat, writeComparisonPerAxisCSVs, writePerAxisCSVs)
 import Test.Benchmark.Main (benchMain)
 import Test.Benchmark.Plutarch (mkTermImplMetaData, sampleTerm, sampleTerm')
-import Test.Benchmark.Plutus (statsByAxis)
+import Test.Benchmark.Plutus (statsByAxis')
 import Test.Benchmark.Precompile (CompiledTerm, compile', (##))
 import Test.Benchmark.Sized (
   Cardinality (Cardinality),
@@ -52,7 +52,7 @@ main = benchMain $ \dir -> do
   let pfind3 :: CompiledTerm (PBuiltinList PInteger :--> PMaybe PInteger) =
         compile' $ pfind # plam (#== 3)
   stats1 <-
-    ImplData "find 3" . statsByAxis
+    ImplData "find 3" . statsByAxis'
       <$> benchSizesUniversal
         gen
         (\list -> sampleTerm' $ pfind3 ## pconstant list)
@@ -63,7 +63,7 @@ main = benchMain $ \dir -> do
   let pfind4 :: CompiledTerm (PBuiltinList PInteger :--> PMaybe PInteger) =
         compile' $ pfind # plam (#== 4)
   stats2 <-
-    ImplData "find 4" . statsByAxis
+    ImplData "find 4" . statsByAxis'
       <$> benchSizesUniversal
         gen
         (\list -> sampleTerm' $ pfind4 ## pconstant list)
