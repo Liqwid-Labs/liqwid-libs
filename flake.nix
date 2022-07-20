@@ -15,6 +15,7 @@
   inputs.haskell-language-server.flake = false;
 
   inputs.plutarch-quickcheck.url = "github:liqwid-labs/plutarch-quickcheck?rev=a560e12b4809c0f292c96e81189e1b2cf2e7f7eb";
+  inputs.plutarch-context-builder.url = "github:liqwid-labs/plutarch-context-builder/staging";
   inputs.plutarch-numeric.url = "github:liqwid-labs/plutarch-numeric";
 
   outputs = inputs@{ self, nixpkgs, nixpkgs-latest, haskell-nix, plutarch, ... }:
@@ -118,6 +119,7 @@
           "${inputs.plutarch}/plutarch-extra"
           "${inputs.plutarch-quickcheck}"
           "${inputs.plutarch-numeric}"
+          "${inputs.plutarch-context-builder}"
         ]
       );
 
