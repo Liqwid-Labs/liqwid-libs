@@ -25,6 +25,7 @@ module Test.Benchmark.Precompile (
 ) where
 
 import Control.Lens ((^?))
+import Data.Text (Text)
 import Data.Text qualified as Text
 import GHC.Stack (HasCallStack)
 import Plutarch (compile)
@@ -159,7 +160,7 @@ infixl 8 ##~
   CompiledTerm b
 (###) = applyCompiledTerm2
 
-infixl 8 ###
+infixl 7 ###
 
 -- | Alias for 'applyCompiledTerm2\''.
 (###~) ::
@@ -169,22 +170,24 @@ infixl 8 ###
   CompiledTerm b
 (###~) = applyCompiledTerm2'
 
-infixl 8 ###~
+infixl 7 ###~
 
 {- | Error during script evaluation.
 
  Copied from 'Plutarch.Lift' because the data constructors aren't exported there.
+ Also added logs.
 -}
 data LiftError
-  = LiftError_EvalError EvalError
+  = LiftError_EvalError EvalError [Text]
   | LiftError_KnownTypeError KnownTypeError
   | LiftError_FromRepr
   deriving stock (Eq)
 
 {- | Convert a 'CompiledTerm' to the associated Haskell value. Fail otherwise.
-This will fully evaluate the arbitrary closed expression, and convert the resulting value.
+ This will fully evaluate the arbitrary closed expression, and convert the resulting value.
 
-Copied and adapted from 'Plutarch.Lift'.
+ Copied and adapted from 'Plutarch.Lift'.
+ Also added logs.
 -}
 pliftCompiled' :: forall p. PUnsafeLiftDecl p => CompiledTerm p -> Either LiftError (PLifted p)
 pliftCompiled' prog = case evalScript (toScript prog) of
@@ -194,11 +197,12 @@ pliftCompiled' prog = case evalScript (toScript prog) of
         Just h -> Right h
         Nothing -> Left LiftError_FromRepr
       Left e -> Left $ LiftError_KnownTypeError e
-  (Left e, _, _) -> Left $ LiftError_EvalError e
+  (Left e, _, logs) -> Left $ LiftError_EvalError e logs
 
 {- | Like `pliftCompiled'` but throws on failure.
 
- Copied and adapted from 'Plutarch.Lift'.
+ Copied and adapted from 'Plutarch.Lift' (the one from there doesn't show logs
+ and can't work with Scripts).
 -}
 pliftCompiled :: forall p. (HasCallStack, PLift p) => CompiledTerm p -> PLifted p
 pliftCompiled prog = case pliftCompiled' prog of
@@ -209,4 +213,7 @@ pliftCompiled prog = case pliftCompiled' prog of
      in error $
           "plift failed: incorrect type: "
             <> maybe "absurd evaluation failure" show unliftErrMaybe
-  Left (LiftError_EvalError e) -> error $ "plift failed: erring term: " <> show e
+  Left (LiftError_EvalError e logs) ->
+    error $
+      "plift failed: erring term: "
+        <> Text.unpack (Text.unlines $ Text.pack (show e) : logs)
