@@ -33,7 +33,10 @@ import Data.Text qualified as Text
 import GHC.Stack (HasCallStack)
 import Plutarch (compile)
 import Plutarch.Evaluate (EvalError, evalScript)
-import Plutarch.Lift (PConstantDecl (pconstantFromRepr), PUnsafeLiftDecl (PLifted))
+import Plutarch.Lift (
+  PConstantDecl (pconstantFromRepr),
+  PUnsafeLiftDecl (PLifted),
+ )
 import PlutusCore.Builtin (KnownTypeError, readKnownConstant)
 import PlutusCore.Evaluation.Machine.Exception (_UnliftingErrorE)
 import PlutusLedgerApi.V1.Scripts (Script (Script, unScript))
@@ -68,11 +71,12 @@ eval s =
 -- | Type-safe wrapper for compiled Plutarch functions.
 newtype CompiledTerm (a :: S -> Type) = CompiledTerm Script
 
--- | Compile a closed Plutarch 'Term' to a 'CompiledTerm'.
---
--- Beware, the Script inside contains everything it needs. You can end up with
--- multiple copies of the same helper function through compiled terms (including
--- RHS terms compiled by '##' and '##~').
+{- | Compile a closed Plutarch 'Term' to a 'CompiledTerm'.
+
+ Beware, the Script inside contains everything it needs. You can end up with
+ multiple copies of the same helper function through compiled terms (including
+ RHS terms compiled by '##' and '##~').
+-}
 compile' ::
   forall (a :: S -> Type).
   (forall (s :: S). Term s a) ->
@@ -194,7 +198,8 @@ data LiftError
 
  This will fully evaluate the compiled term, and convert the resulting value.
 -}
-pliftCompiled' :: forall p. PUnsafeLiftDecl p => CompiledTerm p -> Either LiftError (PLifted p)
+pliftCompiled' ::
+  forall p. PUnsafeLiftDecl p => CompiledTerm p -> Either LiftError (PLifted p)
 pliftCompiled' prog = case evalScript (toScript prog) of
   (Right (unScript -> UplcType.Program _ _ term), _, _) ->
     case readKnownConstant term of
@@ -205,10 +210,15 @@ pliftCompiled' prog = case evalScript (toScript prog) of
   (Left e, _, logs) -> Left $ LiftError_EvalError e logs
 
 -- | Like `pliftCompiled'` but throws on failure.
-pliftCompiled :: forall p. (HasCallStack, PLift p) => CompiledTerm p -> PLifted p
+pliftCompiled ::
+  forall p.
+  (HasCallStack, PLift p) =>
+  CompiledTerm p ->
+  PLifted p
 pliftCompiled prog = case pliftCompiled' prog of
   Right x -> x
-  Left LiftError_FromRepr -> error "plift failed: pconstantFromRepr returned 'Nothing'"
+  Left LiftError_FromRepr ->
+    error "plift failed: pconstantFromRepr returned 'Nothing'"
   Left (LiftError_KnownTypeError e) ->
     let unliftErrMaybe = e ^? _UnliftingErrorE
      in error $

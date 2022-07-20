@@ -3,7 +3,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE NoFieldSelectors #-}
 
--- | Benchmarking with a focus on running on many different input sizes and inputs.
+{- | Benchmarking with a focus on running on many different input sizes and
+ inputs.
+-}
 module Test.Benchmark.Sized (
   SSample (..),
   Cardinality (..),
@@ -16,7 +18,14 @@ module Test.Benchmark.Sized (
 import Control.Monad (filterM, forM, replicateM)
 import Control.Monad.ST.Class (MonadST, liftST)
 import Control.Monad.State.Strict (StateT)
-import Data.Csv (DefaultOrdered (headerOrder), ToNamedRecord, header, namedRecord, toNamedRecord, (.=))
+import Data.Csv (
+  DefaultOrdered (headerOrder),
+  ToNamedRecord,
+  header,
+  namedRecord,
+  toNamedRecord,
+  (.=),
+ )
 import Data.HashTable.ST.Basic qualified as HashTable
 import Data.Hashable (Hashable)
 import Data.Maybe (isNothing)
@@ -218,7 +227,9 @@ benchInputSizeUniversal
             else
               ( desiredSampleSizePerInputSize
               , if coverage > Just 0.5
-                  then -- coverage close to 1 would have extreme slowdown if we didn't do this
+                  then -- coverage close to 1 would have extreme slowdown if we
+                  -- didn't do this (shoutout to fourmolu for this horrible
+                  -- formatting)
 
                     genRandomSubset
                       card

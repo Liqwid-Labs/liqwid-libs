@@ -13,7 +13,9 @@ import Test.QuickCheck (arbitrary)
 import Test.QuickCheck.Gen (Gen (MkGen), sized)
 import Test.QuickCheck.Random (mkQCGen)
 
--- | Converts a QuickCheck Gen to a pure function in terms of System.Random.RandomGen
+{- | Converts a QuickCheck Gen to a pure function in terms of
+ System.Random.RandomGen
+-}
 genToRand ::
   forall (a :: Type) (g :: Type).
   RandomGen g =>
@@ -25,7 +27,9 @@ genToRand (MkGen runQcGen) size g = runStateGen g $ \stateGen -> do
   qcGen <- mkQCGen <$> uniformM stateGen
   pure $ runQcGen qcGen size
 
--- | Converts a pure function in terms of System.Random.RandomGen to a QuickCheck Gen
+{- | Converts a pure function in terms of System.Random.RandomGen to a
+ QuickCheck Gen
+-}
 randToGen ::
   forall (a :: Type).
   (forall (g :: Type). RandomGen g => Int -> g -> (a, g)) ->

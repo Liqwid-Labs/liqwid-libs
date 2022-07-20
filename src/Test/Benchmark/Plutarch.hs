@@ -13,6 +13,7 @@ import Control.Monad.ST.Class (MonadST)
 import Data.Hashable (Hashable)
 import Data.Text (Text)
 import Plutarch (compile)
+import System.Random (RandomGen)
 import Test.Benchmark.Common (ImplData (..))
 import Test.Benchmark.PTouch (PTouch (ptouch), ptouch')
 import Test.Benchmark.Plutus (
@@ -24,8 +25,13 @@ import Test.Benchmark.Plutus (
   sampleScript,
  )
 import Test.Benchmark.Precompile (CompiledTerm, compile', toScript, (###~))
-import Test.Benchmark.Sized (SSample, SUniversalGen, benchSizesUniversal, benchSizesRandom, benchSizesRandomNonUniform)
-import System.Random (RandomGen)
+import Test.Benchmark.Sized (
+  SSample,
+  SUniversalGen,
+  benchSizesRandom,
+  benchSizesRandomNonUniform,
+  benchSizesUniversal,
+ )
 
 mkTermImplMetaData ::
   -- | Name of the implementation. Make sure it's unique.
@@ -41,10 +47,16 @@ sampleTerm term = sampleScript $ compile term
 sampleTerm' :: CompiledTerm a -> Either (BudgetExceeded PlutusCostAxis) Costs
 sampleTerm' = sampleScript . toScript
 
-sampleTouchTerm :: PTouch a => ClosedTerm a -> Either (BudgetExceeded PlutusCostAxis) Costs
+sampleTouchTerm ::
+  PTouch a =>
+  ClosedTerm a ->
+  Either (BudgetExceeded PlutusCostAxis) Costs
 sampleTouchTerm term = sampleScript $ compile $ ptouch # term
 
-sampleTouchTerm' :: PTouch a => CompiledTerm a -> Either (BudgetExceeded PlutusCostAxis) Costs
+sampleTouchTerm' ::
+  PTouch a =>
+  CompiledTerm a ->
+  Either (BudgetExceeded PlutusCostAxis) Costs
 sampleTouchTerm' = sampleScript . toScript . (ptouch' ###~)
 
 -- | See 'benchSizesUniversal'.
@@ -89,8 +101,7 @@ pbenchSizesUniversal
     where
       pfun' = compile' pfun
 
-{- | See 'benchSizesRandom'.
--}
+-- | See 'benchSizesRandom'.
 pbenchSizesRandom ::
   forall (a :: Type) (m :: Type -> Type) (f :: S -> Type) (b :: S -> Type).
   ( Eq a
@@ -121,15 +132,15 @@ pbenchSizesRandom
   sampleSizePerInputSize
   sizes =
     ImplData funName
-      <$> benchSizesRandom randomGen
+      <$> benchSizesRandom
+        randomGen
         (sampleTouchTerm' . applyPFun pfun')
         sampleSizePerInputSize
         sizes
     where
       pfun' = compile' pfun
 
-{- | See 'benchSizesRandomNonUniform'.
--}
+-- | See 'benchSizesRandomNonUniform'.
 pbenchSizesRandomNonUniform ::
   forall (a :: Type) (m :: Type -> Type) (f :: S -> Type) (b :: S -> Type).
   ( Eq a
@@ -160,7 +171,8 @@ pbenchSizesRandomNonUniform
   sampleSizePerInputSize
   sizes =
     ImplData funName
-      <$> benchSizesRandomNonUniform randomGen
+      <$> benchSizesRandomNonUniform
+        randomGen
         (sampleTouchTerm' . applyPFun pfun')
         sampleSizePerInputSize
         sizes

@@ -4,7 +4,12 @@ import Control.Monad (replicateM)
 import Data.Text (pack)
 import System.Random.Stateful (runStateGen, uniformRM)
 import Test.Benchmark.Common (ImplData (ImplData), multiImplData)
-import Test.Benchmark.Cost (meanVal, rankOnPerAxisStat, writeComparisonPerAxisCSVs, writePerAxisCSVs)
+import Test.Benchmark.Cost (
+  meanVal,
+  rankOnPerAxisStat,
+  writeComparisonPerAxisCSVs,
+  writePerAxisCSVs,
+ )
 import Test.Benchmark.Main (benchMain)
 import Test.Benchmark.Plutarch (mkTermImplMetaData, sampleTerm, sampleTerm')
 import Test.Benchmark.Plutus (statsByAxis')

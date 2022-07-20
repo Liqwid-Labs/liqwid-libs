@@ -19,7 +19,8 @@ import Optics.TH (makeFieldLabelsNoPrefix)
 class ToTitle a where
   toTitle :: a -> Text
 
--- | A value tagged with the name of the implementation that it is associated with.
+-- | A value tagged with the name of the implementation that it is associated
+-- with.
 data ImplData a = ImplData
   { name :: Text
   -- ^ the name of the implementation
@@ -37,7 +38,8 @@ instance
   ToField v =>
   ToField (ImplData v)
   where
-  toField implData = encodeUtf8 (toTitle implData) <> " (" <> toField implData.val <> ")"
+  toField implData =
+    encodeUtf8 (toTitle implData) <> " (" <> toField implData.val <> ")"
 
 -- | A value associated with multiple implementations.
 data MultiImplData a = MultiImplData

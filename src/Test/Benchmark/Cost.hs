@@ -247,65 +247,69 @@ rankOnPerAxisStat ::
     [ImplData (AxisMap axis [SSample (Either (BudgetExceeded axis) stats)])] ->
   MultiImplComparisonData
     (AxisMap axis [SSample [ImplData (Either (BudgetExceeded axis) s)]])
-rankOnPerAxisStat comparisonName sel MultiImplData {name, implNames, val = statsPerImpl} =
-  MultiImplComparisonData {name, implNames, comparisonName, val = sorted}
-  where
-    -- raise the axis mapping to the top level
-    raisedMap ::
-      AxisMap axis [ImplData [SSample (Either (BudgetExceeded axis) stats)]]
-    raisedMap = sequenceOf (traversed %% traversed) statsPerImpl
+rankOnPerAxisStat
+  comparisonName
+  sel
+  MultiImplData {name, implNames, val = statsPerImpl} =
+    MultiImplComparisonData {name, implNames, comparisonName, val = sorted}
+    where
+      -- raise the axis mapping to the top level
+      raisedMap ::
+        AxisMap axis [ImplData [SSample (Either (BudgetExceeded axis) stats)]]
+      raisedMap = sequenceOf (traversed %% traversed) statsPerImpl
 
-    -- lower the impl name to each SSample
-    loweredName ::
-      AxisMap axis [ImplData (SSample (Either (BudgetExceeded axis) stats))]
-    loweredName = concat <$> (fmap . fmap) sequence raisedMap
+      -- lower the impl name to each SSample
+      loweredName ::
+        AxisMap axis [ImplData (SSample (Either (BudgetExceeded axis) stats))]
+      loweredName = concat <$> (fmap . fmap) sequence raisedMap
 
-    -- swap the impl name into the SSample.
-    -- Now we have multiple SSamples for each input size in the per-axis list.
-    swapped ::
-      AxisMap axis [SSample (ImplData (Either (BudgetExceeded axis) stats))]
-    swapped = (fmap . fmap) sequenceSamp loweredName
-    -- a workaround for Applicative on SSample not being possible
-    sequenceSamp ::
-      forall (a :: Type). ImplData (SSample a) -> SSample (ImplData a)
-    sequenceSamp implData =
-      implData.val
-        { sample =
-            ImplData
-              { name = implData.name
-              , val = implData.val.sample
+      -- swap the impl name into the SSample.
+      -- Now we have multiple SSamples for each input size in the per-axis list.
+      swapped ::
+        AxisMap axis [SSample (ImplData (Either (BudgetExceeded axis) stats))]
+      swapped = (fmap . fmap) sequenceSamp loweredName
+      -- a workaround for Applicative on SSample not being possible
+      sequenceSamp ::
+        forall (a :: Type). ImplData (SSample a) -> SSample (ImplData a)
+      sequenceSamp implData =
+        implData.val
+          { sample =
+              ImplData
+                { name = implData.name
+                , val = implData.val.sample
+                }
+          }
+
+      -- We merge the SSamples for each input size, keeping the minimum coverage
+      -- and sample size values.
+      merged ::
+        AxisMap axis [SSample [ImplData (Either (BudgetExceeded axis) stats)]]
+      merged = fmap (fmap mergeSSamples . groupAllWith (.inputSize)) swapped
+
+      mergeSSamples :: forall (a :: Type). NonEmpty (SSample a) -> SSample [a]
+      mergeSSamples (s0 :| ss) = foldl' mergeTwo (fmap (: []) s0) ss
+      mergeTwo :: forall (a :: Type). SSample [a] -> SSample a -> SSample [a]
+      mergeTwo sAccum s =
+        if sAccum.inputSize /= s.inputSize
+          then error "tried to merge SSamples with differing input size"
+          else
+            SSample
+              { inputSize = sAccum.inputSize
+              , sampleSize = min sAccum.sampleSize s.sampleSize
+              , coverage = min sAccum.coverage s.coverage
+              , sample = s.sample : sAccum.sample
               }
-        }
 
-    -- We merge the SSamples for each input size, keeping the minimum coverage
-    -- and sample size values.
-    merged :: AxisMap axis [SSample [ImplData (Either (BudgetExceeded axis) stats)]]
-    merged = fmap (fmap mergeSSamples . groupAllWith (.inputSize)) swapped
-
-    mergeSSamples :: forall (a :: Type). NonEmpty (SSample a) -> SSample [a]
-    mergeSSamples (s0 :| ss) = foldl' mergeTwo (fmap (: []) s0) ss
-    mergeTwo :: forall (a :: Type). SSample [a] -> SSample a -> SSample [a]
-    mergeTwo sAccum s =
-      if sAccum.inputSize /= s.inputSize
-        then error "tried to merge SSamples with differing input size"
-        else
-          SSample
-            { inputSize = sAccum.inputSize
-            , sampleSize = min sAccum.sampleSize s.sampleSize
-            , coverage = min sAccum.coverage s.coverage
-            , sample = s.sample : sAccum.sample
-            }
-
-    -- Use sel to focus on a single stat
-    selected = (fmap . fmap . fmap . fmap . fmap . fmap) sel merged
-    -- Sort the list in each SSample by this stat
-    sorted = (fmap . fmap . fmap) (sortBy (cmp `on` (.val))) selected
-    -- BudgetExceeded is always considered bigger, compared to an actual value
-    -- (contrary to how Either compares by default)
-    cmp (Left _) (Right _) = GT
-    cmp (Right _) (Left _) = LT
-    cmp (Left _) (Left _) = EQ
-    cmp (Right a) (Right b) = compare a b
+      -- Use sel to focus on a single stat
+      selected = (fmap . fmap . fmap . fmap . fmap . fmap) sel merged
+      -- Sort the list in each SSample by this stat
+      sorted = (fmap . fmap . fmap) (sortBy (cmp `on` (.val))) selected
+      -- BudgetExceeded is always considered bigger, compared to an actual value
+      -- (contrary to how Either compares by default)
+      cmp (Left _) (Right _) = GT
+      cmp (Right _) (Left _) = LT
+      cmp (Left _) (Left _) = EQ
+      cmp (Right a) (Right b) = compare a b
 
 -- | Write per-axis titled data to CSV files.
 writePerAxisCSVs ::
@@ -323,7 +327,8 @@ writePerAxisCSVs dir titled = do
         encodeDefaultOrderedByNameWith defaultEncodeOptions {encUseCrLf = False}
           <$> titled.val
   forM_ pairs $ \(axis, csvData) -> do
-    file <- parseRelFile . unpack $ toTitle titled <> " " <> axisName axis <> ".csv"
+    file <-
+      parseRelFile . unpack $ toTitle titled <> " " <> axisName axis <> ".csv"
     ByteString.writeFile (toFilePath $ dir </> file) csvData
 
 {- | Write per-axis implementation comparison data to CSV files.
@@ -349,5 +354,6 @@ writeComparisonPerAxisCSVs dir compData = do
         headerOrder (undefined :: SSample ())
           <> header (map (fromString . show) [1 .. (length compData.implNames)])
   forM_ pairs $ \(axis, csvData) -> do
-    file <- parseRelFile . unpack $ toTitle compData <> " " <> axisName axis <> ".csv"
+    file <-
+      parseRelFile . unpack $ toTitle compData <> " " <> axisName axis <> ".csv"
     ByteString.writeFile (toFilePath $ dir </> file) csvData

@@ -1,4 +1,5 @@
-{- | Workaround for accidental lazyness in Scott-encoded results of functions being benchmarked.
+{- | Workaround for accidental lazyness in Scott-encoded results of functions
+ being benchmarked.
 
 This won't be needed in Plutarch 1.2.
 -}
