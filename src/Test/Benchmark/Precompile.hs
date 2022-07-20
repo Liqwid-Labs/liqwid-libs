@@ -8,7 +8,10 @@
 -}
 module Test.Benchmark.Precompile (
   applyScript,
-  CompiledTerm,
+  -- Exporting the data constructor on purpose, since users might want to
+  -- deserialize compiled terms.  If someone wants to subvert type safety using
+  -- Scripts, they can do that regardless of this export.
+  CompiledTerm (..),
   compile',
   toScript,
   applyCompiledTerm,
@@ -66,6 +69,10 @@ eval s =
 newtype CompiledTerm (a :: S -> Type) = CompiledTerm Script
 
 -- | Compile a closed Plutarch 'Term' to a 'CompiledTerm'.
+--
+-- Beware, the Script inside contains everything it needs. You can end up with
+-- multiple copies of the same helper function through compiled terms (including
+-- RHS terms compiled by '##' and '##~').
 compile' ::
   forall (a :: S -> Type).
   (forall (s :: S). Term s a) ->
@@ -172,11 +179,11 @@ infixl 7 ###
 
 infixl 7 ###~
 
-{- | Error during script evaluation.
+--  Copied and adapted the stuff below from 'Plutarch.Lift'. Including
+--  'LiftError', because the data constructors aren't exported there. Also
+--  added trace messages in the exceptions.
 
- Copied from 'Plutarch.Lift' because the data constructors aren't exported there.
- Also added logs.
--}
+-- | Error during script evaluation.
 data LiftError
   = LiftError_EvalError EvalError [Text]
   | LiftError_KnownTypeError KnownTypeError
@@ -184,10 +191,8 @@ data LiftError
   deriving stock (Eq)
 
 {- | Convert a 'CompiledTerm' to the associated Haskell value. Fail otherwise.
- This will fully evaluate the arbitrary closed expression, and convert the resulting value.
 
- Copied and adapted from 'Plutarch.Lift'.
- Also added logs.
+ This will fully evaluate the compiled term, and convert the resulting value.
 -}
 pliftCompiled' :: forall p. PUnsafeLiftDecl p => CompiledTerm p -> Either LiftError (PLifted p)
 pliftCompiled' prog = case evalScript (toScript prog) of
@@ -199,11 +204,7 @@ pliftCompiled' prog = case evalScript (toScript prog) of
       Left e -> Left $ LiftError_KnownTypeError e
   (Left e, _, logs) -> Left $ LiftError_EvalError e logs
 
-{- | Like `pliftCompiled'` but throws on failure.
-
- Copied and adapted from 'Plutarch.Lift' (the one from there doesn't show logs
- and can't work with Scripts).
--}
+-- | Like `pliftCompiled'` but throws on failure.
 pliftCompiled :: forall p. (HasCallStack, PLift p) => CompiledTerm p -> PLifted p
 pliftCompiled prog = case pliftCompiled' prog of
   Right x -> x
