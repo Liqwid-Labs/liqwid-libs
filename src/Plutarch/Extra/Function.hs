@@ -3,10 +3,11 @@ module Plutarch.Extra.Function (
     pidentity,
     papply,
     pon,
+    pbuiltinUncurry,
 ) where
 
 import Data.Kind (Type)
-import Plutarch (S, Term, phoistAcyclic, plam, (#), type (:-->))
+import Plutarch.Prelude (PAsData, PBuiltinPair, PIsData, S, Term, pfromData, pfstBuiltin, phoistAcyclic, plam, psndBuiltin, (#), type (:-->))
 
 -- | @since 1.0.0
 pconst ::
@@ -37,3 +38,19 @@ pon = phoistAcyclic $
         let a = g # x
             b = g # y
          in f # a # b
+
+{- | Make uncurried function with Haskell function with two arguments.
+     @since 1.3.0
+-}
+pbuiltinUncurry ::
+    forall (a :: S -> Type) (b :: S -> Type) (c :: S -> Type) (s :: S).
+    ( PIsData a
+    , PIsData b
+    ) =>
+    (Term s a -> Term s b -> Term s c) ->
+    Term s (PBuiltinPair (PAsData a) (PAsData b)) ->
+    Term s c
+pbuiltinUncurry f p =
+    let p1 = pfromData $ pfstBuiltin # p
+        p2 = pfromData $ psndBuiltin # p
+     in f p1 p2
