@@ -55,6 +55,11 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### Added
 
+- Convenience wrapper for `DerivePNewtype`: `DerivePNewtype'`, `DerivePConstantViaNewtype'`
+- Encode product types as lists: `ProductIsData`, `DerivePConstantViaDataList`
+- Encode enum types as integers: `EnumIsData`, `PEnumData` and `DerivePConstantViaEnum`
+- Plutarch helper functions: `pmatchEnum`, `pmatchEnumFromData`
+
 #### AssocMap (`Plutarch.Extra.Map`)
 
 - `pupdate`
@@ -122,6 +127,10 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 - `ptryFindDatum`
 - `pfindDatum`
 - `pfindTxInByTxOutRef`
+
+### Modified
+
+- Rename `PConstantViaDataList` to `DerivePConstantViaDataList`
 
 ## 1.0.0 -- 2022-05-24
 
