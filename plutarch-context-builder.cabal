@@ -14,7 +14,7 @@ license:
 -- license-file:       LICENSE
 author:             Koz Ross, Seungheon Oh
 maintainer:
-  Koz Ross <koz@mlabs.city>, Seungheon Oh <seungheon.ooh@gmail.com>   
+  Koz Ross <koz@mlabs.city>, Seungheon Oh <seungheon.ooh@gmail.com>  
 
 copyright:          (C) 2022 Liqwid Labs
 category:           Plutarch
@@ -109,5 +109,6 @@ test-suite sample
   main-is:        Main.hs
   other-modules:
     MintingBuilder
-    SpendingBuilder    
+    SpendingBuilder
+
   hs-source-dirs: sample/
