@@ -179,6 +179,8 @@ infixl 4 #<$
     Term s (f b)
 (#$>) = flip (#<$)
 
+infixl 4 #$>
+
 {- | Infix, 'Term'-level version of 'pfmap'.
 
  @since 1.0.0
