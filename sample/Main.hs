@@ -14,6 +14,8 @@ main = do
     defaultMain . testGroup "Sample Tests" $
         [ testCase "TxInfo matches with both Minting and Spending Script Purposes" $
             (scriptContextTxInfo <$> a) @?= (scriptContextTxInfo <$> b)
+        , testCase "TxInfo from TxInfoBuilder should also match" $
+            (scriptContextTxInfo <$> a) @?= c
         , SpendingBuilder.specs
         , MintingBuilder.specs
         ]
@@ -25,6 +27,7 @@ main = do
                 <> withSpendingUTXO
                     (pubKey "aabb" . withValue (singleton "cc" "hello" 123))
             )
+    c = buildTxInfo generalSample
 
 generalSample :: (Monoid a, Builder a) => a
 generalSample =

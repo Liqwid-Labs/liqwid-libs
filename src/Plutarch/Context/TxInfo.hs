@@ -40,7 +40,9 @@ import PlutusLedgerApi.V1 (
     ),
  )
 
-buildTxInfo :: Builder a => a -> Either String TxInfo
+type TxInfoBuilder = BaseBuilder
+
+buildTxInfo :: TxInfoBuilder -> Either String TxInfo
 buildTxInfo (unpack -> builder) = flip runContT Right $ do
     let bb = unpack builder
 
@@ -61,7 +63,7 @@ buildTxInfo (unpack -> builder) = flip runContT Right $ do
 
     return txinfo
 
-buildTxInfoUnsafe :: Builder a => a -> TxInfo
+buildTxInfoUnsafe :: TxInfoBuilder -> TxInfo
 buildTxInfoUnsafe = either error id . buildTxInfo
 
 spends :: TxInfo -> [ScriptContext]
