@@ -17,7 +17,10 @@ module Plutarch.Context.Spending (
     SpendingBuilder (..),
 
     -- * Inputs
-    withSpending,
+    withSpendingUTXO,
+    withSpendingOutRef,
+    withSpendingOutRefId,
+    withSpendingOutRefIdx,
 
     -- * builder
     buildSpending,
@@ -26,33 +29,16 @@ module Plutarch.Context.Spending (
 
 import Control.Monad.Cont (ContT (runContT), MonadTrans (lift))
 import Data.Foldable (Foldable (toList))
-import Plutarch.Context.Base -- (
---    BaseBuilder (bbDatums, bbInputs, bbMints, bbOutputs, bbSignatures),
---    Builder (..),
---    UTXO,
---    scriptUTXOGeneral,
---    scriptUTXOGeneralWith,
---    yieldBaseTxInfo,
---    yieldExtraDatums,
---    yieldInInfoDatums,
---    yieldMint,
---    yieldOutDatums,
--- )
+import Plutarch.Context.Base
 
 import PlutusLedgerApi.V1 (Credential (..))
-import PlutusLedgerApi.V1.Contexts (
-    ScriptContext (ScriptContext),
-    ScriptPurpose (Spending),
-    TxInfo (
-        txInfoData,
-        txInfoInputs,
-        txInfoMint,
-        txInfoOutputs,
-        txInfoSignatories
-    ),
-    txInInfoOutRef,
-    txInInfoResolved,
- )
+import PlutusLedgerApi.V1.Contexts
+
+data ValidatorInputIdentifier
+    = ValidatorUTXO UTXO
+    | ValidatorOutRef TxOutRef
+    | ValidatorOutRefId TxId
+    | ValidatorOutRefIdx Integer
 
 {- | A context builder for spending. Corresponds broadly to validators, and to
  'PlutusLedgerApi.V1.Contexts.Spending' specifically.
@@ -61,12 +47,8 @@ import PlutusLedgerApi.V1.Contexts (
 -}
 data SpendingBuilder = SB
     { sbInner :: BaseBuilder
-    , sbValidatorInput :: Maybe UTXO
+    , sbValidatorInput :: Maybe ValidatorInputIdentifier
     }
-    deriving stock
-        ( -- | @since 1.0.0
-          Show
-        )
 
 -- | @since 1.1.0
 instance Builder SpendingBuilder where
@@ -77,20 +59,84 @@ instance Builder SpendingBuilder where
 instance Semigroup SpendingBuilder where
     SB inner _ <> SB inner' (Just vin') =
         SB (inner <> inner') $ Just vin'
-    SB inner vin <> SB inner' Nothing =
-        SB (inner <> inner') vin
+    SB inner vInRef <> SB inner' Nothing =
+        SB (inner <> inner') vInRef
 
 -- | @since 1.1.0
 instance Monoid SpendingBuilder where
     mempty = SB mempty Nothing
 
-withSpending ::
+{- | Set Validator Input with given UTXO. Note, the given UTXO should
+   exist in the inputs, otherwise the builder would fail.
+
+ @since 2.0.0
+-}
+withSpendingUTXO ::
     (UTXO -> UTXO) ->
     SpendingBuilder
-withSpending f =
+withSpendingUTXO f =
     mempty
-        { sbValidatorInput = Just $ f (UTXO (PubKeyCredential "") mempty Nothing Nothing Nothing)
+        { sbValidatorInput =
+            Just . ValidatorUTXO $ f (UTXO (PubKeyCredential "") mempty Nothing Nothing Nothing)
         }
+
+{- | Set Validator Input with given TxOutRef. Note, input with given
+   TxOutRef should exist, otherwise the builder would fail.
+
+ @since 2.0.0
+-}
+withSpendingOutRef ::
+    TxOutRef ->
+    SpendingBuilder
+withSpendingOutRef outref =
+    mempty
+        { sbValidatorInput =
+            Just . ValidatorOutRef $ outref
+        }
+
+{- | Set Validator Input with given TxOutRefId. Note, input with given
+   TxOutRefId should exist, otherwise the builder would fail.
+
+ @since 2.0.0
+-}
+withSpendingOutRefId ::
+    TxId ->
+    SpendingBuilder
+withSpendingOutRefId tid =
+    mempty
+        { sbValidatorInput =
+            Just . ValidatorOutRefId $ tid
+        }
+
+{- | Set Validator Input with given TxOutRefIdx. Note, input with given
+   TxOutRefIdx should exist, otherwise the builder would fail.
+
+ @since 2.0.0
+-}
+withSpendingOutRefIdx ::
+    Integer ->
+    SpendingBuilder
+withSpendingOutRefIdx tidx =
+    mempty
+        { sbValidatorInput =
+            Just . ValidatorOutRefIdx $ tidx
+        }
+
+yieldValidatorInput ::
+    [TxInInfo] ->
+    ValidatorInputIdentifier ->
+    ContT a (Either String) TxOutRef
+yieldValidatorInput ins = \case
+    ValidatorUTXO utxo -> go txInInfoResolved (utxoToTxOut utxo)
+    ValidatorOutRef outref -> go txInInfoOutRef outref
+    ValidatorOutRefId tid -> go (txOutRefId . txInInfoOutRef) tid
+    ValidatorOutRefIdx tidx -> go (txOutRefIdx . txInInfoOutRef) tidx
+  where
+    go :: (Eq b) => (TxInInfo -> b) -> b -> ContT c (Either String) TxOutRef
+    go f x =
+        case filter (\(f -> y) -> y == x) ins of
+            [] -> lift $ Left "Given validator input identifier does not exist in inputs."
+            (r : _) -> return $ txInInfoOutRef r
 
 {- | Builds @ScriptContext@ according to given configuration and
  @SpendingBuilder@.
@@ -107,7 +153,7 @@ buildSpending ::
 buildSpending builder = flip runContT Right $
     case sbValidatorInput builder of
         Nothing -> lift $ Left "No validator input specified"
-        Just vInUTXO -> do
+        Just vInIden -> do
             let bb = unpack builder
 
             (ins, inDat) <- yieldInInfoDatums (bbInputs bb) builder
@@ -115,6 +161,7 @@ buildSpending builder = flip runContT Right $
             mintedValue <- yieldMint (bbMints bb)
             extraDat <- yieldExtraDatums (bbDatums bb)
             base <- yieldBaseTxInfo builder
+            vInRef <- yieldValidatorInput ins vInIden
 
             let txinfo =
                     base
@@ -124,11 +171,7 @@ buildSpending builder = flip runContT Right $
                         , txInfoMint = mintedValue
                         , txInfoSignatories = toList $ bbSignatures bb
                         }
-                spendingInInfo = filter (\(txInInfoResolved -> x) -> x == utxoToTxOut vInUTXO) ins
-
-            case spendingInInfo of
-                [] -> lift $ Left "UTXO Input not found"
-                (x : _) -> return $ ScriptContext txinfo (Spending (txInInfoOutRef x))
+            return $ ScriptContext txinfo (Spending vInRef)
 
 -- | Builds spending context; it throwing error when builder fails.
 buildSpendingUnsafe ::

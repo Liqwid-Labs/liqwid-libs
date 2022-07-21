@@ -4,6 +4,7 @@ import GHC.IO.Encoding
 import qualified MintingBuilder
 import Plutarch.Context
 import PlutusLedgerApi.V1
+import qualified SpendingBuilder
 import Test.Tasty (defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 
@@ -13,14 +14,15 @@ main = do
     defaultMain . testGroup "Sample Tests" $
         [ testCase "TxInfo matches with both Minting and Spending Script Purposes" $
             (scriptContextTxInfo <$> a) @?= (scriptContextTxInfo <$> b)
+        , SpendingBuilder.specs
         , MintingBuilder.specs
         ]
   where
-    a = buildMinting generalSample{mbMintingCS = Just "aaaa"}
+    a = buildMinting (generalSample <> withMinting "aaaa")
     b =
         buildSpending
             ( generalSample
-                <> withSpending
+                <> withSpendingUTXO
                     (pubKey "aabb" . withValue (singleton "cc" "hello" 123))
             )
 
