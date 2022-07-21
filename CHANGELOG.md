@@ -14,6 +14,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 - `pfindOutputsToAddress`, finds all TxOuts sent to an Address.
 - `pfindTxOutDatum`, finds the data corresponding to a TxOut, if there is one.
 - `phasOnlyOneTokenOfCurrencySymbol`, checks if entire value only contain one token of given currency symbol.
+- `pon`, mirroring `Data.Function.on`
 
 ### Modified
 
