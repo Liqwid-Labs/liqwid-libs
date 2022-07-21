@@ -32,6 +32,7 @@ import Test.Benchmark.Sized (
   benchSizesRandomCached,
   benchAllSizesUniform,
  )
+import Control.Monad.IO.Class (MonadIO)
 
 mkTermImplMetaData ::
   -- | Name of the implementation. Make sure it's unique.
@@ -67,6 +68,7 @@ pbenchAllSizesUniform ::
   , Show a
   , Hashable a
   , MonadST m
+  , MonadIO m
   , PTouch b
   ) =>
   -- | Size-dependent input domain generator.

@@ -16,6 +16,7 @@ module Test.Benchmark.Sized (
 ) where
 
 import Control.Monad (filterM, forM, replicateM)
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.ST.Class (MonadST, liftST)
 import Control.Monad.State.Strict (StateT)
 import Data.Csv (
@@ -28,7 +29,8 @@ import Data.Csv (
  )
 import Data.HashTable.ST.Basic qualified as HashTable
 import Data.Hashable (Hashable)
-import Data.Maybe (isNothing)
+import Data.IORef (newIORef, readIORef, writeIORef)
+import Data.Maybe (fromMaybe, isNothing)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Optics.TH (makeFieldLabelsNoPrefix)
@@ -78,6 +80,15 @@ data Cardinality
 
 makeFieldLabelsNoPrefix ''Cardinality
 
+countCardinalityUpTo :: Int -> [a] -> Cardinality
+countCardinalityUpTo lim xs = go xs 0
+  where
+    go [] c = Cardinality $ fromIntegral c
+    go (_ : xs) c =
+      if c >= lim
+        then HugeCardinality
+        else go xs (c + 1)
+
 {- | Universal size-dependent input generator.
 
  "Universal" relating to small and large input sizes.
@@ -90,14 +101,18 @@ makeFieldLabelsNoPrefix ''Cardinality
  to generate each possible input value only once.
 -}
 data SUniversalGen (a :: Type) = SUniversalGen
-  { cardinalityOfSize :: Int -> Cardinality
+  { cardinalityOfSize :: Maybe (Int -> Cardinality)
   -- ^ Number of possible inputs of a given input size
   --
   -- This is used to decide between the two generators below, depending
   -- on the desired sample size.
   --
-  -- 'HugeDomainCardinality' is interpreted as "trust me, it's more than the
-  -- desired sample size at this input size". If you are wrong, that might cause
+  -- If this is not given, the 'exhaustiveGen' output is counted up to 130% of
+  -- the desired sample size, at which point the count gives up and assumes
+  -- 'HugeCardinality'.
+  --
+  -- 'HugeCardinality' is interpreted as "trust me, it's more than the desired
+  -- sample size at this input size". If you are wrong, that might cause
   -- non-termination.
   , exhaustiveGen :: Int -> [a]
   -- ^ Exhaustive input generator, given the input size
@@ -140,6 +155,7 @@ benchAllSizesUniform ::
     -- displaying progress later so at least a Monad constraint will probably be
     -- involved
     MonadST m
+  , MonadIO m
   ) =>
   -- | Size-dependent input domain generator.
   SUniversalGen a ->
@@ -164,16 +180,24 @@ benchAllSizesUniform
   domainGen
   sampleFun
   desiredSampleSizePerInputSize
-  sizes =
-    -- using StateGenM to be able to freeze the seed. MonadRandom can't do this..
-    runStateGenT_ (mkStdGen 42) . const $
-      mapM
-        ( benchInputSizeUniversal
-            domainGen
-            sampleFun
-            desiredSampleSizePerInputSize
-        )
-        sizes
+  sizes = do
+    prevCardRef <- liftIO $ newIORef (Cardinality 0)
+    mapM
+      ( \inputSize -> do
+          prevCard <- liftIO $ readIORef prevCardRef
+          -- using StateGenM to be able to freeze the seed. MonadRandom can't do this..
+          (card, ssample) <-
+            runStateGenT_ (mkStdGen 42) . const $
+              benchInputSizeUniversal
+                prevCard
+                domainGen
+                sampleFun
+                desiredSampleSizePerInputSize
+                inputSize
+          liftIO $ writeIORef prevCardRef card
+          pure ssample
+      )
+      sizes
 
 benchInputSizeUniversal ::
   forall (a :: Type) (m :: Type -> Type) (se :: Type).
@@ -183,6 +207,8 @@ benchInputSizeUniversal ::
   , Hashable a
   , MonadST m
   ) =>
+  -- | Previous 'Cardinality'
+  Cardinality ->
   -- | Size-dependent input domain generator.
   SUniversalGen a ->
   -- | Sampling function: From input to sample element (a "measurement").
@@ -194,8 +220,9 @@ benchInputSizeUniversal ::
   Int ->
   -- | The input size to benchmark with.
   Int ->
-  StateT StdGen m (SSample [se])
+  StateT StdGen m (Cardinality, SSample [se])
 benchInputSizeUniversal
+  prevCard
   SUniversalGen
     { cardinalityOfSize
     , randomGen
@@ -206,13 +233,24 @@ benchInputSizeUniversal
   inputSize = do
     inputs <- genInputs
     let sample = fmap sampleFun inputs
-    pure $ SSample {inputSize, coverage, sampleSize, sample}
+    pure (rememberedCardinality, SSample {inputSize, coverage, sampleSize, sample})
     where
       coverage = case cardinality of
         HugeCardinality -> Nothing
         Cardinality card ->
           Just $ fromIntegral sampleSize / fromIntegral card
-      cardinality = cardinalityOfSize inputSize
+      cardinalityOfSize' =
+        fromMaybe
+          (countCardinalityUpTo ((desiredSampleSizePerInputSize `div` 10) * 13) . exhaustiveGen)
+          cardinalityOfSize
+      cardinality =
+        if prevCard == HugeCardinality
+          then HugeCardinality
+          else cardinalityOfSize' inputSize
+      rememberedCardinality =
+        case coverage of
+          Nothing -> HugeCardinality
+          Just x -> if x < 0.01 then HugeCardinality else cardinality
       (sampleSize, genInputs) = case cardinality of
         HugeCardinality ->
           ( desiredSampleSizePerInputSize

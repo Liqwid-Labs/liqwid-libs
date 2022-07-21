@@ -50,7 +50,7 @@ main = benchMain $ \dir -> do
 
   let gen =
         SUniversalGen @[Integer]
-          (\size -> Cardinality $ 10 ^ (fromIntegral size :: Int))
+          (Just $ \size -> Cardinality $ 10 ^ (fromIntegral size :: Int))
           (\size -> replicateM size [0 .. 9])
           (\size -> flip runStateGen (replicateM size . uniformRM (0, 9)))
 
