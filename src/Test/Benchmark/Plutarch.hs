@@ -4,9 +4,9 @@ module Test.Benchmark.Plutarch (
   sampleTerm',
   sampleTouchTerm,
   sampleTouchTerm',
-  pbenchSizesUniversal,
-  pbenchSizesRandom,
-  pbenchSizesRandomNonUniform,
+  pbenchAllSizesUniform,
+  pbenchNonTinySizesRandomUniform,
+  pbenchSizesRandomCached,
 ) where
 
 import Control.Monad.ST.Class (MonadST)
@@ -28,9 +28,9 @@ import Test.Benchmark.Precompile (CompiledTerm, compile', toScript, (###~))
 import Test.Benchmark.Sized (
   SSample,
   SUniversalGen,
-  benchSizesRandom,
-  benchSizesRandomNonUniform,
-  benchSizesUniversal,
+  benchNonTinySizesRandomUniform,
+  benchSizesRandomCached,
+  benchAllSizesUniform,
  )
 
 mkTermImplMetaData ::
@@ -59,8 +59,8 @@ sampleTouchTerm' ::
   Either (BudgetExceeded PlutusCostAxis) Costs
 sampleTouchTerm' = sampleScript . toScript . (ptouch' ###~)
 
--- | See 'benchSizesUniversal'.
-pbenchSizesUniversal ::
+-- | See 'benchAllSizesUniform'.
+pbenchAllSizesUniform ::
   forall (a :: Type) (m :: Type -> Type) (f :: S -> Type) (b :: S -> Type).
   ( Eq a
   , Ord a
@@ -85,7 +85,7 @@ pbenchSizesUniversal ::
   -- | The input sizes to benchmark with. Usually something like @[0..n]@.
   [Int] ->
   m (ImplData [SSample [Either (BudgetExceeded PlutusCostAxis) Costs]])
-pbenchSizesUniversal
+pbenchAllSizesUniform
   domainGen
   funName
   pfun
@@ -93,7 +93,7 @@ pbenchSizesUniversal
   desiredSampleSizePerInputSize
   sizes =
     ImplData funName
-      <$> benchSizesUniversal
+      <$> benchAllSizesUniform
         domainGen
         (sampleTouchTerm' . applyPFun pfun')
         desiredSampleSizePerInputSize
@@ -101,8 +101,8 @@ pbenchSizesUniversal
     where
       pfun' = compile' pfun
 
--- | See 'benchSizesRandom'.
-pbenchSizesRandom ::
+-- | See 'benchNonTinySizesRandomUniform'.
+pbenchNonTinySizesRandomUniform ::
   forall (a :: Type) (m :: Type -> Type) (f :: S -> Type) (b :: S -> Type).
   ( Eq a
   , Ord a
@@ -124,7 +124,7 @@ pbenchSizesRandom ::
   -- | The input sizes to benchmark with. Usually something like @[0..n]@.
   [Int] ->
   m (ImplData [SSample [Either (BudgetExceeded PlutusCostAxis) Costs]])
-pbenchSizesRandom
+pbenchNonTinySizesRandomUniform
   randomGen
   funName
   pfun
@@ -132,7 +132,7 @@ pbenchSizesRandom
   sampleSizePerInputSize
   sizes =
     ImplData funName
-      <$> benchSizesRandom
+      <$> benchNonTinySizesRandomUniform
         randomGen
         (sampleTouchTerm' . applyPFun pfun')
         sampleSizePerInputSize
@@ -140,8 +140,8 @@ pbenchSizesRandom
     where
       pfun' = compile' pfun
 
--- | See 'benchSizesRandomNonUniform'.
-pbenchSizesRandomNonUniform ::
+-- | See 'benchSizesRandomCached'.
+pbenchSizesRandomCached ::
   forall (a :: Type) (m :: Type -> Type) (f :: S -> Type) (b :: S -> Type).
   ( Eq a
   , Ord a
@@ -163,7 +163,7 @@ pbenchSizesRandomNonUniform ::
   -- | The input sizes to benchmark with. Usually something like @[0..n]@.
   [Int] ->
   m (ImplData [SSample [Either (BudgetExceeded PlutusCostAxis) Costs]])
-pbenchSizesRandomNonUniform
+pbenchSizesRandomCached
   randomGen
   funName
   pfun
@@ -171,7 +171,7 @@ pbenchSizesRandomNonUniform
   sampleSizePerInputSize
   sizes =
     ImplData funName
-      <$> benchSizesRandomNonUniform
+      <$> benchSizesRandomCached
         randomGen
         (sampleTouchTerm' . applyPFun pfun')
         sampleSizePerInputSize

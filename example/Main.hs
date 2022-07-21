@@ -17,7 +17,7 @@ import Test.Benchmark.Precompile (CompiledTerm, compile', (##))
 import Test.Benchmark.Sized (
   Cardinality (Cardinality),
   SUniversalGen (SUniversalGen),
-  benchSizesUniversal,
+  benchAllSizesUniform,
  )
 
 -- | Waste budget proportional to the argument
@@ -58,7 +58,7 @@ main = benchMain $ \dir -> do
         compile' $ pfind # plam (#== 3)
   stats1 <-
     ImplData "find 3" . statsByAxis'
-      <$> benchSizesUniversal
+      <$> benchAllSizesUniform
         gen
         (\list -> sampleTerm' $ pfind3 ## pconstant list)
         10000
@@ -69,7 +69,7 @@ main = benchMain $ \dir -> do
         compile' $ pfind # plam (#== 4)
   stats2 <-
     ImplData "find 4" . statsByAxis'
-      <$> benchSizesUniversal
+      <$> benchAllSizesUniform
         gen
         (\list -> sampleTerm' $ pfind4 ## pconstant list)
         10000
