@@ -90,6 +90,7 @@ library
   other-modules:
     Plutarch.Context.Base
     Plutarch.Context.Minting
+    Plutarch.Context.Phase1
     Plutarch.Context.Spending
     Plutarch.Context.TxInfo
 
@@ -98,6 +99,8 @@ library
     , mtl
     , plutus-core
     , plutus-ledger-api
+    , plutus-tx
+    , validation
 
   hs-source-dirs:  src
 
