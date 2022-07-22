@@ -173,6 +173,8 @@ instance PApplicative (PEither e) where
     Term s (f b)
 fs #<*> xs = pliftA2 # papply # fs # xs
 
+infixl 4 #<*>
+
 -- | @since 1.0.0
 (#*>) ::
     forall (f :: (S -> Type) -> S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S).
@@ -182,6 +184,8 @@ fs #<*> xs = pliftA2 # papply # fs # xs
     Term s (f b)
 t #*> t' = pliftA2 # plam (\_ x -> x) # t # t'
 
+infixl 4 #*>
+
 -- | @since 1.0.0
 (#<*) ::
     forall (f :: (S -> Type) -> S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S).
@@ -190,6 +194,8 @@ t #*> t' = pliftA2 # plam (\_ x -> x) # t # t'
     Term s (f b) ->
     Term s (f a)
 t #<* t' = pliftA2 # pconst # t # t'
+
+infixl 4 #<*
 
 {- | 'preplicateA' @n@ @comp@ repeats @comp@ @n@ times (0 if @n@ is negative),
  collects the results into a 'PListLike', and returns a single computation

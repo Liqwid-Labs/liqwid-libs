@@ -88,3 +88,5 @@ pconst = phoistAcyclic $ plam $ \x -> prmap # (go # x) # pidentity
     Term s (p a b) ->
     Term s (p a c)
 t #<<< t' = t' #>>> t
+
+infixr 1 #<<<
