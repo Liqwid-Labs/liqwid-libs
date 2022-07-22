@@ -3,7 +3,7 @@
 
 This won't be needed in Plutarch 1.2.
 -}
-module Test.Benchmark.PTouch (PTouch(ptouch), ptouch', touching) where
+module Test.Benchmark.PTouch (PTouch (ptouch), ptouch', touching) where
 
 import Test.Benchmark.Precompile (CompiledTerm, compile')
 
@@ -14,11 +14,10 @@ ptouch' ::
 ptouch' = compile' ptouch
 
 class PTouch (a :: S -> Type) where
-  {- | Forces full evaluation of Scott-encoded lists.
-
-  Beware: The evaluation results do NOT persist. This only results in paying the
-  cost for full evaluation.
-  -}
+  -- | Forces full evaluation of Scott-encoded lists.
+  --
+  --  Beware: The evaluation results do NOT persist. This only results in paying the
+  --  cost for full evaluation.
   ptouch :: forall (s :: S). Term s (a :--> PUnit)
   ptouch = plam $ \_ -> pcon PUnit
 

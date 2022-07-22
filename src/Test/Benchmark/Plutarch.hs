@@ -9,6 +9,7 @@ module Test.Benchmark.Plutarch (
   pbenchSizesRandomCached,
 ) where
 
+import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.ST.Class (MonadST)
 import Data.Hashable (Hashable)
 import Data.Text (Text)
@@ -28,11 +29,10 @@ import Test.Benchmark.Precompile (CompiledTerm, compile', toScript, (###~))
 import Test.Benchmark.Sized (
   SSample,
   SUniversalGen,
+  benchAllSizesUniform,
   benchNonTinySizesRandomUniform,
   benchSizesRandomCached,
-  benchAllSizesUniform,
  )
-import Control.Monad.IO.Class (MonadIO)
 
 mkTermImplMetaData ::
   -- | Name of the implementation. Make sure it's unique.

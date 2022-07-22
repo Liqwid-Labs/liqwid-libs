@@ -19,8 +19,9 @@ import Optics.TH (makeFieldLabelsNoPrefix)
 class ToTitle a where
   toTitle :: a -> Text
 
--- | A value tagged with the name of the implementation that it is associated
--- with.
+{- | A value tagged with the name of the implementation that it is associated
+ with.
+-}
 data ImplData a = ImplData
   { name :: Text
   -- ^ the name of the implementation
