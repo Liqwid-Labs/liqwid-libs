@@ -16,6 +16,10 @@ main = do
             (scriptContextTxInfo <$> a) @?= (scriptContextTxInfo <$> b)
         , testCase "TxInfo from TxInfoBuilder should also match" $
             (scriptContextTxInfo <$> a) @?= c
+        , testCase "TxOut list from TxInfoBuilder should match one from buildTxOut" $
+            (txInfoOutputs . scriptContextTxInfo <$> a) @?= return d
+        , testCase "DatumHash pair list from TxInfoBuilder should match one from buildDatumHashPairs" $
+            (txInfoData . scriptContextTxInfo <$> a) @?= return e
         , SpendingBuilder.specs
         , MintingBuilder.specs
         ]
@@ -28,6 +32,8 @@ main = do
                     (pubKey "aabb" . withValue (singleton "cc" "hello" 123))
             )
     c = buildTxInfo generalSample
+    d = buildTxOuts generalSample
+    e = buildDatumHashPairs generalSample
 
 generalSample :: (Monoid a, Builder a) => a
 generalSample =

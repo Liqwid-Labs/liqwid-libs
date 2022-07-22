@@ -18,7 +18,8 @@ module Plutarch.Context.Base (
     -- * Types
     Builder (..),
     BaseBuilder (..),
-    UTXO (..),
+    UTXO' (..),
+    UTXO,
 
     -- * Modular constructors
     output,
@@ -39,9 +40,12 @@ module Plutarch.Context.Base (
     txId,
     fee,
     timeRange,
+    emptyUTXO,
 
     -- * Builder components
     utxoToTxOut,
+    datumWithHash,
+    utxoDatumPair,
     yieldBaseTxInfo,
     yieldMint,
     yieldExtraDatums,
@@ -89,7 +93,7 @@ import PlutusLedgerApi.V1.Value (Value)
 
 {- | 'UTXO' is used to represent any input or output of a transaction in the builders.
 
-A UTXO contains:
+A UTXO' contains:
 
   - A `Value` of one or more assets.
   - An `Address` that it exists at.
@@ -99,7 +103,7 @@ This is different from `TxOut`, in that we store the 'Data' fully instead of the
 
  @since 1.1.0
 -}
-data UTXO = UTXO
+data UTXO' = UTXO'
     { utxoCredential :: Credential
     , utxoValue :: Value
     , utxoData :: Maybe Data
@@ -108,12 +112,19 @@ data UTXO = UTXO
     }
     deriving stock (Show)
 
-{- | Pulls address output of given UTXO
+-- | @since 1.2.0
+type UTXO = (UTXO' -> UTXO')
+
+emptyUTXO :: UTXO'
+emptyUTXO =
+    UTXO' (PubKeyCredential "") mempty Nothing Nothing Nothing
+
+{- | Pulls address output of given UTXO'
 
  @since 1.1.0
 -}
-utxoAddress :: UTXO -> Address
-utxoAddress UTXO{..} = case utxoCredential of
+utxoAddress :: UTXO' -> Address
+utxoAddress UTXO'{..} = case utxoCredential of
     PubKeyCredential pkh -> pubKeyHashAddress pkh
     ScriptCredential vh -> scriptHashAddress vh
 
@@ -123,21 +134,21 @@ datumWithHash d = (datumHash dt, dt)
     dt :: Datum
     dt = Datum . BuiltinData $ d
 
-{- | Construct DatumHash-Datum pair of given UTXO
+{- | Construct DatumHash-Datum pair of given UTXO'
 
  @since 1.1.0
 -}
-utxoDatumPair :: UTXO -> Maybe (DatumHash, Datum)
-utxoDatumPair UTXO{..} = datumWithHash <$> utxoData
+utxoDatumPair :: UTXO' -> Maybe (DatumHash, Datum)
+utxoDatumPair UTXO'{..} = datumWithHash <$> utxoData
 
-{- | Construct TxOut of given UTXO
+{- | Construct TxOut of given UTXO'
 
  @since 1.1.0
 -}
 utxoToTxOut ::
-    UTXO ->
+    UTXO' ->
     TxOut
-utxoToTxOut utxo@(UTXO{..}) =
+utxoToTxOut utxo@(UTXO'{..}) =
     let address = utxoAddress utxo
         sData = utxoDatumPair utxo
      in TxOut address utxoValue . fmap fst $ sData
@@ -165,8 +176,8 @@ class Builder a where
  @since 1.1.0
 -}
 data BaseBuilder = BB
-    { bbInputs :: Acc UTXO
-    , bbOutputs :: Acc UTXO
+    { bbInputs :: Acc UTXO'
+    , bbOutputs :: Acc UTXO'
     , bbSignatures :: Acc PubKeyHash
     , bbDatums :: Acc Data
     , bbMints :: Acc Value
@@ -267,46 +278,46 @@ withDatum ::
     forall (b :: Type) (p :: S -> Type).
     (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
     b ->
-    UTXO ->
-    UTXO
+    UTXO' ->
+    UTXO'
 withDatum dat u = u{utxoData = Just . datafy $ dat}
 
-withTxId :: TxId -> UTXO -> UTXO
+withTxId :: TxId -> UTXO
 withTxId tid u = u{utxoTxId = Just tid}
 
-withRefIndex :: Integer -> UTXO -> UTXO
+withRefIndex :: Integer -> UTXO
 withRefIndex tidx u = u{utxoTxIdx = Just tidx}
 
-withOutRef :: TxOutRef -> UTXO -> UTXO
+withOutRef :: TxOutRef -> UTXO
 withOutRef (TxOutRef tid idx) = withTxId tid . withRefIndex idx
 
-withValue :: Value -> UTXO -> UTXO
+withValue :: Value -> UTXO
 withValue val u = u{utxoValue = val}
 
-credential :: Credential -> UTXO -> UTXO
+credential :: Credential -> UTXO
 credential cred u = u{utxoCredential = cred}
 
-pubKey :: PubKeyHash -> UTXO -> UTXO
+pubKey :: PubKeyHash -> UTXO
 pubKey (PubKeyCredential -> cred) u = u{utxoCredential = cred}
 
-script :: ValidatorHash -> UTXO -> UTXO
+script :: ValidatorHash -> UTXO
 script (ScriptCredential -> cred) u = u{utxoCredential = cred}
 
 output ::
     forall (a :: Type).
     (Builder a) =>
-    (UTXO -> UTXO) ->
+    UTXO ->
     a
-output f = pack . g . f $ UTXO (PubKeyCredential "") mempty Nothing Nothing Nothing
+output f = pack . g . f $ UTXO' (PubKeyCredential "") mempty Nothing Nothing Nothing
   where
     g x = mempty{bbOutputs = pure x}
 
 input ::
     forall (a :: Type).
     (Builder a) =>
-    (UTXO -> UTXO) ->
+    UTXO ->
     a
-input f = pack . g . f $ UTXO (PubKeyCredential "") mempty Nothing Nothing Nothing
+input f = pack . g . f $ UTXO' (PubKeyCredential "") mempty Nothing Nothing Nothing
   where
     g x = mempty{bbInputs = pure x}
 
@@ -358,21 +369,21 @@ yieldExtraDatums (toList -> ds) =
 -}
 yieldInInfoDatums ::
     (Builder b) =>
-    Acc UTXO ->
+    Acc UTXO' ->
     b ->
     ContT a (Either String) ([TxInInfo], [(DatumHash, Datum)])
 yieldInInfoDatums (toList -> inputs) (unpack -> bb)
     | length (nub takenIdx) /= length takenIdx = lift $ Left "Duplicate Indices"
     | otherwise = return $ createTxInInfo &&& createDatumPairs $ inputs
   where
-    createTxInInfo :: [UTXO] -> [TxInInfo]
+    createTxInInfo :: [UTXO'] -> [TxInInfo]
     createTxInInfo = mkTxInInfo 1
 
     takenIdx = catMaybes $ utxoTxIdx <$> inputs
 
-    mkTxInInfo :: Integer -> [UTXO] -> [TxInInfo]
+    mkTxInInfo :: Integer -> [UTXO'] -> [TxInInfo]
     mkTxInInfo _ [] = []
-    mkTxInInfo ind (utxo@(UTXO{..}) : xs)
+    mkTxInInfo ind (utxo@(UTXO'{..}) : xs)
         | elem ind takenIdx = mkTxInInfo (ind + 1) $ utxo : xs
         | otherwise = case utxoTxIdx of
             Just x -> TxInInfo (ref x) (utxoToTxOut utxo) : mkTxInInfo (ind) xs
@@ -380,7 +391,7 @@ yieldInInfoDatums (toList -> inputs) (unpack -> bb)
       where
         ref = TxOutRef $ fromMaybe (bbTxId bb) utxoTxId
 
-    createDatumPairs :: [UTXO] -> [(DatumHash, Datum)]
+    createDatumPairs :: [UTXO'] -> [(DatumHash, Datum)]
     createDatumPairs xs = catMaybes $ utxoDatumPair <$> xs
 
 {- | Provide list of TxOut and DatumHash-Datum pair for outputs to
@@ -389,12 +400,12 @@ yieldInInfoDatums (toList -> inputs) (unpack -> bb)
  @since 1.1.0
 -}
 yieldOutDatums ::
-    Acc UTXO ->
+    Acc UTXO' ->
     ContT a (Either String) ([TxOut], [(DatumHash, Datum)])
 yieldOutDatums (toList -> outputs) =
     return $ createTxInInfo &&& createDatumPairs $ outputs
   where
-    createTxInInfo :: [UTXO] -> [TxOut]
+    createTxInInfo :: [UTXO'] -> [TxOut]
     createTxInInfo xs = utxoToTxOut <$> xs
-    createDatumPairs :: [UTXO] -> [(DatumHash, Datum)]
+    createDatumPairs :: [UTXO'] -> [(DatumHash, Datum)]
     createDatumPairs xs = catMaybes $ utxoDatumPair <$> xs
