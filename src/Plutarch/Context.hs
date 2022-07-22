@@ -33,29 +33,32 @@ module Plutarch.Context (
     S.withSpendingOutRefId,
     S.withSpendingOutRefIdx,
     S.buildSpending,
+    S.checkBuildSpending,
     S.buildSpendingUnsafe,
     M.MintingBuilder (..),
     M.withMinting,
     M.buildMinting,
+    M.checkBuildMinting,
     M.buildMintingUnsafe,
     T.spends,
     T.mints,
     T.buildTxInfo,
     T.buildTxInfoUnsafe,
+    P1.Checker,
     P1.inOutZeroSum,
     P1.validDatumPairs,
     P1.positiveValues,
     P1.signaturesProvided,
     P1.signaturesFormat,
     P1.validTxId,
-    P1.validInputRefId,    
+    P1.validInputRefId,
     P1.credentialFormat,
     P1.phase1Check,
-    P1.customCheck,    
+    P1.customCheck,
 ) where
 
 import qualified Plutarch.Context.Base as B
 import qualified Plutarch.Context.Minting as M
+import qualified Plutarch.Context.Phase1 as P1
 import qualified Plutarch.Context.Spending as S
 import qualified Plutarch.Context.TxInfo as T
-import qualified Plutarch.Context.Phase1 as P1

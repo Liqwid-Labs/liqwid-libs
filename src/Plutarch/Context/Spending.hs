@@ -1,3 +1,4 @@
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -24,12 +25,15 @@ module Plutarch.Context.Spending (
 
     -- * builder
     buildSpending,
+    checkBuildSpending,
     buildSpendingUnsafe,
 ) where
 
 import Control.Monad.Cont (ContT (runContT), MonadTrans (lift))
 import Data.Foldable (Foldable (toList))
+import Data.Validation (Validation (..))
 import Plutarch.Context.Base
+import Plutarch.Context.Phase1
 
 import PlutusLedgerApi.V1 (Credential (..))
 import PlutusLedgerApi.V1.Contexts
@@ -172,6 +176,13 @@ buildSpending builder = flip runContT Right $
                         , txInfoSignatories = toList $ bbSignatures bb
                         }
             return $ ScriptContext txinfo (Spending vInRef)
+
+-- | Check builder with provided checker, then build spending context.
+checkBuildSpending :: Checker -> SpendingBuilder -> Either String ScriptContext
+checkBuildSpending checker builder =
+    case checker builder of
+        Success b -> buildSpending b
+        Failure err -> Left $ show err
 
 -- | Builds spending context; it throwing error when builder fails.
 buildSpendingUnsafe ::

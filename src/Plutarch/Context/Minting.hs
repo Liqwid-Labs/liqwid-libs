@@ -1,4 +1,5 @@
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -22,12 +23,14 @@ module Plutarch.Context.Minting (
 
     -- * builder
     buildMinting,
+    checkBuildMinting,
     buildMintingUnsafe,
 ) where
 
 import Control.Monad.Cont (ContT (runContT))
 import Control.Monad.Reader (MonadTrans (lift))
 import Data.Foldable (Foldable (toList))
+import Data.Validation (Validation (..))
 import Plutarch.Context.Base (
     BaseBuilder (bbDatums, bbInputs, bbMints, bbOutputs, bbSignatures),
     Builder (..),
@@ -37,6 +40,7 @@ import Plutarch.Context.Base (
     yieldMint,
     yieldOutDatums,
  )
+import Plutarch.Context.Phase1
 
 import PlutusLedgerApi.V1.Contexts (
     ScriptContext (ScriptContext),
@@ -131,6 +135,13 @@ buildMinting builder = flip runContT Right $
             case mintingInfo of
                 [] -> lift $ Left "Minting CS not found"
                 _ -> return $ ScriptContext txinfo (Minting mintingCS)
+
+-- | Check builder with provided checker, then build minting context.
+checkBuildMinting :: Checker -> MintingBuilder -> Either String ScriptContext
+checkBuildMinting checker builder =
+    case checker builder of
+        Success b -> buildMinting b
+        Failure err -> Left $ show err
 
 -- | Builds minting context; it throwing error when builder fails.
 buildMintingUnsafe ::
