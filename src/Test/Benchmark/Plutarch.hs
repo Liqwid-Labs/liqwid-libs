@@ -65,10 +65,7 @@ sampleTouchTerm' = sampleScript . toScript . (ptouch' ###~)
 -- | See 'benchAllSizesUniform'.
 pbenchAllSizesUniform ::
   forall (a :: Type) (m :: Type -> Type) (f :: S -> Type) (b :: S -> Type).
-  ( Eq a
-  , Ord a
-  , Show a
-  , Hashable a
+  ( Hashable a
   , MonadST m
   , MonadIO m
   , PTouch b
@@ -108,10 +105,7 @@ pbenchAllSizesUniform
 -- | See 'benchNonTinySizesRandomUniform'.
 pbenchNonTinySizesRandomUniform ::
   forall (a :: Type) (m :: Type -> Type) (f :: S -> Type) (b :: S -> Type).
-  ( Eq a
-  , Ord a
-  , Show a
-  , Hashable a
+  ( Hashable a
   , MonadST m
   , PTouch b
   ) =>
@@ -147,10 +141,7 @@ pbenchNonTinySizesRandomUniform
 -- | See 'benchSizesRandomCached'.
 pbenchSizesRandomCached ::
   forall (a :: Type) (m :: Type -> Type) (f :: S -> Type) (b :: S -> Type).
-  ( Eq a
-  , Ord a
-  , Show a
-  , Hashable a
+  ( Hashable a
   , MonadST m
   , PTouch b
   ) =>
@@ -186,10 +177,7 @@ pbenchSizesRandomCached
 -- | See 'benchSizesRandomCached'.
 pbenchSizesRandom ::
   forall (a :: Type) (m :: Type -> Type) (f :: S -> Type) (b :: S -> Type).
-  ( Eq a
-  , Ord a
-  , Show a
-  , Hashable a
+  ( Hashable a
   , MonadST m
   , PTouch b
   ) =>

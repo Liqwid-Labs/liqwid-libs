@@ -149,10 +149,7 @@ makeFieldLabelsNoPrefix ''SUniversalGen
 -}
 benchAllSizesUniform ::
   forall (a :: Type) (m :: Type -> Type) (se :: Type).
-  ( Eq a
-  , Ord a
-  , Show a -- TODO print input when exception happens
-  , Hashable a
+  ( Hashable a
   , -- TODO could hide that ST is being used, but need effects anyway for
     -- displaying progress later so at least a Monad constraint will probably be
     -- involved
@@ -178,6 +175,7 @@ benchAllSizesUniform ::
  - maybe streaming
  - dumping the input / seed on crash
  - continuing work after ctrl+c (maybe hash the scripts to check if saved work is obsolete)
+ - print input when exception happens
 -}
 benchAllSizesUniform
   domainGen
@@ -204,10 +202,7 @@ benchAllSizesUniform
 
 benchInputSizeUniversal ::
   forall (a :: Type) (m :: Type -> Type) (se :: Type).
-  ( Eq a
-  , Ord a
-  , Show a
-  , Hashable a
+  ( Hashable a
   , MonadST m
   , NFData se
   ) =>
@@ -313,10 +308,7 @@ verifyCard card inputSize = go (fromIntegral card :: Integer)
 -}
 benchNonTinySizesRandomUniform ::
   forall (a :: Type) (m :: Type -> Type) (se :: Type).
-  ( Eq a
-  , Ord a
-  , Show a -- TODO print input when exception happens
-  , Hashable a
+  ( Hashable a
   , -- TODO could hide that ST is being used, but need effects anyway for displaying progress later
     --   so at least a Monad constraint will probably be involved
     MonadST m
@@ -331,6 +323,7 @@ benchNonTinySizesRandomUniform ::
   -- | The input sizes to benchmark with. Usually something like @[0..n]@.
   [Int] ->
   m [SSample [se]]
+-- TODO print input when exception happens
 benchNonTinySizesRandomUniform
   randomGen
   sampleFun
@@ -373,10 +366,7 @@ benchNonTinySizesRandomUniform
 -}
 benchSizesRandomCached ::
   forall (a :: Type) (m :: Type -> Type) (se :: Type).
-  ( Eq a
-  , Ord a
-  , Show a
-  , Hashable a
+  ( Hashable a
   , MonadST m
   ) =>
   -- | Size-dependent random input generator
@@ -437,10 +427,7 @@ benchSizesRandomCached
 -}
 benchSizesRandom ::
   forall (a :: Type) (m :: Type -> Type) (se :: Type).
-  ( Eq a
-  , Ord a
-  , Show a
-  , MonadST m
+  ( MonadST m
   , NFData se
   ) =>
   -- | Size-dependent random input generator
