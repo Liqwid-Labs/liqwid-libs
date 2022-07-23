@@ -7,6 +7,7 @@ module Test.Benchmark.Plutarch (
   pbenchAllSizesUniform,
   pbenchNonTinySizesRandomUniform,
   pbenchSizesRandomCached,
+  pbenchSizesRandom,
 ) where
 
 import Control.Monad.IO.Class (MonadIO)
@@ -31,6 +32,7 @@ import Test.Benchmark.Sized (
   SUniversalGen,
   benchAllSizesUniform,
   benchNonTinySizesRandomUniform,
+  benchSizesRandom,
   benchSizesRandomCached,
  )
 
@@ -174,6 +176,45 @@ pbenchSizesRandomCached
   sizes =
     ImplData funName
       <$> benchSizesRandomCached
+        randomGen
+        (sampleTouchTerm' . applyPFun pfun')
+        sampleSizePerInputSize
+        sizes
+    where
+      pfun' = compile' pfun
+
+-- | See 'benchSizesRandomCached'.
+pbenchSizesRandom ::
+  forall (a :: Type) (m :: Type -> Type) (f :: S -> Type) (b :: S -> Type).
+  ( Eq a
+  , Ord a
+  , Show a
+  , Hashable a
+  , MonadST m
+  , PTouch b
+  ) =>
+  -- | Size-dependent random input generator
+  (forall (g :: Type). RandomGen g => Int -> g -> (a, g)) ->
+  -- | Name of the function being benchmarked.
+  Text ->
+  -- | The function being benchmarked.
+  ClosedTerm f ->
+  -- | Applying the compiled function to the inputs.
+  (CompiledTerm f -> a -> CompiledTerm b) ->
+  -- | The sample size per input size.
+  Int ->
+  -- | The input sizes to benchmark with. Usually something like @[0..n]@.
+  [Int] ->
+  m (ImplData [SSample [Either (BudgetExceeded PlutusCostAxis) Costs]])
+pbenchSizesRandom
+  randomGen
+  funName
+  pfun
+  applyPFun
+  sampleSizePerInputSize
+  sizes =
+    ImplData funName
+      <$> benchSizesRandom
         randomGen
         (sampleTouchTerm' . applyPFun pfun')
         sampleSizePerInputSize

@@ -25,6 +25,7 @@ module Test.Benchmark.Cost (
 
 import Control.Foldl qualified as Foldl
 import Control.Monad (forM_, void)
+import Control.Parallel.Strategies (NFData)
 import Data.ByteString.Lazy qualified as ByteString
 import Data.Csv (
   DefaultOrdered (headerOrder),
@@ -89,6 +90,7 @@ class Eq a => CostAxis a where
 -}
 newtype AxisMap a b = AxisMap {pairs :: [(a, b)]}
   deriving stock (Show, Functor, Generic)
+  deriving anyclass (NFData)
 
 makeFieldLabelsNoPrefix ''AxisMap
 
@@ -105,6 +107,7 @@ axisLookup axis (AxisMap pairs) = fromJust $ lookup axis pairs
 
 newtype BudgetExceeded axis = BudgetExceeded {exceededAxis :: axis}
   deriving stock (Show, Eq, Generic)
+  deriving anyclass (NFData)
 
 -- | Unboxed Vector of Double, for use with statistics libraries.
 newtype CostVector = CostVector (Vector Double)
@@ -116,6 +119,7 @@ data SimpleStats = SimpleStats
   , stddev :: Double
   }
   deriving stock (Show, Eq, Generic)
+  deriving anyclass (NFData)
 
 makeFieldLabelsNoPrefix ''SimpleStats
 

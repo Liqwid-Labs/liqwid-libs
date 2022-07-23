@@ -13,12 +13,14 @@ module Test.Benchmark.Sized (
   benchAllSizesUniform,
   benchNonTinySizesRandomUniform,
   benchSizesRandomCached,
+  benchSizesRandom,
 ) where
 
 import Control.Monad (filterM, forM, replicateM)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.ST.Class (MonadST, liftST)
 import Control.Monad.State.Strict (StateT)
+import Control.Parallel.Strategies (NFData, parMap, rdeepseq)
 import Data.Csv (
   DefaultOrdered (headerOrder),
   ToNamedRecord,
@@ -156,6 +158,7 @@ benchAllSizesUniform ::
     -- involved
     MonadST m
   , MonadIO m
+  , NFData se
   ) =>
   -- | Size-dependent input domain generator.
   SUniversalGen a ->
@@ -206,6 +209,7 @@ benchInputSizeUniversal ::
   , Show a
   , Hashable a
   , MonadST m
+  , NFData se
   ) =>
   -- | Previous 'Cardinality'
   Cardinality ->
@@ -232,7 +236,7 @@ benchInputSizeUniversal
   desiredSampleSizePerInputSize
   inputSize = do
     inputs <- genInputs
-    let sample = fmap sampleFun inputs
+    let sample = parMap rdeepseq sampleFun inputs
     pure (rememberedCardinality, SSample {inputSize, coverage, sampleSize, sample})
     where
       coverage = case cardinality of
@@ -316,6 +320,7 @@ benchNonTinySizesRandomUniform ::
   , -- TODO could hide that ST is being used, but need effects anyway for displaying progress later
     --   so at least a Monad constraint will probably be involved
     MonadST m
+  , NFData se
   ) =>
   -- | Size-dependent random input generator
   (forall (g :: Type). RandomGen g => Int -> g -> (a, g)) ->
@@ -337,10 +342,12 @@ benchNonTinySizesRandomUniform
     where
       benchInputSize sampleSize inputSize = do
         inputs <- genRandomDedup sampleSize (randomGen inputSize)
-        let sample = fmap sampleFun inputs
+        let sample = parMap rdeepseq sampleFun inputs
         pure $ SSample {inputSize, coverage = Nothing, sampleSize, sample}
 
 {- | Benchmark input sizes using random inputs only, caching results.
+
+ Warning: This is currently not multi-threaded, use 'benchSizesRandom' instead.
 
  This does not deduplicate the inputs. Instead, it caches results for inputs to
  increase performance. This makes it suitable for two purposes:
@@ -356,6 +363,13 @@ benchNonTinySizesRandomUniform
 
  The list of sample elements '[s]' should be not be kept in memory, better
  process it into arrays right away, or write to file.
+
+ TODO: This is single-threaded for now, because of accessing the HashTable.
+
+ Threading this seems to be non-trivial because of the HashTable.
+ It needs worker threads and channels, with one thread doing the HT
+ updates as well as lookups. Might need to defer updates until all
+ worker threads are "fed".
 -}
 benchSizesRandomCached ::
   forall (a :: Type) (m :: Type -> Type) (se :: Type).
@@ -393,6 +407,63 @@ benchSizesRandomCached
             HashTable.mutate ht input $ \case
               Nothing -> let se = sampleFun input in (Just se, se)
               jse@(Just se) -> (jse, se)
+        pure $ SSample {inputSize, coverage = Nothing, sampleSize, sample}
+
+{- | Benchmark input sizes using random inputs only.
+
+ The results are not cached, allowing this to be multi-threaded.
+
+ This does not deduplicate the inputs.
+ This makes it suitable for two purposes:
+
+ - Benchmarking non-uniform distributions that mirror the distribution of
+   real-world inputs.
+ - Benchmarking small input sizes using any distribution, without having to
+   implement an exhaustive generator to be able to use 'benchAllSizesUniform'.
+   Naturally, only 'benchAllSizesUniform' will be able to achieve 100% coverage
+   on small-ish input sizes that are not tiny.
+
+ Output contains a list of samples for each input size.
+
+ The list of sample elements '[s]' should be not be kept in memory, better
+ process it into arrays right away, or write to file.
+
+ TODO: This is single-threaded for now, because of accessing the HashTable.
+
+ Threading this seems to be non-trivial because of the HashTable.
+ It needs worker threads and channels, with one thread doing the HT
+ updates as well as lookups. Might need to defer updates until all
+ worker threads are "fed".
+-}
+benchSizesRandom ::
+  forall (a :: Type) (m :: Type -> Type) (se :: Type).
+  ( Eq a
+  , Ord a
+  , Show a
+  , MonadST m
+  , NFData se
+  ) =>
+  -- | Size-dependent random input generator
+  (forall (g :: Type). RandomGen g => Int -> g -> (a, g)) ->
+  -- | Sampling function: From input to sample element (a "measurement").
+  (a -> se) ->
+  -- | The sample size per input size.
+  Int ->
+  -- | The input sizes to benchmark with. Usually something like @[0..n]@.
+  [Int] ->
+  m [SSample [se]]
+benchSizesRandom
+  randomGen
+  sampleFun
+  sampleSizePerInputSize
+  sizes =
+    -- using StateGenM to be able to freeze the seed. MonadRandom can't do this..
+    runStateGenT_ (mkStdGen 42) . const $
+      mapM (benchInputSize sampleSizePerInputSize) sizes
+    where
+      benchInputSize sampleSize inputSize = do
+        inputs <- replicateM sampleSize (applyRandomGenM (randomGen inputSize) StateGenM)
+        let sample = parMap rdeepseq sampleFun inputs
         pure $ SSample {inputSize, coverage = Nothing, sampleSize, sample}
 
 genRandomDedup ::

@@ -14,6 +14,7 @@ module Test.Benchmark.Plutus (
   statsByAxis,
 ) where
 
+import Control.Parallel.Strategies (NFData)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Vector.Unboxed (Vector)
@@ -60,6 +61,7 @@ data ImplMetaData = ImplMetaData
   -- ^ Size of the script without inputs.
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 makeFieldLabelsNoPrefix ''ImplMetaData
 
@@ -75,11 +77,12 @@ mkScriptImplMetaData name script = ImplMetaData {name, scriptSize}
 
 data PlutusCostAxis = CPU | Mem
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic)
-instance CostAxis PlutusCostAxis
+  deriving anyclass (CostAxis, NFData)
 
 -- | Based on Int, since the Plutus budget types are Int internally as well
 newtype Cost (a :: PlutusCostAxis) = Cost {value :: Int}
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 makeFieldLabelsNoPrefix ''Cost
 
@@ -88,6 +91,7 @@ data Costs = Costs
   , memCost :: Cost 'Mem
   }
   deriving stock (Show, Eq, Generic)
+  deriving anyclass (NFData)
 
 makeFieldLabelsNoPrefix ''Costs
 
