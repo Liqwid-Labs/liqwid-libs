@@ -2,6 +2,20 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 1.2.1 -- 2022-07-25
+
+### Added
+
+- `PBind` type class, for effect types with meaningful bind semantics. This is a
+  direct equivalent to `Bind` from `semigroupoids`.
+- `pjoin` and `#>>=`, as direct equivalents to `join` and `>>-` from
+  `semigroupoids`, over `Term`s.
+- Instances of `PBind` for `PMaybe`, `PMaybeData`, `PList`, `PBuiltinList`,
+  `PPair s` (for semigroupal `s`), `PEither e`, `PIdentity` and `PState s`.
+- Newtype `PStar` representing Kleisli arrows.
+- Instances of `PProfunctor`, `PSemigroupoid`, `PCategory`, `PFunctor`,
+  `PApply`, `PApplicative` for `PStar` (in various parameterizations).
+
 ## 1.2.0 -- 2022-07-12
 
 ### Added

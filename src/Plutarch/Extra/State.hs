@@ -27,6 +27,7 @@ import Plutarch (
     type (:-->),
  )
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
+import Plutarch.Extra.Bind (PBind (pbind))
 import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap))
 import Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Pair (PPair (PPair))
@@ -65,6 +66,16 @@ instance PApply (PState s) where
 instance PApplicative (PState s) where
     ppure =
         phoistAcyclic $ plam $ \x -> pcon . PState $ plam $ \s -> pcon . PPair s $ x
+
+-- | @since 1.2.1
+instance PBind (PState s) where
+    pbind = phoistAcyclic $
+        plam $ \xs f -> unTermCont $ do
+            PState g <- pmatchC xs
+            pure . pcon . PState . plam $ \s -> unTermCont $ do
+                PPair s' res <- pmatchC (g # s)
+                PState h <- pmatchC (f # res)
+                pure $ h # s'
 
 {- | Lift a Plutarch lambda into 'PState'.
 

@@ -1,0 +1,97 @@
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
+
+module Plutarch.Extra.Star (
+    -- * Type
+    PStar (..),
+) where
+
+import Data.Kind (Type)
+import Generics.SOP (Top)
+import Plutarch (
+    DerivePNewtype (DerivePNewtype),
+    PlutusType,
+    S,
+    Term,
+    pcon,
+    phoistAcyclic,
+    plam,
+    unTermCont,
+    (#),
+    type (:-->),
+ )
+import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
+import Plutarch.Extra.Bind (PBind (pbind))
+import Plutarch.Extra.Category (PCategory (pidentity), PSemigroupoid ((#>>>)))
+import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap))
+import Plutarch.Extra.Profunctor (PProfunctor (PCoSubcategory, PContraSubcategory, pdimap))
+import Plutarch.Extra.TermCont (pmatchC)
+
+{- | The (profunctorial) view over a Kleisli arrow. Its name comes from category
+ theory, as it is one of the ways we can lift a functor (in this case, @f@)
+ into a profunctor.
+
+ @since 1.2.1
+-}
+newtype PStar (f :: (S -> Type) -> S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S)
+    = PStar (Term s (a :--> f b))
+    deriving
+        ( -- | @since 1.2.1
+          PlutusType
+        )
+        via (DerivePNewtype (PStar f a b) (a :--> f b))
+
+-- | @since 1.2.1
+instance (PFunctor f) => PProfunctor (PStar f) where
+    type PContraSubcategory (PStar f) = Top
+    type PCoSubcategory (PStar f) = PSubcategory f
+    pdimap = phoistAcyclic $
+        plam $ \into outOf xs -> unTermCont $ do
+            PStar g <- pmatchC xs
+            pure . pcon . PStar $ pdimap # into # (pfmap # outOf) # g
+
+-- | @since 1.2.1
+instance (PBind f) => PSemigroupoid (PStar f) where
+    (#>>>) ::
+        forall (a :: S -> Type) (b :: S -> Type) (c :: S -> Type) (s :: S).
+        (PSubcategory f b, PSubcategory f c) =>
+        Term s (PStar f a b) ->
+        Term s (PStar f b c) ->
+        Term s (PStar f a c)
+    t #>>> t' = go # t # t'
+      where
+        go ::
+            forall (s' :: S).
+            Term s' (PStar f a b :--> PStar f b c :--> PStar f a c)
+        go = phoistAcyclic $
+            plam $ \ab bc -> unTermCont $ do
+                PStar f <- pmatchC ab
+                PStar g <- pmatchC bc
+                pure . pcon . PStar . plam $ \x -> pbind # (f # x) # g
+
+-- | @since 1.2.1
+instance
+    (PApplicative f, PBind f) =>
+    PCategory (PStar f)
+    where
+    pidentity = pcon . PStar . plam $ \x -> ppure # x
+
+-- | @since 1.2.1
+instance (PFunctor f) => PFunctor (PStar f a) where
+    type PSubcategory (PStar f a) = PSubcategory f
+    pfmap = phoistAcyclic $
+        plam $ \f xs -> unTermCont $ do
+            PStar g <- pmatchC xs
+            pure . pcon . PStar . plam $ \x -> pfmap # f # (g # x)
+
+-- | @since 1.2.1
+instance (PApply f) => PApply (PStar f a) where
+    pliftA2 = phoistAcyclic $
+        plam $ \f xs ys -> unTermCont $ do
+            PStar g <- pmatchC xs
+            PStar h <- pmatchC ys
+            pure . pcon . PStar . plam $ \x -> pliftA2 # f # (g # x) # (h # x)
+
+-- | @since 1.2.1
+instance (PApplicative f) => PApplicative (PStar f a) where
+    ppure = phoistAcyclic $ plam $ \x -> pcon . PStar . plam $ \_ -> ppure # x
