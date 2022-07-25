@@ -29,7 +29,7 @@ main = do
         buildSpending
             ( generalSample
                 <> withSpendingUTXO
-                    (pubKey "aabb" . withValue (singleton "cc" "hello" 123))
+                    (pubKey "aabb" <> withValue (singleton "cc" "hello" 123))
             )
     c = buildTxInfo generalSample
     d = buildTxOuts generalSample
@@ -40,15 +40,15 @@ generalSample =
     mconcat
         [ input $
             pubKey "aabb"
-                . withValue (singleton "cc" "hello" 123)
-                . withRefIndex 5
+                <> withValue (singleton "cc" "hello" 123)
+                <> withRefIndex 5
         , input $
             pubKey "eeee"
-                . withValue (singleton "cc" "hello" 123)
-                . withDatum (123 :: Integer)
-                . withTxId "eeff"
+                <> withValue (singleton "cc" "hello" 123)
+                <> withDatum (123 :: Integer)
+                <> withTxId "eeff"
         , output $
             script "cccc"
-                . withValue (singleton "dd" "world" 123)
+                <> withValue (singleton "dd" "world" 123)
         , mint $ singleton "aaaa" "hello" 333
         ]

@@ -33,7 +33,7 @@ import Plutarch.Context.Base
 import PlutusLedgerApi.V1.Contexts
 
 data ValidatorInputIdentifier
-    = ValidatorUTXO UTXO'
+    = ValidatorUTXO UTXO
     | ValidatorOutRef TxOutRef
     | ValidatorOutRefId TxId
     | ValidatorOutRefIdx Integer
@@ -72,10 +72,10 @@ instance Monoid SpendingBuilder where
 withSpendingUTXO ::
     UTXO ->
     SpendingBuilder
-withSpendingUTXO f =
+withSpendingUTXO u =
     mempty
         { sbValidatorInput =
-            Just . ValidatorUTXO $ f emptyUTXO
+            Just $ ValidatorUTXO u
         }
 
 {- | Set Validator Input with given TxOutRef. Note, input with given

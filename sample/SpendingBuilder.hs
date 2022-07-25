@@ -18,28 +18,28 @@ sample =
         [ mint $ singleton "aaaa" "hello" 333
         , input $
             pubKey "ffaacc"
-                . withValue (singleton "cc" "hello" 123)
-                . withRefIndex 19
+                <> withValue (singleton "cc" "hello" 123)
+                <> withRefIndex 19
         , input $
             pubKey "aaccdd"
-                . withValue (singleton "cc" "hello" 123)
-                . withOutRef someOutRef
+                <> withValue (singleton "cc" "hello" 123)
+                <> withOutRef someOutRef
         , input $
             pubKey "aabb"
-                . withValue (singleton "cc" "hello" 123)
-                . withRefIndex 1121
-                . withTxId "abababcc"
+                <> withValue (singleton "cc" "hello" 123)
+                <> withRefIndex 1121
+                <> withTxId "abababcc"
         , input $
             pubKey "eeffdd"
-                . withValue (singleton "cc" "hello" 123)
-                . withTxId "eeddaa"
+                <> withValue (singleton "cc" "hello" 123)
+                <> withTxId "eeddaa"
         , input $
             pubKey "eeee"
-                . withValue (singleton "cc" "hello" 123)
-                . withDatum (123 :: Integer)
+                <> withValue (singleton "cc" "hello" 123)
+                <> withDatum (123 :: Integer)
         , output $
             script "cccc"
-                . withValue (singleton "dd" "world" 123)
+                <> withValue (singleton "dd" "world" 123)
         ]
 
 specs :: TestTree

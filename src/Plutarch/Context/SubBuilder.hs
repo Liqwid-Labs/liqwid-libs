@@ -19,7 +19,7 @@ import PlutusLedgerApi.V1.Scripts (
 type SubBuilder = BaseBuilder
 
 buildTxOut :: UTXO -> TxOut
-buildTxOut f = utxoToTxOut $ f emptyUTXO
+buildTxOut u = utxoToTxOut u
 
 buildTxOuts :: SubBuilder -> [TxOut]
 buildTxOuts x = utxoToTxOut <$> (toList $ x.bbOutputs)
