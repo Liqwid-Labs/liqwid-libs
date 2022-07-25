@@ -10,7 +10,7 @@
 module Plutarch.Context (
     B.Builder (..),
     B.BaseBuilder (..),
-    B.UTXO,
+    B.UTXO (..),
     B.output,
     B.input,
     B.credential,
@@ -43,7 +43,9 @@ module Plutarch.Context (
     T.buildTxInfo,
     T.buildTxInfoUnsafe,
     Sub.buildTxOut,
+    Sub.buildTxInInfo,
     Sub.buildTxOuts,
+    Sub.buildTxInInfos,
     Sub.buildDatumHashPairs,
 ) where
 

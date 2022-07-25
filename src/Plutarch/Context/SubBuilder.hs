@@ -2,6 +2,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Plutarch.Context.SubBuilder (
+    SubBuilder (..),
     buildTxOut,
     buildTxInInfo,
     buildTxOuts,
