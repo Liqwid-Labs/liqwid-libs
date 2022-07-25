@@ -99,7 +99,7 @@ A UTXO' contains:
 
 This is different from `TxOut`, in that we store the 'Data' fully instead of the 'DatumHash'.
 
- @since 1.1.0
+ @since 2.0.0
 -}
 data UTXO = UTXO
     { utxoCredential :: Maybe Credential
@@ -113,9 +113,9 @@ data UTXO = UTXO
 instance Semigroup UTXO where
     (UTXO c v d t tidx) <> (UTXO c' v' d' t' tidx') =
         UTXO (choose c c') (v <> v') (choose d d') (choose t t') (choose tidx tidx')
-        where
-          choose _ (Just b) = Just b
-          choose a Nothing = a
+      where
+        choose _ (Just b) = Just b
+        choose a Nothing = a
 
 instance Monoid UTXO where
     mempty = UTXO Nothing mempty Nothing Nothing Nothing
@@ -126,7 +126,7 @@ instance Monoid UTXO where
 -}
 utxoAddress :: UTXO -> Address
 utxoAddress UTXO{..} = case utxoCredential of
-    Just cred -> case cred of 
+    Just cred -> case cred of
         PubKeyCredential pkh -> pubKeyHashAddress pkh
         ScriptCredential vh -> scriptHashAddress vh
     Nothing -> pubKeyHashAddress ""

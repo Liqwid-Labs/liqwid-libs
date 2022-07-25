@@ -1,30 +1,74 @@
-{-# LANGUAGE OverloadedRecordDot #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Plutarch.Context.SubBuilder (
     buildTxOut,
+    buildTxInInfo,
     buildTxOuts,
+    buildTxInInfos,
     buildDatumHashPairs,
 ) where
 
 import Plutarch.Context.Base
 
+import Control.Monad.Cont (ContT (runContT))
 import Data.Foldable (Foldable (toList))
-import Data.Maybe
-import PlutusLedgerApi.V1.Contexts
+import Data.Maybe (catMaybes)
+import PlutusLedgerApi.V1.Contexts (TxInInfo (..), TxOut (..), TxOutRef (..))
 import PlutusLedgerApi.V1.Scripts (
     Datum (..),
     DatumHash,
  )
 
-type SubBuilder = BaseBuilder
+{- | Smaller builder that builds context smaller than TxInfo.
 
+ @since 2.0.0
+-}
+newtype SubBuilder = SubBuilder BaseBuilder
+
+-- | @since 2.0.0
+instance Builder SubBuilder where
+    pack x = SubBuilder x
+    unpack (SubBuilder x) = x
+
+{- | Builds TxOut from `UTXO`.
+
+ @since 2.0.0
+-}
 buildTxOut :: UTXO -> TxOut
 buildTxOut u = utxoToTxOut u
 
-buildTxOuts :: SubBuilder -> [TxOut]
-buildTxOuts x = utxoToTxOut <$> (toList $ x.bbOutputs)
+{- | Builds TxInInfo from `UTXO`.
 
+ @since 2.0.0
+-}
+buildTxInInfo :: UTXO -> Maybe TxInInfo
+buildTxInInfo u@(UTXO{..}) = do
+    txid <- utxoTxId
+    txidx <- utxoTxIdx
+    return $ TxInInfo (TxOutRef txid txidx) (utxoToTxOut u)
+
+{- | Builds all TxOuts from given builder.
+
+ @since 2.0.0
+-}
+buildTxOuts :: SubBuilder -> [TxOut]
+buildTxOuts (unpack -> BB{..}) = utxoToTxOut <$> (toList $ bbOutputs)
+
+{- | Builds all TxInInfos from give builder. Returns reason when failed.
+
+ @since 2.0.0
+-}
+buildTxInInfos :: SubBuilder -> Either String [TxInInfo]
+buildTxInInfos b@(unpack -> BB{..}) = flip runContT Right $ do
+    (ins, _) <- yieldInInfoDatums bbInputs b
+    return ins
+
+{- | Builds Datum-Hash pair from all inputs, outputs, extra data of given builder.
+
+ @since 2.0.0
+-}
 buildDatumHashPairs :: SubBuilder -> [(DatumHash, Datum)]
-buildDatumHashPairs x =
-    catMaybes (utxoDatumPair <$> (toList $ x.bbInputs <> x.bbOutputs))
-        <> (datumWithHash <$> (toList $ x.bbDatums))
+buildDatumHashPairs (unpack -> BB{..}) =
+    catMaybes (utxoDatumPair <$> (toList $ bbInputs <> bbOutputs))
+        <> (datumWithHash <$> (toList $ bbDatums))
