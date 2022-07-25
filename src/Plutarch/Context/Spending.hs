@@ -177,9 +177,12 @@ buildSpending builder = flip runContT Right $
                         }
             return $ ScriptContext txinfo (Spending vInRef)
 
--- | Check builder with provided checker, then build spending context.
-checkBuildSpending :: Checker -> SpendingBuilder -> Either String ScriptContext
-checkBuildSpending checker builder =
+{- | Check builder with provided checker, then build spending context.
+
+ @since 2.1.0
+-}
+checkBuildSpending :: Checker SpendingBuilder -> SpendingBuilder -> Either String ScriptContext
+checkBuildSpending (Checker checker) builder =
     case checker builder of
         Success b -> buildSpending b
         Failure err -> Left $ show err

@@ -136,9 +136,12 @@ buildMinting builder = flip runContT Right $
                 [] -> lift $ Left "Minting CS not found"
                 _ -> return $ ScriptContext txinfo (Minting mintingCS)
 
--- | Check builder with provided checker, then build minting context.
-checkBuildMinting :: Checker -> MintingBuilder -> Either String ScriptContext
-checkBuildMinting checker builder =
+{- | Check builder with provided checker, then build minting context.
+
+ @since 2.1.0
+-}
+checkBuildMinting :: Checker MintingBuilder -> MintingBuilder -> Either String ScriptContext
+checkBuildMinting (Checker checker) builder =
     case checker builder of
         Success b -> buildMinting b
         Failure err -> Left $ show err
