@@ -31,6 +31,13 @@ import Plutarch.Extra.TermCont (pmatchC)
  theory, as it is one of the ways we can lift a functor (in this case, @f@)
  into a profunctor.
 
+ This essentially enables us to work with @a :--> f b@ using 'PSemigroupoid'
+ and 'PCategory' operations as easily as we do @a :--> b@, provided that @f@
+ is at least a 'PBind'. With the addition of a 'PApplicative' (for identities),
+ we become a full 'PCategory'. Furthermore, we can also compose freely with
+ ordinary Plutarch ':-->' at /both/ ends of a 'PStar', provided @f@ is at
+ least 'PFunctor'.
+
  @since 1.2.1
 -}
 newtype PStar (f :: (S -> Type) -> S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S)
@@ -41,7 +48,11 @@ newtype PStar (f :: (S -> Type) -> S -> Type) (a :: S -> Type) (b :: S -> Type) 
         )
         via (DerivePNewtype (PStar f a b) (a :--> f b))
 
--- | @since 1.2.1
+{- | If @f@ is at least a 'PFunctor', we can pre-process and post-process work
+ done in @PStar f@ using pure functions.
+
+ @since 1.2.1
+-}
 instance (PFunctor f) => PProfunctor (PStar f) where
     type PContraSubcategory (PStar f) = Top
     type PCoSubcategory (PStar f) = PSubcategory f
@@ -50,7 +61,11 @@ instance (PFunctor f) => PProfunctor (PStar f) where
             PStar g <- pmatchC xs
             pure . pcon . PStar $ pdimap # into # (pfmap # outOf) # g
 
--- | @since 1.2.1
+{- | Strengthening @f@ to 'PBind' allows us to compose @PStar f@ computations
+ like ordinary Plutarch functions.
+
+ @since 1.2.1
+-}
 instance (PBind f) => PSemigroupoid (PStar f) where
     (#>>>) ::
         forall (a :: S -> Type) (b :: S -> Type) (c :: S -> Type) (s :: S).
@@ -69,14 +84,24 @@ instance (PBind f) => PSemigroupoid (PStar f) where
                 PStar g <- pmatchC bc
                 pure . pcon . PStar . plam $ \x -> pbind # (f # x) # g
 
--- | @since 1.2.1
+{- | Strengthening @f@ by adding 'PApplicative' gives us an identity, which
+ makes us a full category, on par with @Plut@ as evidenced by ':-->'.
+,
+ @since 1.2.1
+-}
 instance
     (PApplicative f, PBind f) =>
     PCategory (PStar f)
     where
     pidentity = pcon . PStar . plam $ \x -> ppure # x
 
--- | @since 1.2.1
+{- | This essentially makes @PStar f a b@ equivalent to the Haskell @ReaderT a f
+ b@: that is, a read-only environment of type @a@ producing a result of type
+ @b@ in an effect @f@. If @f@ is /only/ a 'PFunctor', we can only lift, but
+ not compose.
+
+ @since 1.2.1
+-}
 instance (PFunctor f) => PFunctor (PStar f a) where
     type PSubcategory (PStar f a) = PSubcategory f
     pfmap = phoistAcyclic $
@@ -84,7 +109,12 @@ instance (PFunctor f) => PFunctor (PStar f a) where
             PStar g <- pmatchC xs
             pure . pcon . PStar . plam $ \x -> pfmap # f # (g # x)
 
--- | @since 1.2.1
+{- | Strengthening to 'PApply' for @f@ allows us to combine together
+ computations in @PStar f a@ using the same \'view\' as in the 'PFunctor'
+ instance.
+
+ @since 1.2.1
+-}
 instance (PApply f) => PApply (PStar f a) where
     pliftA2 = phoistAcyclic $
         plam $ \f xs ys -> unTermCont $ do
@@ -92,6 +122,10 @@ instance (PApply f) => PApply (PStar f a) where
             PStar h <- pmatchC ys
             pure . pcon . PStar . plam $ \x -> pliftA2 # f # (g # x) # (h # x)
 
--- | @since 1.2.1
+{- | Strengthening to 'PApplicative' for @f@ allows arbitrary lifts into @PStar
+ f a@, using the same \'view\' as in the 'PFunctor' instance.
+
+ @since 1.2.1
+-}
 instance (PApplicative f) => PApplicative (PStar f a) where
     ppure = phoistAcyclic $ plam $ \x -> pcon . PStar . plam $ \_ -> ppure # x

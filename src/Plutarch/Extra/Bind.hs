@@ -36,8 +36,22 @@ import Plutarch.List (PList, pconcat, pnil, puncons)
 import Plutarch.Maybe (PMaybe (PJust, PNothing))
 import Plutarch.Pair (PPair (PPair))
 
--- | @since 1.2.1
+{- | Gives the capability to bind a Kleisli arrow over @f@ to a value:
+ essentially, the equivalent of Haskell's '>>='. Unlike Haskell, we don't
+ require the availability of 'pure': to recover the equivalent of Haskell's
+ 'Monad', you want both 'PApplicative' and 'PBind'.
+
+ = Laws
+
+ * @'pbind' '#' ('pbind' '#' m '#' f) '#' g@ @=@
+ @'pbind' '#' m '#' ('plam' '$' \x -> 'pbind' '#' (f '#' x) '#' g)@
+ * @'pbind' '#' f '#' ('plam' '$' \g -> 'pfmap' '#' g '#' x)@ @=@
+ @'pliftA2' '#' 'papply' '#' f '#' x@
+
+ @since 1.2.1
+-}
 class (PApply f) => PBind (f :: (S -> Type) -> S -> Type) where
+    -- | '>>=', but as a Plutarch function.
     pbind ::
         forall (a :: S -> Type) (b :: S -> Type) (s :: S).
         (PSubcategory f a, PSubcategory f b) =>
