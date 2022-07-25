@@ -25,12 +25,9 @@ import PlutusLedgerApi.V1.Scripts (
 
  @since 2.0.0
 -}
-newtype SubBuilder = SubBuilder BaseBuilder
-
--- | @since 2.0.0
-instance Builder SubBuilder where
-    pack x = SubBuilder x
-    unpack (SubBuilder x) = x
+newtype SubBuilder
+    = SubBuilder BaseBuilder
+    deriving newtype (Semigroup, Monoid, Builder)
 
 {- | Builds TxOut from `UTXO`.
 

@@ -20,7 +20,7 @@ import Control.Monad.Cont (ContT (runContT))
 import Data.Foldable (Foldable (toList))
 import Plutarch.Context.Base (
     BaseBuilder (bbDatums, bbInputs, bbMints, bbOutputs, bbSignatures),
-    Builder (unpack),
+    Builder (..),
     yieldBaseTxInfo,
     yieldExtraDatums,
     yieldInInfoDatums,
@@ -40,8 +40,18 @@ import PlutusLedgerApi.V1 (
     ),
  )
 
-type TxInfoBuilder = BaseBuilder
+{- | Builder that builds TxInfo.
 
+ @since 2.0.0
+-}
+newtype TxInfoBuilder
+    = TxInfoBuilder BaseBuilder
+    deriving newtype (Semigroup, Monoid, Builder)
+
+{- | Builds `TxInfo` from TxInfoBuilder.
+
+ @since 2.0.0
+-}
 buildTxInfo :: TxInfoBuilder -> Either String TxInfo
 buildTxInfo (unpack -> builder) = flip runContT Right $ do
     let bb = unpack builder
@@ -63,6 +73,7 @@ buildTxInfo (unpack -> builder) = flip runContT Right $ do
 
     return txinfo
 
+-- | Builds TxInfo; it throwing error when builder fails.
 buildTxInfoUnsafe :: TxInfoBuilder -> TxInfo
 buildTxInfoUnsafe = either error id . buildTxInfo
 
