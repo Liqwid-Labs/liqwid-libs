@@ -31,7 +31,6 @@ module Plutarch.Context.Spending (
 
 import Control.Monad.Cont (ContT (runContT), MonadTrans (lift))
 import Data.Foldable (Foldable (toList))
-import Data.Validation (Validation (..))
 import Plutarch.Context.Base
 import Plutarch.Context.Phase1
 
@@ -182,10 +181,10 @@ buildSpending builder = flip runContT Right $
  @since 2.1.0
 -}
 checkBuildSpending :: Checker SpendingBuilder -> SpendingBuilder -> Either String ScriptContext
-checkBuildSpending (Checker checker) builder =
-    case checker builder of
-        Success b -> buildSpending b
-        Failure err -> Left $ show err
+checkBuildSpending checker builder =
+    case toList (runChecker checker builder) of
+        [] -> buildSpending builder
+        err -> Left $ show err
 
 -- | Builds spending context; it throwing error when builder fails.
 buildSpendingUnsafe ::

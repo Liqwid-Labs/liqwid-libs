@@ -96,6 +96,8 @@ library
 
   build-depends:
     , acc
+    , bytestring
+    , contravariant
     , mtl
     , plutus-core
     , plutus-ledger-api

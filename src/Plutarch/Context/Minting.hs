@@ -30,7 +30,6 @@ module Plutarch.Context.Minting (
 import Control.Monad.Cont (ContT (runContT))
 import Control.Monad.Reader (MonadTrans (lift))
 import Data.Foldable (Foldable (toList))
-import Data.Validation (Validation (..))
 import Plutarch.Context.Base (
     BaseBuilder (bbDatums, bbInputs, bbMints, bbOutputs, bbSignatures),
     Builder (..),
@@ -141,10 +140,10 @@ buildMinting builder = flip runContT Right $
  @since 2.1.0
 -}
 checkBuildMinting :: Checker MintingBuilder -> MintingBuilder -> Either String ScriptContext
-checkBuildMinting (Checker checker) builder =
-    case checker builder of
-        Success b -> buildMinting b
-        Failure err -> Left $ show err
+checkBuildMinting checker builder =
+    case toList (runChecker checker builder) of
+        [] -> buildMinting builder
+        err -> Left $ show err
 
 -- | Builds minting context; it throwing error when builder fails.
 buildMintingUnsafe ::
