@@ -1,6 +1,15 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE NoPartialTypeSignatures #-}
 
+{- | Module: Plutarch.Test.Unit
+ Copyright: (C) Liqwid Labs 2022
+ Maintainer: Seungheon Oh <seungheon.ooh@gmail.com>
+ Portability: GHC only
+ Stability: Experimental
+
+ Small unit test for Plutarch that does not require extra testing
+ library like hunit.
+-}
 module Plutarch.Test.Unit (
     -- * Validator tests
     validatorSucceedsWith,
@@ -55,6 +64,8 @@ import Text.Show.Pretty (ppDoc)
 {- | Ensure the given 'Script' executes without erroring.
  This is a low-level function: you probably don't need this, unless you're
  implementing something yourself.
+
+ @since 1.0.0
 -}
 scriptSucceeds :: String -> Script -> TestTree
 scriptSucceeds name = singleTest name . ExpectSuccess
@@ -62,12 +73,16 @@ scriptSucceeds name = singleTest name . ExpectSuccess
 {- | Ensure the given 'Script' errors during its execution.
  This is a low-level function: you probably don't need this, unless you're
  implementing something yourself.
+
+ @since 1.0.0
 -}
 scriptFails :: String -> Script -> TestTree
 scriptFails name = singleTest name . ExpectFailure
 
 {- | Ensure the given minting policy executes without erroring, given the
  specified input redeemer.
+
+ @since 1.0.0
 -}
 mintingPolicySucceedsWith ::
     forall (redeemer :: S -> Type).
@@ -81,6 +96,8 @@ mintingPolicySucceedsWith = testMP scriptSucceeds
 
 {- | Ensure the given minting policy errors during its execution, given the
  specified input redeemer.
+
+ @since 1.0.0
 -}
 mintingPolicyFailsWith ::
     forall (redeemer :: S -> Type).
@@ -94,6 +111,8 @@ mintingPolicyFailsWith = testMP scriptFails
 
 {- | Ensure the given validator executes without erroring, given the specified
  input datum and redeemer.
+
+ @since 1.0.0
 -}
 validatorSucceedsWith ::
     forall (datum :: S -> Type) (redeemer :: S -> Type).
@@ -112,6 +131,8 @@ validatorSucceedsWith = testValidator scriptSucceeds
 
 {- | Ensure the given validator errors during its execution, given the
  specified input datum and redeemer.
+
+ @since 1.0.0
 -}
 validatorFailsWith ::
     forall (datum :: S -> Type) (redeemer :: S -> Type).
