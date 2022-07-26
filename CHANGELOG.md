@@ -24,6 +24,8 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 - Fixed `PApplicative` instances that previously not worked due to not using `pfix`.
 - Renamed `PType` to `S -> Type`.
+- Renamed `mustBePJust` to `passertPJust`.
+- Renamed `mustBePDJust` to `passertPDJust`.
 
 ## 1.2.0 -- 2022-07-12
 

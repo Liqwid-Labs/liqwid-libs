@@ -23,8 +23,8 @@ module Plutarch.Extra.Maybe (
     pexpectJustC,
 
     -- * Assertions
-    mustBePJust,
-    mustBePDJust,
+    passertPJust,
+    passertPDJust,
 ) where
 
 import Data.Kind (Type)
@@ -199,8 +199,8 @@ pexpectJustC escape ma = tcont $ \f ->
      If there's no value, throw an error with the given message.
      @since 1.3.0
 -}
-mustBePJust :: forall a s. Term s (PString :--> PMaybe a :--> a)
-mustBePJust = phoistAcyclic $
+passertPJust :: forall a s. Term s (PString :--> PMaybe a :--> a)
+passertPJust = phoistAcyclic $
     plam $ \emsg mv' -> pmatch mv' $ \case
         PJust v -> v
         _ -> ptraceError emsg
@@ -209,8 +209,8 @@ mustBePJust = phoistAcyclic $
      If there's no value, throw an error with the given message.
      @since 1.3.0
 -}
-mustBePDJust :: forall a s. (PIsData a) => Term s (PString :--> PMaybeData a :--> a)
-mustBePDJust = phoistAcyclic $
+passertPDJust :: forall a s. (PIsData a) => Term s (PString :--> PMaybeData a :--> a)
+passertPDJust = phoistAcyclic $
     plam $ \emsg mv' -> pmatch mv' $ \case
         PDJust ((pfield @"_0" #) -> v) -> v
         _ -> ptraceError emsg
