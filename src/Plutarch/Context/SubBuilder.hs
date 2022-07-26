@@ -53,7 +53,7 @@ buildTxInInfo u@(UTXO{..}) = do
 buildTxOuts :: SubBuilder -> [TxOut]
 buildTxOuts (unpack -> BB{..}) = utxoToTxOut <$> (toList $ bbOutputs)
 
-{- | Builds all TxInInfos from give builder. Returns reason when failed.
+{- | Builds all TxInInfos from given builder. Returns reason when failed.
 
  @since 2.0.0
 -}
