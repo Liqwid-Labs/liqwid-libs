@@ -30,8 +30,6 @@ module Plutarch.Context.Spending (
 import Control.Monad.Cont (ContT (runContT), MonadTrans (lift))
 import Data.Foldable (Foldable (toList))
 import Plutarch.Context.Base
-
-import PlutusLedgerApi.V1 (Credential (..))
 import PlutusLedgerApi.V1.Contexts
 
 data ValidatorInputIdentifier
@@ -72,12 +70,12 @@ instance Monoid SpendingBuilder where
  @since 2.0.0
 -}
 withSpendingUTXO ::
-    (UTXO -> UTXO) ->
+    UTXO ->
     SpendingBuilder
-withSpendingUTXO f =
+withSpendingUTXO u =
     mempty
         { sbValidatorInput =
-            Just . ValidatorUTXO $ f (UTXO (PubKeyCredential "") mempty Nothing Nothing Nothing)
+            Just $ ValidatorUTXO u
         }
 
 {- | Set Validator Input with given TxOutRef. Note, input with given

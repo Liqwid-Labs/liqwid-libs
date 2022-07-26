@@ -42,9 +42,15 @@ module Plutarch.Context (
     T.mints,
     T.buildTxInfo,
     T.buildTxInfoUnsafe,
+    Sub.buildTxOut,
+    Sub.buildTxInInfo,
+    Sub.buildTxOuts,
+    Sub.buildTxInInfos,
+    Sub.buildDatumHashPairs,
 ) where
 
 import qualified Plutarch.Context.Base as B
 import qualified Plutarch.Context.Minting as M
 import qualified Plutarch.Context.Spending as S
+import qualified Plutarch.Context.SubBuilder as Sub
 import qualified Plutarch.Context.TxInfo as T

@@ -91,6 +91,7 @@ library
     Plutarch.Context.Base
     Plutarch.Context.Minting
     Plutarch.Context.Spending
+    Plutarch.Context.SubBuilder
     Plutarch.Context.TxInfo
 
   build-depends:

@@ -42,6 +42,8 @@ module Plutarch.Context.Base (
 
     -- * Builder components
     utxoToTxOut,
+    datumWithHash,
+    utxoDatumPair,
     yieldBaseTxInfo,
     yieldMint,
     yieldExtraDatums,
@@ -89,7 +91,7 @@ import PlutusLedgerApi.V1.Value (Value)
 
 {- | 'UTXO' is used to represent any input or output of a transaction in the builders.
 
-A UTXO contains:
+A UTXO' contains:
 
   - A `Value` of one or more assets.
   - An `Address` that it exists at.
@@ -97,10 +99,10 @@ A UTXO contains:
 
 This is different from `TxOut`, in that we store the 'Data' fully instead of the 'DatumHash'.
 
- @since 1.1.0
+ @since 2.0.0
 -}
 data UTXO = UTXO
-    { utxoCredential :: Credential
+    { utxoCredential :: Maybe Credential
     , utxoValue :: Value
     , utxoData :: Maybe Data
     , utxoTxId :: Maybe TxId
@@ -108,14 +110,26 @@ data UTXO = UTXO
     }
     deriving stock (Show)
 
-{- | Pulls address output of given UTXO
+instance Semigroup UTXO where
+    (UTXO c v d t tidx) <> (UTXO c' v' d' t' tidx') =
+        UTXO (choose c c') (v <> v') (choose d d') (choose t t') (choose tidx tidx')
+      where
+        choose _ (Just b) = Just b
+        choose a Nothing = a
+
+instance Monoid UTXO where
+    mempty = UTXO Nothing mempty Nothing Nothing Nothing
+
+{- | Pulls address output of given UTXO'
 
  @since 1.1.0
 -}
 utxoAddress :: UTXO -> Address
 utxoAddress UTXO{..} = case utxoCredential of
-    PubKeyCredential pkh -> pubKeyHashAddress pkh
-    ScriptCredential vh -> scriptHashAddress vh
+    Just cred -> case cred of
+        PubKeyCredential pkh -> pubKeyHashAddress pkh
+        ScriptCredential vh -> scriptHashAddress vh
+    Nothing -> pubKeyHashAddress ""
 
 datumWithHash :: Data -> (DatumHash, Datum)
 datumWithHash d = (datumHash dt, dt)
@@ -123,7 +137,7 @@ datumWithHash d = (datumHash dt, dt)
     dt :: Datum
     dt = Datum . BuiltinData $ d
 
-{- | Construct DatumHash-Datum pair of given UTXO
+{- | Construct DatumHash-Datum pair of given UTXO'
 
  @since 1.1.0
 -}
@@ -267,46 +281,45 @@ withDatum ::
     forall (b :: Type) (p :: S -> Type).
     (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
     b ->
-    UTXO ->
     UTXO
-withDatum dat u = u{utxoData = Just . datafy $ dat}
+withDatum dat = mempty{utxoData = Just . datafy $ dat}
 
-withTxId :: TxId -> UTXO -> UTXO
-withTxId tid u = u{utxoTxId = Just tid}
+withTxId :: TxId -> UTXO
+withTxId tid = mempty{utxoTxId = Just tid}
 
-withRefIndex :: Integer -> UTXO -> UTXO
-withRefIndex tidx u = u{utxoTxIdx = Just tidx}
+withRefIndex :: Integer -> UTXO
+withRefIndex tidx = mempty{utxoTxIdx = Just tidx}
 
-withOutRef :: TxOutRef -> UTXO -> UTXO
-withOutRef (TxOutRef tid idx) = withTxId tid . withRefIndex idx
+withOutRef :: TxOutRef -> UTXO
+withOutRef (TxOutRef tid idx) = withTxId tid <> withRefIndex idx
 
-withValue :: Value -> UTXO -> UTXO
-withValue val u = u{utxoValue = val}
+withValue :: Value -> UTXO
+withValue val = mempty{utxoValue = val}
 
-credential :: Credential -> UTXO -> UTXO
-credential cred u = u{utxoCredential = cred}
+credential :: Credential -> UTXO
+credential cred = mempty{utxoCredential = Just cred}
 
-pubKey :: PubKeyHash -> UTXO -> UTXO
-pubKey (PubKeyCredential -> cred) u = u{utxoCredential = cred}
+pubKey :: PubKeyHash -> UTXO
+pubKey (PubKeyCredential -> cred) = mempty{utxoCredential = Just cred}
 
-script :: ValidatorHash -> UTXO -> UTXO
-script (ScriptCredential -> cred) u = u{utxoCredential = cred}
+script :: ValidatorHash -> UTXO
+script (ScriptCredential -> cred) = mempty{utxoCredential = Just cred}
 
 output ::
     forall (a :: Type).
     (Builder a) =>
-    (UTXO -> UTXO) ->
+    UTXO ->
     a
-output f = pack . g . f $ UTXO (PubKeyCredential "") mempty Nothing Nothing Nothing
+output f = pack . g $ f
   where
     g x = mempty{bbOutputs = pure x}
 
 input ::
     forall (a :: Type).
     (Builder a) =>
-    (UTXO -> UTXO) ->
+    UTXO ->
     a
-input f = pack . g . f $ UTXO (PubKeyCredential "") mempty Nothing Nothing Nothing
+input f = pack . g $ f
   where
     g x = mempty{bbInputs = pure x}
 
