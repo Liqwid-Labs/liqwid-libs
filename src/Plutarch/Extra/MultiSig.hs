@@ -7,7 +7,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 {- |
-Module     : Agora.MultiSig
+Module     : Plutarch.Extra.MultiSig
 Maintainer : seungheon.ooh@gmail.com
 Description: A basic N of M multisignature validation function.
 
