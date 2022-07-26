@@ -5,6 +5,40 @@
 
 {- | Benchmarking with a focus on running on many different input sizes and
  inputs.
+
+ Read on below to find out what function you want to use.
+
+ Definition: The cardinality of a certain input size refers to the number of
+ possible inputs at that size, regarding the method of input generation that is
+ being used. An input generator does not necessarily generate the whole domain
+ of the function being benchmarked, so the cardinality of the input size can be
+ different from the cardinality of the subset of the domain with that size.
+
+ When randomly generating inputs for small input sizes, achieving 100% coverage
+ is difficult. Imagine having already generated 9999 inputs of 10000 possible inputs.
+ The random generator will have a chance of 1/10000 of hitting the last possible
+ input with each attempt, requiring a huge number of attempts.
+
+ 'benchAllSizesUniform' exists for this reason, it makes use of exhaustive
+ generation for small input sizes and switches over to random generation for
+ larger input sizes seamlessly. The price you pay for that is having to write
+ both generators, bundled up in a 'SUniversalGen'. Ideally also the cardinality
+ function, this makes things more efficient but is not required.
+
+ All other @bench..@ functions in this module make use of random generation only.
+
+ If you want to bench small input sizes without having to write an 'SUniversalGen',
+ you should use 'benchSizesRandom'.
+
+ 'benchSizesRandomCached' caches results to speed up benching non-uniform random
+ distributions, but is currently not multi-threaded. Unlikely to be useful in
+ its current form.
+
+ 'benchAllSizesUniform' and 'benchNonTinySizesUniform' deduplicate the inputs,
+ making them only suitable for uniform distributions when randomly generating.
+
+ 'benchSizesRandom' does no deduplication and no result caching. It is suitable
+ for any distribution.
 -}
 module Test.Benchmark.Sized (
   SSample (..),
@@ -417,13 +451,6 @@ benchSizesRandomCached
 
  The list of sample elements '[s]' should be not be kept in memory, better
  process it into arrays right away, or write to file.
-
- TODO: This is single-threaded for now, because of accessing the HashTable.
-
- Threading this seems to be non-trivial because of the HashTable.
- It needs worker threads and channels, with one thread doing the HT
- updates as well as lookups. Might need to defer updates until all
- worker threads are "fed".
 -}
 benchSizesRandom ::
   forall (a :: Type) (m :: Type -> Type) (se :: Type).
