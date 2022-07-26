@@ -1,0 +1,89 @@
+cabal-version:      3.0
+name:               plutarch-unit
+version:            1.0.0
+synopsis:           Unit checks for Plutarch
+description:
+  An independent unitcheck library for constructing unit checks for Plutarch.
+
+homepage:           https://github.com/Liqwid-Labs/plutarch-unit
+bug-reports:        https://github.com/Liqwid-Labs/plutarch-unit/issues
+author:             Seungheon Oh
+maintainer:         Seungheon Oh <seungheon.ooh@gmail.com>
+copyright:          (C) 2022 Liqwid Labs
+category:           Plutarch
+build-type:         Simple
+tested-with:        GHC ==9.2.3
+extra-source-files: README.md
+
+-- LICENSE
+source-repository head
+  type:     git
+  location: https://github.com/Liqwid-Labs/plutrach-unit
+
+-- Common sections
+
+common common-lang
+  ghc-options:
+    -Wall -Wcompat -Wincomplete-uni-patterns
+    -Wincomplete-record-updates -Wredundant-constraints
+    -Wmissing-export-lists -Wmissing-deriving-strategies -Werror
+
+  build-depends:
+    , base      ^>=4.16
+    , plutarch
+
+  default-extensions:
+    BangPatterns
+    BinaryLiterals
+    ConstraintKinds
+    DataKinds
+    DeriveFunctor
+    DeriveGeneric
+    DeriveTraversable
+    DerivingStrategies
+    DerivingVia
+    EmptyCase
+    FlexibleContexts
+    FlexibleInstances
+    GeneralisedNewtypeDeriving
+    HexFloatLiterals
+    ImportQualifiedPost
+    InstanceSigs
+    KindSignatures
+    LambdaCase
+    MultiParamTypeClasses
+    NumericUnderscores
+    OverloadedStrings
+    ScopedTypeVariables
+    StandaloneDeriving
+    TupleSections
+    TypeOperators
+
+  default-language:   Haskell2010
+
+common common-tests
+  import:        common-lang
+  ghc-options:   -O2 -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+    , bytestring
+    , plutarch
+    , plutus-core
+    , QuickCheck
+    , tasty
+    , tasty-hunit
+    , tasty-quickcheck
+
+library
+  import:          common-lang
+  exposed-modules: Plutarch.Test.Unit
+  other-modules:
+  build-depends:
+    , plutus-tx
+    , pretty
+    , pretty-show
+    , tagged
+    , tasty
+    , plutus-ledger-api
+    , text
+
+  hs-source-dirs:  src
