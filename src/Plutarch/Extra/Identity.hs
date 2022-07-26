@@ -25,7 +25,7 @@ import Plutarch (
 import Plutarch.Bool (PEq, POrd)
 import Plutarch.Builtin (PIsData)
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
-import Plutarch.Extra.Bind (PBind (pbind))
+import Plutarch.Extra.Bind (PBind ((#>>=)))
 import Plutarch.Extra.Boring (PBoring (pboring))
 import Plutarch.Extra.Comonad (
     PComonad (pextract),
@@ -130,6 +130,6 @@ instance (PBoring a) => PBoring (PIdentity a) where
 
 -- | @since 1.2.1
 instance PBind PIdentity where
-    pbind = phoistAcyclic $
-        plam $ \xs f ->
-            pmatch xs $ \(PIdentity x) -> f # x
+    {-# INLINEABLE (#>>=) #-}
+    xs #>>= f = pmatch xs $ \case
+        PIdentity x -> f # x

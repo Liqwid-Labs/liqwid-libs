@@ -7,7 +7,6 @@ module Plutarch.Extra.Bind (
     PBind (..),
 
     -- * Functions
-    (#>>=),
     pjoin,
 ) where
 
@@ -16,12 +15,10 @@ import Plutarch (
     S,
     Term,
     pcon,
-    pfix,
     phoistAcyclic,
     plam,
-    unTermCont,
+    pmatch,
     (#),
-    (#$),
     type (:-->),
  )
 import Plutarch.Api.V1.Maybe (PMaybeData (PDJust, PDNothing))
@@ -31,10 +28,11 @@ import Plutarch.Either (PEither (PLeft, PRight))
 import Plutarch.Extra.Applicative (PApply)
 import Plutarch.Extra.Function (pidentity)
 import Plutarch.Extra.Functor (PSubcategory)
-import Plutarch.Extra.TermCont (pmatchC)
-import Plutarch.List (PList, pconcat, pnil, puncons)
+import Plutarch.Lift (PUnsafeLiftDecl)
+import Plutarch.List (PList, pconcat, pelimList, pnil)
 import Plutarch.Maybe (PMaybe (PJust, PNothing))
 import Plutarch.Pair (PPair (PPair))
+import Prelude hiding (head, tail)
 
 {- | Gives the capability to bind a Kleisli arrow over @f@ to a value:
  essentially, the equivalent of Haskell's '>>='. Unlike Haskell, we don't
@@ -43,91 +41,79 @@ import Plutarch.Pair (PPair (PPair))
 
  = Laws
 
- * @'pbind' '#' ('pbind' '#' m '#' f) '#' g@ @=@
- @'pbind' '#' m '#' ('plam' '$' \x -> 'pbind' '#' (f '#' x) '#' g)@
- * @'pbind' '#' f '#' ('plam' '$' \g -> 'pfmap' '#' g '#' x)@ @=@
- @'pliftA2' '#' 'papply' '#' f '#' x@
+ * @(m '#>>=' f) '#>>=' g@ @=@ @m '#>>=' ('plam' '$' \x -> (f '#' x) '#>>=' g)@
+ * @f '#<*>' x@ @=@ @f '#>>=' ('#<$>' x)@
 
  @since 1.2.1
 -}
 class (PApply f) => PBind (f :: (S -> Type) -> S -> Type) where
-    -- | '>>=', but as a Plutarch function.
-    pbind ::
+    -- | '>>=', but as a function on 'Term's.
+    (#>>=) ::
         forall (a :: S -> Type) (b :: S -> Type) (s :: S).
         (PSubcategory f a, PSubcategory f b) =>
-        Term s (f a :--> (a :--> f b) :--> f b)
+        Term s (f a) ->
+        Term s (a :--> f b) ->
+        Term s (f b)
+
+infixl 1 #>>=
 
 -- | @since 1.2.1
 instance PBind PMaybe where
-    pbind = phoistAcyclic $
-        plam $ \xs f -> unTermCont $ do
-            xs' <- pmatchC xs
-            pure $ case xs' of
-                PNothing -> pcon PNothing
-                PJust t -> f # t
+    {-# INLINEABLE (#>>=) #-}
+    xs #>>= f = pmatch xs $ \case
+        PNothing -> pcon PNothing
+        PJust t -> f # t
 
 -- | @since 1.2.1
 instance PBind PMaybeData where
-    pbind = phoistAcyclic $
-        plam $ \xs f -> unTermCont $ do
-            xs' <- pmatchC xs
-            pure $ case xs' of
-                PDNothing t -> pcon . PDNothing $ t
-                PDJust t -> f # pfromData (pfield @"_0" # t)
+    {-# INLINEABLE (#>>=) #-}
+    xs #>>= f = pmatch xs $ \case
+        PDNothing t -> pcon . PDNothing $ t
+        PDJust t -> f # pfromData (pfield @"_0" # t)
 
 -- | @since 1.2.1
 instance PBind PList where
-    pbind = phoistAcyclic $
-        pfix #$ plam $ \self xs f -> unTermCont $ do
-            xs' <- pmatchC (puncons # xs)
-            case xs' of
-                PNothing -> pure pnil
-                PJust t -> do
-                    PPair h rest <- pmatchC t
-                    pure $ pconcat # (f # h) # (self # rest # f)
+    (#>>=) ::
+        forall (a :: S -> Type) (b :: S -> Type) (s :: S).
+        Term s (PList a) ->
+        Term s (a :--> PList b) ->
+        Term s (PList b)
+    {-# INLINEABLE (#>>=) #-}
+    xs #>>= f = pelimList go pnil xs
+      where
+        go :: Term s a -> Term s (PList a) -> Term s (PList b)
+        go head tail = pconcat # (f # head) # (tail #>>= f)
 
 -- | @since 1.2.1
 instance PBind PBuiltinList where
-    pbind = phoistAcyclic $
-        pfix #$ plam $ \self xs f -> unTermCont $ do
-            xs' <- pmatchC (puncons # xs)
-            case xs' of
-                PNothing -> pure pnil
-                PJust t -> do
-                    PPair h rest <- pmatchC t
-                    pure $ pconcat # (f # h) # (self # rest # f)
+    (#>>=) ::
+        forall (a :: S -> Type) (b :: S -> Type) (s :: S).
+        (PUnsafeLiftDecl a, PUnsafeLiftDecl b) =>
+        Term s (PBuiltinList a) ->
+        Term s (a :--> PBuiltinList b) ->
+        Term s (PBuiltinList b)
+    {-# INLINEABLE (#>>=) #-}
+    xs #>>= f = pelimList go pnil xs
+      where
+        go :: Term s a -> Term s (PBuiltinList a) -> Term s (PBuiltinList b)
+        go head tail = pconcat # (f # head) # (tail #>>= f)
 
 -- | @since 1.2.1
 instance (forall (s :: S). Semigroup (Term s a)) => PBind (PPair a) where
-    pbind = phoistAcyclic $
-        plam $ \xs f -> unTermCont $ do
-            PPair acc t <- pmatchC xs
-            PPair acc' res <- pmatchC (f # t)
-            pure . pcon . PPair (acc <> acc') $ res
+    {-# INLINEABLE (#>>=) #-}
+    xs #>>= f = pmatch xs $ \case
+        PPair acc t -> pmatch (f # t) $ \case
+            PPair acc' res -> pcon . PPair (acc <> acc') $ res
 
 {- | Forwards the /first/ 'PLeft'.
 
  @since 1.2.1
 -}
 instance PBind (PEither e) where
-    pbind = phoistAcyclic $
-        plam $ \xs f -> unTermCont $ do
-            t <- pmatchC xs
-            pure $ case t of
-                PLeft t' -> pcon . PLeft $ t'
-                PRight t' -> f # t'
-
-{- | Infix form of 'pbind'.
-
- @since 1.2.1
--}
-(#>>=) ::
-    forall (a :: S -> Type) (b :: S -> Type) (f :: (S -> Type) -> S -> Type) (s :: S).
-    (PBind f, PSubcategory f a, PSubcategory f b) =>
-    Term s (f a) ->
-    Term s (a :--> f b) ->
-    Term s (f b)
-xs #>>= f = pbind # xs # f
+    {-# INLINEABLE (#>>=) #-}
+    xs #>>= f = pmatch xs $ \case
+        PLeft t -> pcon . PLeft $ t
+        PRight t -> f # t
 
 {- | \'Flattens\' two identical 'PBind' layers into one.
 
@@ -137,4 +123,4 @@ pjoin ::
     forall (a :: S -> Type) (f :: (S -> Type) -> S -> Type) (s :: S).
     (PBind f, PSubcategory f a, PSubcategory f (f a)) =>
     Term s (f (f a) :--> f a)
-pjoin = phoistAcyclic $ plam $ \xs -> pbind # xs # pidentity
+pjoin = phoistAcyclic $ plam $ \xs -> xs #>>= pidentity

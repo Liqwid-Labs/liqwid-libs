@@ -12,9 +12,9 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   `semigroupoids`, over `Term`s.
 - Instances of `PBind` for `PMaybe`, `PMaybeData`, `PList`, `PBuiltinList`,
   `PPair s` (for semigroupal `s`), `PEither e`, `PIdentity` and `PState s`.
-- Newtype `PStar` representing Kleisli arrows.
+- Newtype `PStar` representing Kleisli arrows, as well as some helper functions.
 - Instances of `PProfunctor`, `PSemigroupoid`, `PCategory`, `PFunctor`,
-  `PApply`, `PApplicative` for `PStar` (in various parameterizations).
+  `PApply`, `PApplicative`, `PBind` for `PStar` (in various parameterizations).
 
 ## 1.2.0 -- 2022-07-12
 

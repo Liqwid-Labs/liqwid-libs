@@ -4,6 +4,9 @@
 module Plutarch.Extra.Star (
     -- * Type
     PStar (..),
+
+    -- * Functions
+    papplyStar,
 ) where
 
 import Data.Kind (Type)
@@ -16,12 +19,13 @@ import Plutarch (
     pcon,
     phoistAcyclic,
     plam,
+    pmatch,
     unTermCont,
     (#),
     type (:-->),
  )
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
-import Plutarch.Extra.Bind (PBind (pbind))
+import Plutarch.Extra.Bind (PBind ((#>>=)))
 import Plutarch.Extra.Category (PCategory (pidentity), PSemigroupoid ((#>>>)))
 import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap))
 import Plutarch.Extra.Profunctor (PProfunctor (PCoSubcategory, PContraSubcategory, pdimap))
@@ -67,22 +71,10 @@ instance (PFunctor f) => PProfunctor (PStar f) where
  @since 1.2.1
 -}
 instance (PBind f) => PSemigroupoid (PStar f) where
-    (#>>>) ::
-        forall (a :: S -> Type) (b :: S -> Type) (c :: S -> Type) (s :: S).
-        (PSubcategory f b, PSubcategory f c) =>
-        Term s (PStar f a b) ->
-        Term s (PStar f b c) ->
-        Term s (PStar f a c)
-    t #>>> t' = go # t # t'
-      where
-        go ::
-            forall (s' :: S).
-            Term s' (PStar f a b :--> PStar f b c :--> PStar f a c)
-        go = phoistAcyclic $
-            plam $ \ab bc -> unTermCont $ do
-                PStar f <- pmatchC ab
-                PStar g <- pmatchC bc
-                pure . pcon . PStar . plam $ \x -> pbind # (f # x) # g
+    {-# INLINEABLE (#>>>) #-}
+    t #>>> t' = pmatch t $ \case
+        PStar ab -> pmatch t' $ \case
+            PStar bc -> pcon . PStar . plam $ \x -> (ab # x) #>>= bc
 
 {- | Strengthening @f@ by adding 'PApplicative' gives us an identity, which
  makes us a full category, on par with @Plut@ as evidenced by ':-->'.
@@ -129,3 +121,28 @@ instance (PApply f) => PApply (PStar f a) where
 -}
 instance (PApplicative f) => PApplicative (PStar f a) where
     ppure = phoistAcyclic $ plam $ \x -> pcon . PStar . plam $ \_ -> ppure # x
+
+{- | Strengthening to 'PBind' for @f@ allows dynamic control flow on the basis
+ of the result of a @PStar f a@, using the same \'view\' as the 'PFunctor'
+ instance.
+
+ @since 1.2.1
+-}
+instance (PBind f) => PBind (PStar f a) where
+    {-# INLINEABLE (#>>=) #-}
+    xs #>>= f = pmatch xs $ \case
+        PStar g -> pcon . PStar . plam $
+            \x -> (g # x) #>>= (f #>>> (papplyStar # x))
+
+{- | \'Run\' the 'PStar' as the function it secretly is. Useful for cases where
+ you want to build up a large computation using 'PStar' instances, then
+ execute.
+
+ @since 1.2.1
+-}
+papplyStar ::
+    forall (a :: S -> Type) (b :: S -> Type) (f :: (S -> Type) -> S -> Type) (s :: S).
+    Term s (a :--> PStar f a b :--> f b)
+papplyStar = phoistAcyclic $
+    plam $ \x f -> pmatch f $ \case
+        PStar f' -> f' # x
