@@ -19,9 +19,7 @@
   inputs.haskell-nix.follows = "plutarch/haskell-nix";
   inputs.iohk-nix.follows = "plutarch/iohk-nix";
   inputs.haskell-language-server.follows = "plutarch/haskell-language-server";
-
-  inputs.liqwid-nix.url =
-    "/home/emiflake/work/liqwid/liqwid-nix";
+  inputs.liqwid-nix.url = "github:Liqwid-Labs/liqwid-nix";
 
   outputs = inputs@{ liqwid-nix, ... }:
     (liqwid-nix.buildProject

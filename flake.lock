@@ -454,14 +454,17 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1657632350,
+        "lastModified": 1657637292,
         "narHash": "sha256-jm5Ca5Rh/RJSn3UrpCAQ0rAjgIQeY56hhU48Lw4JHmo=",
-        "type": "git",
-        "url": "file:///home/emiflake/work/liqwid/liqwid-nix"
+        "owner": "Liqwid-Labs",
+        "repo": "liqwid-nix",
+        "rev": "da0bcb385267e7e66b76b25ce4b1410967525980",
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///home/emiflake/work/liqwid/liqwid-nix"
+        "owner": "Liqwid-Labs",
+        "repo": "liqwid-nix",
+        "type": "github"
       }
     },
     "lowdown-src": {
