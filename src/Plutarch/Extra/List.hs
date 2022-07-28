@@ -25,21 +25,21 @@ module Plutarch.Extra.List (
 
 import Data.Kind (Type)
 import Plutarch (
-    PCon (pcon),
-    PMatch (pmatch),
     S,
     Term,
+    pcon,
     pfix,
     phoistAcyclic,
     plam,
     plet,
+    pmatch,
     unTermCont,
     (#),
     (#$),
     type (:-->),
  )
 import Plutarch.Api.V1.Tuple (PTuple)
-import Plutarch.Bool (PBool (..), PEq (..), POrd (..), pif, (#||))
+import Plutarch.Bool (PBool (..), PEq (..), POrd, pif, (#<), (#<=), (#||))
 import Plutarch.Builtin (PAsData, PBuiltinPair, PIsData, pfromData, pfstBuiltin, psndBuiltin)
 import Plutarch.DataRepr (pfield)
 import "plutarch-extra" Plutarch.Extra.List as Extra (

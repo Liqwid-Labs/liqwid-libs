@@ -21,25 +21,24 @@ module Plutarch.Extra.MultiSig (
 ) where
 
 import qualified GHC.Generics as GHC (Generic)
-import Generics.SOP (Generic, I (I))
+import Generics.SOP (Generic)
 import Plutarch.Api.V1 (PPubKeyHash, PTxInfo)
 import Plutarch.DataRepr (
     DerivePConstantViaData (DerivePConstantViaData),
     PDataFields,
-    PIsDataReprInstances (PIsDataReprInstances),
+    PlutusTypeData,
  )
 import Plutarch.Extra.TermCont (pletFieldsC)
 import Plutarch.Lift (PConstantDecl, PLifted, PUnsafeLiftDecl)
 import Plutarch.Prelude (
+    DerivePlutusType (..),
     PAsData,
     PBool,
     PBuiltinList,
     PDataRecord,
     PInteger,
     PIsData,
-    PIsDataRepr,
     PLabeledType ((:=)),
-    POrd ((#<=)),
     PlutusType,
     S,
     Term,
@@ -54,6 +53,7 @@ import Plutarch.Prelude (
     unTermCont,
     (#),
     (#$),
+    (#<=),
     type (:-->),
  )
 import PlutusLedgerApi.V1.Crypto (PubKeyHash)
@@ -110,23 +110,26 @@ newtype PMultiSig (s :: S) = PMultiSig
         )
     deriving anyclass
         ( -- | @since 0.1.0
-          PIsDataRepr
-        )
-    deriving
-        ( -- | @since 0.1.0
           PlutusType
         , -- | @since 0.1.0
           PIsData
         , -- | @since 0.1.0
           PDataFields
         )
-        via (PIsDataReprInstances PMultiSig)
+
+-- | @since 1.4.0
+instance DerivePlutusType PMultiSig where
+    type DPTStrat _ = PlutusTypeData
 
 -- | @since 0.1.0
-instance PUnsafeLiftDecl PMultiSig where type PLifted PMultiSig = MultiSig
+instance PUnsafeLiftDecl PMultiSig where
+    type PLifted PMultiSig = MultiSig
 
 -- | @since 0.1.0
-deriving via (DerivePConstantViaData MultiSig PMultiSig) instance (PConstantDecl MultiSig)
+deriving via
+    (DerivePConstantViaData MultiSig PMultiSig)
+    instance
+        (PConstantDecl MultiSig)
 
 --------------------------------------------------------------------------------
 

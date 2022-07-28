@@ -18,23 +18,22 @@ module Plutarch.Extra.Map (
 import Data.Foldable (foldl')
 import Data.Kind (Type)
 import Plutarch (
-    PMatch (pmatch),
     S,
     Term,
     pcon,
     phoistAcyclic,
     plam,
+    pmatch,
     pto,
     unTermCont,
     (#),
     type (:-->),
  )
 import Plutarch.Api.V1.AssocMap (KeyGuarantees, PMap (PMap))
-import Plutarch.Bool (PBool, PEq ((#==)), POrd ((#<)), pif)
+import Plutarch.Bool (PBool, PEq ((#==)), POrd, pif, (#<))
 import Plutarch.Builtin (
     PAsData,
     PBuiltinList (PCons, PNil),
-    PBuiltinMap,
     PBuiltinPair,
     PIsData,
     pdata,
@@ -93,10 +92,6 @@ pmapFromList ::
     Term s (PMap keys k v)
 pmapFromList = pcon . PMap . foldl' go (pcon PNil)
   where
-    go ::
-        Term s (PBuiltinMap k v) ->
-        (Term s k, Term s v) ->
-        Term s (PBuiltinMap k v)
     go acc (k, v) = unTermCont $ do
         k' <- pletC (pdata k)
         v' <- pletC (pdata v)

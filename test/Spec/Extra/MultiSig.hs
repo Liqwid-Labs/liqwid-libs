@@ -81,7 +81,7 @@ genMultiSigProp p = do
         MeetsMinSigs -> chooseInt (minSig, length pkhs)
         DoesNotMeetMinSigs -> chooseInt (0, minSig - 1)
 
-    let builder :: BaseBuilder
+    let builder :: (Monoid a, Builder a) => a
         builder = mconcat $ signedWith <$> take n pkhs <> othersigners
         txinfo = buildTxInfoUnsafe builder
     pure (ms, ScriptContext txinfo (Spending (TxOutRef "" 0)))

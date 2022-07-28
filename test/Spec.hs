@@ -3,7 +3,6 @@ import Test.Tasty (defaultMain, testGroup)
 
 --------------------------------------------------------------------------------
 
-import qualified Spec.Api.V1.Value as Value
 import qualified Spec.Extra.List as List
 import qualified Spec.Extra.Map as Map
 import qualified Spec.Extra.MultiSig as MultiSig
@@ -19,7 +18,6 @@ main = do
             "test suite"
             [ testGroup "list utilities" List.tests
             , testGroup "map utilities" Map.tests
-            , testGroup "value utilities" Value.tests
             , testGroup "traversable" Traversable.tests
             , testGroup "multisig" MultiSig.tests
             ]

@@ -36,7 +36,7 @@ import Plutarch.Api.V1 (
     PValue (PValue),
  )
 import Plutarch.Api.V1.AssetClass (PAssetClass)
-import Plutarch.Bool (PBool, POrd ((#<=)), (#&&), (#==))
+import Plutarch.Bool (PBool, (#&&), (#<=), (#==))
 import Plutarch.Builtin (pdata, pfromData, ppairDataBuiltin, psndBuiltin)
 import Plutarch.DataRepr (pfield)
 import qualified Plutarch.Extra.List

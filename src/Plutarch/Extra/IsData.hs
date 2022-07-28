@@ -39,16 +39,15 @@ import Generics.SOP (
     unI,
  )
 import qualified Generics.SOP as SOP
-import Plutarch (PlutusType (pcon', pmatch'))
 import Plutarch.Builtin (PIsData (pdataImpl, pfromDataImpl), pasInt)
 import Plutarch.Extra.TermCont (pletC)
+import Plutarch.Internal.PlutusType (PlutusType (pmatch', pcon'))
 import Plutarch.Lift (PConstantDecl (PConstantRepr, PConstanted, pconstantFromRepr, pconstantToRepr))
 import Plutarch.Prelude (
     PData,
     PEq ((#==)),
     PInteger,
     PLift,
-    PlutusType (..),
     S,
     Term,
     Type,
@@ -203,11 +202,10 @@ instance
     forall (a :: S -> Type).
     ( forall s. Enum (a s)
     , forall s. Bounded (a s)
-    , forall s. Eq (a s)
     ) =>
     PlutusType (PEnumData a)
     where
-    type PInner (PEnumData a) _ = PInteger
+    type PInner (PEnumData a) = PInteger
     pmatch' = pmatchEnum
     pcon' = fromInteger . toInteger . fromEnum
 

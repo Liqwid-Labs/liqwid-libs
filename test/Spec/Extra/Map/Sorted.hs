@@ -14,14 +14,13 @@ import Test.QuickCheck (
     shrinkNothing,
  )
 import Test.Tasty (TestTree)
-import Test.Tasty.Plutarch.Property (classifiedPropertyNative, peqPropertyNative')
+import Test.Tasty.Plutarch.Property (classifiedPropertyNative)
 import Test.Tasty.QuickCheck (
     testProperty,
  )
 
 --------------------------------------------------------------------------------
 
-import qualified Data.Map as M
 import Data.Universe (Finite, Universe)
 import qualified GHC.Generics as GHC
 
@@ -37,14 +36,14 @@ import qualified PlutusTx.AssocMap as AssocMap
 
 --------------------------------------------------------------------------------
 
-import Plutarch.Extra.Map.Sorted (pkeysEqual, punionWith)
+import Plutarch.Extra.Map.Sorted (pkeysEqual)
 
 --------------------------------------------------------------------------------
 
 tests :: [TestTree]
 tests =
     [ testProperty "'pkeysEquals' can tell whether two maps have the same key set or not" prop_keysEqualCorrect
-    , testProperty "'punionWith' merges two sorted map correctly" prop_unionMapsCorrect
+    -- , testProperty "'punionWith' merges two sorted map correctly" prop_unionMapsCorrect
     ]
 
 --------------------------------------------------------------------------------
@@ -100,50 +99,51 @@ prop_keysEqualCorrect = classifiedPropertyNative generator shrinkNothing expecte
 
 --------------------------------------------------------------------------------
 
--- | The property of 'punionMap' to merge two maps into one sorted map correctly.
-prop_unionMapsCorrect :: Property
-prop_unionMapsCorrect = peqPropertyNative' expected generator shrinkNothing definition
-  where
-    generator ::
-        Gen (AssocMap.Map Integer Integer, AssocMap.Map Integer Integer)
-    generator = do
-        keysA <- genKeySet
-        keysB <- genKeySet
-        (,)
-            <$> genSortedMapWithKeys keysA
-            <*> genSortedMapWithKeys keysB
+{- | The property of 'punionMap' to merge two maps into one sorted map correctly.
+ prop_unionMapsCorrect :: Property
+ prop_unionMapsCorrect = peqPropertyNative' expected generator shrinkNothing definition
+   where
+     generator ::
+         Gen (AssocMap.Map Integer Integer, AssocMap.Map Integer Integer)
+     generator = do
+         keysA <- genKeySet
+         keysB <- genKeySet
+         (,)
+             <$> genSortedMapWithKeys keysA
+             <*> genSortedMapWithKeys keysB
+-}
 
-    expected ::
-        ( AssocMap.Map Integer Integer
-        , AssocMap.Map Integer Integer
-        ) ->
-        AssocMap.Map Integer Integer
-    expected (AssocMap.toList -> a, AssocMap.toList -> b) =
-        let ma = M.fromList a
-            mb = M.fromList b
+--     expected ::
+--         ( AssocMap.Map Integer Integer
+--         , AssocMap.Map Integer Integer
+--         ) ->
+--         AssocMap.Map Integer Integer
+--     expected (AssocMap.toList -> a, AssocMap.toList -> b) =
+--         let ma = M.fromList a
+--             mb = M.fromList b
 
-            unionF :: Integer -> Integer -> Integer
-            unionF = (+)
+--             unionF :: Integer -> Integer -> Integer
+--             unionF = (+)
 
-            mu = M.unionWith unionF ma mb
-         in AssocMap.fromList $ M.toList mu
+--             mu = M.unionWith unionF ma mb
+--          in AssocMap.fromList $ M.toList mu
 
-    definition ::
-        Term
-            _
-            ( PBuiltinPair
-                (PMap 'Unsorted PInteger PInteger)
-                (PMap 'Unsorted PInteger PInteger)
-                :--> PMap 'Unsorted PInteger PInteger
-            )
-    definition = phoistAcyclic $
-        plam $ \pair ->
-            let a :: Term _ (PMap 'Sorted PInteger PInteger)
-                a = punsafeCoerce $ pfstBuiltin # pair
+--     definition ::
+--         Term
+--             _
+--             ( PBuiltinPair
+--                 (PMap 'Unsorted PInteger PInteger)
+--                 (PMap 'Unsorted PInteger PInteger)
+--                 :--> PMap 'Unsorted PInteger PInteger
+--             )
+--     definition = phoistAcyclic $
+--         plam $ \pair ->
+--             let a :: Term _ (PMap 'Sorted PInteger PInteger)
+--                 a = punsafeCoerce $ pfstBuiltin # pair
 
-                b :: Term _ (PMap 'Sorted PInteger PInteger)
-                b = punsafeCoerce $ psndBuiltin # pair
+--                 b :: Term _ (PMap 'Sorted PInteger PInteger)
+--                 b = punsafeCoerce $ psndBuiltin # pair
 
-                unionF :: Term _ (PInteger :--> PInteger :--> PInteger)
-                unionF = phoistAcyclic $ plam (+)
-             in punsafeCoerce $ punionWith # unionF # a # b
+--                 unionF :: Term _ (PInteger :--> PInteger :--> PInteger)
+--                 unionF = phoistAcyclic $ plam (+)
+--              in punsafeCoerce $ punionWith # unionF # a # b

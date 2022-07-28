@@ -26,7 +26,7 @@ module Plutarch.Api.V1.ScriptContext (
 ) where
 
 import Data.Kind (Type)
-import Plutarch (PCon (..), S, Term, phoistAcyclic, plam, plet, pmatch, pto, unTermCont, (#), (#$), (:-->))
+import Plutarch (S, Term, pcon, phoistAcyclic, plam, plet, pmatch, pto, unTermCont, (#), (#$), (:-->))
 import Plutarch.Api.V1 (
     AmountGuarantees (NoGuarantees, NonZero, Positive),
     KeyGuarantees (Sorted, Unsorted),
@@ -48,7 +48,7 @@ import Plutarch.Api.V1 (
     PValue,
  )
 import Plutarch.Api.V1.AssetClass (PAssetClass, passetClassValueOf)
-import Plutarch.Bool (PBool, POrd ((#<)), pif, pnot, (#==))
+import Plutarch.Bool (PBool, PPartialOrd (#<), pif, pnot, (#==))
 import Plutarch.Builtin (PAsData, PBuiltinList, PData, pdata, pfromData)
 import Plutarch.DataRepr (pdcons, pdnil, pfield)
 import Plutarch.Extra.List (pfirstJust, plookupTuple)
@@ -98,14 +98,14 @@ pownInput = phoistAcyclic $
         res <- pmatchC (pfind # (go # txOutRef) # txInInfos)
         pure $ case res of
             PNothing -> ptraceError "pownInput: Could not find my own input"
-            PJust res' -> pfromData res'
+            PJust res' -> res'
   where
     go ::
         forall (s' :: S).
-        Term s' (PTxOutRef :--> PAsData PTxInInfo :--> PBool)
+        Term s' (PTxOutRef :--> PTxInInfo :--> PBool)
     go = phoistAcyclic $
         plam $ \tgt t -> unTermCont $ do
-            x <- pletC (pfield @"outRef" # pfromData t)
+            x <- pletC (pfield @"outRef" # t)
             pure $ tgt #== x
 
 {- | Determines if a given UTXO is spent.
