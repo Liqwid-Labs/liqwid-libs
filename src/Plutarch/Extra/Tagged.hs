@@ -128,11 +128,6 @@ deriving anyclass instance (PNum underlying) => PNum (PTagged tag underlying)
 deriving anyclass instance (PShow underlying) => PShow (PTagged tag underlying)
 
 -- | @since 1.0.0
-deriving anyclass instance
-    (PTryFrom a underlying, PSubtype a (PTagged tag underlying)) =>
-    PTryFrom a (PTagged tag underlying)
-
--- | @since 1.0.0
 instance PFunctor (PTagged tag) where
     type PSubcategory (PTagged tag) = Top
     pfmap = phoistAcyclic $
