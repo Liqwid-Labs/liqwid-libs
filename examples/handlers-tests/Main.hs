@@ -19,7 +19,7 @@ import Data.Universe (
     Universe (universe),
  )
 
-import Plutarch (PCon (pcon), S, Term, plam, (#), type (:-->))
+import Plutarch (S, Term, pcon, plam, (#), type (:-->))
 import Plutarch.Integer (PInteger, PIntegral (pquot))
 import Plutarch.Maybe (PMaybe (..))
 import Plutarch.Trace (ptraceError)
