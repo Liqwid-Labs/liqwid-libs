@@ -48,7 +48,7 @@ benchMain run = do
 {- TODO
   The whole interface is rather low-level for now.
   A high-level interface needs to:
-  - allow grouping benchmarks in a tree
+  - allow grouping benchmarks in a tree (see tasty-bench, maybe reuse)
   - allow to filter the tree with command line arguments, just like Tasty/QuickCheck do
   - needs to keep track of dependencies: a comparison of multiple
     benchmark-outputs needs to make sure those benchmarks are run, no matter what

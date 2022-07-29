@@ -81,7 +81,7 @@ class Eq a => CostAxis a where
   default axisName :: Show a => a -> Text
   axisName a = pack $ show a
   default axes :: (Bounded a, Enum a) => [a]
-  axes = enumFromTo minBound maxBound
+  axes = [minBound .. maxBound]
 
 {- | Holds values for all your cost axes.
 
