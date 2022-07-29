@@ -10,8 +10,7 @@ module Test.Benchmark.Plutarch (
   pbenchSizesRandom,
 ) where
 
-import Control.Monad.IO.Class (MonadIO)
-import Control.Monad.ST.Class (MonadST)
+import Control.Monad.Primitive (MonadPrim)
 import Data.Hashable (Hashable)
 import Data.Text (Text)
 import Plutarch (compile)
@@ -64,10 +63,9 @@ sampleTouchTerm' = sampleScript . toScript . (ptouch' ###~)
 
 -- | See 'benchAllSizesUniform'.
 pbenchAllSizesUniform ::
-  forall (a :: Type) (m :: Type -> Type) (f :: S -> Type) (b :: S -> Type).
+  forall (a :: Type) (f :: S -> Type) (b :: S -> Type) (m :: Type -> Type) (s :: Type).
   ( Hashable a
-  , MonadST m
-  , MonadIO m
+  , MonadPrim s m
   , PTouch b
   ) =>
   -- | Size-dependent input domain generator.
@@ -104,9 +102,9 @@ pbenchAllSizesUniform
 
 -- | See 'benchNonTinySizesRandomUniform'.
 pbenchNonTinySizesRandomUniform ::
-  forall (a :: Type) (m :: Type -> Type) (f :: S -> Type) (b :: S -> Type).
+  forall (a :: Type) (f :: S -> Type) (b :: S -> Type) (m :: Type -> Type) (s :: Type).
   ( Hashable a
-  , MonadST m
+  , MonadPrim s m
   , PTouch b
   ) =>
   -- | Size-dependent random input generator
@@ -140,9 +138,9 @@ pbenchNonTinySizesRandomUniform
 
 -- | See 'benchSizesRandomCached'.
 pbenchSizesRandomCached ::
-  forall (a :: Type) (m :: Type -> Type) (f :: S -> Type) (b :: S -> Type).
+  forall (a :: Type) (f :: S -> Type) (b :: S -> Type) (m :: Type -> Type) (s :: Type).
   ( Hashable a
-  , MonadST m
+  , MonadPrim s m
   , PTouch b
   ) =>
   -- | Size-dependent random input generator
@@ -176,9 +174,9 @@ pbenchSizesRandomCached
 
 -- | See 'benchSizesRandomCached'.
 pbenchSizesRandom ::
-  forall (a :: Type) (m :: Type -> Type) (f :: S -> Type) (b :: S -> Type).
+  forall (a :: Type) (f :: S -> Type) (b :: S -> Type) (m :: Type -> Type) (s :: Type).
   ( Hashable a
-  , MonadST m
+  , MonadPrim s m
   , PTouch b
   ) =>
   -- | Size-dependent random input generator

@@ -65,7 +65,7 @@ import Data.Csv (
 import Data.HashTable.ST.Basic qualified as HashTable
 import Data.Hashable (Hashable)
 import Data.Maybe (fromMaybe, isNothing)
-import Data.STRef (newSTRef, readSTRef, writeSTRef)
+import Data.Primitive.MutVar (newMutVar, readMutVar, writeMutVar)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Optics.TH (makeFieldLabelsNoPrefix)
@@ -181,7 +181,7 @@ makeFieldLabelsNoPrefix ''SUniversalGen
  TODO An actual Stream might be a better choice
 -}
 benchAllSizesUniform ::
-  forall (a :: Type) (m :: Type -> Type) (s :: Type) (se :: Type).
+  forall (a :: Type) (se :: Type) (m :: Type -> Type) (s :: Type).
   ( Hashable a
   , -- TODO could hide that ST is being used, but need effects anyway for
     -- displaying progress later so at least a Monad constraint will probably be
@@ -214,10 +214,10 @@ benchAllSizesUniform
   sampleFun
   desiredSampleSizePerInputSize
   sizes = do
-    prevCardRef <- stToPrim $ newSTRef (Cardinality 0)
+    prevCardRef <- newMutVar (Cardinality 0)
     mapM
       ( \inputSize -> do
-          prevCard <- stToPrim $ readSTRef prevCardRef
+          prevCard <- readMutVar prevCardRef
           -- using StateGenM to be able to freeze the seed. MonadRandom can't do this..
           (card, ssample) <-
             runStateGenT_ (mkStdGen 42) . const $
@@ -227,13 +227,13 @@ benchAllSizesUniform
                 sampleFun
                 desiredSampleSizePerInputSize
                 inputSize
-          stToPrim $ writeSTRef prevCardRef card
+          writeMutVar prevCardRef card
           pure ssample
       )
       sizes
 
 benchInputSizeUniversal ::
-  forall (a :: Type) (m :: Type -> Type) (s :: Type) (se :: Type).
+  forall (a :: Type) (se :: Type) (m :: Type -> Type) (s :: Type).
   ( Hashable a
   , MonadPrim s m
   , NFData se
@@ -339,7 +339,7 @@ verifyCard card inputSize = go (fromIntegral card :: Integer)
  process it into arrays right away, or write to file.
 -}
 benchNonTinySizesRandomUniform ::
-  forall (a :: Type) (m :: Type -> Type) (s :: Type) (se :: Type).
+  forall (a :: Type) (se :: Type) (m :: Type -> Type) (s :: Type).
   ( Hashable a
   , -- TODO could hide that ST is being used, but need effects anyway for displaying progress later
     --   so at least a Monad constraint will probably be involved
@@ -397,7 +397,7 @@ benchNonTinySizesRandomUniform
  worker threads are "fed".
 -}
 benchSizesRandomCached ::
-  forall (a :: Type) (m :: Type -> Type) (s :: Type) (se :: Type).
+  forall (a :: Type) (se :: Type) (m :: Type -> Type) (s :: Type).
   ( Hashable a
   , MonadPrim s m
   ) =>
@@ -451,7 +451,7 @@ benchSizesRandomCached
  process it into arrays right away, or write to file.
 -}
 benchSizesRandom ::
-  forall (a :: Type) (m :: Type -> Type) (se :: Type).
+  forall (a :: Type) (se :: Type) (m :: Type -> Type).
   ( Monad m
   , NFData se
   ) =>
@@ -479,7 +479,7 @@ benchSizesRandom
         pure $ SSample {inputSize, coverage = Nothing, sampleSize, sample}
 
 genRandomDedup ::
-  forall g a m s.
+  forall (g :: Type) (a :: Type) (m :: Type -> Type) (s :: Type).
   ( MonadPrim s m
   , RandomGen g
   , Hashable a
@@ -504,7 +504,7 @@ genRandomDedup sampleSize gen = do
   loop sampleSize
 
 genRandomSubset ::
-  forall (m :: Type -> Type) (s :: Type) (a :: Type) (g :: Type).
+  forall (g :: Type) (a :: Type) (m :: Type -> Type) (s :: Type).
   ( MonadPrim s m
   , RandomGen g
   ) =>
