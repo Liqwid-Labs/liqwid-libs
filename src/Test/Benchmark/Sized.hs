@@ -51,8 +51,7 @@ module Test.Benchmark.Sized (
 ) where
 
 import Control.Monad (filterM, forM, replicateM)
-import Control.Monad.IO.Class (MonadIO, liftIO)
-import Control.Monad.ST.Class (MonadST, liftST)
+import Control.Monad.Primitive (MonadPrim, stToPrim)
 import Control.Monad.State.Strict (StateT)
 import Control.Parallel.Strategies (NFData, parMap, rdeepseq)
 import Data.Csv (
@@ -65,8 +64,8 @@ import Data.Csv (
  )
 import Data.HashTable.ST.Basic qualified as HashTable
 import Data.Hashable (Hashable)
-import Data.IORef (newIORef, readIORef, writeIORef)
 import Data.Maybe (fromMaybe, isNothing)
+import Data.STRef (newSTRef, readSTRef, writeSTRef)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Optics.TH (makeFieldLabelsNoPrefix)
@@ -182,13 +181,12 @@ makeFieldLabelsNoPrefix ''SUniversalGen
  TODO An actual Stream might be a better choice
 -}
 benchAllSizesUniform ::
-  forall (a :: Type) (m :: Type -> Type) (se :: Type).
+  forall (a :: Type) (m :: Type -> Type) (s :: Type) (se :: Type).
   ( Hashable a
   , -- TODO could hide that ST is being used, but need effects anyway for
     -- displaying progress later so at least a Monad constraint will probably be
     -- involved
-    MonadST m
-  , MonadIO m
+    MonadPrim s m
   , NFData se
   ) =>
   -- | Size-dependent input domain generator.
@@ -216,10 +214,10 @@ benchAllSizesUniform
   sampleFun
   desiredSampleSizePerInputSize
   sizes = do
-    prevCardRef <- liftIO $ newIORef (Cardinality 0)
+    prevCardRef <- stToPrim $ newSTRef (Cardinality 0)
     mapM
       ( \inputSize -> do
-          prevCard <- liftIO $ readIORef prevCardRef
+          prevCard <- stToPrim $ readSTRef prevCardRef
           -- using StateGenM to be able to freeze the seed. MonadRandom can't do this..
           (card, ssample) <-
             runStateGenT_ (mkStdGen 42) . const $
@@ -229,15 +227,15 @@ benchAllSizesUniform
                 sampleFun
                 desiredSampleSizePerInputSize
                 inputSize
-          liftIO $ writeIORef prevCardRef card
+          stToPrim $ writeSTRef prevCardRef card
           pure ssample
       )
       sizes
 
 benchInputSizeUniversal ::
-  forall (a :: Type) (m :: Type -> Type) (se :: Type).
+  forall (a :: Type) (m :: Type -> Type) (s :: Type) (se :: Type).
   ( Hashable a
-  , MonadST m
+  , MonadPrim s m
   , NFData se
   ) =>
   -- | Previous 'Cardinality'
@@ -341,11 +339,11 @@ verifyCard card inputSize = go (fromIntegral card :: Integer)
  process it into arrays right away, or write to file.
 -}
 benchNonTinySizesRandomUniform ::
-  forall (a :: Type) (m :: Type -> Type) (se :: Type).
+  forall (a :: Type) (m :: Type -> Type) (s :: Type) (se :: Type).
   ( Hashable a
   , -- TODO could hide that ST is being used, but need effects anyway for displaying progress later
     --   so at least a Monad constraint will probably be involved
-    MonadST m
+    MonadPrim s m
   , NFData se
   ) =>
   -- | Size-dependent random input generator
@@ -399,9 +397,9 @@ benchNonTinySizesRandomUniform
  worker threads are "fed".
 -}
 benchSizesRandomCached ::
-  forall (a :: Type) (m :: Type -> Type) (se :: Type).
+  forall (a :: Type) (m :: Type -> Type) (s :: Type) (se :: Type).
   ( Hashable a
-  , MonadST m
+  , MonadPrim s m
   ) =>
   -- | Size-dependent random input generator
   (forall (g :: Type). RandomGen g => Int -> g -> (a, g)) ->
@@ -421,13 +419,13 @@ benchSizesRandomCached
       mapM (benchInputSize sampleSizePerInputSize) sizes
     where
       benchInputSize sampleSize inputSize = do
-        ht <- liftST $ HashTable.newSized sampleSize
+        ht <- stToPrim $ HashTable.newSized sampleSize
         inputs <-
           replicateM
             sampleSize
             (applyRandomGenM (randomGen inputSize) StateGenM)
         sample <- forM inputs $ \input -> do
-          liftST $
+          stToPrim $
             HashTable.mutate ht input $ \case
               Nothing -> let se = sampleFun input in (Just se, se)
               jse@(Just se) -> (jse, se)
@@ -454,7 +452,7 @@ benchSizesRandomCached
 -}
 benchSizesRandom ::
   forall (a :: Type) (m :: Type -> Type) (se :: Type).
-  ( MonadST m
+  ( Monad m
   , NFData se
   ) =>
   -- | Size-dependent random input generator
@@ -481,8 +479,8 @@ benchSizesRandom
         pure $ SSample {inputSize, coverage = Nothing, sampleSize, sample}
 
 genRandomDedup ::
-  forall g a m.
-  ( MonadST m
+  forall g a m s.
+  ( MonadPrim s m
   , RandomGen g
   , Hashable a
   ) =>
@@ -490,14 +488,14 @@ genRandomDedup ::
   (g -> (a, g)) ->
   StateT g m [a]
 genRandomDedup sampleSize gen = do
-  ht <- liftST $ HashTable.newSized sampleSize
+  ht <- stToPrim $ HashTable.newSized sampleSize
   let loop 0 = pure []
       loop n = do
         input <- applyRandomGenM gen StateGenM
         isNew <-
           -- just abusing this mutable hashtable as a set
           -- lookup and insert at the same time
-          liftST $
+          stToPrim $
             HashTable.mutate ht input $
               maybe (Just (), True) (\() -> (Just (), False))
         if isNew
@@ -506,8 +504,8 @@ genRandomDedup sampleSize gen = do
   loop sampleSize
 
 genRandomSubset ::
-  forall (m :: Type -> Type) (a :: Type) (g :: Type).
-  ( MonadST m
+  forall (m :: Type -> Type) (s :: Type) (a :: Type) (g :: Type).
+  ( MonadPrim s m
   , RandomGen g
   ) =>
   Natural ->
@@ -517,14 +515,14 @@ genRandomSubset ::
 genRandomSubset card sampleSize set = do
   let dropNum = fromIntegral card - sampleSize
   -- fill a hashtable with dropNum indices into exhaustiveGen output
-  ht <- liftST $ HashTable.newSized sampleSize
+  ht <- stToPrim $ HashTable.newSized sampleSize
   let loop (-1) = pure ()
       loop n = do
         input :: Int <- uniformRM (0, fromIntegral card - 1) StateGenM
         isNew <-
           -- just abusing this mutable hashtable as a set
           -- lookup and insert at the same time
-          liftST $
+          stToPrim $
             HashTable.mutate ht input $
               maybe (Just (), True) (\() -> (Just (), False))
         if isNew
@@ -533,5 +531,5 @@ genRandomSubset card sampleSize set = do
   loop dropNum
   let es = zip [0 ..] set
   es' <- flip filterM es $ \(ix, _) ->
-    liftST $ isNothing <$> HashTable.lookup ht ix
+    stToPrim $ isNothing <$> HashTable.lookup ht ix
   pure $ snd <$> es'
