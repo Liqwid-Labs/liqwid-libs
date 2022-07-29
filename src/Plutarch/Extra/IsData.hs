@@ -4,6 +4,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Plutarch.Extra.IsData (
     -- * PlutusTx ToData/FromData derive-wrappers
@@ -11,9 +12,11 @@ module Plutarch.Extra.IsData (
     EnumIsData (..),
 
     -- * Plutarch PIsData/PlutusType derive-wrappers
-    PEnumData (..),
     DerivePConstantViaDataList (..),
     DerivePConstantViaEnum (..),
+
+    -- * Plutarch deriving strategy
+    PlutusTypeEnumData,
 
     -- * Functions for PEnumData types
     pmatchEnum,
@@ -41,8 +44,9 @@ import Generics.SOP (
 import qualified Generics.SOP as SOP
 import Plutarch.Builtin (PIsData (pdataImpl, pfromDataImpl), pasInt)
 import Plutarch.Extra.TermCont (pletC)
-import Plutarch.Internal.PlutusType (PlutusType (pmatch', pcon'))
-import Plutarch.Lift (PConstantDecl (PConstantRepr, PConstanted, pconstantFromRepr, pconstantToRepr))
+import Plutarch.Internal.Generic (PGeneric)
+import Plutarch.Internal.PlutusType (DerivePlutusType (..), PlutusTypeStrat (..))
+import Plutarch.Lift (PConstantDecl (..))
 import Plutarch.Prelude (
     PData,
     PEq ((#==)),
@@ -171,20 +175,6 @@ instance
 -}
 newtype EnumIsData (a :: Type) = EnumIsData a
 
-{- |
-  Wrapper for deriving `PlutusType` & `PIsData` via a ToData repr derived with `EnumIsData`.
-
-  @since 1.1.0
--}
-newtype PEnumData (a :: S -> Type) (s :: S) = PEnumData (a s)
-    deriving
-        ( -- | @since 1.1.0
-          Enum
-        , -- | @since 1.1.0
-          Bounded
-        )
-        via (a s)
-
 -- | @since 1.1.0
 instance forall (a :: Type). (Enum a) => ToData (EnumIsData a) where
     toBuiltinData = coerce $ toBuiltinData . toInteger . fromEnum @a
@@ -197,20 +187,34 @@ instance forall (a :: Type). (Enum a) => FromData (EnumIsData a) where
 instance forall (a :: Type). (Enum a) => UnsafeFromData (EnumIsData a) where
     unsafeFromBuiltinData = coerce . toEnum @a . fromInteger . unsafeFromBuiltinData @Integer
 
--- | @since 1.1.0
-instance
-    forall (a :: S -> Type).
-    ( forall s. Enum (a s)
-    , forall s. Bounded (a s)
-    ) =>
-    PlutusType (PEnumData a)
-    where
-    type PInner (PEnumData a) = PInteger
-    pmatch' = pmatchEnum
-    pcon' = fromInteger . toInteger . fromEnum
+data PlutusTypeEnumData
 
--- | @since 1.1.0
-instance forall (a :: S -> Type). PIsData (PEnumData a) where
+class
+    ( PGeneric p
+    , forall s. Enum (p s)
+    , forall s. Bounded (p s)
+    ) =>
+    IsPlutusTypeEnumData (p :: S -> Type)
+instance
+    ( PGeneric p
+    , forall s. Enum (p s)
+    , forall s. Bounded (p s)
+    ) =>
+    IsPlutusTypeEnumData p
+
+instance PlutusTypeStrat PlutusTypeEnumData where
+    type PlutusTypeStratConstraint PlutusTypeEnumData = IsPlutusTypeEnumData
+    type DerivedPInner PlutusTypeEnumData a = PInteger
+    derivedPCon = fromInteger . toInteger . fromEnum
+    derivedPMatch = pmatchEnum
+
+instance
+    {-# OVERLAPPABLE #-}
+    ( DerivePlutusType a
+    , DPTStrat a ~ PlutusTypeEnumData
+    ) =>
+    PIsData a
+    where
     pfromDataImpl d =
         punsafeCoerce (pfromDataImpl @PInteger $ punsafeCoerce d)
 
@@ -228,7 +232,11 @@ newtype DerivePConstantViaEnum (h :: Type) (p :: S -> Type)
 -- | @since 1.1.0
 instance
     forall (p :: S -> Type) (h :: Type).
-    (PLift p, Enum h) =>
+    ( PLift p
+    , Enum h
+    , DerivePlutusType p
+    , DPTStrat p ~ PlutusTypeEnumData
+    ) =>
     PConstantDecl (DerivePConstantViaEnum h p)
     where
     type PConstantRepr (DerivePConstantViaEnum h p) = Integer
