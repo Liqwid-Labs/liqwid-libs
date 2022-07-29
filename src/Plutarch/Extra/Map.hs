@@ -19,7 +19,6 @@ import Data.Foldable (foldl')
 import Data.Kind (Type)
 import Plutarch (
     PMatch (pmatch),
-    PType,
     S,
     Term,
     pcon,
@@ -186,7 +185,7 @@ pkvPairLt = phoistAcyclic $
 
 -- | @since 1.3.0
 pfoldlWithKey ::
-    forall (a :: PType) (k :: PType) (v :: PType) (keys :: KeyGuarantees) (s :: S).
+    forall (a :: S -> Type) (k :: S -> Type) (v :: S -> Type) (keys :: KeyGuarantees) (s :: S).
     (PIsData k, PIsData v) =>
     Term s ((a :--> k :--> v :--> a) :--> a :--> PMap keys k v :--> a)
 pfoldlWithKey = phoistAcyclic $
@@ -203,7 +202,7 @@ pfoldlWithKey = phoistAcyclic $
 
 -- | @since 1.3.0
 pfoldMapWithKey ::
-    forall (m :: PType) (k :: PType) (v :: PType) (keys :: KeyGuarantees) (s :: S).
+    forall (m :: S -> Type) (k :: S -> Type) (v :: S -> Type) (keys :: KeyGuarantees) (s :: S).
     (PIsData k, PIsData v, forall (s' :: S). Monoid (Term s' m)) =>
     Term s ((k :--> v :--> m) :--> PMap keys k v :--> m)
 pfoldMapWithKey = phoistAcyclic $

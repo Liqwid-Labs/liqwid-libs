@@ -7,7 +7,20 @@ module Plutarch.Extra.Function (
 ) where
 
 import Data.Kind (Type)
-import Plutarch.Prelude (PAsData, PBuiltinPair, PIsData, S, Term, pfromData, pfstBuiltin, phoistAcyclic, plam, psndBuiltin, (#), type (:-->))
+import Plutarch.Prelude (
+    PAsData,
+    PBuiltinPair,
+    PIsData,
+    S,
+    Term,
+    pfromData,
+    pfstBuiltin,
+    phoistAcyclic,
+    plam,
+    psndBuiltin,
+    (#),
+    type (:-->),
+ )
 
 -- | @since 1.0.0
 pconst ::

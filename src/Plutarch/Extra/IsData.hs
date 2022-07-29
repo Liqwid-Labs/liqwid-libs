@@ -23,9 +23,9 @@ module Plutarch.Extra.IsData (
 --------------------------------------------------------------------------------
 
 import Data.Coerce (coerce)
-import Data.Functor.Identity (Identity (..))
+import Data.Functor.Identity (Identity (Identity, runIdentity))
 import Data.Maybe (fromJust)
-import Data.Proxy (Proxy (..))
+import Data.Proxy (Proxy (Proxy))
 import Generics.SOP (
     All,
     IsProductType,
@@ -42,7 +42,7 @@ import qualified Generics.SOP as SOP
 import Plutarch (PlutusType (pcon', pmatch'))
 import Plutarch.Builtin (PIsData (pdataImpl, pfromDataImpl), pasInt)
 import Plutarch.Extra.TermCont (pletC)
-import Plutarch.Lift (PConstantDecl (..))
+import Plutarch.Lift (PConstantDecl (PConstantRepr, PConstanted, pconstantFromRepr, pconstantToRepr))
 import Plutarch.Prelude (
     PData,
     PEq ((#==)),
@@ -59,7 +59,7 @@ import Plutarch.Prelude (
  )
 import Plutarch.Unsafe (punsafeCoerce)
 import PlutusLedgerApi.V1 (BuiltinData (BuiltinData), UnsafeFromData (unsafeFromBuiltinData))
-import PlutusTx (Data (List), FromData (..), ToData (..), fromData, toData)
+import PlutusTx (Data (List), FromData (fromBuiltinData), ToData (toBuiltinData), fromData, toData)
 import Prelude
 
 --------------------------------------------------------------------------------
@@ -72,7 +72,7 @@ import Prelude
 
   @since 1.1.0
 -}
-newtype ProductIsData a = ProductIsData {unProductIsData :: a}
+newtype ProductIsData (a :: Type) = ProductIsData {unProductIsData :: a}
 
 -- | Variant of 'PConstantViaData' using the List repr from 'ProductIsData'
 newtype DerivePConstantViaDataList (h :: Type) (p :: S -> Type) = DerivePConstantViaDataList h
@@ -83,7 +83,10 @@ newtype DerivePConstantViaDataList (h :: Type) (p :: S -> Type) = DerivePConstan
   @since 1.1.0
 -}
 gProductToBuiltinData ::
-    (IsProductType a repr, All ToData repr) => a -> BuiltinData
+    forall (a :: Type) (repr :: [Type]).
+    (IsProductType a repr, All ToData repr) =>
+    a ->
+    BuiltinData
 gProductToBuiltinData x =
     BuiltinData $ List $ hcollapse $ hcmap (Proxy @ToData) (mapIK toData) $ productTypeFrom x
 
@@ -124,6 +127,7 @@ gProductFromBuiltinDataUnsafe _ = error "invalid representation"
 
 -- | @since 1.1.0
 instance
+    forall (h :: Type) (p :: S -> Type).
     (PlutusTx.FromData h, PlutusTx.ToData h, PLift p) =>
     PConstantDecl (DerivePConstantViaDataList h p)
     where
@@ -135,15 +139,27 @@ instance
     pconstantFromRepr = coerce (PlutusTx.fromData @h . PlutusTx.List)
 
 -- | @since 1.1.0
-instance (IsProductType a repr, All ToData repr) => ToData (ProductIsData a) where
+instance
+    forall (a :: Type) (repr :: [Type]).
+    (IsProductType a repr, All ToData repr) =>
+    ToData (ProductIsData a)
+    where
     toBuiltinData = coerce (gProductToBuiltinData @a)
 
 -- | @since 1.1.0
-instance (IsProductType a repr, All UnsafeFromData repr) => UnsafeFromData (ProductIsData a) where
+instance
+    forall (a :: Type) (repr :: [Type]).
+    (IsProductType a repr, All UnsafeFromData repr) =>
+    UnsafeFromData (ProductIsData a)
+    where
     unsafeFromBuiltinData = coerce (gProductFromBuiltinDataUnsafe @a)
 
 -- | @since 1.1.0
-instance (IsProductType a repr, All FromData repr) => FromData (ProductIsData a) where
+instance
+    forall (a :: Type) (repr :: [Type]).
+    (IsProductType a repr, All FromData repr) =>
+    FromData (ProductIsData a)
+    where
     fromBuiltinData = coerce (gProductFromBuiltinData @a)
 
 --------------------------------------------------------------------------------
@@ -154,7 +170,7 @@ instance (IsProductType a repr, All FromData repr) => FromData (ProductIsData a)
 
   @since 1.1.0
 -}
-newtype EnumIsData a = EnumIsData a
+newtype EnumIsData (a :: Type) = EnumIsData a
 
 {- |
   Wrapper for deriving `PlutusType` & `PIsData` via a ToData repr derived with `EnumIsData`.
@@ -171,19 +187,20 @@ newtype PEnumData (a :: S -> Type) (s :: S) = PEnumData (a s)
         via (a s)
 
 -- | @since 1.1.0
-instance (Enum a) => ToData (EnumIsData a) where
+instance forall (a :: Type). (Enum a) => ToData (EnumIsData a) where
     toBuiltinData = coerce $ toBuiltinData . toInteger . fromEnum @a
 
 -- | @since 1.1.0
-instance (Enum a) => FromData (EnumIsData a) where
+instance forall (a :: Type). (Enum a) => FromData (EnumIsData a) where
     fromBuiltinData = coerce $ fmap (toEnum @a . fromInteger) . fromBuiltinData @Integer
 
 -- | @since 1.1.0
-instance (Enum a) => UnsafeFromData (EnumIsData a) where
+instance forall (a :: Type). (Enum a) => UnsafeFromData (EnumIsData a) where
     unsafeFromBuiltinData = coerce . toEnum @a . fromInteger . unsafeFromBuiltinData @Integer
 
 -- | @since 1.1.0
 instance
+    forall (a :: S -> Type).
     ( forall s. Enum (a s)
     , forall s. Bounded (a s)
     , forall s. Eq (a s)
@@ -211,7 +228,11 @@ newtype DerivePConstantViaEnum (h :: Type) (p :: S -> Type)
     = DerivePConstantEnum h
 
 -- | @since 1.1.0
-instance (PLift p, Enum h) => PConstantDecl (DerivePConstantViaEnum h p) where
+instance
+    forall (p :: S -> Type) (h :: Type).
+    (PLift p, Enum h) =>
+    PConstantDecl (DerivePConstantViaEnum h p)
+    where
     type PConstantRepr (DerivePConstantViaEnum h p) = Integer
     type PConstanted (DerivePConstantViaEnum h p) = p
 
@@ -219,7 +240,7 @@ instance (PLift p, Enum h) => PConstantDecl (DerivePConstantViaEnum h p) where
     pconstantFromRepr = Just . coerce . toEnum @h . fromInteger
 
 -- | Safely enumerate all the cases.
-safeCases :: forall a. (Bounded a, Enum a) => [a]
+safeCases :: forall (a :: Type). (Bounded a, Enum a) => [a]
 safeCases = enumFrom minBound
 
 {- |

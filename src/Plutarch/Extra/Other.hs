@@ -17,7 +17,7 @@ import Data.Coerce (Coercible)
 import Data.Kind (Constraint, Type)
 import qualified Generics.SOP as SOP
 import Plutarch (
-    DerivePNewtype (..),
+    DerivePNewtype (DerivePNewtype),
     POpaque,
     PlutusType (PInner),
     S,
@@ -26,11 +26,11 @@ import Plutarch (
  )
 import Plutarch.Bool (PEq, POrd)
 import Plutarch.Builtin (PAsData, PData, PIsData)
-import Plutarch.DataRepr (PDataFields (..))
+import Plutarch.DataRepr (PDataFields (PFields, ptoFields))
 import Plutarch.Integer (PIntegral)
 import Plutarch.Internal (S (SI), punsafeCoerce)
 import Plutarch.Lift (DerivePConstantViaNewtype, PConstantDecl, PLift, PUnsafeLiftDecl (PLifted))
-import Plutarch.TryFrom (PTryFrom (..))
+import Plutarch.TryFrom (PTryFrom (PTryFromExcess, ptryFrom'))
 
 -- Plutarch deriving wrappers
 
@@ -89,7 +89,7 @@ deriving via
         PlutusType (DerivePNewtype' a)
 
 -- | @since 1.1.0
-instance (PDataFields b) => PDataFields (DerivePNewtype a b) where
+instance forall (a :: S -> Type) (b :: S -> Type). (PDataFields b) => PDataFields (DerivePNewtype a b) where
     type PFields (DerivePNewtype a b) = (PFields b)
     ptoFields x = ptoFields $ pto x
 
@@ -108,6 +108,7 @@ deriving via
 
 -- | @since 1.1.0
 instance
+    forall (a :: S -> Type) (b :: S -> Type).
     ( PNewtypeOf a ~ b
     , PTryFrom PData (PAsData b)
     ) =>

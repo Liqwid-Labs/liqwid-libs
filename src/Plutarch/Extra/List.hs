@@ -27,7 +27,6 @@ import Data.Kind (Type)
 import Plutarch (
     PCon (pcon),
     PMatch (pmatch),
-    PType,
     S,
     Term,
     pfix,
@@ -374,7 +373,7 @@ preplicate = phoistAcyclic $
  @since 1.3.0
 -}
 pisUniq' ::
-    forall (l :: PType -> PType) (a :: PType) (s :: S).
+    forall (l :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
     (PEq a, PIsListLike l a) =>
     Term s (l a :--> PBool)
 pisUniq' = phoistAcyclic $ pisUniqBy' # phoistAcyclic (plam (#==))
@@ -385,7 +384,7 @@ pisUniq' = phoistAcyclic $ pisUniqBy' # phoistAcyclic (plam (#==))
  @since 1.3.0
 -}
 pisUniqBy' ::
-    forall (l :: PType -> PType) (a :: PType) (s :: S).
+    forall (l :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
     (PIsListLike l a) =>
     Term s ((a :--> a :--> PBool) :--> l a :--> PBool)
 pisUniqBy' = phoistAcyclic $

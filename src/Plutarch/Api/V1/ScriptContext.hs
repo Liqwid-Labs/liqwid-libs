@@ -28,27 +28,27 @@ module Plutarch.Api.V1.ScriptContext (
 import Data.Kind (Type)
 import Plutarch (PCon (..), S, Term, phoistAcyclic, plam, plet, pmatch, pto, unTermCont, (#), (#$), (:-->))
 import Plutarch.Api.V1 (
-    AmountGuarantees (..),
-    KeyGuarantees (..),
+    AmountGuarantees (NoGuarantees, NonZero, Positive),
+    KeyGuarantees (Sorted, Unsorted),
     PAddress (PAddress),
-    PCredential (..),
+    PCredential (PPubKeyCredential, PScriptCredential),
     PDatum,
     PDatumHash,
-    PMaybeData (..),
+    PMaybeData (PDJust),
     PPubKeyHash,
     PScriptContext,
     PScriptPurpose (PSpending),
     PStakingCredential,
     PTuple,
-    PTxInInfo (..),
+    PTxInInfo (PTxInInfo),
     PTxInfo,
-    PTxOut (..),
+    PTxOut (PTxOut),
     PTxOutRef,
     PValidatorHash,
     PValue,
  )
-import Plutarch.Api.V1.AssetClass (PAssetClass (..), passetClassValueOf)
-import Plutarch.Bool (PBool, POrd (..), pif, pnot, (#==))
+import Plutarch.Api.V1.AssetClass (PAssetClass, passetClassValueOf)
+import Plutarch.Bool (PBool, POrd ((#<)), pif, pnot, (#==))
 import Plutarch.Builtin (PAsData, PBuiltinList, PData, pdata, pfromData)
 import Plutarch.DataRepr (pdcons, pdnil, pfield)
 import Plutarch.Extra.List (pfirstJust, plookupTuple)
@@ -147,7 +147,7 @@ pvalueSpent = phoistAcyclic $
 
     @since 1.1.0
 -}
-pisTokenSpent :: forall {s :: S}. Term s (PAssetClass :--> PBuiltinList (PAsData PTxInInfo) :--> PBool)
+pisTokenSpent :: forall (s :: S). Term s (PAssetClass :--> PBuiltinList (PAsData PTxInInfo) :--> PBool)
 pisTokenSpent =
     plam $ \tokenClass inputs ->
         0
@@ -166,7 +166,7 @@ pisTokenSpent =
 
     @since 1.1.0
 -}
-pfindTxInByTxOutRef :: Term s (PTxOutRef :--> PBuiltinList (PAsData PTxInInfo) :--> PMaybe PTxInInfo)
+pfindTxInByTxOutRef :: forall (s :: S). Term s (PTxOutRef :--> PBuiltinList (PAsData PTxInInfo) :--> PMaybe PTxInInfo)
 pfindTxInByTxOutRef = phoistAcyclic $
     plam $ \txOutRef inputs ->
         pfirstJust
@@ -185,7 +185,7 @@ pfindTxInByTxOutRef = phoistAcyclic $
 
     @since 1.1.0
 -}
-ptxSignedBy :: Term s (PBuiltinList (PAsData PPubKeyHash) :--> PAsData PPubKeyHash :--> PBool)
+ptxSignedBy :: forall (s :: S). Term s (PBuiltinList (PAsData PPubKeyHash) :--> PAsData PPubKeyHash :--> PBool)
 ptxSignedBy = phoistAcyclic $
     plam $ \sigs sig -> pelem # sig # sigs
 
@@ -193,7 +193,7 @@ ptxSignedBy = phoistAcyclic $
 
     @since 1.1.0
 -}
-pfindDatum :: Term s (PDatumHash :--> PBuiltinList (PAsData (PTuple PDatumHash PDatum)) :--> PMaybe PDatum)
+pfindDatum :: forall (s :: S). Term s (PDatumHash :--> PBuiltinList (PAsData (PTuple PDatumHash PDatum)) :--> PMaybe PDatum)
 pfindDatum = phoistAcyclic $
     plam $ \datumHash datums -> plookupTuple # datumHash # datums
 
@@ -257,7 +257,7 @@ paddressFromPubKeyHash = plam $ \pkh stakingCred ->
 {- | Get script hash from an Address.
      @since 1.3.0
 -}
-pscriptHashFromAddress :: Term s (PAddress :--> PMaybe PValidatorHash)
+pscriptHashFromAddress :: forall (s :: S). Term s (PAddress :--> PMaybe PValidatorHash)
 pscriptHashFromAddress = phoistAcyclic $
     plam $ \addr ->
         pmatch (pfromData $ pfield @"credential" # addr) $ \case
@@ -267,14 +267,14 @@ pscriptHashFromAddress = phoistAcyclic $
 {- | Return true if the given address is a script address.
      @since 1.3.0
 -}
-pisScriptAddress :: Term s (PAddress :--> PBool)
+pisScriptAddress :: forall (s :: S). Term s (PAddress :--> PBool)
 pisScriptAddress = phoistAcyclic $
     plam $ \addr -> pnot #$ pisPubKey #$ pfromData $ pfield @"credential" # addr
 
 {- | Return true if the given credential is a pub-key-hash.
      @since 1.3.0
 -}
-pisPubKey :: Term s (PCredential :--> PBool)
+pisPubKey :: forall (s :: S). Term s (PCredential :--> PBool)
 pisPubKey = phoistAcyclic $
     plam $ \cred ->
         pmatch cred $ \case
@@ -285,6 +285,7 @@ pisPubKey = phoistAcyclic $
      @since 1.3.0
 -}
 pfindOutputsToAddress ::
+    forall (s :: S).
     Term
         s
         ( PBuiltinList (PAsData PTxOut)
@@ -302,6 +303,7 @@ pfindOutputsToAddress = phoistAcyclic $
      @since 1.3.0
 -}
 pfindTxOutDatum ::
+    forall (s :: S).
     Term
         s
         ( PBuiltinList (PAsData (PTuple PDatumHash PDatum))

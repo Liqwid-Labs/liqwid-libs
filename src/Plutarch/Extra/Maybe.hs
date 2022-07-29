@@ -199,7 +199,7 @@ pexpectJustC escape ma = tcont $ \f ->
      If there's no value, throw an error with the given message.
      @since 1.3.0
 -}
-passertPJust :: forall a s. Term s (PString :--> PMaybe a :--> a)
+passertPJust :: forall (a :: S -> Type) (s :: S). Term s (PString :--> PMaybe a :--> a)
 passertPJust = phoistAcyclic $
     plam $ \emsg mv' -> pmatch mv' $ \case
         PJust v -> v
@@ -209,7 +209,7 @@ passertPJust = phoistAcyclic $
      If there's no value, throw an error with the given message.
      @since 1.3.0
 -}
-passertPDJust :: forall a s. (PIsData a) => Term s (PString :--> PMaybeData a :--> a)
+passertPDJust :: forall (a :: S -> Type) (s :: S). (PIsData a) => Term s (PString :--> PMaybeData a :--> a)
 passertPDJust = phoistAcyclic $
     plam $ \emsg mv' -> pmatch mv' $ \case
         PDJust ((pfield @"_0" #) -> v) -> v

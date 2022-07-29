@@ -25,7 +25,6 @@ module Plutarch.Extra.Traversable (
 
 import Data.Kind (Type)
 import Plutarch (
-    PType,
     S,
     Term,
     pcon,
@@ -469,7 +468,7 @@ psum = phoistAcyclic $ plam $ \t -> pfoldComonad # go # t
 
 -- | @since 1.3.0
 pany ::
-    forall (t :: PType -> PType) (a :: PType) (s :: S).
+    forall (t :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
     (PTraversable t, PSubcategory t a) =>
     Term s ((a :--> PBool) :--> t a :--> PBool)
 pany = phoistAcyclic $
@@ -479,7 +478,7 @@ pany = phoistAcyclic $
 
 -- | @since 1.3.0
 pall ::
-    forall (t :: PType -> PType) (a :: PType) (s :: S).
+    forall (t :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
     (PTraversable t, PSubcategory t a) =>
     Term s ((a :--> PBool) :--> t a :--> PBool)
 pall = phoistAcyclic $

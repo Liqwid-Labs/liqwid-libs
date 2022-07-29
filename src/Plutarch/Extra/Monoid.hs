@@ -9,7 +9,7 @@ module Plutarch.Extra.Monoid (
 
 import Control.Composition ((.*))
 import Data.Function (on)
-import Plutarch (DerivePNewtype (..), PCon (pcon), PlutusType (..), S, Term, plam, type (:-->))
+import Plutarch (DerivePNewtype (..), PCon (pcon), PlutusType (..), S, Term, plam, pto, type (:-->))
 import Plutarch.Bool (PBool (..), PEq, (#&&))
 import Plutarch.Builtin (PIsData)
 import Plutarch.Lift (pconstant)
@@ -31,7 +31,7 @@ newtype PAll (s :: S) = PAll (Term s PBool)
         via (DerivePNewtype PAll PBool)
 
 instance forall (s :: S). Semigroup (Term s PAll) where
-    (<>) = pcon . PAll .* (#&&) `on` punsafeCoerce
+    x <> y = pcon . PAll $ pto x #&& pto y
 
 instance forall (s :: S). Monoid (Term s PAll) where
     mempty = pcon $ PAll $ pconstant True

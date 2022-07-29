@@ -22,7 +22,7 @@ module Plutarch.Extra.MultiSig (
 
 import qualified GHC.Generics as GHC (Generic)
 import Generics.SOP (Generic, I (I))
-import Plutarch.Api.V1 (PPubKeyHash, PTxInfo (..))
+import Plutarch.Api.V1 (PPubKeyHash, PTxInfo)
 import Plutarch.DataRepr (
     DerivePConstantViaData (DerivePConstantViaData),
     PDataFields,
@@ -134,7 +134,7 @@ deriving via (DerivePConstantViaData MultiSig PMultiSig) instance (PConstantDecl
 
      @since 0.1.0
 -}
-validatedByMultisig :: MultiSig -> Term s (PTxInfo :--> PBool)
+validatedByMultisig :: forall (s :: S). MultiSig -> Term s (PTxInfo :--> PBool)
 validatedByMultisig params =
     phoistAcyclic $
         pvalidatedByMultisig # pconstant params
@@ -143,7 +143,7 @@ validatedByMultisig params =
 
      @since 0.1.0
 -}
-pvalidatedByMultisig :: Term s (PMultiSig :--> PTxInfo :--> PBool)
+pvalidatedByMultisig :: forall (s :: S). Term s (PMultiSig :--> PTxInfo :--> PBool)
 pvalidatedByMultisig =
     phoistAcyclic $
         plam $ \multi' txInfo -> unTermCont $ do
