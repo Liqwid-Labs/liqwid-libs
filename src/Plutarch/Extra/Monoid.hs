@@ -22,9 +22,10 @@ import Plutarch (
     Term,
     pcon,
     plam,
+    pto,
     type (:-->),
  )
-import Plutarch.Bool (PBool (..), PEq, (#&&))
+import Plutarch.Bool (PBool, PEq, (#&&))
 import Plutarch.Builtin (PIsData)
 import Plutarch.Lift (pconstant)
 import Plutarch.Show (PShow)

@@ -15,11 +15,8 @@
 
     # Plutarch and its friends
     plutarch = {
-      url =
-        "github:Liqwid-Labs/plutarch?ref=staging";
+      url = "github:Liqwid-Labs/plutarch?ref=staging";
 
-      inputs.haskell-nix-extra-hackage.url =
-        "github:mlabs-haskell/haskell-nix-extra-hackage?ref=main";
       inputs.emanote.follows =
         "plutarch/haskell-nix/nixpkgs-unstable";
       inputs.nixpkgs.follows =
@@ -50,6 +47,18 @@
           "${inputs.plutarch-numeric}"
           "${inputs.plutarch-context-builder}"
         ])
+        (liqwid-nix.addChecks {
+          testSuite = "liqwid-plutarch-extra:test:liqwid-plutarch-extra-test";
+          liqwid-plutarch-extra = "liqwid-plutarch-extra:lib:liqwid-plutarch-extra";
+        })
+        (liqwid-nix.enableFormatCheck [
+          "-XTemplateHaskell"
+          "-XOverloadedRecordDot"
+          "-XTypeApplications"
+          "-XPatternSynonyms"
+        ])
+        liqwid-nix.enableCabalFormatCheck
+        liqwid-nix.enableNixFormatCheck
       ]
     ).toFlake;
 }

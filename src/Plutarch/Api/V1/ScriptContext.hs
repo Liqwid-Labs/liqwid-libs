@@ -60,7 +60,7 @@ import Plutarch.Api.V1 (
     PValue,
  )
 import Plutarch.Api.V1.AssetClass (PAssetClass, passetClassValueOf)
-import Plutarch.Bool (PBool, PPartialOrd (#<), pif, pnot, (#==))
+import Plutarch.Bool (PBool, PPartialOrd ((#<)), pif, pnot, (#==))
 import Plutarch.Builtin (PAsData, PBuiltinList, PData, pdata, pfromData)
 import Plutarch.DataRepr (pdcons, pdnil, pfield)
 import Plutarch.Extra.List (pfirstJust, plookupTuple)
@@ -159,7 +159,6 @@ pvalueSpent = phoistAcyclic $
 
     @since 1.1.0
 -}
-
 pisTokenSpent :: forall (s :: S). Term s (PAssetClass :--> PBuiltinList PTxInInfo :--> PBool)
 pisTokenSpent =
     plam $ \tokenClass inputs ->
