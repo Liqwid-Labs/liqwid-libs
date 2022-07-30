@@ -72,10 +72,10 @@ mkScriptInfo script =
         }
 
 exportConfig :: Config
-exportConfig
-  = Config 
-  { tracingMode = NoTracing
-  }
+exportConfig =
+  Config
+    { tracingMode = NoTracing
+    }
 
 {- | Create a 'ScriptInfo' given a Plutarch term of a policy.
 
