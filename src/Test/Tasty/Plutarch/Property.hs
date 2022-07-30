@@ -320,14 +320,14 @@ classifiedPropertyNative getGen shr getOutcome classify comp = case cardinality 
         guard (classify x' == ix)
         pure (ix, x')
     go ::
-        (forall (s' :: S). Term s' (c :--> (PMaybe d) :--> PInteger)) ->
+        (forall (s' :: S). Term s' (c :--> PMaybe d :--> PInteger)) ->
         (ix, a) ->
         Property
     go precompiled (ix, input) =
         if ix /= classified
             then failedClassification ix classified
             else
-                let s = mustCompile (precompiled # (pconstant input) # toPMaybe (getOutcome input))
+                let s = mustCompile (precompiled # pconstant input # toPMaybe (getOutcome input))
                     (res, _, logs) = evalScript s
                  in counterexample (prettyLogs logs)
                         . ensureCovered input classify
