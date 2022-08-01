@@ -38,6 +38,15 @@
       [
         liqwid-nix.haskellProject
         liqwid-nix.plutarchProject
+        (liqwid-nix.addChecks
+          {
+            plutarch-context-builder = "plutarch-context-builder:lib:plutarch-context-builder";
+          })
+        (liqwid-nix.enableFormatCheck [
+          "-XTemplateHaskell"
+          "-XTypeApplications"
+          "-XPatternSynonyms"
+        ])
       ]
     ).toFlake;
 }

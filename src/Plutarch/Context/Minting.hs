@@ -1,7 +1,5 @@
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE ViewPatterns #-}
 
 {- | Module: Plutarch.Context.Minting
  Copyright: (C) Liqwid Labs 2022
@@ -71,7 +69,7 @@ data MintingBuilder = MB
 -- | @since 1.1.0
 instance Semigroup MintingBuilder where
     MB inner _ <> MB inner' cs@(Just _) =
-        MB (inner <> inner') $ cs
+        MB (inner <> inner') cs
     MB inner cs <> MB inner' Nothing =
         MB (inner <> inner') cs
 
