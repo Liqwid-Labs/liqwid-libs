@@ -16,7 +16,8 @@ import Data.Coerce (coerce)
 import Data.Kind (Type)
 import GHC.OverloadedLabels (IsLabel (..))
 import GHC.TypeLits (Symbol)
-import Plutarch (PCon (pcon), PlutusType, S, Term)
+import Generics.SOP (SListI)
+import Plutarch (PlutusType, S, Term, pcon)
 import Plutarch.Builtin (PAsData)
 import Plutarch.DataRepr (PDataRecord (PDCons), PLabeledType (..), pdnil)
 import Prelude (($))
@@ -83,6 +84,7 @@ infix 7 .=
 -- | Cons a labeled type as a 'RecordMorphism'.
 (.=) ::
     forall (sym :: Symbol) (a :: S -> Type) (as :: [PLabeledType]) (s :: S).
+    (SListI as) =>
     -- | The field name. You can use @-XOverloadedLabels@ to enable the syntax:
     --   @#hello ~ 'FieldName' "hello"@
     FieldName sym ->

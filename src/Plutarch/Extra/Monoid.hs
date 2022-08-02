@@ -1,3 +1,6 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Plutarch.Extra.Monoid (
@@ -9,8 +12,20 @@ module Plutarch.Extra.Monoid (
 
 import Control.Composition ((.*))
 import Data.Function (on)
-import Plutarch (DerivePNewtype (..), PCon (pcon), PlutusType (..), S, Term, plam, pto, type (:-->))
-import Plutarch.Bool (PBool (..), PEq, (#&&))
+import GHC.Generics (Generic)
+import qualified Generics.SOP as SOP
+import Plutarch (
+    DerivePlutusType (DPTStrat),
+    PlutusType,
+    PlutusTypeNewtype,
+    S,
+    Term,
+    pcon,
+    plam,
+    pto,
+    type (:-->),
+ )
+import Plutarch.Bool (PBool, PEq, (#&&))
 import Plutarch.Builtin (PIsData)
 import Plutarch.Lift (pconstant)
 import Plutarch.Show (PShow)
@@ -18,8 +33,14 @@ import Plutarch.Unsafe (punsafeCoerce)
 
 -- | @since 1.3.0
 newtype PAll (s :: S) = PAll (Term s PBool)
-    deriving
-        ( -- | @since 1.3.0
+    deriving stock
+        ( -- | @since 1.4.0
+          Generic
+        )
+    deriving anyclass
+        ( -- | @since 1.4.0
+          SOP.Generic
+        , -- | @since 1.3.0
           PlutusType
         , -- | @since 1.3.0
           PIsData
@@ -28,7 +49,10 @@ newtype PAll (s :: S) = PAll (Term s PBool)
         , -- | @since 1.3.0
           PShow
         )
-        via (DerivePNewtype PAll PBool)
+
+-- | @since 1.4.0
+instance DerivePlutusType PAll where
+    type DPTStrat _ = PlutusTypeNewtype
 
 instance forall (s :: S). Semigroup (Term s PAll) where
     x <> y = pcon . PAll $ pto x #&& pto y
@@ -41,8 +65,14 @@ pgetAll = plam punsafeCoerce
 
 -- | @since 1.3.0
 newtype PAny (s :: S) = PAny (Term s PBool)
-    deriving
-        ( -- | @since 1.3.0
+    deriving stock
+        ( -- | @since 1.4.0
+          Generic
+        )
+    deriving anyclass
+        ( -- | @since 1.4.0
+          SOP.Generic
+        , -- | @since 1.3.0
           PlutusType
         , -- | @since 1.3.0
           PIsData
@@ -51,7 +81,10 @@ newtype PAny (s :: S) = PAny (Term s PBool)
         , -- | @since 1.3.0
           PShow
         )
-        via (DerivePNewtype PAny PBool)
+
+-- | @since 1.4.0
+instance DerivePlutusType PAny where
+    type DPTStrat _ = PlutusTypeNewtype
 
 pgetAny :: forall (s :: S). Term s (PAny :--> PBool)
 pgetAny = plam punsafeCoerce

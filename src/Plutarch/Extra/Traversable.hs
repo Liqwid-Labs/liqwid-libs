@@ -63,6 +63,7 @@ import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.Integer (PInteger)
 import Plutarch.List (PList, pcons, pnil, puncons)
 import Plutarch.Maybe (PMaybe (PJust, PNothing))
+import Plutarch.Num
 import Plutarch.Pair (PPair (PPair))
 import Plutarch.Unit (PUnit)
 
@@ -455,7 +456,7 @@ plength = phoistAcyclic $ plam $ \t -> pfoldComonad # go # t
 psum ::
     forall (t :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
     ( PTraversable t
-    , forall (s' :: S). Num (Term s' a)
+    , PNum a
     , PSubcategory t a
     ) =>
     Term s (t a :--> a)

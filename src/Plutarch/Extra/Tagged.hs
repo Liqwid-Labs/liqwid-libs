@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
@@ -15,11 +16,13 @@ module Plutarch.Extra.Tagged (
 import Data.Bifunctor (first)
 import Data.Kind (Type)
 import Data.Tagged (Tagged (Tagged))
-import Generics.SOP (I (I), Top)
-import Generics.SOP.TH (deriveGeneric)
+import GHC.Generics (Generic)
+import Generics.SOP (Top)
 import Plutarch (
-    DerivePNewtype (DerivePNewtype),
+    DPTStrat,
+    DerivePlutusType,
     PlutusType,
+    PlutusTypeNewtype,
     S,
     Term,
     pcon,
@@ -28,7 +31,7 @@ import Plutarch (
     unTermCont,
     (#),
  )
-import Plutarch.Bool (PEq, POrd)
+import Plutarch.Bool (PEq, POrd, PPartialOrd)
 import Plutarch.Builtin (PAsData, PData, PIsData)
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
 import Plutarch.Extra.Boring (PBoring (pboring))
@@ -47,8 +50,9 @@ import Plutarch.Lift (
     PConstantDecl (PConstantRepr, PConstanted, pconstantFromRepr, pconstantToRepr),
     PUnsafeLiftDecl (PLifted),
  )
+import Plutarch.Num (PNum (..))
 import Plutarch.Show (PShow)
-import Plutarch.TryFrom (PTryFrom (PTryFromExcess, ptryFrom'))
+import Plutarch.TryFrom (PSubtype, PTryFrom (PTryFromExcess, ptryFrom'))
 import Plutarch.Unsafe (punsafeCoerce)
 import qualified PlutusTx
 
@@ -109,65 +113,19 @@ tagged_b2 = pmatch b $ \case
 -}
 newtype PTagged (tag :: k) (underlying :: S -> Type) (s :: S)
     = PTagged (Term s underlying)
+    deriving stock (Generic)
+    deriving anyclass (PlutusType, PIsData, PEq, PPartialOrd, POrd)
 
-deriveGeneric ''PTagged
-
--- | @since 1.0.0
-deriving via
-    (DerivePNewtype (PTagged tag underlying) underlying)
-    instance
-        (PlutusType (PTagged tag underlying))
+instance DerivePlutusType (PTagged k u) where type DPTStrat _ = PlutusTypeNewtype
 
 -- | @since 1.0.0
-deriving via
-    (DerivePNewtype (PTagged tag underlying) underlying)
-    instance
-        (PIsData underlying) => (PIsData (PTagged tag underlying))
+deriving anyclass instance (PIntegral underlying) => PIntegral (PTagged tag underlying)
 
--- | @since 1.0.0
-deriving via
-    (DerivePNewtype (PTagged tag underlying) underlying)
-    instance
-        (PEq underlying) => PEq (PTagged tag underlying)
+-- -- | @since 1.0.0
+deriving anyclass instance (PNum underlying) => PNum (PTagged tag underlying)
 
--- | @since 1.0.0
-deriving via
-    (DerivePNewtype (PTagged tag underlying) underlying)
-    instance
-        (POrd underlying) => POrd (PTagged tag underlying)
-
--- | @since 1.0.0
-deriving via
-    (DerivePNewtype (PTagged tag underlying) underlying)
-    instance
-        (PIntegral underlying) => PIntegral (PTagged tag underlying)
-
--- | @since 1.0.0
-deriving via
-    (Term s (DerivePNewtype (PTagged tag underlying) underlying))
-    instance
-        (Num (Term s underlying)) => Num (Term s (PTagged tag underlying))
-
--- | @since 1.0.0
-deriving via
-    (Term s (DerivePNewtype (PTagged tag underlying) underlying))
-    instance
-        (Semigroup (Term s underlying)) => Semigroup (Term s (PTagged tag underlying))
-
--- | @since 1.0.0
-deriving via
-    (Term s (DerivePNewtype (PTagged tag underlying) underlying))
-    instance
-        (Monoid (Term s underlying)) => Monoid (Term s (PTagged tag underlying))
-
--- | @since 1.0.0
+-- -- | @since 1.0.0
 deriving anyclass instance (PShow underlying) => PShow (PTagged tag underlying)
-
--- | @since 1.0.0
-deriving via
-    (DerivePNewtype (PTagged tag underlying) underlying)
-    instance
-        (PTryFrom a underlying) => PTryFrom a (PTagged tag underlying)
 
 -- | @since 1.0.0
 instance PFunctor (PTagged tag) where
@@ -243,7 +201,7 @@ pretag = punsafeCoerce
 
 -- | @since 1.0.0
 instance
-    (PTryFrom PData (PAsData underlying)) =>
+    (PTryFrom PData (PAsData underlying), PSubtype PData (PAsData (PTagged tag underlying))) =>
     PTryFrom PData (PAsData (PTagged tag underlying))
     where
     type

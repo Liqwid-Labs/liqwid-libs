@@ -18,7 +18,7 @@ import Plutarch (
     type (:-->),
  )
 import Plutarch.Api.V1.AssocMap (KeyGuarantees (..), PMap (PMap))
-import Plutarch.Bool (PBool, PEq ((#==)), POrd ((#<)), pif)
+import Plutarch.Bool (PBool, PEq ((#==)), POrd, pif, (#<))
 import Plutarch.Builtin (
     PAsData,
     PBuiltinList,

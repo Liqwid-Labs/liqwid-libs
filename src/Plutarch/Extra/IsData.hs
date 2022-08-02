@@ -1,9 +1,14 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Plutarch.Extra.IsData (
     -- * PlutusTx ToData/FromData derive-wrappers
@@ -11,9 +16,12 @@ module Plutarch.Extra.IsData (
     EnumIsData (..),
 
     -- * Plutarch PIsData/PlutusType derive-wrappers
-    PEnumData (..),
     DerivePConstantViaDataList (..),
     DerivePConstantViaEnum (..),
+    DerivePDataFieldsViaDataList (..),
+
+    -- * Plutarch deriving strategy
+    PlutusTypeEnumData,
 
     -- * Functions for PEnumData types
     pmatchEnum,
@@ -24,8 +32,10 @@ module Plutarch.Extra.IsData (
 
 import Data.Coerce (coerce)
 import Data.Functor.Identity (Identity (Identity, runIdentity))
+import Data.Kind (Constraint)
 import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (Proxy))
+import GHC.TypeLits (ErrorMessage (..), TypeError)
 import Generics.SOP (
     All,
     IsProductType,
@@ -39,16 +49,18 @@ import Generics.SOP (
     unI,
  )
 import qualified Generics.SOP as SOP
-import Plutarch (PlutusType (pcon', pmatch'))
 import Plutarch.Builtin (PIsData (pdataImpl, pfromDataImpl), pasInt)
+import Plutarch.DataRepr (PDataFields (..), PDataRecord, PDataSum, PLabeledType)
 import Plutarch.Extra.TermCont (pletC)
-import Plutarch.Lift (PConstantDecl (PConstantRepr, PConstanted, pconstantFromRepr, pconstantToRepr))
+import Plutarch.Internal.Generic (PGeneric, gpfrom, gpto)
+import Plutarch.Internal.PlutusType (DerivePlutusType (..), PlutusType (..), PlutusTypeStrat (..))
+import Plutarch.Lift (PConstantDecl (..))
 import Plutarch.Prelude (
     PData,
     PEq ((#==)),
     PInteger,
     PLift,
-    PlutusType (..),
+    PlutusTypeNewtype,
     S,
     Term,
     Type,
@@ -60,6 +72,7 @@ import Plutarch.Prelude (
 import Plutarch.Unsafe (punsafeCoerce)
 import PlutusLedgerApi.V1 (BuiltinData (BuiltinData), UnsafeFromData (unsafeFromBuiltinData))
 import PlutusTx (Data (List), FromData (fromBuiltinData), ToData (toBuiltinData), fromData, toData)
+import Unsafe.Coerce (unsafeCoerce)
 import Prelude
 
 --------------------------------------------------------------------------------
@@ -105,11 +118,19 @@ gProductFromBuiltinData (BuiltinData (List xs)) = do
     productTypeTo <$> hctraverse (Proxy @FromData) (unI . mapKI fromData) prod
 gProductFromBuiltinData _ = Nothing
 
-{- |
-  Unsafe version of 'gProductFromBuiltinData'.
+-- | @since 1.4.0
+newtype DerivePDataFieldsViaDataList (a :: S -> Type) (s :: S)
+    = DerivePDataFieldsViaDataList (a s)
 
-  @since 1.1.0
--}
+-- | @since 1.4.0
+instance
+    (PDataFields (PInner a), PInner (DerivePDataFieldsViaDataList a) ~ a) =>
+    PDataFields (DerivePDataFieldsViaDataList a)
+    where
+    type PFields (DerivePDataFieldsViaDataList a) = PFields (PInner a)
+    ptoFields x = ptoFields $ pto $ pto x
+
+-- | @since 1.1.0
 gProductFromBuiltinDataUnsafe ::
     forall (a :: Type) (repr :: [Type]).
     (IsProductType a repr, All UnsafeFromData repr) =>
@@ -172,20 +193,6 @@ instance
 -}
 newtype EnumIsData (a :: Type) = EnumIsData a
 
-{- |
-  Wrapper for deriving `PlutusType` & `PIsData` via a ToData repr derived with `EnumIsData`.
-
-  @since 1.1.0
--}
-newtype PEnumData (a :: S -> Type) (s :: S) = PEnumData (a s)
-    deriving
-        ( -- | @since 1.1.0
-          Enum
-        , -- | @since 1.1.0
-          Bounded
-        )
-        via (a s)
-
 -- | @since 1.1.0
 instance forall (a :: Type). (Enum a) => ToData (EnumIsData a) where
     toBuiltinData = coerce $ toBuiltinData . toInteger . fromEnum @a
@@ -198,21 +205,36 @@ instance forall (a :: Type). (Enum a) => FromData (EnumIsData a) where
 instance forall (a :: Type). (Enum a) => UnsafeFromData (EnumIsData a) where
     unsafeFromBuiltinData = coerce . toEnum @a . fromInteger . unsafeFromBuiltinData @Integer
 
--- | @since 1.1.0
-instance
-    forall (a :: S -> Type).
-    ( forall s. Enum (a s)
-    , forall s. Bounded (a s)
-    , forall s. Eq (a s)
-    ) =>
-    PlutusType (PEnumData a)
-    where
-    type PInner (PEnumData a) _ = PInteger
-    pmatch' = pmatchEnum
-    pcon' = fromInteger . toInteger . fromEnum
+data PlutusTypeEnumData
 
--- | @since 1.1.0
-instance forall (a :: S -> Type). PIsData (PEnumData a) where
+class
+    ( PGeneric p
+    , forall s. Enum (p s)
+    , forall s. Bounded (p s)
+    ) =>
+    IsPlutusTypeEnumData (p :: S -> Type)
+instance
+    ( PGeneric p
+    , forall s. Enum (p s)
+    , forall s. Bounded (p s)
+    ) =>
+    IsPlutusTypeEnumData p
+
+-- | @since 1.4.0
+instance PlutusTypeStrat PlutusTypeEnumData where
+    type PlutusTypeStratConstraint PlutusTypeEnumData = IsPlutusTypeEnumData
+    type DerivedPInner PlutusTypeEnumData a = PInteger
+    derivedPCon = fromInteger . toInteger . fromEnum
+    derivedPMatch = pmatchEnum
+
+-- | @since 1.4.0
+instance
+    {-# OVERLAPPABLE #-}
+    ( DerivePlutusType a
+    , DPTStrat a ~ PlutusTypeEnumData
+    ) =>
+    PIsData a
+    where
     pfromDataImpl d =
         punsafeCoerce (pfromDataImpl @PInteger $ punsafeCoerce d)
 
@@ -230,7 +252,11 @@ newtype DerivePConstantViaEnum (h :: Type) (p :: S -> Type)
 -- | @since 1.1.0
 instance
     forall (p :: S -> Type) (h :: Type).
-    (PLift p, Enum h) =>
+    ( PLift p
+    , Enum h
+    , DerivePlutusType p
+    , DPTStrat p ~ PlutusTypeEnumData
+    ) =>
     PConstantDecl (DerivePConstantViaEnum h p)
     where
     type PConstantRepr (DerivePConstantViaEnum h p) = Integer

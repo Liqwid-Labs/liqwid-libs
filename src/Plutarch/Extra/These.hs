@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
@@ -18,25 +19,12 @@ module Plutarch.Extra.These (
 ) where
 
 import Data.Kind (Type)
-import Generics.SOP (I (I), Top)
-import Generics.SOP.TH (deriveGeneric)
-import Plutarch (
-    PlutusType,
-    S,
-    Term,
-    pcon,
-    phoistAcyclic,
-    plam,
-    unTermCont,
-    (#),
-    type (:-->),
- )
-import Plutarch.Bool (PBool (PFalse, PTrue), PEq, POrd ((#<), (#<=)))
+import GHC.Generics (Generic)
+import Generics.SOP (Top)
+import Plutarch.Bool (PBool (PFalse, PTrue), PEq, POrd, PPartialOrd (..))
 import Plutarch.Builtin (PAsData, PIsData, pdata, pfromData)
 import Plutarch.DataRepr (
     PDataRecord,
-    PIsDataRepr,
-    PIsDataReprInstances (PIsDataReprInstances),
     PLabeledType ((:=)),
     pdcons,
     pdnil,
@@ -51,6 +39,21 @@ import Plutarch.Extra.Functor (
  )
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.Extra.Traversable (PTraversable (ptraverse, ptraverse_))
+import Plutarch.Prelude (
+    DPTStrat,
+    DerivePlutusType,
+    PlutusType,
+    PlutusTypeData,
+    PlutusTypeScott,
+    S,
+    Term,
+    pcon,
+    phoistAcyclic,
+    plam,
+    unTermCont,
+    (#),
+    type (:-->),
+ )
 import Plutarch.Show (PShow)
 
 {- | A data type which contains an @a@, a @b@, or both. This uses a
@@ -62,17 +65,13 @@ data PThese (a :: S -> Type) (b :: S -> Type) (s :: S)
     = PThis (Term s a)
     | PThat (Term s b)
     | PThese (Term s a) (Term s b)
+    deriving stock (Generic)
+    deriving anyclass (PlutusType, PEq)
 
-deriveGeneric ''PThese
-
--- | @since 1.0.0
-deriving anyclass instance PlutusType (PThese a b)
-
--- | @since 1.0.0
-deriving anyclass instance (PEq a, PEq b) => PEq (PThese a b)
+instance DerivePlutusType (PThese a b) where type DPTStrat _ = PlutusTypeScott
 
 -- | @since 1.0.0
-instance (POrd a, POrd b) => POrd (PThese a b) where
+instance (POrd a, POrd b) => PPartialOrd (PThese a b) where
     t1 #<= t2 = unTermCont $ do
         t1' <- pmatchC t1
         t2' <- pmatchC t2
@@ -192,26 +191,17 @@ data PDThese (a :: S -> Type) (b :: S -> Type) (s :: S)
     = PDThis (Term s (PDataRecord '["_0" ':= a]))
     | PDThat (Term s (PDataRecord '["_0" ':= b]))
     | PDThese (Term s (PDataRecord '["_0" ':= a, "_1" ':= b]))
-
-deriveGeneric ''PDThese
-
--- | @since 1.0.0
-deriving via (PIsDataReprInstances (PDThese a b)) instance (PIsData (PDThese a b))
+    deriving stock (Generic)
+    deriving anyclass (PlutusType, PIsData, PEq)
 
 -- | @since 1.0.0
-deriving via (PIsDataReprInstances (PDThese a b)) instance (PlutusType (PDThese a b))
+instance DerivePlutusType (PDThese a b) where type DPTStrat _ = PlutusTypeData
 
 -- | @since 1.0.0
-deriving anyclass instance PIsDataRepr (PDThese a b)
+deriving anyclass instance (POrd a, POrd b, PIsData a, PIsData b) => PPartialOrd (PDThese a b)
 
 -- | @since 1.0.0
-deriving via (PIsDataReprInstances (PDThese a b)) instance PEq (PDThese a b)
-
--- | @since 1.0.0
-deriving via
-    (PIsDataReprInstances (PDThese a b))
-    instance
-        (POrd a, POrd b, PIsData a, PIsData b) => POrd (PDThese a b)
+deriving anyclass instance (POrd a, POrd b, PIsData a, PIsData b) => POrd (PDThese a b)
 
 -- | @since 1.0.0
 instance (PIsData a) => PFunctor (PDThese a) where

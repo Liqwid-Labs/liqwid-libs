@@ -35,9 +35,9 @@ import Plutarch.DataRepr (pdcons, pdnil, pfield)
 import Plutarch.Lift (pconstant)
 import Plutarch.Maybe (PMaybe (PJust, PNothing))
 import Plutarch.Prelude (
-    PCon (pcon),
     S,
     Term,
+    pcon,
     phoistAcyclic,
     plam,
     pmatch,

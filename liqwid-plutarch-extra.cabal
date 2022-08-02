@@ -91,7 +91,6 @@ library
     Plutarch.Extra.Monoid
     Plutarch.Extra.MultiSig
     Plutarch.Extra.Numeric
-    Plutarch.Extra.Other
     Plutarch.Extra.Profunctor
     Plutarch.Extra.Record
     Plutarch.Extra.State
@@ -100,6 +99,7 @@ library
     Plutarch.Extra.TermCont
     Plutarch.Extra.These
     Plutarch.Extra.Traversable
+    Plutarch.Orphans
 
   build-depends:
     , composition-prelude
@@ -132,12 +132,9 @@ test-suite liqwid-plutarch-extra-test
     , universe
 
   other-modules:
-    Spec.Api.V1.Value
-    Spec.Api.V1.Value.Unsorted
     Spec.Extra.List
     Spec.Extra.Map
     Spec.Extra.Map.Sorted
-    Spec.Extra.Map.Unsorted
     Spec.Extra.MultiSig
     Spec.Extra.Traversable
     Spec.Utils

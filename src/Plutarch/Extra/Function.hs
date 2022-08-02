@@ -4,6 +4,7 @@ module Plutarch.Extra.Function (
     papply,
     pon,
     pbuiltinUncurry,
+    pflip,
 ) where
 
 import Data.Kind (Type)
@@ -67,3 +68,15 @@ pbuiltinUncurry f p =
     let p1 = pfromData $ pfstBuiltin # p
         p2 = pfromData $ psndBuiltin # p
      in f p1 p2
+
+-- | @since 1.4.0
+pflip ::
+    forall
+        (a :: S -> Type)
+        (b :: S -> Type)
+        (c :: S -> Type)
+        (s :: S).
+    Term
+        s
+        ((a :--> b :--> c) :--> b :--> a :--> c)
+pflip = phoistAcyclic $ plam $ \f y x -> f # x # y

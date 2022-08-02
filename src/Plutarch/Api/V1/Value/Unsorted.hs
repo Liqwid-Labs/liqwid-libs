@@ -1,12 +1,12 @@
 module Plutarch.Api.V1.Value.Unsorted (psort) where
 
 import Plutarch (
-    PMatch (pmatch),
     S,
     Term,
     pcon,
     phoistAcyclic,
     plam,
+    pmatch,
     (#),
     type (:-->),
  )
