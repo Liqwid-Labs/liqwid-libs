@@ -1,14 +1,9 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DefaultSignatures #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -30,15 +25,14 @@ import "liqwid-plutarch-extra" Plutarch.Extra.List (plookup)
 import Plutarch.Extra.Maybe (pfromJust, pmaybe)
 import Plutarch.Lift (PLift, PUnsafeLiftDecl (PLifted), pconstant)
 import Plutarch.Prelude (PBuiltinList, PBuiltinPair, PEq)
-import Plutarch.Test.QuickCheck.Instances (TestableTerm (..))
+import Plutarch.Test.QuickCheck.Instances (TestableTerm (TestableTerm, unTestableTerm))
 import Test.QuickCheck (
-    Arbitrary (..),
-    CoArbitrary (..),
+    Arbitrary (arbitrary, shrink),
+    CoArbitrary (coarbitrary),
     Gen,
     sized,
     vectorOf,
  )
-import Test.QuickCheck.Function ()
 
 data PFun (a :: S -> Type) (b :: S -> Type) where
     PFun ::
@@ -78,8 +72,8 @@ instance
     where
     arbitrary = sized $ \r -> do
         xs <- vectorOf r (arbitrary :: Gen (PLifted a))
-        ys <- sequenceA $ ($ (arbitrary :: Gen (PLifted b))) . coarbitrary <$> xs
-        let table = zipWith (,) xs ys
+        ys <- traverse (($ (arbitrary :: Gen (PLifted b))) . coarbitrary) xs
+        let table = zip xs ys
 
         d <- arbitrary :: Gen (PLifted b)
         return $ mkPFun (nubBy (\x y -> fst x == fst y) table) d

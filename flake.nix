@@ -57,7 +57,6 @@
         ])
         liqwid-nix.enableCabalFormatCheck
         liqwid-nix.enableNixFormatCheck
-        liqwid-nix.enableLintCheck
       ]
     ).toFlake;
 }

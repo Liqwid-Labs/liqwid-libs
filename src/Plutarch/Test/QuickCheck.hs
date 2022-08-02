@@ -1,18 +1,13 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DefaultSignatures #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ViewPatterns #-}
 
 module Plutarch.Test.QuickCheck (
     type IsPLam,
@@ -40,23 +35,18 @@ module Plutarch.Test.QuickCheck (
     pliftT,
 ) where
 
-import Control.Arrow ()
 import Data.Kind (Type)
-import Data.List ()
-import Data.Universe ()
-import Generics.SOP (All, HPure (hcpure), NP ((:*)), Proxy (..))
+import Generics.SOP (All, HPure (hcpure), NP ((:*)), Proxy (Proxy))
 import Plutarch (S, Term, (#), type (:-->))
-import "liqwid-plutarch-extra" Plutarch.Extra.List ()
-import Plutarch.Extra.Maybe ()
 import Plutarch.Lift (PLift, PUnsafeLiftDecl (PLifted), plift)
 import Plutarch.Prelude (PBool, PInteger)
 import Plutarch.Show (PShow)
 import Plutarch.Test.QuickCheck.Function (
-    PFn,
     PFun (..),
     applyPFun,
     plamFinite,
     plamTable,
+    pattern PFn,
  )
 import Plutarch.Test.QuickCheck.Instances (
     PArbitrary (..),
@@ -71,7 +61,6 @@ import Test.QuickCheck (
     Testable (property),
     forAll,
  )
-import Test.QuickCheck.Function ()
 
 -- | @since 2.0.0
 data PTermType
@@ -111,10 +100,10 @@ type family IsLast (p :: S -> Type) :: Bool where
 -}
 type family TestableFun (b :: PTermType) (p :: S -> Type) where
     TestableFun _ PBool = TestableTerm PBool
-    TestableFun PTerm (a :--> b) = TestableTerm a -> (TestableFun (PTT b) b)
-    TestableFun LastPTerm (a :--> b) = TestableTerm a -> (TestableFun (PTT b) b)
-    TestableFun PFunction ((a :--> b) :--> c) = PFun a b -> (TestableFun (PTT c) c)
-    TestableFun LastPFunction ((a :--> b) :--> c) = PFun a b -> (TestableFun (PTT c) c)
+    TestableFun PTerm (a :--> b) = TestableTerm a -> TestableFun (PTT b) b
+    TestableFun LastPTerm (a :--> b) = TestableTerm a -> TestableFun (PTT b) b
+    TestableFun PFunction ((a :--> b) :--> c) = PFun a b -> TestableFun (PTT c) c
+    TestableFun LastPFunction ((a :--> b) :--> c) = PFun a b -> TestableFun (PTT c) c
 
 {- | Convert Plutarch function into testable Haskell function that takes
      `TestableTerm`. It also converts plutarch function into `PFun`.
@@ -132,11 +121,11 @@ instance
     ) =>
     FromPFunN (a :--> b) PBool LastPFunction
     where
-    fromPFun' _ f = \(PFn x) -> TestableTerm $ f # x
+    fromPFun' _ f (PFn x) = TestableTerm $ f # x
 
 -- | @since 2.0.0
 instance FromPFunN a PBool LastPTerm where
-    fromPFun' _ f = \(TestableTerm x) -> TestableTerm $ f # x
+    fromPFun' _ f (TestableTerm x) = TestableTerm $ f # x
 
 -- | @since 2.0.0
 instance
@@ -148,7 +137,7 @@ instance
     ) =>
     FromPFunN (a :--> b) c PFunction
     where
-    fromPFun' _ f = \(PFn x) -> fromPFun' (Proxy @(PTT c)) $ f # x
+    fromPFun' _ f (PFn x) = fromPFun' (Proxy @(PTT c)) $ f # x
 
 -- | @since 2.0.0
 instance
@@ -158,7 +147,7 @@ instance
     ) =>
     FromPFunN a b PTerm
     where
-    fromPFun' _ f = \(TestableTerm x) -> fromPFun' (Proxy @(PTT b)) $ f # x
+    fromPFun' _ f (TestableTerm x) = fromPFun' (Proxy @(PTT b)) $ f # x
 
 {- | Converts Plutarch Functions into `Testable` Haskell function of TestableTerms.
 
@@ -171,14 +160,14 @@ fromPFun ::
     ) =>
     (forall s. Term s (a :--> b)) ->
     TestableFun c (a :--> b)
-fromPFun f = fromPFun' (Proxy @(PTT (a :--> b))) f
+fromPFun = fromPFun' (Proxy @(PTT (a :--> b)))
 
 {- | Extracts all @TestableTerm@s from give Plutarch function.
 
  @since 2.0.0
 -}
 type family PLamArgs (p :: S -> Type) :: [Type] where
-    PLamArgs (a :--> b) = TestableTerm a : (PLamArgs b)
+    PLamArgs (a :--> b) = TestableTerm a : PLamArgs b
     PLamArgs _ = '[]
 
 {- | Make property by directly comparing behavior of Plutarch function

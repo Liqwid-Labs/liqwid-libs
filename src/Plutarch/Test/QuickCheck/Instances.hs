@@ -1,6 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DefaultSignatures #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE QuantifiedConstraints #-}
@@ -18,12 +17,10 @@ module Plutarch.Test.QuickCheck.Instances (
     pliftT,
 ) where
 
-import Control.Arrow ()
 import Data.ByteString (ByteString)
 import Data.Default (Default (def))
 import qualified Data.Text as T (intercalate, pack, unpack)
 import qualified GHC.Exts as Exts (IsList (fromList, toList))
-import Generics.SOP ()
 import Plutarch (
     PlutusType,
     S,
@@ -39,22 +36,22 @@ import Plutarch (
 import Plutarch.Api.V1 (
     AmountGuarantees (NoGuarantees, NonZero, Positive),
     KeyGuarantees (Sorted, Unsorted),
-    PAddress (..),
-    PCredential (..),
-    PCurrencySymbol (..),
-    PExtended (..),
-    PInterval (..),
-    PLowerBound (..),
-    PMap (..),
-    PMaybeData (..),
+    PAddress (PAddress),
+    PCredential (PPubKeyCredential, PScriptCredential),
+    PCurrencySymbol (PCurrencySymbol),
+    PExtended (PFinite, PNegInf, PPosInf),
+    PInterval (PInterval),
+    PLowerBound (PLowerBound),
+    PMap (PMap),
+    PMaybeData (PDJust, PDNothing),
     PPOSIXTime,
-    PPubKeyHash (..),
-    PStakeValidatorHash (..),
-    PStakingCredential (..),
-    PTokenName (..),
-    PUpperBound (..),
-    PValidatorHash (..),
-    PValue (..),
+    PPubKeyHash (PPubKeyHash),
+    PStakeValidatorHash (PStakeValidatorHash),
+    PStakingCredential (PStakingHash, PStakingPtr),
+    PTokenName (PTokenName),
+    PUpperBound (PUpperBound),
+    PValidatorHash (PValidatorHash),
+    PValue (PValue),
  )
 import qualified Plutarch.Api.V1.AssocMap as Assoc (
     pfilter,
@@ -70,8 +67,6 @@ import Plutarch.Api.V1.Tuple (
 import qualified "plutarch" Plutarch.Api.V1.Value as Value (
     pnormalize,
  )
-import Plutarch.Builtin ()
-import Plutarch.DataRepr ()
 import Plutarch.Evaluate (evalScript)
 import Plutarch.Extra.Map.Unsorted (psort)
 import Plutarch.Extra.Maybe (
@@ -80,10 +75,7 @@ import Plutarch.Extra.Maybe (
     pisDJust,
     pisJust,
  )
-import "liqwid-plutarch-extra" Plutarch.Extra.TermCont ()
-import Plutarch.Internal ()
 import Plutarch.Lift (PUnsafeLiftDecl (PLifted), plift)
-import Plutarch.List ()
 import Plutarch.Positive (PPositive, ptryPositive)
 import Plutarch.Prelude (
     PAsData,
@@ -91,7 +83,7 @@ import Plutarch.Prelude (
     PBuiltinList,
     PBuiltinPair,
     PByteString,
-    PEither (..),
+    PEither (PLeft, PRight),
     PEq ((#==)),
     PInteger,
     PIsData,
@@ -99,11 +91,11 @@ import Plutarch.Prelude (
     PLift,
     PList,
     PListLike (pcons, phead, pnil, pnull, ptail),
-    PMaybe (..),
+    PMaybe (PJust, PNothing),
     POrd,
-    PPair (..),
+    PPair (PPair),
     PPartialOrd ((#<), (#<=)),
-    PRational (..),
+    PRational (PRational),
     PString,
     PUnit,
     Type,
@@ -120,14 +112,11 @@ import Plutarch.Prelude (
     pshow,
     ptraceError,
  )
-import Plutarch.Rational ()
 import Plutarch.Show (PShow)
-import Plutarch.Unsafe ()
-import qualified PlutusLedgerApi.V1.Scripts as Scripts ()
 import Test.QuickCheck (
-    Arbitrary (..),
-    CoArbitrary (..),
-    Function (..),
+    Arbitrary (arbitrary, shrink),
+    CoArbitrary (coarbitrary),
+    Function (function),
     Gen,
     Testable (property),
     chooseInt,
@@ -138,8 +127,6 @@ import Test.QuickCheck (
     variant,
     vectorOf,
  )
-import Test.QuickCheck.Function ()
-import qualified UntypedPlutusCore as UPLC ()
 
 -- | @since 2.0.0
 instance Testable (TestableTerm PBool) where
@@ -154,7 +141,7 @@ instance Testable (TestableTerm PBool) where
 
  @since 2.0.0
 -}
-data TestableTerm a = TestableTerm {unTestableTerm :: (forall s. Term s a)}
+data TestableTerm a = TestableTerm {unTestableTerm :: forall s. Term s a}
 
 -- | @since 2.0.0
 liftTestable ::
@@ -180,7 +167,7 @@ instance (forall (s :: S). Num (Term s a)) => Num (TestableTerm a) where
     abs = liftTestable abs
     negate = liftTestable negate
     signum = liftTestable signum
-    fromInteger i = TestableTerm $ (fromInteger i :: Term s a)
+    fromInteger i = TestableTerm (fromInteger i :: Term s a)
 
 -- | @since 2.0.0
 instance (forall (s :: S). Eq (Term s a)) => Eq (TestableTerm a) where
@@ -351,7 +338,7 @@ instance PCoArbitrary PRational where
 
 -- | @since 2.0.0
 instance PArbitrary PString where
-    parbitrary = (\x -> TestableTerm (pconstant (T.pack x))) <$> arbitrary
+    parbitrary = pconstantT . T.pack <$> arbitrary
     pshrink = fmap (pconstantT . T.pack) . shrink . T.unpack . pliftT
 
 instance PCoArbitrary PString where
@@ -361,10 +348,10 @@ instance PCoArbitrary PString where
 instance PArbitrary a => PArbitrary (PMaybe a) where
     parbitrary = do
         (TestableTerm x) <- parbitrary
-        frequency [(3, return $ TestableTerm $ pcon $ PJust x), (1, return $ TestableTerm $ pcon $ PNothing)]
+        frequency [(3, return $ TestableTerm $ pcon $ PJust x), (1, return $ pconT PNothing)]
     pshrink (TestableTerm x)
         | plift $ pisJust # x =
-            (TestableTerm $ pcon PNothing) :
+            TestableTerm (pcon PNothing) :
                 [ TestableTerm $ pcon $ PJust a
                 | (TestableTerm a) <- shrink (TestableTerm $ pfromJust # x)
                 ]
@@ -372,28 +359,30 @@ instance PArbitrary a => PArbitrary (PMaybe a) where
 
 instance PCoArbitrary a => PCoArbitrary (PMaybe a) where
     pcoarbitrary (TestableTerm x)
-        | plift $ pisJust # x = variant 1 . (pcoarbitrary $ TestableTerm $ pfromJust # x)
+        | plift $ pisJust # x = variant 1 . pcoarbitrary (TestableTerm $ pfromJust # x)
         | otherwise = variant 0
 
 -- | @since 2.0.0
 instance (PIsData a, PArbitrary a) => PArbitrary (PMaybeData a) where
     parbitrary = do
         (TestableTerm x) <- parbitrary
-        elements $
-            [ TestableTerm $ pcon $ PDJust $ pdcons @"_0" # (pdata x) # pdnil
+        elements
+            [ TestableTerm $ pcon $ PDJust $ pdcons @"_0" # pdata x # pdnil
             , TestableTerm $ pcon $ PDNothing pdnil
             ]
     pshrink (TestableTerm x)
         | plift $ pisDJust # x =
-            (TestableTerm $ pcon $ PDNothing pdnil) :
-                [ TestableTerm $ pcon $ PDJust $ pdcons @"_0" # (pdata a) # pdnil
+            ( pconT $
+                PDNothing pdnil
+            ) :
+                [ TestableTerm $ pcon $ PDJust $ pdcons @"_0" # pdata a # pdnil
                 | (TestableTerm a) <- shrink (TestableTerm $ pfromDJust # x)
                 ]
         | otherwise = []
 
 instance (PIsData a, PCoArbitrary a) => PCoArbitrary (PMaybeData a) where
     pcoarbitrary (TestableTerm x)
-        | plift $ pisDJust # x = variant 1 . (pcoarbitrary $ TestableTerm $ pfromDJust # x)
+        | plift $ pisDJust # x = variant 1 . pcoarbitrary (TestableTerm $ pfromDJust # x)
         | otherwise = variant 0
 
 isRight = flip pmatchT $ \case
@@ -425,8 +414,8 @@ instance (PArbitrary a, PArbitrary b) => PArbitrary (PEither a b) where
 
 instance (PCoArbitrary a, PCoArbitrary b) => PCoArbitrary (PEither a b) where
     pcoarbitrary x
-        | pliftT $ isRight x = variant 0 . (pcoarbitrary $ pright x)
-        | otherwise = variant 1 . (pcoarbitrary $ pleft x)
+        | pliftT $ isRight x = variant 0 . pcoarbitrary (pright x)
+        | otherwise = variant 1 . pcoarbitrary (pleft x)
 
 {- | Unfortunately, it is impossible to create @PBuiltinPair@ at the
      Plutarch level without getting into manipulating raw Plutus
@@ -445,7 +434,7 @@ instance
     ) =>
     PArbitrary (PBuiltinPair a b)
     where
-    parbitrary = (\x -> TestableTerm (pconstant x)) <$> arbitrary
+    parbitrary = pconstantT <$> arbitrary
 
     pshrink = fmap pconstantT . shrink . pliftT
 
@@ -503,7 +492,7 @@ instance
     parbitrary = do
         (TestableTerm x) <- parbitrary
         (TestableTerm y) <- parbitrary
-        return $ TestableTerm $ pcon $ PPair x y
+        return . pconT $ PPair x y
 
     pshrink x =
         [ pconT $ PPair a b
@@ -515,9 +504,9 @@ instance (PCoArbitrary a, PCoArbitrary b) => PCoArbitrary (PPair a b) where
     pcoarbitrary x = pcoarbitrary (ppFstT x) . pcoarbitrary (ppSndT x)
 
 ptFstT :: (PIsData a) => TestableTerm (PTuple a b) -> TestableTerm (PAsData a)
-ptFstT = liftTestable $ (pfield @"_0" #)
+ptFstT = liftTestable (pfield @"_0" #)
 ptSndT :: (PIsData b) => TestableTerm (PTuple a b) -> TestableTerm (PAsData b)
-ptSndT = liftTestable $ (pfield @"_1" #)
+ptSndT = liftTestable (pfield @"_1" #)
 
 -- | @since 2.0.0
 instance
@@ -531,7 +520,7 @@ instance
     parbitrary = do
         (TestableTerm x) <- parbitrary
         (TestableTerm y) <- parbitrary
-        return $ TestableTerm $ ptuple # (pdata x) # (pdata y)
+        return $ TestableTerm $ ptuple # pdata x # pdata y
 
     pshrink x =
         [ TestableTerm $ ptuple # a # b
@@ -550,10 +539,10 @@ instance
     pcoarbitrary x = pcoarbitrary (ptFstT x) . pcoarbitrary (ptSndT x)
 
 psimplify :: (PLift a) => TestableTerm a -> TestableTerm a
-psimplify (TestableTerm x) = TestableTerm $ pconstant $ plift x
+psimplify (TestableTerm x) = pconstantT $ plift x
 
 constrPList :: (PIsListLike b a) => [TestableTerm a] -> TestableTerm (b a)
-constrPList [] = TestableTerm $ pnil
+constrPList [] = TestableTerm pnil
 constrPList ((TestableTerm x) : xs) =
     let (TestableTerm rest) = constrPList xs
      in TestableTerm $ pcons # x # rest
@@ -561,7 +550,7 @@ constrPList ((TestableTerm x) : xs) =
 convToList :: (PIsListLike b a) => TestableTerm (b a) -> [TestableTerm a]
 convToList (TestableTerm x)
     | not $ plift $ pnull # x =
-        (TestableTerm (phead # x)) : convToList (TestableTerm $ ptail # x)
+        TestableTerm (phead # x) : convToList (TestableTerm $ ptail # x)
     | otherwise = []
 
 genPListLike :: forall b a. (PArbitrary a, PIsListLike b a) => Gen (TestableTerm (b a))
@@ -580,7 +569,7 @@ coArbitraryPListLike ::
     (PCoArbitrary a, PCoArbitrary (b a), PIsListLike b a) => TestableTerm (b a) -> Gen c -> Gen c
 coArbitraryPListLike (TestableTerm x)
     | plift (pnull # x) = variant 0
-    | otherwise = variant 1 . (pcoarbitrary $ TestableTerm $ phead # x) . (pcoarbitrary $ TestableTerm $ ptail # x)
+    | otherwise = variant 1 . pcoarbitrary (TestableTerm $ phead # x) . pcoarbitrary (TestableTerm $ ptail # x)
 
 -- | @since 2.0.0
 instance (PArbitrary a, PIsListLike PBuiltinList a) => PArbitrary (PBuiltinList a) where
@@ -609,7 +598,7 @@ instance
     where
     parbitrary = do
         (TestableTerm x) <- parbitrary
-        return $ TestableTerm $ pcon $ PMap x
+        return $ pconT $ PMap x
 
     pshrink = fmap reMap . shrink . unMap
       where
@@ -628,9 +617,9 @@ instance
     where
     parbitrary = do
         (TestableTerm x) <- parbitrary
-        return $ TestableTerm $ psort # (pcon $ PMap x)
+        return $ TestableTerm $ psort # pcon (PMap x)
 
-    pshrink = fmap (\(TestableTerm x) -> TestableTerm $ psort # (pcon $ PMap x)) . shrink . unMap
+    pshrink = fmap (\(TestableTerm x) -> TestableTerm $ psort # pcon (PMap x)) . shrink . unMap
       where
         unMap = flip pmatchT $ \(PMap a) -> a
 
@@ -643,7 +632,7 @@ instance (PCoArbitrary a, PCoArbitrary b, PIsData a, PIsData b) => PCoArbitrary 
 instance PArbitrary PPOSIXTime where
     parbitrary = do
         (TestableTerm x) <- parbitrary
-        return $ TestableTerm $ pcon $ PPOSIXTime x
+        return $ pconT $ PPOSIXTime x
 
     pshrink = fmap (\(TestableTerm x) -> pconT $ PPOSIXTime x) . shrink . unTime
       where
@@ -653,10 +642,10 @@ instance PArbitrary PPOSIXTime where
 instance (PIsData a, PArbitrary a) => PArbitrary (PExtended a) where
     parbitrary = do
         (TestableTerm x) <- parbitrary
-        elements $
-            [ TestableTerm $ pcon $ PNegInf pdnil
-            , TestableTerm $ pcon $ PFinite $ pdcons @"_0" # (pdata x) # pdnil
-            , TestableTerm $ pcon $ PPosInf pdnil
+        elements
+            [ pconT $ PNegInf pdnil
+            , pconT $ PFinite $ pdcons @"_0" # (pdata x) # pdnil
+            , pconT $ PPosInf pdnil
             ]
 
 -- | @since 2.0.0
@@ -665,10 +654,9 @@ instance (PIsData a, PArbitrary a) => PArbitrary (PLowerBound a) where
         (TestableTerm ex) <- parbitrary
         (TestableTerm cl) <- parbitrary
         return $
-            TestableTerm $
-                pcon $
-                    PLowerBound $
-                        pdcons @"_0" # (pdata ex) #$ pdcons @"_1" # (pdata cl) # pdnil
+            pconT $
+                PLowerBound $
+                    pdcons @"_0" # pdata ex #$ pdcons @"_1" # pdata cl # pdnil
 
 -- | @since 2.0.0
 instance (PIsData a, PArbitrary a) => PArbitrary (PUpperBound a) where
@@ -676,10 +664,9 @@ instance (PIsData a, PArbitrary a) => PArbitrary (PUpperBound a) where
         (TestableTerm ex) <- parbitrary
         (TestableTerm cl) <- parbitrary
         return $
-            TestableTerm $
-                pcon $
-                    PUpperBound $
-                        pdcons @"_0" # (pdata ex) #$ pdcons @"_1" # (pdata cl) # pdnil
+            pconT $
+                PUpperBound $
+                    pdcons @"_0" # pdata ex #$ pdcons @"_1" # pdata cl # pdnil
 
 -- | @since 2.0.0
 instance (PIsData a, PArbitrary a) => PArbitrary (PInterval a) where
@@ -687,40 +674,39 @@ instance (PIsData a, PArbitrary a) => PArbitrary (PInterval a) where
         (TestableTerm lo) <- parbitrary
         (TestableTerm up) <- parbitrary
         return $
-            TestableTerm $
-                pcon $
-                    PInterval $
-                        pdcons @"from" # (pdata lo) #$ pdcons @"to" # (pdata up) # pdnil
+            pconT $
+                PInterval $
+                    pdcons @"from" # pdata lo #$ pdcons @"to" # pdata up # pdnil
 
 -- | @since 2.0.0
 instance PArbitrary PPubKeyHash where
     parbitrary = do
         -- PubKeyHash should be 28 bytes long
         bs <- genByteString 28
-        return $ TestableTerm $ pcon $ PPubKeyHash $ pconstant bs
+        return $ pconT $ PPubKeyHash $ pconstant bs
 
 -- | @since 2.0.0
 instance PArbitrary PValidatorHash where
     parbitrary = do
         -- PubKeyHash should be 28 bytes long
         bs <- genByteString 28
-        return $ TestableTerm $ pcon $ PValidatorHash $ pconstant bs
+        return $ pconT $ PValidatorHash $ pconstant bs
 
 -- | @since 2.0.0
 instance PArbitrary PStakeValidatorHash where
     parbitrary = do
         -- PubKeyHash should be 28 bytes long
         bs <- genByteString 28
-        return $ TestableTerm $ pcon $ PStakeValidatorHash $ pconstant bs
+        return $ pconT $ PStakeValidatorHash $ pconstant bs
 
 -- | @since 2.0.0
 instance PArbitrary PCredential where
     parbitrary = do
         (TestableTerm pk) <- parbitrary
         (TestableTerm vh) <- parbitrary
-        elements $
-            [ TestableTerm $ pcon $ PScriptCredential $ pdcons @"_0" # (pdata vh) # pdnil
-            , TestableTerm $ pcon $ PPubKeyCredential $ pdcons @"_0" # (pdata pk) # pdnil
+        elements
+            [ pconT $ PScriptCredential $ pdcons @"_0" # pdata vh # pdnil
+            , pconT $ PPubKeyCredential $ pdcons @"_0" # pdata pk # pdnil
             ]
 
 -- | @since 2.0.0
@@ -730,14 +716,13 @@ instance PArbitrary PStakingCredential where
         (TestableTerm x) <- parbitrary
         (TestableTerm y) <- parbitrary
         (TestableTerm z) <- parbitrary
-        elements $
-            [ TestableTerm $ pcon $ PStakingHash $ pdcons @"_0" # (pdata cred) # pdnil
-            , TestableTerm $
-                pcon $
-                    PStakingPtr $
-                        pdcons @"_0" # (pdata x)
-                            #$ pdcons @"_1" # (pdata y)
-                            #$ pdcons @"_2" # (pdata z) # pdnil
+        elements
+            [ pconT $ PStakingHash $ pdcons @"_0" # pdata cred # pdnil
+            , pconT $
+                PStakingPtr $
+                    pdcons @"_0" # pdata x
+                        #$ pdcons @"_1" # pdata y
+                        #$ pdcons @"_2" # pdata z # pdnil
             ]
 
 -- | @since 2.0.0
@@ -746,30 +731,29 @@ instance PArbitrary PAddress where
         (TestableTerm cred) <- parbitrary
         (TestableTerm scred) <- parbitrary
         return $
-            TestableTerm $
-                pcon $
-                    PAddress $
-                        pdcons @"credential" # (pdata cred)
-                            #$ pdcons @"stakingCredential" # (pdata scred) # pdnil
+            pconT $
+                PAddress $
+                    pdcons @"credential" # pdata cred
+                        #$ pdcons @"stakingCredential" # pdata scred # pdnil
 
 -- | @since 2.0.0
 instance PArbitrary PCurrencySymbol where
     parbitrary = do
         (TestableTerm cs) <- parbitrary
-        return $ TestableTerm $ pcon $ PCurrencySymbol cs
+        return $ pconT $ PCurrencySymbol cs
 
 -- | @since 2.0.0
 instance PArbitrary PTokenName where
     parbitrary = do
         len <- chooseInt (1, 32)
         tn <- genByteString len
-        return $ TestableTerm $ pcon $ PTokenName $ pconstant tn
+        return $ pconT $ PTokenName $ pconstant tn
 
 -- | @since 2.0.0
 instance PArbitrary (PValue Unsorted NoGuarantees) where
     parbitrary = do
         (TestableTerm val) <- parbitrary
-        return $ TestableTerm $ pcon $ PValue val
+        return $ pconT $ PValue val
 
     pshrink = fmap (\(TestableTerm x) -> pconT $ PValue x) . shrink . unValue
       where
@@ -780,38 +764,36 @@ instance PArbitrary (PValue Unsorted NonZero) where
     parbitrary = do
         (TestableTerm val) <- parbitrary
         return $
-            TestableTerm $
-                pcon $
-                    PValue $
-                        Assoc.pmap # (plam $ \x -> Assoc.pfilter # (plam $ \y -> pnot # (y #== 0)) # x) # val
+            pconT $
+                PValue $
+                    Assoc.pmap # plam (\x -> Assoc.pfilter # (plam $ \y -> pnot # (y #== 0)) # x) # val
 
     pshrink = fmap reValue . shrink . unValue
       where
         unValue = flip pmatchT $ \(PValue a) -> a
         reValue (TestableTerm val) =
-            pconT $ PValue $ Assoc.pmap # (plam $ \x -> Assoc.pfilter # (plam $ \y -> pnot # (y #== 0)) # x) # val
+            pconT $ PValue $ Assoc.pmap # plam (\x -> Assoc.pfilter # plam (\y -> pnot # (y #== 0)) # x) # val
 
 -- | @since 2.0.0
 instance PArbitrary (PValue Unsorted Positive) where
     parbitrary = do
         (TestableTerm val) <- parbitrary
         return $
-            TestableTerm $
-                pcon $
-                    PValue $
-                        Assoc.pmap # (plam $ \x -> Assoc.pfilter # (plam $ \y -> pnot # (0 #< y)) # x) # val
+            pconT $
+                PValue $
+                    Assoc.pmap # plam (\x -> Assoc.pfilter # plam (\y -> pnot # (0 #< y)) # x) # val
 
     pshrink = fmap reValue . shrink . unValue
       where
         unValue = flip pmatchT $ \(PValue a) -> a
         reValue (TestableTerm val) =
-            pconT $ PValue $ Assoc.pmap # (plam $ \x -> Assoc.pfilter # (plam $ \y -> pnot # (0 #< y)) # x) # val
+            pconT $ PValue $ Assoc.pmap # plam (\x -> Assoc.pfilter # plam (\y -> pnot # (0 #< y)) # x) # val
 
 -- | @since 2.0.0
 instance PArbitrary (PValue Sorted NoGuarantees) where
     parbitrary = do
         (TestableTerm val) <- parbitrary
-        return $ TestableTerm $ pcon $ PValue val
+        return $ pconT $ PValue val
 
     pshrink = fmap (\(TestableTerm x) -> pconT $ PValue x) . shrink . unValue
       where
@@ -826,26 +808,25 @@ instance PArbitrary (PValue Sorted NonZero) where
                 Value.pnormalize
                     #$ pcon
                     $ PValue $
-                        Assoc.pmap # (plam $ \x -> Assoc.pfilter # (plam $ \y -> pnot # (y #== 0)) # x) # val
+                        Assoc.pmap # plam (\x -> Assoc.pfilter # plam (\y -> pnot # (y #== 0)) # x) # val
 
     pshrink = fmap reValue . shrink . unValue
       where
         unValue = flip pmatchT $ \(PValue a) -> a
         reValue (TestableTerm val) =
-            pconT $ PValue $ Assoc.pmap # (plam $ \x -> Assoc.pfilter # (plam $ \y -> pnot # (y #== 0)) # x) # val
+            pconT $ PValue $ Assoc.pmap # plam (\x -> Assoc.pfilter # plam (\y -> pnot # (y #== 0)) # x) # val
 
 -- | @since 2.0.0
 instance PArbitrary (PValue Sorted Positive) where
     parbitrary = do
         (TestableTerm val) <- (parbitrary :: Gen (TestableTerm (PValue Sorted NonZero)))
         return $
-            TestableTerm $
-                pcon $
-                    PValue $
-                        Assoc.pmap # (plam $ \x -> Assoc.pfilter # (plam $ \y -> (0 #<= y)) # x) # pto val
+            pconT $
+                PValue $
+                    Assoc.pmap # plam (\x -> Assoc.pfilter # plam (\y -> 0 #<= y) # x) # pto val
 
     pshrink = fmap reValue . shrink . unValue
       where
         unValue = flip pmatchT $ \(PValue a) -> a
         reValue (TestableTerm val) =
-            pconT $ PValue $ Assoc.pmap # (plam $ \x -> Assoc.pfilter # (plam $ \y -> pnot # (0 #< y)) # x) # val
+            pconT $ PValue $ Assoc.pmap # plam (\x -> Assoc.pfilter # plam (\y -> pnot # (0 #< y)) # x) # val
