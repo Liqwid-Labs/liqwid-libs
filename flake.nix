@@ -24,11 +24,11 @@
     };
 
     plutarch-quickcheck.url =
-      "github:liqwid-labs/plutarch-quickcheck?ref=connor/liqwid-nix";
+      "github:liqwid-labs/plutarch-quickcheck?ref=staging";
     plutarch-numeric.url =
-      "github:liqwid-labs/plutarch-numeric?ref=connor/liqwid-nix";
+      "github:liqwid-labs/plutarch-numeric?ref=main";
     plutarch-context-builder.url =
-      "github:Liqwid-Labs/plutarch-context-builder?ref=connor/liqwid-nix";
+      "github:Liqwid-Labs/plutarch-context-builder?ref=staging";
 
     liqwid-nix.url = "github:Liqwid-Labs/liqwid-nix";
   };
