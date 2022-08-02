@@ -13,7 +13,7 @@ module Test.Benchmark.Plutarch (
 import Control.Monad.Primitive (MonadPrim)
 import Data.Hashable (Hashable)
 import Data.Text (Text)
-import Plutarch (compile)
+import Plutarch.Extra.Compile (mustCompile)
 import System.Random (RandomGen)
 import Test.Benchmark.Common (ImplData (..))
 import Test.Benchmark.PTouch (PTouch (ptouch), ptouch')
@@ -41,10 +41,10 @@ mkTermImplMetaData ::
   -- | The implementation without any inputs
   ClosedTerm a ->
   ImplMetaData
-mkTermImplMetaData name term = mkScriptImplMetaData name $ compile term
+mkTermImplMetaData name term = mkScriptImplMetaData name $ mustCompile term
 
 sampleTerm :: ClosedTerm a -> Either (BudgetExceeded PlutusCostAxis) Costs
-sampleTerm term = sampleScript $ compile term
+sampleTerm term = sampleScript $ mustCompile term
 
 sampleTerm' :: CompiledTerm a -> Either (BudgetExceeded PlutusCostAxis) Costs
 sampleTerm' = sampleScript . toScript
@@ -53,7 +53,7 @@ sampleTouchTerm ::
   PTouch a =>
   ClosedTerm a ->
   Either (BudgetExceeded PlutusCostAxis) Costs
-sampleTouchTerm term = sampleScript $ compile $ ptouch # term
+sampleTouchTerm term = sampleScript $ mustCompile $ ptouch # term
 
 sampleTouchTerm' ::
   PTouch a =>

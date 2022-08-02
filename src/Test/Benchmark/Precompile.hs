@@ -31,8 +31,8 @@ import Control.Lens ((^?))
 import Data.Text (Text)
 import Data.Text qualified as Text
 import GHC.Stack (HasCallStack)
-import Plutarch (compile)
 import Plutarch.Evaluate (EvalError, evalScript)
+import Plutarch.Extra.Compile (mustCompile)
 import Plutarch.Lift (
   PConstantDecl (pconstantFromRepr),
   PUnsafeLiftDecl (PLifted),
@@ -81,7 +81,7 @@ compile' ::
   forall (a :: S -> Type).
   (forall (s :: S). Term s a) ->
   CompiledTerm a
-compile' t = CompiledTerm $ compile t
+compile' t = CompiledTerm $ mustCompile t
 
 -- | Convert a 'CompiledTerm' to a 'Script'.
 toScript :: forall (a :: S -> Type). CompiledTerm a -> Script
@@ -99,7 +99,7 @@ applyCompiledTerm ::
   (forall (s :: S). Term s a) ->
   CompiledTerm b
 applyCompiledTerm (CompiledTerm sf) a =
-  CompiledTerm $ applyScript sf (eval $ compile a)
+  CompiledTerm $ applyScript sf (eval $ mustCompile a)
 
 {- | Apply a 'CompiledTerm' to a closed Plutarch 'Term'.
 
@@ -113,7 +113,7 @@ applyCompiledTerm' ::
   (forall (s :: S). Term s a) ->
   CompiledTerm b
 applyCompiledTerm' (CompiledTerm sf) a =
-  CompiledTerm $ applyScript sf (compile a)
+  CompiledTerm $ applyScript sf (mustCompile a)
 
 {- | Apply a 'CompiledTerm' to a 'CompiledTerm'.
 
