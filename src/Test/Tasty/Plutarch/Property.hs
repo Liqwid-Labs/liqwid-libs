@@ -17,20 +17,29 @@ module Test.Tasty.Plutarch.Property (
     -- * Basic properties
     peqProperty,
 
+    -- * Basic properties with native Haskell
+    peqPropertyNative',
+
     -- * Properties that always should fail
     alwaysFailProperty,
 
     -- * Coverage-based properties
     classifiedProperty,
+
+    -- * Coverage-based properties with native Haskell
+    classifiedPropertyNative,
 ) where
 
 import Control.Monad (guard)
+import Data.Default (def)
 import Data.Kind (Type)
 import Data.Monoid (Endo (Endo), appEndo)
 import Data.Tagged (Tagged (Tagged))
 import Data.Text (Text)
+import qualified Data.Text as T
 import Data.Universe (Finite (cardinality, universeF))
 import Plutarch (
+    ClosedTerm,
     PlutusType,
     S,
     Term,
@@ -52,7 +61,7 @@ import Plutarch.Integer (PInteger)
 import Plutarch.Lift (PUnsafeLiftDecl (PLifted), pconstant)
 import Plutarch.Maybe (PMaybe (PJust, PNothing))
 import Plutarch.TermCont (tcont)
-import Plutus.V1.Ledger.Scripts (Script)
+import PlutusLedgerApi.V1 (Script)
 import Test.QuickCheck (
     Gen,
     Property,
@@ -99,7 +108,43 @@ peqProperty expected gen shr comp =
         a ->
         Property
     go precompiled input =
-        let s = compile (precompiled # expected # pconstant input)
+        let s = mustCompile (precompiled # expected # pconstant input)
+            (res, _, logs) = evalScript s
+         in counterexample (prettyLogs logs) $ case res of
+                Left e -> unexpectedError e
+                Right s' -> sameAsExpected s'
+
+{- | Have the same functionalities as 'peqProperty' but allow generating
+ expeceted result using a Haskell function.
+
+ @since 1.0.2
+-}
+peqPropertyNative' ::
+    forall (a :: Type) (b :: Type) (c :: S -> Type) (d :: S -> Type).
+    ( Show a
+    , PLifted c ~ a
+    , PLifted d ~ b
+    , PEq d
+    , PUnsafeLiftDecl c
+    , PUnsafeLiftDecl d
+    ) =>
+    -- | Given an input value, returns the expected value.
+    (a -> b) ->
+    Gen a ->
+    (a -> [a]) ->
+    (forall (s :: S). Term s (c :--> d)) ->
+    Property
+peqPropertyNative' getExpected gen shr comp =
+    forAllShrinkShow gen shr showInput (go (peqTemplate comp))
+  where
+    go ::
+        (forall (s' :: S). Term s' (d :--> c :--> PBool)) ->
+        a ->
+        Property
+    go precompiled input =
+        let expected :: Term s' d
+            expected = pconstant $ getExpected input
+            s = mustCompile (precompiled # expected # pconstant input)
             (res, _, logs) = evalScript s
          in counterexample (prettyLogs logs) $ case res of
                 Left e -> unexpectedError e
@@ -130,7 +175,7 @@ alwaysFailProperty gen shr comp = forAllShrinkShow gen shr showInput (go comp)
   where
     go :: (forall (s' :: S). Term s' (c :--> d)) -> a -> Property
     go precompiled input =
-        let s = compile (precompiled # pconstant input)
+        let s = mustCompile (precompiled # pconstant input)
             (res, _, _) = evalScript s
          in case res of
                 Right _ -> counterexample ranOnCrash . property $ False
@@ -210,7 +255,7 @@ classifiedProperty getGen shr getOutcome classify comp = case cardinality @ix of
          in if ix /= classified
                 then failedClassification ix classified
                 else
-                    let s = compile (precompiled # pconstant input)
+                    let s = mustCompile (precompiled # pconstant input)
                         (res, _, logs) = evalScript s
                      in counterexample (prettyLogs logs)
                             . ensureCovered input classify
@@ -221,11 +266,85 @@ classifiedProperty getGen shr getOutcome classify comp = case cardinality @ix of
                                             | s' == canon 0 -> property True
                                             | otherwise -> counterexample wrongResult . property $ False
                                 Left e ->
-                                    let sTest = compile (pisNothing #$ getOutcome # pconstant input)
+                                    let sTest = mustCompile (pisNothing #$ getOutcome # pconstant input)
                                         (testRes, _, _) = evalScript sTest
                                      in case testRes of
                                             Left e' -> failCrashyGetOutcome e'
                                             Right s' -> crashedWhenItShouldHave e s'
+
+{- | Identical to @classifiedProperty@ but it receives expected result
+   in Haskell function instead of Plutarch function. As a result it
+   requires little bit tighter constraints but allows more readable
+   code for writing expected result.
+
+ @since 1.0.2
+-}
+classifiedPropertyNative ::
+    forall (a :: Type) (e :: Type) (ix :: Type) (c :: S -> Type) (d :: S -> Type).
+    ( Show a
+    , Finite ix
+    , Eq ix
+    , Show ix
+    , PLifted c ~ a
+    , PLifted d ~ e
+    , PUnsafeLiftDecl c
+    , PUnsafeLiftDecl d
+    , PEq d
+    ) =>
+    -- | A way to generate values for each case. We expect that for any such
+    -- generated value, the classification function should report the appropriate
+    -- case: a test iteration will fail if this doesn't happen.
+    (ix -> Gen a) ->
+    -- | A shrinker for inputs.
+    (a -> [a]) ->
+    -- | Given an input value, either construct its
+    -- corresponding expected value or fail.
+    (a -> Maybe e) ->
+    -- | A \'classifier function\' for generated inputs.
+    (a -> ix) ->
+    -- | The computation to test.
+    (forall (s :: S). Term s (c :--> d)) ->
+    Property
+classifiedPropertyNative getGen shr getOutcome classify comp = case cardinality @ix of
+    Tagged 0 -> failOutNoCases
+    Tagged 1 -> failOutOneCase
+    _ -> forAllShrinkShow gen shr' (showInput . snd) (go (classifiedTemplateNativeEx comp))
+  where
+    gen :: Gen (ix, a)
+    gen = do
+        ix <- elements universeF
+        (ix,) <$> getGen ix
+    shr' :: (ix, a) -> [(ix, a)]
+    shr' (ix, x) = do
+        x' <- shr x
+        guard (classify x' == ix)
+        pure (ix, x')
+    go ::
+        (forall (s' :: S). Term s' (c :--> PMaybe d :--> PInteger)) ->
+        (ix, a) ->
+        Property
+    go precompiled (ix, input) =
+        if ix /= classified
+            then failedClassification ix classified
+            else
+                let s = mustCompile (precompiled # pconstant input # toPMaybe (getOutcome input))
+                    (res, _, logs) = evalScript s
+                 in counterexample (prettyLogs logs)
+                        . ensureCovered input classify
+                        $ case res of
+                            Right s' ->
+                                if
+                                        | s' == canon 2 -> counterexample ranOnCrash . property $ False
+                                        | s' == canon 0 -> property True
+                                        | otherwise -> counterexample wrongResult . property $ False
+                            Left e ->
+                                let sTest = mustCompile (pisNothing #$ toPMaybe (getOutcome input))
+                                    (testRes, _, _) = evalScript sTest
+                                 in case testRes of
+                                        Left e' -> failCrashyGetOutcome e'
+                                        Right s' -> crashedWhenItShouldHave e s'
+      where
+        classified = classify input
 
 -- Note from Koz
 --
@@ -273,6 +392,29 @@ classifiedTemplate comp getOutcome = phoistAcyclic $
         pure $ case expectedMay of
             PNothing -> 2
             PJust expected -> pif (expected #== actual) 0 1
+
+classifiedTemplateNativeEx ::
+    forall (c :: S -> Type) (d :: S -> Type) (s :: S).
+    (PEq d) =>
+    (forall (s' :: S). Term s' (c :--> d)) ->
+    Term s (c :--> PMaybe d :--> PInteger)
+classifiedTemplateNativeEx comp = phoistAcyclic $
+    plam $ \input res -> unTermCont $ do
+        actual <- tclet (comp # input)
+        expectedMay <- tcmatch res
+        pure $ case expectedMay of
+            PNothing -> 2
+            PJust expected -> pif (expected #== actual) 0 1
+
+toPMaybe ::
+    forall (a :: Type) (c :: S -> Type) (s :: S).
+    ( PLifted c ~ a
+    , PUnsafeLiftDecl c
+    ) =>
+    Maybe a ->
+    Term s (PMaybe c)
+toPMaybe (Just x) = pcon $ PJust $ pconstant x
+toPMaybe Nothing = pcon PNothing
 
 pisNothing ::
     forall (a :: S -> Type) (s :: S).
@@ -388,11 +530,16 @@ tcmatch ::
     TermCont s (a s)
 tcmatch t = tcont (pmatch t)
 
+mustCompile :: ClosedTerm a -> Script
+mustCompile t = case compile def t of
+    Left err -> error $ unwords ["Plutarch compilation error:", T.unpack err]
+    Right s -> s
+
 canonTrue :: Script
-canonTrue = compile (pcon PTrue)
+canonTrue = mustCompile (pcon PTrue)
 
 canon :: Integer -> Script
-canon x = compile (pconstant x)
+canon x = mustCompile (pconstant x)
 
 prettyLogs :: [Text] -> String
 prettyLogs =

@@ -19,7 +19,7 @@ import Data.Universe (
     Universe (universe),
  )
 
-import Plutarch (PCon (pcon), S, Term, plam, (#), type (:-->))
+import Plutarch (S, Term, pcon, plam, (#), type (:-->))
 import Plutarch.Integer (PInteger, PIntegral (pquot))
 import Plutarch.Maybe (PMaybe (..))
 import Plutarch.Trace (ptraceError)
@@ -111,13 +111,13 @@ alwaysFailsSucceeds :: Property
 alwaysFailsSucceeds = alwaysFailProperty arbitrary shrink definition
   where
     definition :: forall (s :: S). Term s (PInteger :--> PInteger)
-    definition = plam $ const $ 5
+    definition = plam $ const 5
 
 alwaysFailsOnClassifiedProperty :: Property
 alwaysFailsOnClassifiedProperty = classifiedProperty generator shrinker expected classifier definition
   where
     expected :: forall (s :: S). Term s (PInteger :--> PMaybe PInteger)
-    expected = plam $ const $ pcon $ PNothing
+    expected = plam $ const $ pcon PNothing
 
     definition :: forall (s :: S). Term s (PInteger :--> PInteger)
     definition = plam $ const $ ptraceError "failed"
@@ -127,7 +127,8 @@ main = do
     defaultMain $
         testGroup
             "Handlers Tests"
-            [ testGroup "Possible outputs of classifiedProperty" $
+            [ testGroup
+                "Possible outputs of classifiedProperty"
                 [ expectFailBecause "expects failure but script runs successfully" $
                     testProperty "\"expected: Failure/yields: Success\"" expectedFailureSucceeding
                 , testProperty "\"expected: Failure/yields: Failure\"" expectedFailureFailing
@@ -138,7 +139,8 @@ main = do
                 , testProperty "\"expected: Success/yields: Success and Correct\"" expectedSuccessCorrectValue
                 ]
             , adjustOption go $
-                testGroup "alwaysFailproperty" $
+                testGroup
+                    "alwaysFailproperty"
                     [ expectFailBecause "expects failure but script runs successfully" $
                         testProperty "\"expected: Failure/yields: Success\"" alwaysFailsSucceeds
                     , testProperty "faster (using alwaysFailProperty)" alwaysFails

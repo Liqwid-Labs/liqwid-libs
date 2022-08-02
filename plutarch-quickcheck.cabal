@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutarch-quickcheck
-version:            1.0.0
+version:            1.0.2
 synopsis:           Helpers for property testing plutarch
 description:
   Contains several helpers for law checks of Plutarch type classes, as well as 
@@ -91,6 +91,7 @@ library
   other-modules:   Test.Tasty.Plutarch.Helpers
   build-depends:
     , bytestring
+    , data-default
     , plutus-core
     , plutus-ledger-api
     , pretty
