@@ -25,7 +25,7 @@ import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
 import Data.Text (Text)
 import GHC.Generics qualified as GHC
-import Plutarch (ClosedTerm)
+import Plutarch (ClosedTerm, Config (Config, tracingMode), TracingMode (NoTracing))
 import Plutarch.Api.V1 (PMintingPolicy, PValidator, mkMintingPolicy, mkValidator, scriptHash)
 import PlutusLedgerApi.V1 (
   MintingPolicy (getMintingPolicy),
@@ -71,13 +71,19 @@ mkScriptInfo script =
         , hash = scriptHash script
         }
 
+exportConfig :: Config
+exportConfig =
+  Config
+    { tracingMode = NoTracing
+    }
+
 {- | Create a 'ScriptInfo' given a Plutarch term of a policy.
 
      @since 1.0.0
 -}
 mkPolicyInfo :: ClosedTerm PMintingPolicy -> ScriptInfo
 mkPolicyInfo term =
-  mkScriptInfo (getMintingPolicy $ mkMintingPolicy term)
+  mkScriptInfo (getMintingPolicy $ mkMintingPolicy exportConfig term)
 
 {- | Create a 'ScriptInfo' given a Plutarch term of a validator.
 
@@ -85,4 +91,4 @@ mkPolicyInfo term =
 -}
 mkValidatorInfo :: ClosedTerm PValidator -> ScriptInfo
 mkValidatorInfo term =
-  mkScriptInfo (getValidator $ mkValidator term)
+  mkScriptInfo (getValidator $ mkValidator exportConfig term)

@@ -1,0 +1,27 @@
+# Cabal builds
+dist/
+dist-newstyle/
+
+# Nix build results
+result
+result-*
+
+# Editors
+.vscode/
+.idea
+tags
+TAGS
+.nvimrc
+
+*.tix
+
+# Plutus dumped .flat files
+*.flat
+
+# direnv files
+.envrc
+.direnv/
+
+# Haddock files and Hoogle databases 
+haddock 
+hoo
