@@ -363,11 +363,11 @@
     "hackage_2": {
       "flake": false,
       "locked": {
-        "lastModified": 1659143660,
-        "narHash": "sha256-ex2+RppFnQeGQh8dcWA58Bo5fit/Rr/fCcHNg3DHfpY=",
+        "lastModified": 1659402819,
+        "narHash": "sha256-1ghmulyIk+obGnyFeouVHBQXxUHMBmgCIRazLfEoT34=",
         "owner": "input-output-hk",
         "repo": "hackage.nix",
-        "rev": "4f1d07bf7cb50072b504ec79eab58560025c80b7",
+        "rev": "2f6f97ca3db96f91eea674ef46f4a0785d1e9d9c",
         "type": "github"
       },
       "original": {
@@ -501,11 +501,11 @@
         "stackage": "stackage_2"
       },
       "locked": {
-        "lastModified": 1659143825,
-        "narHash": "sha256-dWBsXDcMdwk82nZQm+JbI7HEgpT34fGZzF/ZOedSWsw=",
+        "lastModified": 1659418937,
+        "narHash": "sha256-t2MJscMipJmHm4XK9GBEqh7ValC5cwMZd38Ovxa6Yxk=",
         "owner": "input-output-hk",
         "repo": "haskell.nix",
-        "rev": "279f8dd11a37c3f22cc3e13f4ddddfe7b6c3c127",
+        "rev": "1ccfd295aa4b568d57f54dd04879514295b323e5",
         "type": "github"
       },
       "original": {
@@ -666,11 +666,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1659018962,
-        "narHash": "sha256-lfpPs7b6N5e0nOx4k2TdpuTszD0krMqEDKcNveijtQ4=",
+        "lastModified": 1659383708,
+        "narHash": "sha256-eenTO5t4ocK7VzorMUdUyKUoup976cCu5dJcVjebY8E=",
         "owner": "Liqwid-Labs",
         "repo": "liqwid-nix",
-        "rev": "1fd7184f103e295834d5b03bc2ecebde3baeebe8",
+        "rev": "c261df76dc31b3dc5dfde7030420e0a6be73f615",
         "type": "github"
       },
       "original": {
@@ -1145,17 +1145,17 @@
         "secp256k1-haskell": "secp256k1-haskell"
       },
       "locked": {
-        "lastModified": 1658833185,
-        "narHash": "sha256-kOpzTnWkZge3+nCrb8jxGNACZDOq7pVz9NYKFZuxfz8=",
-        "owner": "Liqwid-Labs",
-        "repo": "plutarch",
-        "rev": "e23f2d9ecad8482e9971bd6ec1c772f9693014ce",
+        "lastModified": 1659381657,
+        "narHash": "sha256-W0EWY0DV2idbIeqtJnShVHQ83exME8TK2GYQGbVpz8A=",
+        "owner": "Plutonomicon",
+        "repo": "plutarch-plutus",
+        "rev": "45b7c77a9ee9bd6c7dc25ddebcc3d12c58c4c3a2",
         "type": "github"
       },
       "original": {
-        "owner": "Liqwid-Labs",
+        "owner": "Plutonomicon",
         "ref": "staging",
-        "repo": "plutarch",
+        "repo": "plutarch-plutus",
         "type": "github"
       }
     },
@@ -1296,11 +1296,11 @@
     "stackage_2": {
       "flake": false,
       "locked": {
-        "lastModified": 1659143755,
-        "narHash": "sha256-xcq9ccD4DT117E0YFCSB0SwUgoNEwX7XGJi+ao1oUaQ=",
+        "lastModified": 1659402917,
+        "narHash": "sha256-zRDOtN4A2KmfzmZiqqxOAIw1YVPhnoIaszKKd+qCEcQ=",
         "owner": "input-output-hk",
         "repo": "stackage.nix",
-        "rev": "e1396e44052237d48ea6da30c0c656b0672df94f",
+        "rev": "778df3c4b35eac853d57fac7bafc7c9f2dde917f",
         "type": "github"
       },
       "original": {

@@ -16,7 +16,7 @@
     # Plutarch and its friends
     plutarch = {
       url =
-        "github:Liqwid-Labs/plutarch?ref=staging";
+        "github:Plutonomicon/plutarch-plutus?ref=staging";
 
       inputs.haskell-nix-extra-hackage.url =
         "github:mlabs-haskell/haskell-nix-extra-hackage?ref=main";
