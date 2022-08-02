@@ -2,6 +2,29 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 1.4.0 -- 2022-08-02
+
+### Added 
+ - A `Plutarch.Oprhans` module, holding downcasted instances of semigroup and monoid when the upcasted type has the appropriate instances.
+ - `pflip` to `Plutarch.Extra.Function`
+ - `Plutarch.Extra.IsData`:
+   - `PDerivePDataFieldsViaDataList`
+   - A `PlutusTypeEnumData` as a deriving strategy for `PlutusType` 
+
+### Changed
+
+ - Update to [`Liqwid.nix`](https://github.com/liqwid-Labs/liqwid-nix)
+ - Update to Plutarch version 1.2. See the [CHANGELOG](https://github.com/Plutonomicon/plutarch-plutus/blob/v1.2.0/CHANGELOG.md) 
+   for full details.
+   - The flake now points at the `Plutonomicon` repository, instead of the Liqwid Labs fork.
+   - Changes to deriving strategies and constraints may cause some API breakage. In particular,
+     `deriving via`, `PMatch`, `PCon` has been eliminated, and redundant `PAsDAta`, `pfromData` have been reduced.
+
+### Removed
+
+ - The `Plutarch.Extra.Other` module has been removed. This held `deriving via` wrappers that are no longer necessary.
+ - Tests relating to `Value`s and unsorted `Map`s, since `Plutarch 1.2` removed the `PEq` constraint on unsorted maps.
+
 ## 1.3.0 -- 2022-07-20
 
 ### Added
