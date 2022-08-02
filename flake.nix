@@ -38,6 +38,21 @@
       [
         liqwid-nix.haskellProject
         liqwid-nix.plutarchProject
+        (liqwid-nix.addChecks {
+          plutarch-script-export = "plutarch-script-export:lib:plutarch-script-export";
+          plutarch-script-export-example = "plutarch-script-export:exe:example";
+        })
+        (liqwid-nix.enableFormatCheck [
+          "-XQuasiQuotes"
+          "-XTemplateHaskell"
+          "-XTypeApplications"
+          "-XImportQualifiedPost"
+          "-XPatternSynonyms"
+          "-XOverloadedRecordDot"
+        ])
+        liqwid-nix.enableLintCheck
+        liqwid-nix.enableCabalFormatCheck
+        liqwid-nix.enableNixFormatCheck
       ]
     ).toFlake;
 }
