@@ -18,8 +18,6 @@
       url =
         "github:Plutonomicon/plutarch-plutus?ref=staging";
 
-      inputs.haskell-nix-extra-hackage.url =
-        "github:mlabs-haskell/haskell-nix-extra-hackage?ref=main";
       inputs.emanote.follows =
         "plutarch/haskell-nix/nixpkgs-unstable";
       inputs.nixpkgs.follows =
@@ -47,6 +45,9 @@
           "-XTypeApplications"
           "-XPatternSynonyms"
         ])
+        liqwid-nix.enableCabalFormatCheck
+        liqwid-nix.enableNixFormatCheck
+        liqwid-nix.enableLintCheck
       ]
     ).toFlake;
 }
