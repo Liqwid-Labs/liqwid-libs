@@ -2,13 +2,13 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-## 1.4.0 -- 2022-08-02
+## 2.0.0 -- 2022-08-02
 
 ### Added 
  - A `Plutarch.Oprhans` module, holding downcasted instances of semigroup and monoid when the upcasted type has the appropriate instances.
  - `pflip` to `Plutarch.Extra.Function`
- - `Plutarch.Extra.IsData`:
-   - A `PlutusTypeEnumData` as a deriving strategy for `PlutusType` 
+ - `Plutarch.Extra.IsData` a `PlutusTypeEnumData` as a deriving strategy for `PlutusType`
+ - A `Plutarch.Extra.Compile` module, holding a `mustCompile` function to mimic the previous behavior of `compile`
 
 ### Changed
 
