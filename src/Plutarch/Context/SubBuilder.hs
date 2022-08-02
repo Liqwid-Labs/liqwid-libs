@@ -34,7 +34,7 @@ newtype SubBuilder
  @since 2.0.0
 -}
 buildTxOut :: UTXO -> TxOut
-buildTxOut u = utxoToTxOut u
+buildTxOut = utxoToTxOut
 
 {- | Builds TxInInfo from `UTXO`.
 
@@ -51,7 +51,7 @@ buildTxInInfo u@(UTXO{..}) = do
  @since 2.0.0
 -}
 buildTxOuts :: SubBuilder -> [TxOut]
-buildTxOuts (unpack -> BB{..}) = utxoToTxOut <$> (toList $ bbOutputs)
+buildTxOuts (unpack -> BB{..}) = utxoToTxOut <$> toList bbOutputs
 
 {- | Builds all TxInInfos from given builder. Returns reason when failed.
 
@@ -68,5 +68,5 @@ buildTxInInfos b@(unpack -> BB{..}) = flip runContT Right $ do
 -}
 buildDatumHashPairs :: SubBuilder -> [(DatumHash, Datum)]
 buildDatumHashPairs (unpack -> BB{..}) =
-    catMaybes (utxoDatumPair <$> (toList $ bbInputs <> bbOutputs))
-        <> (datumWithHash <$> (toList $ bbDatums))
+    catMaybes (utxoDatumPair <$> toList (bbInputs <> bbOutputs))
+        <> (datumWithHash <$> toList bbDatums)

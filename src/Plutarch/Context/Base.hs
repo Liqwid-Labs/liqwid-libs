@@ -310,7 +310,7 @@ output ::
     (Builder a) =>
     UTXO ->
     a
-output f = pack . g $ f
+output = pack . g
   where
     g x = mempty{bbOutputs = pure x}
 
@@ -319,7 +319,7 @@ input ::
     (Builder a) =>
     UTXO ->
     a
-input f = pack . g $ f
+input = pack . g
   where
     g x = mempty{bbInputs = pure x}
 
@@ -386,9 +386,9 @@ yieldInInfoDatums (toList -> inputs) (unpack -> bb)
     mkTxInInfo :: Integer -> [UTXO] -> [TxInInfo]
     mkTxInInfo _ [] = []
     mkTxInInfo ind (utxo@(UTXO{..}) : xs)
-        | elem ind takenIdx = mkTxInInfo (ind + 1) $ utxo : xs
+        | ind `elem` takenIdx = mkTxInInfo (ind + 1) $ utxo : xs
         | otherwise = case utxoTxIdx of
-            Just x -> TxInInfo (ref x) (utxoToTxOut utxo) : mkTxInInfo (ind) xs
+            Just x -> TxInInfo (ref x) (utxoToTxOut utxo) : mkTxInInfo ind xs
             Nothing -> TxInInfo (ref ind) (utxoToTxOut utxo) : mkTxInInfo (ind + 1) xs
       where
         ref = TxOutRef $ fromMaybe (bbTxId bb) utxoTxId
