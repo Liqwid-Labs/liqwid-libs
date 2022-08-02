@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -9,11 +9,13 @@ module Plutarch.Extra.Sum (
 ) where
 
 import Data.Kind (Type)
-import Generics.SOP (I (I), Top)
-import Generics.SOP.TH (deriveGeneric)
+import GHC.Generics (Generic)
+import Generics.SOP (Top)
+import qualified Generics.SOP as SOP
 import Plutarch (
-    DerivePNewtype (DerivePNewtype),
+    DerivePlutusType (..),
     PlutusType,
+    PlutusTypeNewtype,
     S,
     Term,
     pcon,
@@ -22,7 +24,7 @@ import Plutarch (
     unTermCont,
     (#),
  )
-import Plutarch.Bool (PEq, POrd)
+import Plutarch.Bool (PEq, POrd, PPartialOrd)
 import Plutarch.Builtin (PIsData)
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
 import Plutarch.Extra.Boring (PBoring (pboring))
@@ -30,6 +32,7 @@ import Plutarch.Extra.Comonad (PComonad (pextract), PExtend (pextend))
 import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap))
 import Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Integer (PIntegral)
+import Plutarch.Num (PNum)
 import Plutarch.Show (PShow)
 
 {- | A \'numerical\' value which is monoidal over its addition.
@@ -38,41 +41,38 @@ import Plutarch.Show (PShow)
 -}
 newtype PSum (a :: S -> Type) (s :: S)
     = PSum (Term s a)
+    deriving stock
+        ( -- | @since 1.0.0
+          Generic
+        )
+    deriving anyclass
+        ( -- | @since 1.0.0
+          SOP.Generic
+        , -- | @since 1.0.0
+          PlutusType
+        )
 
-deriveGeneric ''PSum
-
--- | @since 1.0.0
-deriving via (DerivePNewtype (PSum a) a) instance (PlutusType (PSum a))
-
--- | @since 1.0.0
-deriving via
-    (DerivePNewtype (PSum a) a)
-    instance
-        (PIsData a) => (PIsData (PSum a))
-
--- | @since 1.0.0
-deriving via
-    (DerivePNewtype (PSum a) a)
-    instance
-        (PEq a) => PEq (PSum a)
+-- | @since 1.4.0
+instance DerivePlutusType (PSum a) where
+    type DPTStrat _ = PlutusTypeNewtype
 
 -- | @since 1.0.0
-deriving via
-    (DerivePNewtype (PSum a) a)
-    instance
-        (POrd a) => POrd (PSum a)
+deriving anyclass instance (PIsData a) => (PIsData (PSum a))
 
 -- | @since 1.0.0
-deriving via
-    (DerivePNewtype (PSum a) a)
-    instance
-        (PIntegral a) => PIntegral (PSum a)
+deriving anyclass instance (PEq a) => PEq (PSum a)
+
+-- | @since 1.4.0
+deriving anyclass instance (POrd a) => PPartialOrd (PSum a)
 
 -- | @since 1.0.0
-deriving via
-    (Term s (DerivePNewtype (PSum a) a))
-    instance
-        (Num (Term s a)) => Num (Term s (PSum a))
+deriving anyclass instance (POrd a) => POrd (PSum a)
+
+-- | @since 1.0.0
+deriving anyclass instance (PIntegral a) => PIntegral (PSum a)
+
+-- | @since 1.0.0
+deriving anyclass instance (PNum a) => PNum (PSum a)
 
 -- | @since 1.0.0
 instance

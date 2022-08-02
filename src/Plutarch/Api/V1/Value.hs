@@ -11,7 +11,8 @@ module Plutarch.Api.V1.Value (
     pgeqByClass,
     pgeqBySymbol,
     pgeqByClass',
-    AddGuarantees,
+    type AddGuarantees,
+    phasOnlyOneTokenOfCurrencySymbol,
 ) where
 
 import Plutarch (
@@ -20,8 +21,10 @@ import Plutarch (
     pcon,
     phoistAcyclic,
     plam,
+    pto,
     unTermCont,
     (#),
+    (#$),
     type (:-->),
  )
 import Plutarch.Api.V1 (
@@ -33,7 +36,7 @@ import Plutarch.Api.V1 (
     PValue (PValue),
  )
 import Plutarch.Api.V1.AssetClass (PAssetClass)
-import Plutarch.Bool (PBool, POrd ((#<=)))
+import Plutarch.Bool (PBool, (#&&), (#<=), (#==))
 import Plutarch.Builtin (pdata, pfromData, ppairDataBuiltin, psndBuiltin)
 import Plutarch.DataRepr (pfield)
 import qualified Plutarch.Extra.List
@@ -42,7 +45,7 @@ import Plutarch.Extra.Maybe (pexpectJustC)
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.Integer (PInteger)
 import Plutarch.Lift (pconstant)
-import Plutarch.List (pfoldr, psingleton)
+import Plutarch.List (pfoldr, plength, psingleton)
 import Plutarch.Maybe (PMaybe (PJust, PNothing))
 import PlutusLedgerApi.V1.Value (AssetClass (..))
 
@@ -173,3 +176,14 @@ pgeqByClass' ac =
 type family AddGuarantees (a :: AmountGuarantees) (b :: AmountGuarantees) where
     AddGuarantees 'Positive 'Positive = 'Positive
     AddGuarantees _ _ = 'NoGuarantees
+
+{- | The entire value only contains one token of the given currency symbol.
+     @since 1.3.0
+-}
+phasOnlyOneTokenOfCurrencySymbol ::
+    forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
+    Term s (PCurrencySymbol :--> PValue keys amounts :--> PBool)
+phasOnlyOneTokenOfCurrencySymbol = phoistAcyclic $
+    plam $ \cs vs ->
+        psymbolValueOf # cs # vs #== 1
+            #&& (plength #$ pto $ pto $ pto vs) #== 1

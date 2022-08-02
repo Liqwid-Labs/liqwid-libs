@@ -1,9 +1,14 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Plutarch.Extra.IsData (
     -- * PlutusTx ToData/FromData derive-wrappers
@@ -11,9 +16,12 @@ module Plutarch.Extra.IsData (
     EnumIsData (..),
 
     -- * Plutarch PIsData/PlutusType derive-wrappers
-    PEnumData (..),
-    PConstantViaDataList (PConstantViaDataList),
+    DerivePConstantViaDataList (..),
     DerivePConstantViaEnum (..),
+    DerivePDataFieldsViaDataList (..),
+
+    -- * Plutarch deriving strategy
+    PlutusTypeEnumData,
 
     -- * Functions for PEnumData types
     pmatchEnum,
@@ -23,7 +31,11 @@ module Plutarch.Extra.IsData (
 --------------------------------------------------------------------------------
 
 import Data.Coerce (coerce)
-import Data.Proxy (Proxy (..))
+import Data.Functor.Identity (Identity (Identity, runIdentity))
+import Data.Kind (Constraint)
+import Data.Maybe (fromJust)
+import Data.Proxy (Proxy (Proxy))
+import GHC.TypeLits (ErrorMessage (..), TypeError)
 import Generics.SOP (
     All,
     IsProductType,
@@ -37,16 +49,18 @@ import Generics.SOP (
     unI,
  )
 import qualified Generics.SOP as SOP
-import Plutarch (PlutusType (pcon', pmatch'))
 import Plutarch.Builtin (PIsData (pdataImpl, pfromDataImpl), pasInt)
+import Plutarch.DataRepr (PDataFields (..), PDataRecord, PDataSum, PLabeledType)
 import Plutarch.Extra.TermCont (pletC)
+import Plutarch.Internal.Generic (PGeneric, gpfrom, gpto)
+import Plutarch.Internal.PlutusType (DerivePlutusType (..), PlutusType (..), PlutusTypeStrat (..))
 import Plutarch.Lift (PConstantDecl (..))
 import Plutarch.Prelude (
     PData,
     PEq ((#==)),
     PInteger,
     PLift,
-    PlutusType (..),
+    PlutusTypeNewtype,
     S,
     Term,
     Type,
@@ -56,8 +70,9 @@ import Plutarch.Prelude (
     (#),
  )
 import Plutarch.Unsafe (punsafeCoerce)
-import PlutusLedgerApi.V1 (BuiltinData (BuiltinData))
-import PlutusTx (Data (List), FromData (..), ToData (..), fromData, toData)
+import PlutusLedgerApi.V1 (BuiltinData (BuiltinData), UnsafeFromData (unsafeFromBuiltinData))
+import PlutusTx (Data (List), FromData (fromBuiltinData), ToData (toBuiltinData), fromData, toData)
+import Unsafe.Coerce (unsafeCoerce)
 import Prelude
 
 --------------------------------------------------------------------------------
@@ -70,10 +85,10 @@ import Prelude
 
   @since 1.1.0
 -}
-newtype ProductIsData a = ProductIsData {unProductIsData :: a}
+newtype ProductIsData (a :: Type) = ProductIsData {unProductIsData :: a}
 
 -- | Variant of 'PConstantViaData' using the List repr from 'ProductIsData'
-newtype PConstantViaDataList (h :: Type) (p :: S -> Type) = PConstantViaDataList h
+newtype DerivePConstantViaDataList (h :: Type) (p :: S -> Type) = DerivePConstantViaDataList h
 
 {- |
   Generically convert a Product-Type to 'BuiltinData' with the 'List' repr.
@@ -81,7 +96,10 @@ newtype PConstantViaDataList (h :: Type) (p :: S -> Type) = PConstantViaDataList
   @since 1.1.0
 -}
 gProductToBuiltinData ::
-    (IsProductType a repr, All ToData repr) => a -> BuiltinData
+    forall (a :: Type) (repr :: [Type]).
+    (IsProductType a repr, All ToData repr) =>
+    a ->
+    BuiltinData
 gProductToBuiltinData x =
     BuiltinData $ List $ hcollapse $ hcmap (Proxy @ToData) (mapIK toData) $ productTypeFrom x
 
@@ -100,24 +118,69 @@ gProductFromBuiltinData (BuiltinData (List xs)) = do
     productTypeTo <$> hctraverse (Proxy @FromData) (unI . mapKI fromData) prod
 gProductFromBuiltinData _ = Nothing
 
+-- | @since 1.4.0
+newtype DerivePDataFieldsViaDataList (a :: S -> Type) (s :: S)
+    = DerivePDataFieldsViaDataList (a s)
+
+-- | @since 1.4.0
+instance
+    (PDataFields (PInner a), PInner (DerivePDataFieldsViaDataList a) ~ a) =>
+    PDataFields (DerivePDataFieldsViaDataList a)
+    where
+    type PFields (DerivePDataFieldsViaDataList a) = PFields (PInner a)
+    ptoFields x = ptoFields $ pto $ pto x
+
+-- | @since 1.1.0
+gProductFromBuiltinDataUnsafe ::
+    forall (a :: Type) (repr :: [Type]).
+    (IsProductType a repr, All UnsafeFromData repr) =>
+    BuiltinData ->
+    a
+gProductFromBuiltinDataUnsafe (BuiltinData (List xs)) =
+    let prod = fromJust $ SOP.fromList @repr xs
+     in productTypeTo $
+            runIdentity $
+                hctraverse
+                    (Proxy @UnsafeFromData)
+                    (unI . mapKI (Identity . unsafeFromBuiltinData . BuiltinData))
+                    prod
+gProductFromBuiltinDataUnsafe _ = error "invalid representation"
+
 -- | @since 1.1.0
 instance
+    forall (h :: Type) (p :: S -> Type).
     (PlutusTx.FromData h, PlutusTx.ToData h, PLift p) =>
-    PConstantDecl (PConstantViaDataList h p)
+    PConstantDecl (DerivePConstantViaDataList h p)
     where
-    type PConstantRepr (PConstantViaDataList h p) = [PlutusTx.Data]
-    type PConstanted (PConstantViaDataList h p) = p
-    pconstantToRepr (PConstantViaDataList x) = case PlutusTx.toData x of
+    type PConstantRepr (DerivePConstantViaDataList h p) = [PlutusTx.Data]
+    type PConstanted (DerivePConstantViaDataList h p) = p
+    pconstantToRepr (DerivePConstantViaDataList x) = case PlutusTx.toData x of
         (PlutusTx.List xs) -> xs
         _ -> error "ToData repr is not a List!"
     pconstantFromRepr = coerce (PlutusTx.fromData @h . PlutusTx.List)
 
 -- | @since 1.1.0
-instance (IsProductType a repr, All ToData repr) => ToData (ProductIsData a) where
+instance
+    forall (a :: Type) (repr :: [Type]).
+    (IsProductType a repr, All ToData repr) =>
+    ToData (ProductIsData a)
+    where
     toBuiltinData = coerce (gProductToBuiltinData @a)
 
 -- | @since 1.1.0
-instance (IsProductType a repr, All FromData repr) => FromData (ProductIsData a) where
+instance
+    forall (a :: Type) (repr :: [Type]).
+    (IsProductType a repr, All UnsafeFromData repr) =>
+    UnsafeFromData (ProductIsData a)
+    where
+    unsafeFromBuiltinData = coerce (gProductFromBuiltinDataUnsafe @a)
+
+-- | @since 1.1.0
+instance
+    forall (a :: Type) (repr :: [Type]).
+    (IsProductType a repr, All FromData repr) =>
+    FromData (ProductIsData a)
+    where
     fromBuiltinData = coerce (gProductFromBuiltinData @a)
 
 --------------------------------------------------------------------------------
@@ -128,44 +191,50 @@ instance (IsProductType a repr, All FromData repr) => FromData (ProductIsData a)
 
   @since 1.1.0
 -}
-newtype EnumIsData a = EnumIsData a
-
-{- |
-  Wrapper for deriving `PlutusType` & `PIsData` via a ToData repr derived with `EnumIsData`.
-
-  @since 1.1.0
--}
-newtype PEnumData (a :: S -> Type) (s :: S) = PEnumData (a s)
-    deriving
-        ( -- | @since 1.1.0
-          Enum
-        , -- | @since 1.1.0
-          Bounded
-        )
-        via (a s)
+newtype EnumIsData (a :: Type) = EnumIsData a
 
 -- | @since 1.1.0
-instance (Enum a) => ToData (EnumIsData a) where
+instance forall (a :: Type). (Enum a) => ToData (EnumIsData a) where
     toBuiltinData = coerce $ toBuiltinData . toInteger . fromEnum @a
 
 -- | @since 1.1.0
-instance (Enum a) => FromData (EnumIsData a) where
+instance forall (a :: Type). (Enum a) => FromData (EnumIsData a) where
     fromBuiltinData = coerce $ fmap (toEnum @a . fromInteger) . fromBuiltinData @Integer
 
 -- | @since 1.1.0
-instance
-    ( forall s. Enum (a s)
-    , forall s. Bounded (a s)
-    , forall s. Eq (a s)
-    ) =>
-    PlutusType (PEnumData a)
-    where
-    type PInner (PEnumData a) _ = PInteger
-    pmatch' = pmatchEnum
-    pcon' = fromInteger . toInteger . fromEnum
+instance forall (a :: Type). (Enum a) => UnsafeFromData (EnumIsData a) where
+    unsafeFromBuiltinData = coerce . toEnum @a . fromInteger . unsafeFromBuiltinData @Integer
 
--- | @since 1.1.0
-instance forall (a :: S -> Type). PIsData (PEnumData a) where
+data PlutusTypeEnumData
+
+class
+    ( PGeneric p
+    , forall s. Enum (p s)
+    , forall s. Bounded (p s)
+    ) =>
+    IsPlutusTypeEnumData (p :: S -> Type)
+instance
+    ( PGeneric p
+    , forall s. Enum (p s)
+    , forall s. Bounded (p s)
+    ) =>
+    IsPlutusTypeEnumData p
+
+-- | @since 1.4.0
+instance PlutusTypeStrat PlutusTypeEnumData where
+    type PlutusTypeStratConstraint PlutusTypeEnumData = IsPlutusTypeEnumData
+    type DerivedPInner PlutusTypeEnumData a = PInteger
+    derivedPCon = fromInteger . toInteger . fromEnum
+    derivedPMatch = pmatchEnum
+
+-- | @since 1.4.0
+instance
+    {-# OVERLAPPABLE #-}
+    ( DerivePlutusType a
+    , DPTStrat a ~ PlutusTypeEnumData
+    ) =>
+    PIsData a
+    where
     pfromDataImpl d =
         punsafeCoerce (pfromDataImpl @PInteger $ punsafeCoerce d)
 
@@ -181,7 +250,15 @@ newtype DerivePConstantViaEnum (h :: Type) (p :: S -> Type)
     = DerivePConstantEnum h
 
 -- | @since 1.1.0
-instance (PLift p, Enum h) => PConstantDecl (DerivePConstantViaEnum h p) where
+instance
+    forall (p :: S -> Type) (h :: Type).
+    ( PLift p
+    , Enum h
+    , DerivePlutusType p
+    , DPTStrat p ~ PlutusTypeEnumData
+    ) =>
+    PConstantDecl (DerivePConstantViaEnum h p)
+    where
     type PConstantRepr (DerivePConstantViaEnum h p) = Integer
     type PConstanted (DerivePConstantViaEnum h p) = p
 
@@ -189,7 +266,7 @@ instance (PLift p, Enum h) => PConstantDecl (DerivePConstantViaEnum h p) where
     pconstantFromRepr = Just . coerce . toEnum @h . fromInteger
 
 -- | Safely enumerate all the cases.
-safeCases :: forall a. (Bounded a, Enum a) => [a]
+safeCases :: forall (a :: Type). (Bounded a, Enum a) => [a]
 safeCases = enumFrom minBound
 
 {- |

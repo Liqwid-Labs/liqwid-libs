@@ -18,39 +18,56 @@ module Plutarch.Api.V1.ScriptContext (
     pfindDatum,
     pfindTxInByTxOutRef,
     pvalidatorHashFromAddress,
+    pscriptHashFromAddress,
+    pisScriptAddress,
+    pisPubKey,
+    pfindOutputsToAddress,
+    pfindTxOutDatum,
 ) where
 
 import Data.Kind (Type)
-import Plutarch (PCon (..), S, Term, phoistAcyclic, plam, plet, pmatch, pto, unTermCont, (#), (#$), (:-->))
+import Plutarch (
+    S,
+    Term,
+    pcon,
+    phoistAcyclic,
+    plam,
+    pmatch,
+    pto,
+    unTermCont,
+    (#),
+    (#$),
+    (:-->),
+ )
 import Plutarch.Api.V1 (
-    AmountGuarantees (..),
-    KeyGuarantees (..),
+    AmountGuarantees (NoGuarantees, NonZero, Positive),
+    KeyGuarantees (Sorted, Unsorted),
     PAddress (PAddress),
-    PCredential (..),
+    PCredential (PPubKeyCredential, PScriptCredential),
     PDatum,
     PDatumHash,
-    PMaybeData,
+    PMaybeData (PDJust),
     PPubKeyHash,
     PScriptContext,
     PScriptPurpose (PSpending),
     PStakingCredential,
     PTuple,
-    PTxInInfo (..),
+    PTxInInfo (PTxInInfo),
     PTxInfo,
-    PTxOut (..),
+    PTxOut (PTxOut),
     PTxOutRef,
     PValidatorHash,
     PValue,
  )
-import Plutarch.Api.V1.AssetClass (PAssetClass (..), passetClassValueOf)
-import Plutarch.Bool (PBool, POrd (..), pif, (#==))
+import Plutarch.Api.V1.AssetClass (PAssetClass, passetClassValueOf)
+import Plutarch.Bool (PBool, PPartialOrd ((#<)), pif, pnot, (#==))
 import Plutarch.Builtin (PAsData, PBuiltinList, PData, pdata, pfromData)
 import Plutarch.DataRepr (pdcons, pdnil, pfield)
 import Plutarch.Extra.List (pfirstJust, plookupTuple)
 import Plutarch.Extra.Maybe (pisJust)
 import Plutarch.Extra.TermCont (pletC, pmatchC, ptryFromC)
 import Plutarch.Lift (pconstant)
-import Plutarch.List (pelem, pfind, pfoldr)
+import Plutarch.List (pelem, pfilter, pfind, pfoldr)
 import Plutarch.Maybe (PMaybe (PJust, PNothing))
 import Plutarch.Trace (ptraceError)
 import Plutarch.TryFrom (PTryFrom)
@@ -93,21 +110,21 @@ pownInput = phoistAcyclic $
         res <- pmatchC (pfind # (go # txOutRef) # txInInfos)
         pure $ case res of
             PNothing -> ptraceError "pownInput: Could not find my own input"
-            PJust res' -> pfromData res'
+            PJust res' -> res'
   where
     go ::
         forall (s' :: S).
-        Term s' (PTxOutRef :--> PAsData PTxInInfo :--> PBool)
+        Term s' (PTxOutRef :--> PTxInInfo :--> PBool)
     go = phoistAcyclic $
         plam $ \tgt t -> unTermCont $ do
-            x <- pletC (pfield @"outRef" # pfromData t)
+            x <- pletC (pfield @"outRef" # t)
             pure $ tgt #== x
 
 {- | Determines if a given UTXO is spent.
 
     @since 1.1.0
 -}
-pisUTXOSpent :: Term s (PTxOutRef :--> PBuiltinList (PAsData PTxInInfo) :--> PBool)
+pisUTXOSpent :: Term s (PTxOutRef :--> PBuiltinList PTxInInfo :--> PBool)
 pisUTXOSpent = phoistAcyclic $
     plam $ \oref inputs -> pisJust #$ pfindTxInByTxOutRef # oref # inputs
 
@@ -117,18 +134,18 @@ pisUTXOSpent = phoistAcyclic $
 -}
 pvalueSpent ::
     forall (s :: S).
-    Term s (PBuiltinList (PAsData PTxInInfo) :--> PValue 'Sorted 'Positive)
+    Term s (PBuiltinList PTxInInfo :--> PValue 'Sorted 'Positive)
 pvalueSpent = phoistAcyclic $
     plam $ \inputs ->
         pfoldr
             # plam
                 ( \txInInfo' v ->
                     pmatch
-                        (pfromData txInInfo')
+                        txInInfo'
                         $ \(PTxInInfo txInInfo) ->
                             pmatch
                                 (pfield @"resolved" # txInInfo)
-                                (\(PTxOut o) -> pfromData $ pfield @"value" # o)
+                                (\(PTxOut o) -> pfield @"value" # o)
                                 <> v
                 )
             -- TODO: This should be possible without coercions, but I can't figure out the types atm.
@@ -142,14 +159,14 @@ pvalueSpent = phoistAcyclic $
 
     @since 1.1.0
 -}
-pisTokenSpent :: forall {s :: S}. Term s (PAssetClass :--> PBuiltinList (PAsData PTxInInfo) :--> PBool)
+pisTokenSpent :: forall (s :: S). Term s (PAssetClass :--> PBuiltinList PTxInInfo :--> PBool)
 pisTokenSpent =
     plam $ \tokenClass inputs ->
         0
             #< pfoldr @PBuiltinList
                 # plam
                     ( \txInInfo' acc -> unTermCont $ do
-                        PTxInInfo txInInfo <- pmatchC (pfromData txInInfo')
+                        PTxInInfo txInInfo <- pmatchC txInInfo'
                         PTxOut txOut' <- pmatchC $ pfromData $ pfield @"resolved" # txInInfo
                         let value = pfromData $ pfield @"value" # txOut'
                         pure $ acc + passetClassValueOf # value # tokenClass
@@ -161,18 +178,17 @@ pisTokenSpent =
 
     @since 1.1.0
 -}
-pfindTxInByTxOutRef :: Term s (PTxOutRef :--> PBuiltinList (PAsData PTxInInfo) :--> PMaybe PTxInInfo)
+pfindTxInByTxOutRef :: forall (s :: S). Term s (PTxOutRef :--> PBuiltinList PTxInInfo :--> PMaybe PTxInInfo)
 pfindTxInByTxOutRef = phoistAcyclic $
     plam $ \txOutRef inputs ->
         pfirstJust
             # plam
-                ( \txInInfo' ->
-                    plet (pfromData txInInfo') $ \r ->
-                        pmatch r $ \(PTxInInfo txInInfo) ->
-                            pif
-                                (pdata txOutRef #== pfield @"outRef" # txInInfo)
-                                (pcon (PJust r))
-                                (pcon PNothing)
+                ( \r ->
+                    pmatch r $ \(PTxInInfo txInInfo) ->
+                        pif
+                            (pdata txOutRef #== pfield @"outRef" # txInInfo)
+                            (pcon (PJust r))
+                            (pcon PNothing)
                 )
             #$ inputs
 
@@ -180,7 +196,7 @@ pfindTxInByTxOutRef = phoistAcyclic $
 
     @since 1.1.0
 -}
-ptxSignedBy :: Term s (PBuiltinList (PAsData PPubKeyHash) :--> PAsData PPubKeyHash :--> PBool)
+ptxSignedBy :: forall (s :: S). Term s (PBuiltinList (PAsData PPubKeyHash) :--> PAsData PPubKeyHash :--> PBool)
 ptxSignedBy = phoistAcyclic $
     plam $ \sigs sig -> pelem # sig # sigs
 
@@ -188,7 +204,7 @@ ptxSignedBy = phoistAcyclic $
 
     @since 1.1.0
 -}
-pfindDatum :: Term s (PDatumHash :--> PBuiltinList (PAsData (PTuple PDatumHash PDatum)) :--> PMaybe PDatum)
+pfindDatum :: forall (s :: S). Term s (PDatumHash :--> PBuiltinList (PAsData (PTuple PDatumHash PDatum)) :--> PMaybe PDatum)
 pfindDatum = phoistAcyclic $
     plam $ \datumHash datums -> plookupTuple # datumHash # datums
 
@@ -219,7 +235,7 @@ pvalidatorHashFromAddress = phoistAcyclic $
     plam $ \addr ->
         pmatch (pfromData $ pfield @"credential" # addr) $ \case
             PScriptCredential ((pfield @"_0" #) -> vh) -> pcon $ PJust vh
-            _ -> pcon $ PNothing
+            _ -> pcon PNothing
 
 {- | Construct an address from a @PValidatorHash@ and maybe a
 @PStakingCredential@
@@ -248,3 +264,66 @@ paddressFromPubKeyHash = plam $ \pkh stakingCred ->
         pdcons # pdata (pcon $ PPubKeyCredential (pdcons # pdata pkh # pdnil))
             #$ pdcons # pdata stakingCred
             #$ pdnil
+
+{- | Get script hash from an Address.
+     @since 1.3.0
+-}
+pscriptHashFromAddress :: forall (s :: S). Term s (PAddress :--> PMaybe PValidatorHash)
+pscriptHashFromAddress = phoistAcyclic $
+    plam $ \addr ->
+        pmatch (pfromData $ pfield @"credential" # addr) $ \case
+            PScriptCredential ((pfield @"_0" #) -> h) -> pcon $ PJust h
+            _ -> pcon PNothing
+
+{- | Return true if the given address is a script address.
+     @since 1.3.0
+-}
+pisScriptAddress :: forall (s :: S). Term s (PAddress :--> PBool)
+pisScriptAddress = phoistAcyclic $
+    plam $ \addr -> pnot #$ pisPubKey #$ pfromData $ pfield @"credential" # addr
+
+{- | Return true if the given credential is a pub-key-hash.
+     @since 1.3.0
+-}
+pisPubKey :: forall (s :: S). Term s (PCredential :--> PBool)
+pisPubKey = phoistAcyclic $
+    plam $ \cred ->
+        pmatch cred $ \case
+            PScriptCredential _ -> pconstant False
+            _ -> pconstant True
+
+{- | Find all TxOuts sent to an Address
+     @since 1.3.0
+-}
+pfindOutputsToAddress ::
+    forall (s :: S).
+    Term
+        s
+        ( PBuiltinList PTxOut
+            :--> PAddress
+            :--> PBuiltinList PTxOut
+        )
+pfindOutputsToAddress = phoistAcyclic $
+    plam $ \outputs address' -> unTermCont $ do
+        address <- pletC $ pdata address'
+        pure $
+            pfilter # plam (\txOut -> pfield @"address" # txOut #== address)
+                # outputs
+
+{- | Find the data corresponding to a TxOut, if there is one
+     @since 1.3.0
+-}
+pfindTxOutDatum ::
+    forall (s :: S).
+    Term
+        s
+        ( PBuiltinList (PAsData (PTuple PDatumHash PDatum))
+            :--> PTxOut
+            :--> PMaybe PDatum
+        )
+pfindTxOutDatum = phoistAcyclic $
+    plam $ \datums out -> unTermCont $ do
+        datumHash' <- pmatchC $ pfromData $ pfield @"datumHash" # out
+        pure $ case datumHash' of
+            PDJust ((pfield @"_0" #) -> datumHash) -> pfindDatum # datumHash # datums
+            _ -> pcon PNothing

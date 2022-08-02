@@ -1,5 +1,6 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Plutarch.Extra.Maybe (
     -- * Utility functions for working with 'PMaybe'
@@ -11,31 +12,39 @@ module Plutarch.Extra.Maybe (
     -- * Utility functions for working with 'PMaybeData'
     pfromDJust,
     pisDJust,
+    pmaybeData,
+    pdjust,
+    pdnothing,
 
     -- * Conversion between 'PMaybe' and 'PMaybeData'
     pmaybeToMaybeData,
 
     -- * TermCont-based combinators
     pexpectJustC,
+
+    -- * Assertions
+    passertPJust,
+    passertPDJust,
 ) where
 
 import Data.Kind (Type)
-import Plutarch (
-    PCon (pcon),
-    S,
-    Term,
-    phoistAcyclic,
-    plam,
-    pmatch,
-    (#),
-    type (:-->),
- )
 import Plutarch.Api.V1.Maybe (PMaybeData (PDJust, PDNothing))
 import Plutarch.Bool (PBool)
 import Plutarch.Builtin (PIsData, pdata, pfromData)
 import Plutarch.DataRepr (pdcons, pdnil, pfield)
 import Plutarch.Lift (pconstant)
 import Plutarch.Maybe (PMaybe (PJust, PNothing))
+import Plutarch.Prelude (
+    S,
+    Term,
+    pcon,
+    phoistAcyclic,
+    plam,
+    pmatch,
+    (#),
+    (#$),
+    type (:-->),
+ )
 import Plutarch.String (PString)
 import Plutarch.TermCont (TermCont, tcont)
 import Plutarch.Trace (ptraceError)
@@ -122,6 +131,40 @@ pisDJust = phoistAcyclic $
         PDJust _ -> pconstant True
         _ -> pconstant False
 
+{- | Special version of 'pmaybe' that works with 'PMaybeData'
+
+ @since 1.3.0
+-}
+pmaybeData ::
+    forall (a :: S -> Type) (b :: S -> Type) (s :: S).
+    PIsData a =>
+    Term s (b :--> (a :--> b) :--> PMaybeData a :--> b)
+pmaybeData = phoistAcyclic $
+    plam $ \d f m -> pmatch m $
+        \case
+            PDJust x -> f #$ pfield @"_0" # x
+            _ -> d
+
+{- | Construct a 'PDJust' value
+
+ @since 1.3.0
+-}
+pdjust ::
+    forall (a :: S -> Type) (s :: S).
+    PIsData a =>
+    Term s (a :--> PMaybeData a)
+pdjust = phoistAcyclic $
+    plam $ \x -> pcon $ PDJust $ pdcons @"_0" # pdata x #$ pdnil
+
+{- | Construct a 'PDNothing' value
+
+ @since 1.3.0
+-}
+pdnothing ::
+    forall (a :: S -> Type) (s :: S).
+    Term s (PMaybeData a)
+pdnothing = phoistAcyclic $ pcon $ PDNothing pdnil
+
 --------------------------------------------------------------------------------
 -- Conversion between 'PMaybe' and 'PMaybeData'.
 
@@ -151,3 +194,23 @@ pexpectJustC escape ma = tcont $ \f ->
     pmatch ma $ \case
         PJust v -> f v
         PNothing -> escape
+
+{- | Extract the value stored in a PMaybe container.
+     If there's no value, throw an error with the given message.
+     @since 1.3.0
+-}
+passertPJust :: forall (a :: S -> Type) (s :: S). Term s (PString :--> PMaybe a :--> a)
+passertPJust = phoistAcyclic $
+    plam $ \emsg mv' -> pmatch mv' $ \case
+        PJust v -> v
+        _ -> ptraceError emsg
+
+{- | Extract the value stored in a PMaybeData container.
+     If there's no value, throw an error with the given message.
+     @since 1.3.0
+-}
+passertPDJust :: forall (a :: S -> Type) (s :: S). (PIsData a) => Term s (PString :--> PMaybeData a :--> a)
+passertPDJust = phoistAcyclic $
+    plam $ \emsg mv' -> pmatch mv' $ \case
+        PDJust ((pfield @"_0" #) -> v) -> v
+        _ -> ptraceError emsg

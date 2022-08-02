@@ -1,8 +1,9 @@
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Plutarch.Extra.Const (
     -- * Type
@@ -13,11 +14,13 @@ module Plutarch.Extra.Const (
 ) where
 
 import Data.Kind (Type)
-import Generics.SOP (I (I), Top)
-import Generics.SOP.TH (deriveGeneric)
+import GHC.Generics (Generic)
+import Generics.SOP (Top)
+import qualified Generics.SOP as SOP
 import Plutarch (
-    DerivePNewtype (DerivePNewtype),
+    DerivePlutusType (..),
     PlutusType,
+    PlutusTypeNewtype,
     S,
     Term,
     pcon,
@@ -26,7 +29,7 @@ import Plutarch (
     unTermCont,
     (#),
  )
-import Plutarch.Bool (PEq, POrd)
+import Plutarch.Bool (PEq, POrd, PPartialOrd)
 import Plutarch.Builtin (PIsData)
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
 import Plutarch.Extra.Boring (PBoring (pboring))
@@ -36,6 +39,7 @@ import Plutarch.Extra.Functor (
  )
 import Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Integer (PIntegral)
+import Plutarch.Num (PNum)
 import Plutarch.Show (PShow)
 import Plutarch.Unsafe (punsafeCoerce)
 
@@ -45,53 +49,38 @@ import Plutarch.Unsafe (punsafeCoerce)
 -}
 newtype PConst (a :: S -> Type) (b :: S -> Type) (s :: S)
     = PConst (Term s a)
+    deriving stock
+        ( -- | @since 1.0.0
+          Generic
+        )
+    deriving anyclass
+        ( -- | @since 1.0.0
+          SOP.Generic
+        , -- | @since 1.0.0
+          PlutusType
+        )
 
-deriveGeneric ''PConst
-
--- | @since 1.0.0
-deriving via (DerivePNewtype (PConst a b) a) instance (PlutusType (PConst a b))
-
--- | @since 1.0.0
-deriving via
-    (DerivePNewtype (PConst a b) a)
-    instance
-        (PIsData a) => (PIsData (PConst a b))
-
--- | @since 1.0.0
-deriving via
-    (DerivePNewtype (PConst a b) a)
-    instance
-        (PEq a) => PEq (PConst a b)
+-- | @since 1.4.0
+instance DerivePlutusType (PConst a b) where
+    type DPTStrat _ = PlutusTypeNewtype
 
 -- | @since 1.0.0
-deriving via
-    (DerivePNewtype (PConst a b) a)
-    instance
-        (POrd a) => POrd (PConst a b)
+deriving anyclass instance (PIsData a) => (PIsData (PConst a b))
 
 -- | @since 1.0.0
-deriving via
-    (DerivePNewtype (PConst a b) a)
-    instance
-        (PIntegral a) => PIntegral (PConst a b)
+deriving anyclass instance (PEq a) => PEq (PConst a b)
+
+-- | @since 1.4.0
+deriving anyclass instance (POrd a) => PPartialOrd (PConst a b)
 
 -- | @since 1.0.0
-deriving via
-    (Term s (DerivePNewtype (PConst a b) a))
-    instance
-        (Num (Term s a)) => Num (Term s (PConst a b))
+deriving anyclass instance (POrd a) => POrd (PConst a b)
 
 -- | @since 1.0.0
-deriving via
-    (Term s (DerivePNewtype (PConst a b) a))
-    instance
-        (Semigroup (Term s a)) => Semigroup (Term s (PConst a b))
+deriving anyclass instance (PIntegral a) => PIntegral (PConst a b)
 
--- | @since 1.0.0
-deriving via
-    (Term s (DerivePNewtype (PConst a b) a))
-    instance
-        (Monoid (Term s a)) => Monoid (Term s (PConst a b))
+-- | @since 1.4.0
+deriving anyclass instance (PNum a) => PNum (PConst a b)
 
 -- | @since 1.0.0
 deriving anyclass instance (PShow a) => PShow (PConst a b)

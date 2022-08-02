@@ -1,6 +1,6 @@
 module Spec.Extra.Traversable (tests) where
 
-import Plutarch (PCon (pcon), Term, plam, (#), (#$))
+import Plutarch (Term, pcon, plam, (#), (#$))
 import Plutarch.Extra.Traversable (PTraversable (ptraverse))
 import Plutarch.Prelude (
     PBool,

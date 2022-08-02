@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -13,10 +15,13 @@ module Plutarch.Extra.State (
 ) where
 
 import Data.Kind (Type)
+import GHC.Generics (Generic)
 import Generics.SOP (Top)
+import qualified Generics.SOP as SOP
 import Plutarch (
-    DerivePNewtype (DerivePNewtype),
+    DerivePlutusType (..),
     PlutusType,
+    PlutusTypeNewtype,
     S,
     Term,
     pcon,
@@ -35,11 +40,20 @@ import Plutarch.Unit (PUnit (PUnit))
 -- | @since 1.0.0
 newtype PState (s :: S -> Type) (a :: S -> Type) (s' :: S)
     = PState (Term s' (s :--> PPair s a))
-    deriving
-        ( -- | @since 1.0.0
+    deriving stock
+        ( -- | @since 1.4.0
+          Generic
+        )
+    deriving anyclass
+        ( -- | @since 1.4.0
+          SOP.Generic
+        , -- | @since 1.0.0
           PlutusType
         )
-        via (DerivePNewtype (PState s a) (s :--> PPair s a))
+
+-- | @since 1.4.0
+instance DerivePlutusType (PState s a) where
+    type DPTStrat _ = PlutusTypeNewtype
 
 -- | @since 1.0.0
 instance PFunctor (PState s) where

@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -12,9 +12,10 @@ module Plutarch.Api.V1.AssetClass (
 ) where
 
 import Data.Kind (Type)
-import Generics.SOP (I (I))
-import Generics.SOP.TH (deriveGeneric)
+import qualified GHC.Generics as GHC
+import Generics.SOP (Generic)
 import Plutarch (
+    DerivePlutusType (..),
     PlutusType,
     S,
     Term,
@@ -46,9 +47,8 @@ import Plutarch.Builtin (
 import Plutarch.DataRepr (
     PDataFields,
     PDataRecord,
-    PIsDataRepr,
-    PIsDataReprInstances (PIsDataReprInstances),
     PLabeledType ((:=)),
+    PlutusTypeData,
     pdcons,
     pdnil,
     pfield,
@@ -69,23 +69,29 @@ newtype PAssetClass (s :: S)
                  ]
             )
         )
+    deriving stock
+        ( -- | @since 0.1.0
+          GHC.Generic
+        )
+    deriving anyclass
+        ( -- | @since 0.1.0
+          Generic
+        )
+    deriving anyclass
+        ( -- | @since 0.1.0
+          PlutusType
+        , -- | @since 0.1.0
+          PIsData
+        , -- | @since 0.1.0
+          PDataFields
+        )
 
-deriveGeneric ''PAssetClass
+-- | @since 1.4.0
+instance DerivePlutusType PAssetClass where
+    type DPTStrat _ = PlutusTypeData
 
 -- | @since 1.0.0
-deriving anyclass instance PIsDataRepr PAssetClass
-
--- | @since 1.0.0
-deriving via (PIsDataReprInstances PAssetClass) instance (PDataFields PAssetClass)
-
--- | @since 1.0.0
-deriving via (PIsDataReprInstances PAssetClass) instance (PIsData PAssetClass)
-
--- | @since 1.0.0
-deriving via (PIsDataReprInstances PAssetClass) instance (PlutusType PAssetClass)
-
--- | @since 1.0.0
-deriving via (PIsDataReprInstances PAssetClass) instance (PEq PAssetClass)
+deriving anyclass instance (PEq PAssetClass)
 
 -- | @since 1.0.0
 passetClass ::

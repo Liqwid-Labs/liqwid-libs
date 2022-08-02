@@ -88,8 +88,9 @@ library
     Plutarch.Extra.Map.Sorted
     Plutarch.Extra.Map.Unsorted
     Plutarch.Extra.Maybe
+    Plutarch.Extra.Monoid
+    Plutarch.Extra.MultiSig
     Plutarch.Extra.Numeric
-    Plutarch.Extra.Other
     Plutarch.Extra.Profunctor
     Plutarch.Extra.Record
     Plutarch.Extra.State
@@ -98,8 +99,10 @@ library
     Plutarch.Extra.TermCont
     Plutarch.Extra.These
     Plutarch.Extra.Traversable
+    Plutarch.Orphans
 
   build-depends:
+    , composition-prelude
     , generics-sop
     , plutarch-extra
     , plutarch-numeric
@@ -117,22 +120,22 @@ test-suite liqwid-plutarch-extra-test
     , containers
     , liqwid-plutarch-extra
     , mtl
+    , plutarch-context-builder
     , plutarch-quickcheck
     , plutus-core
     , QuickCheck
     , quickcheck-instances
+    , tagged
     , tasty
     , tasty-hunit
     , tasty-quickcheck
     , universe
 
   other-modules:
-    Spec.Api.V1.Value
-    Spec.Api.V1.Value.Unsorted
     Spec.Extra.List
     Spec.Extra.Map
     Spec.Extra.Map.Sorted
-    Spec.Extra.Map.Unsorted
+    Spec.Extra.MultiSig
     Spec.Extra.Traversable
     Spec.Utils
 

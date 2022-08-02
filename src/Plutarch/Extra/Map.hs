@@ -1,4 +1,5 @@
 {-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Plutarch.Extra.Map (
@@ -10,28 +11,29 @@ module Plutarch.Extra.Map (
     pmap,
     pkvPairKey,
     pkvPairLt,
+    pfoldlWithKey,
+    pfoldMapWithKey,
 ) where
 
 import Data.Foldable (foldl')
 import Data.Kind (Type)
 import Plutarch (
-    PMatch (pmatch),
     S,
     Term,
     pcon,
     phoistAcyclic,
     plam,
+    pmatch,
     pto,
     unTermCont,
     (#),
     type (:-->),
  )
 import Plutarch.Api.V1.AssocMap (KeyGuarantees, PMap (PMap))
-import Plutarch.Bool (PBool, PEq ((#==)), POrd ((#<)), pif)
+import Plutarch.Bool (PBool, PEq ((#==)), POrd, pif, (#<))
 import Plutarch.Builtin (
     PAsData,
     PBuiltinList (PCons, PNil),
-    PBuiltinMap,
     PBuiltinPair,
     PIsData,
     pdata,
@@ -43,7 +45,8 @@ import Plutarch.Builtin (
 import Plutarch.Extra.Functor (pfmap)
 import Plutarch.Extra.List (pmapMaybe)
 import Plutarch.Extra.TermCont (pletC, pmatchC)
-import Plutarch.List (pfind)
+import Plutarch.Extra.Traversable (pfoldMap)
+import Plutarch.List (pfind, pfoldl)
 import qualified Plutarch.List
 import Plutarch.Maybe (PMaybe (PJust, PNothing))
 import Plutarch.Trace (ptraceError)
@@ -89,10 +92,6 @@ pmapFromList ::
     Term s (PMap keys k v)
 pmapFromList = pcon . PMap . foldl' go (pcon PNil)
   where
-    go ::
-        Term s (PBuiltinMap k v) ->
-        (Term s k, Term s v) ->
-        Term s (PBuiltinMap k v)
     go acc (k, v) = unTermCont $ do
         k' <- pletC (pdata k)
         v' <- pletC (pdata v)
@@ -178,3 +177,36 @@ pkvPairLt ::
     Term s (PBuiltinPair (PAsData k) (PAsData v) :--> PBuiltinPair (PAsData k) (PAsData v) :--> PBool)
 pkvPairLt = phoistAcyclic $
     plam $ \((pkvPairKey #) -> keyA) ((pkvPairKey #) -> keyB) -> keyA #< keyB
+
+-- | @since 1.3.0
+pfoldlWithKey ::
+    forall (a :: S -> Type) (k :: S -> Type) (v :: S -> Type) (keys :: KeyGuarantees) (s :: S).
+    (PIsData k, PIsData v) =>
+    Term s ((a :--> k :--> v :--> a) :--> a :--> PMap keys k v :--> a)
+pfoldlWithKey = phoistAcyclic $
+    plam $ \f a (pto -> l :: Term _ (PBuiltinList _)) ->
+        pfoldl
+            # plam
+                ( \x p ->
+                    let k = pfromData $ pfstBuiltin # p
+                        v = pfromData $ psndBuiltin # p
+                     in f # x # k # v
+                )
+            # a
+            # l
+
+-- | @since 1.3.0
+pfoldMapWithKey ::
+    forall (m :: S -> Type) (k :: S -> Type) (v :: S -> Type) (keys :: KeyGuarantees) (s :: S).
+    (PIsData k, PIsData v, forall (s' :: S). Monoid (Term s' m)) =>
+    Term s ((k :--> v :--> m) :--> PMap keys k v :--> m)
+pfoldMapWithKey = phoistAcyclic $
+    plam $ \f (pto -> l :: Term _ (PBuiltinList _)) ->
+        pfoldMap
+            # plam
+                ( \p ->
+                    let k = pfromData $ pfstBuiltin # p
+                        v = pfromData $ psndBuiltin # p
+                     in f # k # v
+                )
+            # l
