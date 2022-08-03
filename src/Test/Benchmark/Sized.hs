@@ -66,7 +66,6 @@ import Data.HashTable.ST.Basic qualified as HashTable
 import Data.Hashable (Hashable)
 import Data.Maybe (fromMaybe, isNothing)
 import Data.Primitive.MutVar (newMutVar, readMutVar, writeMutVar)
-import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Optics.TH (makeFieldLabelsNoPrefix)
 import System.Random (RandomGen, StdGen, mkStdGen)
