@@ -20,7 +20,6 @@ import Data.Text qualified as Text
 import Data.Vector.Unboxed (Vector)
 import Data.Vector.Unboxed qualified as Vector
 import Data.Vector.Unboxed.Base (Vector (V_2))
-import GHC.Generics (Generic)
 import Optics.TH (makeFieldLabelsNoPrefix)
 import Plutarch.Evaluate (evalScript)
 import PlutusCore.Evaluation.Machine.ExBudget (

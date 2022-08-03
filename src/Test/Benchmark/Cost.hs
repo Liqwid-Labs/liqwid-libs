@@ -51,7 +51,6 @@ import Data.Text (Text, pack, unpack)
 import Data.Text.Encoding (encodeUtf8)
 import Data.Vector.Unboxed (Vector)
 import Data.Vector.Unboxed qualified as Vector
-import GHC.Generics (Generic)
 import Optics (sequenceOf, traversed, (%%))
 import Optics.TH (makeFieldLabelsNoPrefix)
 import Path (Dir, Path, Rel, parseRelFile, toFilePath, (</>))
