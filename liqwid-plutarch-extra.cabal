@@ -67,10 +67,10 @@ common common-lang
 library
   import:          common-lang
   exposed-modules:
-    Plutarch.Api.V1.AssetClass
-    Plutarch.Api.V1.ScriptContext
-    Plutarch.Api.V1.Value
-    Plutarch.Api.V1.Value.Unsorted
+    Plutarch.Extra.AssetClass
+    Plutarch.Extra.ScriptContext
+    Plutarch.Extra.Value
+    Plutarch.Extra.Value.Unsorted
     Plutarch.Extra.Applicative
     Plutarch.Extra.Bool
     Plutarch.Extra.Boring

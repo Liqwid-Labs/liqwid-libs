@@ -27,7 +27,7 @@ import Plutarch (
     type (:-->),
  )
 import Plutarch.Api.V1.AssocMap (KeyGuarantees, PMap (PMap))
-import Plutarch.Api.V1.Maybe (PMaybeData (PDJust, PDNothing))
+import Plutarch.Api.V2 (PMaybeData (PDJust, PDNothing))
 import Plutarch.Builtin (
     PAsData,
     PBuiltinList,

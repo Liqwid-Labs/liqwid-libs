@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Plutarch.Api.V1.AssetClass (
+module Plutarch.Extra.AssetClass (
     PAssetClass (..),
     passetClass,
     passetClassValueOf,
@@ -26,10 +26,12 @@ import Plutarch (
     (#),
     type (:-->),
  )
-import Plutarch.Api.V1 (
+import Plutarch.Api.V2 (
     AmountGuarantees,
     KeyGuarantees,
-    PCurrencySymbol,
+  )
+import Plutarch.Api.V1 (
+  PCurrencySymbol,
     PTokenName,
     PValue (PValue),
  )
