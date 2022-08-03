@@ -2,8 +2,6 @@ module Test.Benchmark.Plutarch (
   mkTermImplMetaData,
   sampleTerm,
   sampleTerm',
-  sampleTouchTerm,
-  sampleTouchTerm',
   pbenchAllSizesUniform,
   pbenchNonTinySizesRandomUniform,
   pbenchSizesRandomCached,
@@ -16,7 +14,6 @@ import Data.Text (Text)
 import Plutarch.Extra.Compile (mustCompile)
 import System.Random (RandomGen)
 import Test.Benchmark.Common (ImplData (..))
-import Test.Benchmark.PTouch (PTouch (ptouch), ptouch')
 import Test.Benchmark.Plutus (
   BudgetExceeded,
   Costs,
@@ -25,7 +22,7 @@ import Test.Benchmark.Plutus (
   mkScriptImplMetaData,
   sampleScript,
  )
-import Test.Benchmark.Precompile (CompiledTerm, compile', toScript, (###~))
+import Test.Benchmark.Precompile (CompiledTerm, compile', toScript)
 import Test.Benchmark.Sized (
   SSample,
   SUniversalGen,
@@ -49,24 +46,11 @@ sampleTerm term = sampleScript $ mustCompile term
 sampleTerm' :: CompiledTerm a -> Either (BudgetExceeded PlutusCostAxis) Costs
 sampleTerm' = sampleScript . toScript
 
-sampleTouchTerm ::
-  PTouch a =>
-  ClosedTerm a ->
-  Either (BudgetExceeded PlutusCostAxis) Costs
-sampleTouchTerm term = sampleScript $ mustCompile $ ptouch # term
-
-sampleTouchTerm' ::
-  PTouch a =>
-  CompiledTerm a ->
-  Either (BudgetExceeded PlutusCostAxis) Costs
-sampleTouchTerm' = sampleScript . toScript . (ptouch' ###~)
-
 -- | See 'benchAllSizesUniform'.
 pbenchAllSizesUniform ::
   forall (a :: Type) (f :: S -> Type) (b :: S -> Type) (m :: Type -> Type) (s :: Type).
   ( Hashable a
   , MonadPrim s m
-  , PTouch b
   ) =>
   -- | Size-dependent input domain generator.
   SUniversalGen a ->
@@ -94,7 +78,7 @@ pbenchAllSizesUniform
     ImplData funName
       <$> benchAllSizesUniform
         domainGen
-        (sampleTouchTerm' . applyPFun pfun')
+        (sampleTerm' . applyPFun pfun')
         desiredSampleSizePerInputSize
         sizes
     where
@@ -105,7 +89,6 @@ pbenchNonTinySizesRandomUniform ::
   forall (a :: Type) (f :: S -> Type) (b :: S -> Type) (m :: Type -> Type) (s :: Type).
   ( Hashable a
   , MonadPrim s m
-  , PTouch b
   ) =>
   -- | Size-dependent random input generator
   (forall (g :: Type). RandomGen g => Int -> g -> (a, g)) ->
@@ -130,7 +113,7 @@ pbenchNonTinySizesRandomUniform
     ImplData funName
       <$> benchNonTinySizesRandomUniform
         randomGen
-        (sampleTouchTerm' . applyPFun pfun')
+        (sampleTerm' . applyPFun pfun')
         sampleSizePerInputSize
         sizes
     where
@@ -141,7 +124,6 @@ pbenchSizesRandomCached ::
   forall (a :: Type) (f :: S -> Type) (b :: S -> Type) (m :: Type -> Type) (s :: Type).
   ( Hashable a
   , MonadPrim s m
-  , PTouch b
   ) =>
   -- | Size-dependent random input generator
   (forall (g :: Type). RandomGen g => Int -> g -> (a, g)) ->
@@ -166,7 +148,7 @@ pbenchSizesRandomCached
     ImplData funName
       <$> benchSizesRandomCached
         randomGen
-        (sampleTouchTerm' . applyPFun pfun')
+        (sampleTerm' . applyPFun pfun')
         sampleSizePerInputSize
         sizes
     where
@@ -177,7 +159,6 @@ pbenchSizesRandom ::
   forall (a :: Type) (f :: S -> Type) (b :: S -> Type) (m :: Type -> Type) (s :: Type).
   ( Hashable a
   , MonadPrim s m
-  , PTouch b
   ) =>
   -- | Size-dependent random input generator
   (forall (g :: Type). RandomGen g => Int -> g -> (a, g)) ->
@@ -202,7 +183,7 @@ pbenchSizesRandom
     ImplData funName
       <$> benchSizesRandom
         randomGen
-        (sampleTouchTerm' . applyPFun pfun')
+        (sampleTerm' . applyPFun pfun')
         sampleSizePerInputSize
         sizes
     where
