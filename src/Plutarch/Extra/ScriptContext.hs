@@ -39,14 +39,19 @@ import Plutarch (
     (#$),
     (:-->),
  )
+import Plutarch.Api.V1 (
+    AmountGuarantees (NoGuarantees, NonZero, Positive),
+    PCredential (PPubKeyCredential, PScriptCredential),
+    PValidatorHash,
+    PValue,
+ )
 import Plutarch.Api.V2 (
-
     KeyGuarantees (Sorted, Unsorted),
     PAddress (PAddress),
     PDatum,
-    POutputDatum (POutputDatumHash, PNoOutputDatum, POutputDatum),
     PDatumHash,
     PMaybeData,
+    POutputDatum (PNoOutputDatum, POutputDatum, POutputDatumHash),
     PPubKeyHash,
     PScriptContext,
     PScriptPurpose (PSpending),
@@ -56,19 +61,11 @@ import Plutarch.Api.V2 (
     PTxInfo,
     PTxOut (PTxOut),
     PTxOutRef,
-
-
  )
-import Plutarch.Api.V1 (
-  PValue,
-  PValidatorHash,
-  PCredential (PPubKeyCredential, PScriptCredential),
-  AmountGuarantees (NoGuarantees, NonZero, Positive),
-                       )
-import Plutarch.Extra.AssetClass (PAssetClass, passetClassValueOf)
 import Plutarch.Bool (PBool, PPartialOrd ((#<)), pif, pnot, (#==))
 import Plutarch.Builtin (PAsData, PBuiltinList, PData, pdata, pfromData)
 import Plutarch.DataRepr (pdcons, pdnil, pfield)
+import Plutarch.Extra.AssetClass (PAssetClass, passetClassValueOf)
 import Plutarch.Extra.List (pfirstJust, plookupTuple)
 import Plutarch.Extra.Maybe (pisJust)
 import Plutarch.Extra.TermCont (pletC, pmatchC, ptryFromC)

@@ -67,11 +67,8 @@ common common-lang
 library
   import:          common-lang
   exposed-modules:
-    Plutarch.Extra.AssetClass
-    Plutarch.Extra.ScriptContext
-    Plutarch.Extra.Value
-    Plutarch.Extra.Value.Unsorted
     Plutarch.Extra.Applicative
+    Plutarch.Extra.AssetClass
     Plutarch.Extra.Bool
     Plutarch.Extra.Boring
     Plutarch.Extra.Category
@@ -93,12 +90,15 @@ library
     Plutarch.Extra.Numeric
     Plutarch.Extra.Profunctor
     Plutarch.Extra.Record
+    Plutarch.Extra.ScriptContext
     Plutarch.Extra.State
     Plutarch.Extra.Sum
     Plutarch.Extra.Tagged
     Plutarch.Extra.TermCont
     Plutarch.Extra.These
     Plutarch.Extra.Traversable
+    Plutarch.Extra.Value
+    Plutarch.Extra.Value.Unsorted
     Plutarch.Orphans
 
   build-depends:
@@ -110,33 +110,34 @@ library
 
   hs-source-dirs:  src
 
-test-suite liqwid-plutarch-extra-test
-  import:         common-lang
-  type:           exitcode-stdio-1.0
-  main-is:        Spec.hs
-  ghc-options:    -O2 -threaded -rtsopts -with-rtsopts=-N
-  build-depends:
-    , bytestring
-    , containers
-    , liqwid-plutarch-extra
-    , mtl
-    , plutarch-context-builder
-    , plutarch-quickcheck
-    , plutus-core
-    , QuickCheck
-    , quickcheck-instances
-    , tagged
-    , tasty
-    , tasty-hunit
-    , tasty-quickcheck
-    , universe
-
-  other-modules:
-    Spec.Extra.List
-    Spec.Extra.Map
-    Spec.Extra.Map.Sorted
-    Spec.Extra.MultiSig
-    Spec.Extra.Traversable
-    Spec.Utils
-
-  hs-source-dirs: test
+--test-suite liqwid-plutarch-extra-test
+--  import:         common-lang
+--  type:           exitcode-stdio-1.0
+--  main-is:        Spec.hs
+--  ghc-options:    -O2 -threaded -rtsopts -with-rtsopts=-N
+--  build-depends:
+--  , bytestring
+--  , containers
+--    , liqwid-plutarch-extra
+--    , mtl
+--    , plutarch-context-builder
+--    , plutarch-quickcheck
+--    , plutus-core
+--    , QuickCheck
+--    , quickcheck-instances
+--    , tagged
+--    , tasty
+--    , tasty-hunit
+--    , tasty-quickcheck
+--    , universe
+--
+--  other-modules:
+--    Spec.Extra.List
+--    Spec.Extra.Map
+--    Spec.Extra.Map.Sorted
+--    Spec.Extra.MultiSig
+--    Spec.Extra.Traversable
+--    Spec.Utils
+--
+--  hs-source-dirs: test
+--

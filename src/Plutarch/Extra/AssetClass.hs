@@ -26,16 +26,16 @@ import Plutarch (
     (#),
     type (:-->),
  )
-import Plutarch.Api.V2 (
-    AmountGuarantees,
-    KeyGuarantees,
-  )
 import Plutarch.Api.V1 (
-  PCurrencySymbol,
+    PCurrencySymbol,
     PTokenName,
     PValue (PValue),
  )
 import Plutarch.Api.V1.AssocMap (PMap (PMap))
+import Plutarch.Api.V2 (
+    AmountGuarantees,
+    KeyGuarantees,
+ )
 import Plutarch.Bool (PBool, PEq ((#==)))
 import Plutarch.Builtin (
     PAsData,

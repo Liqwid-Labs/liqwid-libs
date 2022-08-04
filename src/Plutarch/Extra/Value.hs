@@ -27,24 +27,20 @@ import Plutarch (
     (#$),
     type (:-->),
  )
+import Plutarch.Api.V1 (
+    PCurrencySymbol,
+    PMap (PMap),
+    PTokenName,
+    PValue (PValue),
+ )
 import Plutarch.Api.V2 (
     AmountGuarantees (..),
     KeyGuarantees,
-
-
-
-
  )
-import Plutarch.Api.V1 (
-  PValue (PValue),
-  PCurrencySymbol,
-  PTokenName,
-  PMap (PMap),
-  )
-import Plutarch.Extra.AssetClass (PAssetClass)
 import Plutarch.Bool (PBool, (#&&), (#<=), (#==))
 import Plutarch.Builtin (pdata, pfromData, ppairDataBuiltin, psndBuiltin)
 import Plutarch.DataRepr (pfield)
+import Plutarch.Extra.AssetClass (PAssetClass)
 import qualified Plutarch.Extra.List
 import Plutarch.Extra.Map (plookup)
 import Plutarch.Extra.Maybe (pexpectJustC)

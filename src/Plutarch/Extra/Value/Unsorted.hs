@@ -10,14 +10,13 @@ import Plutarch (
     (#),
     type (:-->),
  )
+import Plutarch.Api.V1 (
+    PValue (PValue),
+ )
 import Plutarch.Api.V2 (
     AmountGuarantees (..),
     KeyGuarantees (..),
-
  )
-import Plutarch.Api.V1 (
-  PValue (PValue),
-                       )
 import qualified Plutarch.Extra.Map as Map
 import qualified Plutarch.Extra.Map.Unsorted as UnsortedMap
 
