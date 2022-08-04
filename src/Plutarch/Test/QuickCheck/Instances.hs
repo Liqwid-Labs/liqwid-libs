@@ -4,9 +4,7 @@
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE QuantifiedConstraints #-}
-
 {-# LANGUAGE TypeApplications #-}
-
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -215,7 +213,7 @@ instance PShow a => Show (TestableTerm a) where
 class PArbitrary (a :: S -> Type) where
     parbitrary :: Gen (TestableTerm a)
     default parbitrary :: (PLift a, Arbitrary (PLifted a)) => Gen (TestableTerm a)
-    parbitrary =  pconstantT <$> arbitrary
+    parbitrary = pconstantT <$> arbitrary
 
     pshrink :: TestableTerm a -> [TestableTerm a]
     pshrink = const []
