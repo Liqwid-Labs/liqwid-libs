@@ -34,20 +34,14 @@ import Plutarch (
     (#$),
  )
 import Plutarch.Api.V1 (
-    AmountGuarantees (NoGuarantees, NonZero, Positive),
-    KeyGuarantees (Sorted, Unsorted),
-    PAddress (PAddress),
+    AmountGuarantees (NonZero),
     PCredential (PPubKeyCredential, PScriptCredential),
     PCurrencySymbol (PCurrencySymbol),
     PExtended (PFinite, PNegInf, PPosInf),
     PInterval (PInterval),
     PLowerBound (PLowerBound),
     PMap (PMap),
-    PMaybeData (PDJust, PDNothing),
-    PPOSIXTime,
-    PPubKeyHash (PPubKeyHash),
     PStakeValidatorHash (PStakeValidatorHash),
-    PStakingCredential (PStakingHash, PStakingPtr),
     PTokenName (PTokenName),
     PUpperBound (PUpperBound),
     PValidatorHash (PValidatorHash),
@@ -66,6 +60,14 @@ import Plutarch.Api.V1.Tuple (
  )
 import qualified "plutarch" Plutarch.Api.V1.Value as Value (
     pnormalize,
+ )
+import Plutarch.Api.V2 (
+    AmountGuarantees (NoGuarantees, Positive),
+    KeyGuarantees (Sorted, Unsorted),
+    PAddress (PAddress),
+    PMaybeData (PDJust, PDNothing),
+    PPubKeyHash (PPubKeyHash),
+    PStakingCredential (PStakingHash, PStakingPtr),
  )
 import Plutarch.Evaluate (evalScript)
 import Plutarch.Extra.Map.Unsorted (psort)
