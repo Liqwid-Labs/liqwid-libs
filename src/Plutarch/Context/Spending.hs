@@ -27,10 +27,27 @@ module Plutarch.Context.Spending (
     buildSpendingUnsafe,
 ) where
 
-import Control.Monad.Cont (ContT (runContT), MonadTrans (lift))
-import Data.Foldable (Foldable (toList))
+import Control.Monad.Cont ( ContT(runContT), MonadTrans(lift) )
+import Data.Foldable ( Foldable(toList) )
 import Plutarch.Context.Base
-import PlutusLedgerApi.V1.Contexts
+    ( utxoToTxOut,
+      yieldBaseTxInfo,
+      yieldExtraDatums,
+      yieldInInfoDatums,
+      yieldMint,
+      yieldOutDatums,
+      BaseBuilder(bbSignatures, bbInputs, bbOutputs, bbMints, bbDatums),
+      Builder(..),
+      UTXO )
+import PlutusLedgerApi.V2
+    ( TxId,
+      TxOutRef(txOutRefIdx, txOutRefId),
+      TxInfo(txInfoSignatories, txInfoInputs, txInfoOutputs, txInfoData,
+             txInfoMint),
+      TxInInfo(txInInfoOutRef, txInInfoResolved),
+      ScriptPurpose(Spending),
+      fromList,
+      ScriptContext(ScriptContext) )
 
 data ValidatorInputIdentifier
     = ValidatorUTXO UTXO
@@ -165,7 +182,7 @@ buildSpending builder = flip runContT Right $
                     base
                         { txInfoInputs = ins
                         , txInfoOutputs = outs
-                        , txInfoData = inDat <> outDat <> extraDat
+                        , txInfoData = fromList $ inDat <> outDat <> extraDat
                         , txInfoMint = mintedValue
                         , txInfoSignatories = toList $ bbSignatures bb
                         }

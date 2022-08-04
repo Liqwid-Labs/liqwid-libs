@@ -10,16 +10,19 @@ module Plutarch.Context.SubBuilder (
     buildDatumHashPairs,
 ) where
 
+import Control.Monad.Cont ( ContT(runContT) )
+import Data.Foldable ( Foldable(toList) )
+import Data.Maybe ( catMaybes )
 import Plutarch.Context.Base
-
-import Control.Monad.Cont (ContT (runContT))
-import Data.Foldable (Foldable (toList))
-import Data.Maybe (catMaybes)
-import PlutusLedgerApi.V1.Contexts (TxInInfo (..), TxOut (..), TxOutRef (..))
-import PlutusLedgerApi.V1.Scripts (
-    Datum (..),
-    DatumHash,
- )
+    ( datumWithHash,
+      utxoDatumPair,
+      utxoToTxOut,
+      yieldInInfoDatums,
+      BaseBuilder(..),
+      Builder(unpack),
+      UTXO(..) )
+import PlutusLedgerApi.V2
+    ( DatumHash, Datum, TxOut, TxOutRef(TxOutRef), TxInInfo(TxInInfo) )
 
 {- | Smaller builder that builds context smaller than TxInfo.
 

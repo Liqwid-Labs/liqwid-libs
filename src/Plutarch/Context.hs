@@ -38,6 +38,7 @@ module Plutarch.Context (
     M.withMinting,
     M.buildMinting,
     M.buildMintingUnsafe,
+    T.TxInfoBuilder (..),
     T.spends,
     T.mints,
     T.buildTxInfo,

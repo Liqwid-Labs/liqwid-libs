@@ -1,12 +1,31 @@
 module Main (main) where
 
-import GHC.IO.Encoding
-import qualified MintingBuilder
+import GHC.IO.Encoding ( setLocaleEncoding, utf8 )
 import Plutarch.Context
-import PlutusLedgerApi.V1
-import qualified SpendingBuilder
-import Test.Tasty (defaultMain, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=))
+    ( input,
+      mint,
+      output,
+      pubKey,
+      script,
+      withDatum,
+      withRefIndex,
+      withTxId,
+      withValue,
+      buildMinting,
+      withMinting,
+      buildSpending,
+      withSpendingUTXO,
+      buildTxOuts,
+      buildTxInfo,
+      Builder )
+import PlutusLedgerApi.V2
+    ( TxInfo(txInfoOutputs),
+      ScriptContext(scriptContextTxInfo),
+      singleton )
+import Test.Tasty ( defaultMain, testGroup )
+import Test.Tasty.HUnit ( testCase, (@?=) )
+import qualified MintingBuilder ( specs )
+import qualified SpendingBuilder ( specs )
 
 main :: IO ()
 main = do
@@ -18,8 +37,6 @@ main = do
             (scriptContextTxInfo <$> a) @?= c
         , testCase "TxOut list from TxInfoBuilder should match one from buildTxOut" $
             (txInfoOutputs . scriptContextTxInfo <$> a) @?= return d
-        , testCase "DatumHash pair list from TxInfoBuilder should match one from buildDatumHashPairs" $
-            (txInfoData . scriptContextTxInfo <$> a) @?= return e
         , SpendingBuilder.specs
         , MintingBuilder.specs
         ]
@@ -33,7 +50,6 @@ main = do
             )
     c = buildTxInfo generalSample
     d = buildTxOuts generalSample
-    e = buildDatumHashPairs generalSample
 
 generalSample :: (Monoid a, Builder a) => a
 generalSample =

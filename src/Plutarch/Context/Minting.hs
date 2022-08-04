@@ -23,34 +23,27 @@ module Plutarch.Context.Minting (
     buildMintingUnsafe,
 ) where
 
-import Control.Monad.Cont (ContT (runContT))
-import Control.Monad.Reader (MonadTrans (lift))
-import Data.Foldable (Foldable (toList))
-import Plutarch.Context.Base (
-    BaseBuilder (bbDatums, bbInputs, bbMints, bbOutputs, bbSignatures),
-    Builder (..),
-    yieldBaseTxInfo,
-    yieldExtraDatums,
-    yieldInInfoDatums,
-    yieldMint,
-    yieldOutDatums,
- )
-
-import PlutusLedgerApi.V1.Contexts (
-    ScriptContext (ScriptContext),
-    ScriptPurpose (Minting),
-    TxInfo (
-        txInfoData,
-        txInfoInputs,
-        txInfoMint,
-        txInfoOutputs,
-        txInfoSignatories
-    ),
- )
-import PlutusLedgerApi.V1.Value (
-    CurrencySymbol,
-    flattenValue,
- )
+import Control.Monad.Cont ( ContT(runContT) )
+import Control.Monad.Reader ( MonadTrans(lift) )
+import Data.Foldable ( Foldable(toList) )
+import Plutarch.Context.Base
+    ( BaseBuilder(bbDatums, bbInputs, bbMints, bbOutputs,
+                  bbSignatures),
+      Builder(..),
+      yieldBaseTxInfo,
+      yieldExtraDatums,
+      yieldInInfoDatums,
+      yieldMint,
+      yieldOutDatums )
+import PlutusLedgerApi.V2
+    ( Value(getValue),
+      CurrencySymbol,
+      TxInfo(txInfoSignatories, txInfoInputs, txInfoOutputs, txInfoData,
+             txInfoMint),
+      ScriptPurpose(Minting),
+      fromList,
+      ScriptContext(ScriptContext) )
+import qualified PlutusTx.AssocMap as Map ( toList )
 
 {- | A context builder for Minting. Corresponds to
  'Plutus.V1.Ledger.Contexts.Minting' specifically.
@@ -117,14 +110,14 @@ buildMinting builder = flip runContT Right $
                     base
                         { txInfoInputs = ins
                         , txInfoOutputs = outs
-                        , txInfoData = inDat <> outDat <> extraDat
+                        , txInfoData = fromList $ inDat <> outDat <> extraDat
                         , txInfoMint = mintedValue
                         , txInfoSignatories = toList $ bbSignatures bb
                         }
                 mintingInfo =
                     filter
-                        (\(cs, _, _) -> cs == mintingCS)
-                        $ flattenValue mintedValue
+                        (\(cs, _) -> cs == mintingCS)
+                        $ Map.toList $ getValue mintedValue
 
             case mintingInfo of
                 [] -> lift $ Left "Minting CS not found"

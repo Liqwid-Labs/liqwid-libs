@@ -1,10 +1,10 @@
 module MintingBuilder (specs) where
 
-import Plutarch.Context (MintingBuilder, buildMinting, mint, withMinting)
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase)
-
-import qualified PlutusLedgerApi.V1.Value as Value
+import Plutarch.Context
+    ( MintingBuilder, buildMinting, mint, withMinting )
+import PlutusLedgerApi.V2 ( singleton )
+import Test.Tasty ( TestTree, testGroup )
+import Test.Tasty.HUnit ( assertFailure, testCase )
 
 specs :: TestTree
 specs =
@@ -39,7 +39,7 @@ specs =
         ]
 
 singleMint :: MintingBuilder
-singleMint = mint (Value.singleton "deadbeef" "alivecow" 1)
+singleMint = mint (singleton "deadbeef" "alivecow" 1)
 
 doubleMint :: MintingBuilder
-doubleMint = singleMint <> mint (Value.singleton "bebe" "smallcow" 1)
+doubleMint = singleMint <> mint (singleton "bebe" "smallcow" 1)

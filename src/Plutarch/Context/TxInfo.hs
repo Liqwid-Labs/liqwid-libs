@@ -10,35 +10,31 @@
  possible Script Context from TxInfo.
 -}
 module Plutarch.Context.TxInfo (
+    TxInfoBuilder (..),
     spends,
     mints,
     buildTxInfo,
     buildTxInfoUnsafe,
 ) where
 
-import Control.Monad.Cont (ContT (runContT))
-import Data.Foldable (Foldable (toList))
-import Plutarch.Context.Base (
-    BaseBuilder (bbDatums, bbInputs, bbMints, bbOutputs, bbSignatures),
-    Builder (..),
-    yieldBaseTxInfo,
-    yieldExtraDatums,
-    yieldInInfoDatums,
-    yieldMint,
-    yieldOutDatums,
- )
-import PlutusLedgerApi.V1 (
-    ScriptContext (ScriptContext),
-    ScriptPurpose (Spending),
-    TxInInfo (txInInfoOutRef),
-    TxInfo (
-        txInfoData,
-        txInfoInputs,
-        txInfoMint,
-        txInfoOutputs,
-        txInfoSignatories
-    ),
- )
+import Control.Monad.Cont ( ContT(runContT) )
+import Data.Foldable ( Foldable(toList) )
+import Plutarch.Context.Base
+    ( BaseBuilder(bbDatums, bbInputs, bbMints, bbOutputs,
+                  bbSignatures),
+      Builder(..),
+      yieldBaseTxInfo,
+      yieldExtraDatums,
+      yieldInInfoDatums,
+      yieldMint,
+      yieldOutDatums )
+import PlutusLedgerApi.V2
+    ( TxInfo(txInfoInputs, txInfoOutputs, txInfoData, txInfoMint,
+             txInfoSignatories),
+      TxInInfo(txInInfoOutRef),
+      ScriptPurpose(Spending),
+      fromList,
+      ScriptContext(ScriptContext) )
 
 {- | Builder that builds TxInfo.
 
@@ -66,7 +62,7 @@ buildTxInfo (unpack -> builder) = flip runContT Right $ do
             base
                 { txInfoInputs = ins
                 , txInfoOutputs = outs
-                , txInfoData = inDat <> outDat <> extraDat
+                , txInfoData = fromList $ inDat <> outDat <> extraDat
                 , txInfoMint = mintedValue
                 , txInfoSignatories = toList $ bbSignatures bb
                 }
