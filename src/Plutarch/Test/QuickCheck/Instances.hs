@@ -2,10 +2,11 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImpredicativeTypes #-}
+{-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE RankNTypes #-}
+
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
+
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -69,15 +70,12 @@ import Plutarch.Api.V2 (
     PPubKeyHash (PPubKeyHash),
     PStakingCredential (PStakingHash, PStakingPtr),
  )
+import Plutarch.Builtin (ppairDataBuiltin)
 import Plutarch.Evaluate (evalScript)
-import Plutarch.Extra.Map.Unsorted (psort)
-import Plutarch.Extra.Maybe (
-    pfromDJust,
-    pfromJust,
-    pisDJust,
-    pisJust,
- )
+import Plutarch.Extra.TermCont (pletC)
 import Plutarch.Lift (PUnsafeLiftDecl (PLifted), plift)
+import qualified Plutarch.List
+import Plutarch.Maybe (pfromJust)
 import Plutarch.Positive (PPositive, ptryPositive)
 import Plutarch.Prelude (
     PAsData,
@@ -107,14 +105,22 @@ import Plutarch.Prelude (
     pdenominator,
     pdnil,
     pfield,
+    pfix,
     pfromData,
+    pfstBuiltin,
+    phoistAcyclic,
     pif,
+    plet,
     pnot,
     pnumerator,
     pshow,
+    psingleton,
+    psndBuiltin,
     ptraceError,
+    (:-->),
  )
 import Plutarch.Show (PShow)
+import Plutarch.TermCont (unTermCont)
 import Test.QuickCheck (
     Arbitrary (arbitrary, shrink),
     CoArbitrary (coarbitrary),
@@ -209,7 +215,7 @@ instance PShow a => Show (TestableTerm a) where
 class PArbitrary (a :: S -> Type) where
     parbitrary :: Gen (TestableTerm a)
     default parbitrary :: (PLift a, Arbitrary (PLifted a)) => Gen (TestableTerm a)
-    parbitrary = (\x -> TestableTerm (pconstant x)) <$> arbitrary
+    parbitrary = (TestableTerm . pconstant) <$> arbitrary
 
     pshrink :: TestableTerm a -> [TestableTerm a]
     pshrink = const []
@@ -374,9 +380,7 @@ instance (PIsData a, PArbitrary a) => PArbitrary (PMaybeData a) where
             ]
     pshrink (TestableTerm x)
         | plift $ pisDJust # x =
-            ( pconT $
-                PDNothing pdnil
-            ) :
+            pconT (PDNothing pdnil) :
                 [ TestableTerm $ pcon $ PDJust $ pdcons @"_0" # pdata a # pdnil
                 | (TestableTerm a) <- shrink (TestableTerm $ pfromDJust # x)
                 ]
@@ -646,7 +650,7 @@ instance (PIsData a, PArbitrary a) => PArbitrary (PExtended a) where
         (TestableTerm x) <- parbitrary
         elements
             [ pconT $ PNegInf pdnil
-            , pconT $ PFinite $ pdcons @"_0" # (pdata x) # pdnil
+            , pconT $ PFinite $ pdcons @"_0" # pdata x # pdnil
             , pconT $ PPosInf pdnil
             ]
 
@@ -768,7 +772,7 @@ instance PArbitrary (PValue Unsorted NonZero) where
         return $
             pconT $
                 PValue $
-                    Assoc.pmap # plam (\x -> Assoc.pfilter # (plam $ \y -> pnot # (y #== 0)) # x) # val
+                    Assoc.pmap # plam (\x -> Assoc.pfilter # plam (\y -> pnot # (y #== 0)) # x) # val
 
     pshrink = fmap reValue . shrink . unValue
       where
@@ -825,10 +829,146 @@ instance PArbitrary (PValue Sorted Positive) where
         return $
             pconT $
                 PValue $
-                    Assoc.pmap # plam (\x -> Assoc.pfilter # plam (\y -> 0 #<= y) # x) # pto val
+                    Assoc.pmap # plam (\x -> Assoc.pfilter # plam (0 #<=) # x) # pto val
 
     pshrink = fmap reValue . shrink . unValue
       where
         unValue = flip pmatchT $ \(PValue a) -> a
         reValue (TestableTerm val) =
             pconT $ PValue $ Assoc.pmap # plam (\x -> Assoc.pfilter # plam (\y -> pnot # (0 #< y)) # x) # val
+
+--------------------------------------------------------------------------------
+-- The following functions are copied from `liqwid-plutarch-extra` to avoid
+-- cyclic dependency issues
+
+-- | / O(nlogn) /. Sort a `PMap` by the keys of each key-value pairs, in an ascending order.
+psort ::
+    forall (k :: S -> Type) (v :: S -> Type) (s :: S).
+    (PIsData k, POrd k) =>
+    Term s (PMap 'Unsorted k v :--> PMap 'Sorted k v)
+psort = phoistAcyclic $
+    plam $ \(pto -> l :: (Term _ (PBuiltinList _))) ->
+        pcon $ PMap $ pmsortBy # pkvPairLt # l
+
+-- | Extracts the element out of a 'PDJust' and throws an error if its argument is 'PDNothing'.
+pfromDJust ::
+    forall (a :: S -> Type) (s :: S).
+    (PIsData a) =>
+    Term s (PMaybeData a :--> a)
+pfromDJust = phoistAcyclic $
+    plam $ \t -> pmatch t $ \case
+        PDNothing _ -> ptraceError "pfromDJust: found PDNothing"
+        PDJust x -> pfromData $ pfield @"_0" # x
+
+-- | Yield True if a given 'PMaybeData' is of form @'PDJust' _@.
+pisDJust ::
+    forall (a :: S -> Type) (s :: S).
+    Term s (PMaybeData a :--> PBool)
+pisDJust = phoistAcyclic $
+    plam $ \x -> pmatch x $ \case
+        PDJust _ -> pconstant True
+        _ -> pconstant False
+
+-- | Yields true if the given 'PMaybe' value is of form @'PJust' _@.
+pisJust ::
+    forall (a :: S -> Type) (s :: S).
+    Term s (PMaybe a :--> PBool)
+pisJust = phoistAcyclic $
+    plam $ \v' ->
+        pmatch v' $ \case
+            PJust _ -> pconstant True
+            _ -> pconstant False
+
+{- | / O(nlogn) /. Merge sort, bottom-up version, given a custom comparator.
+
+   Assuming the comparator returns true if first value is less than the second one,
+    the list elements will be arranged in ascending order, keeping duplicates in the order
+    they appeared in the input.
+-}
+pmsortBy ::
+    forall s a l.
+    (PIsListLike l a, PIsListLike l (l a)) =>
+    Term s ((a :--> a :--> PBool) :--> l a :--> l a)
+pmsortBy = phoistAcyclic $
+    plam $ \comp xs ->
+        mergeAll # comp # (Plutarch.List.pmap # psingleton # xs)
+  where
+    mergeAll :: Term _ ((a :--> a :--> PBool) :--> l (l a) :--> l a)
+    mergeAll = phoistAcyclic $
+        pfix #$ plam $ \self comp xs ->
+            pif (pnull # xs) pnil $
+                let y = phead # xs
+                    ys = ptail # xs
+                 in pif (pnull # ys) y $
+                        self # comp #$ mergePairs # comp # xs
+    mergePairs :: Term _ ((a :--> a :--> PBool) :--> l (l a) :--> l (l a))
+    mergePairs = phoistAcyclic $
+        pfix #$ plam $ \self comp xs ->
+            pif (pnull # xs) pnil $
+                let y = phead # xs
+                 in plet (ptail # xs) $ \ys ->
+                        pif (pnull # ys) xs $
+                            let z = phead # ys
+                                zs = ptail # ys
+                             in pcons # (pmergeBy # comp # y # z) # (self # comp # zs)
+
+{- | / O(n) /. Merge two lists which are assumed to be ordered, given a custom comparator.
+    The comparator should return true if first value is less than the second one.
+-}
+pmergeBy ::
+    forall (a :: S -> Type) (s :: S) list.
+    (PIsListLike list a) =>
+    Term
+        s
+        ( (a :--> a :--> PBool)
+            :--> list a
+            :--> list a
+            :--> list a
+        )
+pmergeBy = phoistAcyclic $ pfix #$ plam go
+  where
+    go self comp a b =
+        pif (pnull # a) b $
+            pif (pnull # b) a $
+                unTermCont $ do
+                    ah <- pletC $ phead # a
+                    at <- pletC $ ptail # a
+                    bh <- pletC $ phead # b
+                    bt <- pletC $ ptail # b
+
+                    pure $
+                        pif
+                            (comp # ah # bh)
+                            (pcons # ah #$ self # comp # at # b)
+                            (pcons # bh #$ self # comp # a # bt)
+
+-- | Compare two key-value pairs by their keys, return true if the first key is less than the second one.
+pkvPairLt ::
+    (PIsData k, POrd k) =>
+    Term s (PBuiltinPair (PAsData k) (PAsData v) :--> PBuiltinPair (PAsData k) (PAsData v) :--> PBool)
+pkvPairLt = phoistAcyclic $
+    plam $ \((pkvPairKey #) -> keyA) ((pkvPairKey #) -> keyB) -> keyA #< keyB
+
+-- | Get the key of a key-value pair.
+pkvPairKey :: (PIsData k) => Term s (PBuiltinPair (PAsData k) (PAsData v) :--> k)
+pkvPairKey = phoistAcyclic $ plam $ \(pfromData . (pfstBuiltin #) -> key) -> key
+
+-- | / O(n) /. Map a function over all values in a 'PMap'.
+pmap ::
+    forall (k :: S -> Type) (a :: S -> Type) (b :: S -> Type) (keys :: KeyGuarantees) (s :: S).
+    (PIsData k, PIsData a, PIsData b) =>
+    Term s ((a :--> b) :--> PMap keys k a :--> PMap keys k b)
+pmap = phoistAcyclic $
+    plam $ \f (pto -> (ps :: Term _ (PBuiltinList _))) ->
+        pcon $
+            PMap $
+                Plutarch.List.pmap
+                    # plam
+                        ( \kv ->
+                            let k = pfstBuiltin # kv
+                                v = psndBuiltin # kv
+
+                                nv = pdata $ f # pfromData v
+                             in ppairDataBuiltin # k # nv
+                        )
+                    # ps

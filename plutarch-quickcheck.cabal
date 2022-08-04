@@ -72,8 +72,8 @@ library
     , containers
     , data-default
     , generics-sop
-    , liqwid-plutarch-extra
     , mtl
+    , plutarch-extra
     , plutus-core
     , plutus-ledger-api
     , plutus-tx
