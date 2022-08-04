@@ -1,10 +1,14 @@
 module MintingBuilder (specs) where
 
-import Plutarch.Context
-    ( MintingBuilder, buildMinting, mint, withMinting )
-import PlutusLedgerApi.V2 ( singleton )
-import Test.Tasty ( TestTree, testGroup )
-import Test.Tasty.HUnit ( assertFailure, testCase )
+import Plutarch.Context (
+    MintingBuilder,
+    buildMinting,
+    mint,
+    withMinting,
+ )
+import PlutusLedgerApi.V2 (singleton)
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (assertFailure, testCase)
 
 specs :: TestTree
 specs =

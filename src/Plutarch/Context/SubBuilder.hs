@@ -10,19 +10,24 @@ module Plutarch.Context.SubBuilder (
     buildDatumHashPairs,
 ) where
 
-import Control.Monad.Cont ( ContT(runContT) )
-import Data.Foldable ( Foldable(toList) )
-import Data.Maybe ( catMaybes )
-import Plutarch.Context.Base
-    ( datumWithHash,
-      utxoDatumPair,
-      utxoToTxOut,
-      yieldInInfoDatums,
-      BaseBuilder(..),
-      Builder(unpack),
-      UTXO(..) )
-import PlutusLedgerApi.V2
-    ( DatumHash, Datum, TxOut, TxOutRef(TxOutRef), TxInInfo(TxInInfo) )
+import Data.Foldable (Foldable (toList))
+import Data.Maybe (catMaybes)
+import Plutarch.Context.Base (
+    BaseBuilder (..),
+    Builder (unpack),
+    UTXO (..),
+    datumWithHash,
+    utxoDatumPair,
+    utxoToTxOut,
+    yieldInInfoDatums,
+ )
+import PlutusLedgerApi.V2 (
+    Datum,
+    DatumHash,
+    TxInInfo (TxInInfo),
+    TxOut,
+    TxOutRef (TxOutRef),
+ )
 
 {- | Smaller builder that builds context smaller than TxInfo.
 
@@ -60,10 +65,9 @@ buildTxOuts (unpack -> BB{..}) = utxoToTxOut <$> toList bbOutputs
 
  @since 2.0.0
 -}
-buildTxInInfos :: SubBuilder -> Either String [TxInInfo]
-buildTxInInfos b@(unpack -> BB{..}) = flip runContT Right $ do
-    (ins, _) <- yieldInInfoDatums bbInputs b
-    return ins
+buildTxInInfos :: SubBuilder -> [TxInInfo]
+buildTxInInfos b@(unpack -> BB{..}) =
+    fst $ yieldInInfoDatums bbInputs b
 
 {- | Builds Datum-Hash pair from all inputs, outputs, extra data of given builder.
 

@@ -53,39 +53,38 @@ module Plutarch.Context.Base (
     yieldOutDatums,
 ) where
 
-import Acc ( Acc )
-import Control.Arrow ( Arrow((&&&)) )
-import Control.Monad.Cont ( ContT, lift )
-import Data.Foldable ( Foldable(toList) )
-import Data.Kind ( Type )
-import Data.List ( nub )
-import Data.Maybe ( catMaybes, fromMaybe )
-import Plutarch ( S )
-import Plutarch.Api.V2 ( datumHash )
-import Plutarch.Builtin ( PIsData, pdata, pforgetData )
-import Plutarch.Lift ( PUnsafeLiftDecl(..), pconstant, plift )
-import PlutusLedgerApi.V2
-    ( PubKeyHash(PubKeyHash),
-      Data,
-      Value,
-      POSIXTime,
-      always,
-      Credential(..),
-      ScriptHash,
-      TxId(TxId),
-      Interval,
-      Address(Address),
-      OutputDatum(..),
-      DatumHash,
-      Datum(Datum),
-      BuiltinData(BuiltinData),
-      ValidatorHash,
-      TxOut(TxOut),
-      TxOutRef(TxOutRef),
-      TxInfo(..),
-      TxInInfo(TxInInfo),
-      fromList )
-    
+import Acc (Acc)
+import Control.Arrow (Arrow ((&&&)))
+import Data.Foldable (Foldable (toList))
+import Data.Kind (Type)
+import Data.Maybe (catMaybes, fromMaybe)
+import Plutarch (S)
+import Plutarch.Api.V2 (datumHash)
+import Plutarch.Builtin (PIsData, pdata, pforgetData)
+import Plutarch.Lift (PUnsafeLiftDecl (..), pconstant, plift)
+import PlutusLedgerApi.V2 (
+    Address (Address),
+    BuiltinData (BuiltinData),
+    Credential (..),
+    Data,
+    Datum (Datum),
+    DatumHash,
+    Interval,
+    OutputDatum (..),
+    POSIXTime,
+    PubKeyHash (PubKeyHash),
+    ScriptHash,
+    TxId (TxId),
+    TxInInfo (TxInInfo),
+    TxInfo (..),
+    TxOut (TxOut),
+    TxOutRef (TxOutRef),
+    ValidatorHash,
+    Value,
+    always,
+    fromList,
+ )
+
 data DatumType
     = InlineDatum Data
     | ContextDatum Data
@@ -344,23 +343,22 @@ reference x = pack mempty{bbReferenceInputs = pure x}
  @since 1.1.0
 -}
 yieldBaseTxInfo ::
-    (Builder b) => b -> ContT a (Either String) TxInfo
+    (Builder b) => b -> TxInfo
 yieldBaseTxInfo (unpack -> BB{..}) =
-    return $
-        TxInfo
-            { txInfoInputs = mempty
-            , txInfoReferenceInputs = mempty
-            , txInfoOutputs = mempty
-            , txInfoFee = bbFee
-            , txInfoMint = mempty
-            , txInfoDCert = mempty
-            , txInfoWdrl = fromList []
-            , txInfoValidRange = bbTimeRange
-            , txInfoSignatories = mempty
-            , txInfoRedeemers = fromList []
-            , txInfoData = fromList []
-            , txInfoId = bbTxId
-            }
+    TxInfo
+        { txInfoInputs = mempty
+        , txInfoReferenceInputs = mempty
+        , txInfoOutputs = mempty
+        , txInfoFee = bbFee
+        , txInfoMint = mempty
+        , txInfoDCert = mempty
+        , txInfoWdrl = fromList []
+        , txInfoValidRange = bbTimeRange
+        , txInfoSignatories = mempty
+        , txInfoRedeemers = fromList []
+        , txInfoData = fromList []
+        , txInfoId = bbTxId
+        }
 
 {- | Provide total mints to Continuation Monad.
 
@@ -368,9 +366,9 @@ yieldBaseTxInfo (unpack -> BB{..}) =
 -}
 yieldMint ::
     Acc Value ->
-    ContT a (Either String) Value
+    Value
 yieldMint (toList -> vals) =
-    return $ mconcat vals
+    mconcat vals
 
 {- | Provide DatumHash-Datum pair to Continuation Monad.
 
@@ -378,9 +376,9 @@ yieldMint (toList -> vals) =
 -}
 yieldExtraDatums ::
     Acc Data ->
-    ContT a (Either String) ([(DatumHash, Datum)])
+    [(DatumHash, Datum)]
 yieldExtraDatums (toList -> ds) =
-    return $ datumWithHash <$> ds
+    datumWithHash <$> ds
 
 {- | Provide list of TxInInfo and DatumHash-Datum pair for inputs to
  Continutation Monad.
@@ -391,10 +389,9 @@ yieldInInfoDatums ::
     (Builder b) =>
     Acc UTXO ->
     b ->
-    ContT a (Either String) ([TxInInfo], [(DatumHash, Datum)])
-yieldInInfoDatums (toList -> inputs) (unpack -> bb)
-    | length (nub takenIdx) /= length takenIdx = lift $ Left "Duplicate Indices"
-    | otherwise = return $ createTxInInfo &&& createDatumPairs $ inputs
+    ([TxInInfo], [(DatumHash, Datum)])
+yieldInInfoDatums (toList -> inputs) (unpack -> bb) =
+    createTxInInfo &&& createDatumPairs $ inputs
   where
     createTxInInfo :: [UTXO] -> [TxInInfo]
     createTxInInfo = mkTxInInfo 1
@@ -421,9 +418,9 @@ yieldInInfoDatums (toList -> inputs) (unpack -> bb)
 -}
 yieldOutDatums ::
     Acc UTXO ->
-    ContT a (Either String) ([TxOut], [(DatumHash, Datum)])
+    ([TxOut], [(DatumHash, Datum)])
 yieldOutDatums (toList -> outputs) =
-    return $ createTxInInfo &&& createDatumPairs $ outputs
+    createTxInInfo &&& createDatumPairs $ outputs
   where
     createTxInInfo :: [UTXO] -> [TxOut]
     createTxInInfo xs = utxoToTxOut <$> xs

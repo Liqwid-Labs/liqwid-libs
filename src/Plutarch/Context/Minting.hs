@@ -1,5 +1,7 @@
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ViewPatterns #-}
 
 {- | Module: Plutarch.Context.Minting
  Copyright: (C) Liqwid Labs 2022
@@ -23,27 +25,39 @@ module Plutarch.Context.Minting (
     buildMintingUnsafe,
 ) where
 
-import Control.Monad.Cont ( ContT(runContT) )
-import Control.Monad.Reader ( MonadTrans(lift) )
-import Data.Foldable ( Foldable(toList) )
-import Plutarch.Context.Base
-    ( BaseBuilder(bbDatums, bbInputs, bbMints, bbOutputs,
-                  bbSignatures),
-      Builder(..),
-      yieldBaseTxInfo,
-      yieldExtraDatums,
-      yieldInInfoDatums,
-      yieldMint,
-      yieldOutDatums )
-import PlutusLedgerApi.V2
-    ( Value(getValue),
-      CurrencySymbol,
-      TxInfo(txInfoSignatories, txInfoInputs, txInfoOutputs, txInfoData,
-             txInfoMint),
-      ScriptPurpose(Minting),
-      fromList,
-      ScriptContext(ScriptContext) )
-import qualified PlutusTx.AssocMap as Map ( toList )
+import Data.Foldable (Foldable (toList))
+import Data.Maybe (fromJust)
+import Plutarch.Context.Base (
+    BaseBuilder (
+        BB,
+        bbDatums,
+        bbInputs,
+        bbMints,
+        bbOutputs,
+        bbSignatures
+    ),
+    Builder (..),
+    yieldBaseTxInfo,
+    yieldExtraDatums,
+    yieldInInfoDatums,
+    yieldMint,
+    yieldOutDatums,
+ )
+import PlutusLedgerApi.V2 (
+    CurrencySymbol,
+    ScriptContext (ScriptContext),
+    ScriptPurpose (Minting),
+    TxInfo (
+        txInfoData,
+        txInfoInputs,
+        txInfoMint,
+        txInfoOutputs,
+        txInfoSignatories
+    ),
+    Value (getValue),
+    fromList,
+ )
+import qualified PlutusTx.AssocMap as Map (toList)
 
 {- | A context builder for Minting. Corresponds to
  'Plutus.V1.Ledger.Contexts.Minting' specifically.
@@ -93,38 +107,34 @@ withMinting cs = MB mempty $ Just cs
 -}
 buildMinting ::
     MintingBuilder ->
-    Either String ScriptContext
-buildMinting builder = flip runContT Right $
-    case mbMintingCS builder of
-        Nothing -> lift $ Left "No minting currency symbol specified"
-        Just mintingCS -> do
-            let bb = unpack builder
+    Maybe ScriptContext
+buildMinting builder@(unpack -> BB{..}) = do
+    mintingCS <- mbMintingCS builder
+    let (ins, inDat) = yieldInInfoDatums bbInputs builder
+        (outs, outDat) = yieldOutDatums bbOutputs
+        mintedValue = yieldMint bbMints
+        extraDat = yieldExtraDatums bbDatums
+        base = yieldBaseTxInfo builder
 
-            (ins, inDat) <- yieldInInfoDatums (bbInputs bb) builder
-            (outs, outDat) <- yieldOutDatums (bbOutputs bb)
-            mintedValue <- yieldMint (bbMints bb)
-            extraDat <- yieldExtraDatums (bbDatums bb)
-            base <- yieldBaseTxInfo builder
+        txinfo =
+            base
+                { txInfoInputs = ins
+                , txInfoOutputs = outs
+                , txInfoData = fromList $ inDat <> outDat <> extraDat
+                , txInfoMint = mintedValue
+                , txInfoSignatories = toList $ bbSignatures
+                }
+        mintingInfo =
+            filter
+                (\(cs, _) -> cs == mintingCS)
+                $ Map.toList $ getValue mintedValue
 
-            let txinfo =
-                    base
-                        { txInfoInputs = ins
-                        , txInfoOutputs = outs
-                        , txInfoData = fromList $ inDat <> outDat <> extraDat
-                        , txInfoMint = mintedValue
-                        , txInfoSignatories = toList $ bbSignatures bb
-                        }
-                mintingInfo =
-                    filter
-                        (\(cs, _) -> cs == mintingCS)
-                        $ Map.toList $ getValue mintedValue
-
-            case mintingInfo of
-                [] -> lift $ Left "Minting CS not found"
-                _ -> return $ ScriptContext txinfo (Minting mintingCS)
+    case mintingInfo of
+        [] -> Nothing
+        _ -> Just $ ScriptContext txinfo (Minting mintingCS)
 
 -- | Builds minting context; it throwing error when builder fails.
 buildMintingUnsafe ::
     MintingBuilder ->
     ScriptContext
-buildMintingUnsafe = either error id . buildMinting
+buildMintingUnsafe = fromJust . buildMinting

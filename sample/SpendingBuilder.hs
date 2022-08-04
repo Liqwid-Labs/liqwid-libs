@@ -2,29 +2,31 @@
 
 module SpendingBuilder (specs) where
 
-import Plutarch.Context
-    ( input,
-      mint,
-      output,
-      pubKey,
-      script,
-      withDatum,
-      withOutRef,
-      withRefIndex,
-      withTxId,
-      withValue,
-      buildSpending,
-      withSpendingOutRef,
-      withSpendingOutRefId,
-      withSpendingOutRefIdx,
-      SpendingBuilder )
-import PlutusLedgerApi.V2
-    ( singleton,
-      ScriptPurpose(Spending),
-      TxOutRef(..),
-      ScriptContext(scriptContextPurpose) )
-import Test.Tasty ( TestTree, testGroup )
-import Test.Tasty.HUnit ( assertFailure, testCase, (@?=) )
+import Plutarch.Context (
+    SpendingBuilder,
+    buildSpending,
+    input,
+    mint,
+    output,
+    pubKey,
+    script,
+    withDatum,
+    withOutRef,
+    withRefIndex,
+    withSpendingOutRef,
+    withSpendingOutRefId,
+    withSpendingOutRefIdx,
+    withTxId,
+    withValue,
+ )
+import PlutusLedgerApi.V2 (
+    ScriptContext (scriptContextPurpose),
+    ScriptPurpose (Spending),
+    TxOutRef (..),
+    singleton,
+ )
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 
 someOutRef :: TxOutRef
 someOutRef = TxOutRef "abcdee" 71

@@ -42,7 +42,6 @@ module Plutarch.Context (
     T.spends,
     T.mints,
     T.buildTxInfo,
-    T.buildTxInfoUnsafe,
     Sub.buildTxOut,
     Sub.buildTxInInfo,
     Sub.buildTxOuts,

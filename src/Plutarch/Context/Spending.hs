@@ -1,3 +1,4 @@
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -27,27 +28,34 @@ module Plutarch.Context.Spending (
     buildSpendingUnsafe,
 ) where
 
-import Control.Monad.Cont ( ContT(runContT), MonadTrans(lift) )
-import Data.Foldable ( Foldable(toList) )
-import Plutarch.Context.Base
-    ( utxoToTxOut,
-      yieldBaseTxInfo,
-      yieldExtraDatums,
-      yieldInInfoDatums,
-      yieldMint,
-      yieldOutDatums,
-      BaseBuilder(bbSignatures, bbInputs, bbOutputs, bbMints, bbDatums),
-      Builder(..),
-      UTXO )
-import PlutusLedgerApi.V2
-    ( TxId,
-      TxOutRef(txOutRefIdx, txOutRefId),
-      TxInfo(txInfoSignatories, txInfoInputs, txInfoOutputs, txInfoData,
-             txInfoMint),
-      TxInInfo(txInInfoOutRef, txInInfoResolved),
-      ScriptPurpose(Spending),
-      fromList,
-      ScriptContext(ScriptContext) )
+import Data.Foldable (Foldable (toList))
+import Data.Maybe (fromJust)
+import Plutarch.Context.Base (
+    BaseBuilder (BB, bbDatums, bbInputs, bbMints, bbOutputs, bbSignatures),
+    Builder (..),
+    UTXO,
+    utxoToTxOut,
+    yieldBaseTxInfo,
+    yieldExtraDatums,
+    yieldInInfoDatums,
+    yieldMint,
+    yieldOutDatums,
+ )
+import PlutusLedgerApi.V2 (
+    ScriptContext (ScriptContext),
+    ScriptPurpose (Spending),
+    TxId,
+    TxInInfo (txInInfoOutRef, txInInfoResolved),
+    TxInfo (
+        txInfoData,
+        txInfoInputs,
+        txInfoMint,
+        txInfoOutputs,
+        txInfoSignatories
+    ),
+    TxOutRef (txOutRefId, txOutRefIdx),
+    fromList,
+ )
 
 data ValidatorInputIdentifier
     = ValidatorUTXO UTXO
@@ -140,17 +148,17 @@ withSpendingOutRefIdx tidx =
 yieldValidatorInput ::
     [TxInInfo] ->
     ValidatorInputIdentifier ->
-    ContT a (Either String) TxOutRef
+    Maybe TxOutRef
 yieldValidatorInput ins = \case
     ValidatorUTXO utxo -> go txInInfoResolved (utxoToTxOut utxo)
     ValidatorOutRef outref -> go txInInfoOutRef outref
     ValidatorOutRefId tid -> go (txOutRefId . txInInfoOutRef) tid
     ValidatorOutRefIdx tidx -> go (txOutRefIdx . txInInfoOutRef) tidx
   where
-    go :: (Eq b) => (TxInInfo -> b) -> b -> ContT c (Either String) TxOutRef
+    go :: (Eq b) => (TxInInfo -> b) -> b -> Maybe TxOutRef
     go f x =
         case filter (\(f -> y) -> y == x) ins of
-            [] -> lift $ Left "Given validator input identifier does not exist in inputs."
+            [] -> Nothing
             (r : _) -> return $ txInInfoOutRef r
 
 {- | Builds @ScriptContext@ according to given configuration and
@@ -164,32 +172,27 @@ yieldValidatorInput ins = \case
 -}
 buildSpending ::
     SpendingBuilder ->
-    Either String ScriptContext
-buildSpending builder = flip runContT Right $
-    case sbValidatorInput builder of
-        Nothing -> lift $ Left "No validator input specified"
-        Just vInIden -> do
-            let bb = unpack builder
-
-            (ins, inDat) <- yieldInInfoDatums (bbInputs bb) builder
-            (outs, outDat) <- yieldOutDatums (bbOutputs bb)
-            mintedValue <- yieldMint (bbMints bb)
-            extraDat <- yieldExtraDatums (bbDatums bb)
-            base <- yieldBaseTxInfo builder
-            vInRef <- yieldValidatorInput ins vInIden
-
-            let txinfo =
-                    base
-                        { txInfoInputs = ins
-                        , txInfoOutputs = outs
-                        , txInfoData = fromList $ inDat <> outDat <> extraDat
-                        , txInfoMint = mintedValue
-                        , txInfoSignatories = toList $ bbSignatures bb
-                        }
-            return $ ScriptContext txinfo (Spending vInRef)
+    Maybe ScriptContext
+buildSpending builder@(unpack -> BB{..}) = do
+    vInIden <- sbValidatorInput builder
+    let (ins, inDat) = yieldInInfoDatums bbInputs builder
+        (outs, outDat) = yieldOutDatums bbOutputs
+        mintedValue = yieldMint bbMints
+        extraDat = yieldExtraDatums bbDatums
+        base = yieldBaseTxInfo builder
+        txinfo =
+            base
+                { txInfoInputs = ins
+                , txInfoOutputs = outs
+                , txInfoData = fromList $ inDat <> outDat <> extraDat
+                , txInfoMint = mintedValue
+                , txInfoSignatories = toList $ bbSignatures
+                }
+    vInRef <- yieldValidatorInput ins vInIden
+    Just $ ScriptContext txinfo (Spending vInRef)
 
 -- | Builds spending context; it throwing error when builder fails.
 buildSpendingUnsafe ::
     SpendingBuilder ->
     ScriptContext
-buildSpendingUnsafe = either error id . buildSpending
+buildSpendingUnsafe = fromJust . buildSpending

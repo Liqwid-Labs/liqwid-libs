@@ -1,31 +1,33 @@
 module Main (main) where
 
-import GHC.IO.Encoding ( setLocaleEncoding, utf8 )
-import Plutarch.Context
-    ( input,
-      mint,
-      output,
-      pubKey,
-      script,
-      withDatum,
-      withRefIndex,
-      withTxId,
-      withValue,
-      buildMinting,
-      withMinting,
-      buildSpending,
-      withSpendingUTXO,
-      buildTxOuts,
-      buildTxInfo,
-      Builder )
-import PlutusLedgerApi.V2
-    ( TxInfo(txInfoOutputs),
-      ScriptContext(scriptContextTxInfo),
-      singleton )
-import Test.Tasty ( defaultMain, testGroup )
-import Test.Tasty.HUnit ( testCase, (@?=) )
-import qualified MintingBuilder ( specs )
-import qualified SpendingBuilder ( specs )
+import GHC.IO.Encoding (setLocaleEncoding, utf8)
+import qualified MintingBuilder (specs)
+import Plutarch.Context (
+    Builder,
+    buildMinting,
+    buildSpending,
+    buildTxInfo,
+    buildTxOuts,
+    input,
+    mint,
+    output,
+    pubKey,
+    script,
+    withDatum,
+    withMinting,
+    withRefIndex,
+    withSpendingUTXO,
+    withTxId,
+    withValue,
+ )
+import PlutusLedgerApi.V2 (
+    ScriptContext (scriptContextTxInfo),
+    TxInfo (txInfoOutputs),
+    singleton,
+ )
+import qualified SpendingBuilder (specs)
+import Test.Tasty (defaultMain, testGroup)
+import Test.Tasty.HUnit (testCase, (@?=))
 
 main :: IO ()
 main = do
