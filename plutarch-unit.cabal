@@ -78,12 +78,13 @@ library
   exposed-modules: Plutarch.Test.Unit
   other-modules:
   build-depends:
+    , liqwid-plutarch-extra
+    , plutus-ledger-api
     , plutus-tx
     , pretty
     , pretty-show
     , tagged
     , tasty
-    , plutus-ledger-api
     , text
 
   hs-source-dirs:  src
