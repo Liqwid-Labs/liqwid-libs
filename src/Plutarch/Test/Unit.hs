@@ -26,10 +26,10 @@ module Plutarch.Test.Unit (
 
 import Data.Tagged (Tagged (Tagged))
 import Data.Text (Text)
-import Plutarch (compile)
 import Plutarch.Api.V1 (PMintingPolicy, PValidator)
 import Plutarch.Builtin (pforgetData)
 import Plutarch.Evaluate (EvalError, evalScript)
+import Plutarch.Extra.Compile (mustCompile)
 import Plutarch.Lift (PUnsafeLiftDecl (PLifted))
 import Plutarch.Prelude (
     PData,
@@ -167,7 +167,7 @@ testValidator ::
     TestTree
 testValidator f name val dat red sc =
     f name $
-        compile
+        mustCompile
             ( val # pforgetConstant dat
                 # pforgetConstant red
                 # pconstant sc
@@ -191,7 +191,7 @@ testMP ::
     TestTree
 testMP f name policy red sc =
     f name $
-        compile
+        mustCompile
             ( policy # pforgetConstant red # pconstant sc
             )
 
