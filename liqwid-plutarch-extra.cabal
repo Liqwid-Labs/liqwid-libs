@@ -76,6 +76,7 @@ library
     Plutarch.Extra.Boring
     Plutarch.Extra.Category
     Plutarch.Extra.Comonad
+    Plutarch.Extra.Compile
     Plutarch.Extra.Const
     Plutarch.Extra.Field
     Plutarch.Extra.FixedDecimal
