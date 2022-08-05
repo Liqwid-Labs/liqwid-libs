@@ -1,6 +1,11 @@
+{-# LANGUAGE RankNTypes #-}
+
 module Plutarch.Extra.Compile (mustCompile) where
 
-import Data.Default (Default (Data))
+import Data.Default (def)
+import qualified Data.Text as T
+import Plutarch (ClosedTerm, compile)
+import PlutusLedgerApi.V1 (Script)
 
 -- | Compile a ClosedTerm, throwing an error if unsuccessful.
 mustCompile :: ClosedTerm a -> Script
