@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -25,6 +26,7 @@ module Plutarch.Context.Spending (
 
     -- * builder
     buildSpending,
+    checkBuildSpending,
     buildSpendingUnsafe,
 ) where
 
@@ -190,6 +192,16 @@ buildSpending builder@(unpack -> BB{..}) = do
                 }
     vInRef <- yieldValidatorInput ins vInIden
     Just $ ScriptContext txinfo (Spending vInRef)
+
+{- | Check builder with provided checker, then build spending context.
+
+ @since 2.1.0
+-}
+checkBuildSpending :: Checker SpendingBuilder -> SpendingBuilder -> Either String ScriptContext
+checkBuildSpending checker builder =
+    case toList (runChecker checker builder) of
+        [] -> buildSpending builder
+        err -> Left $ show err
 
 -- | Builds spending context; it throwing error when builder fails.
 buildSpendingUnsafe ::

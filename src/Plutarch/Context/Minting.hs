@@ -1,4 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -22,6 +24,7 @@ module Plutarch.Context.Minting (
 
     -- * builder
     buildMinting,
+    checkBuildMinting,
     buildMintingUnsafe,
 ) where
 
@@ -132,6 +135,16 @@ buildMinting builder@(unpack -> BB{..}) = do
     case mintingInfo of
         [] -> Nothing
         _ -> Just $ ScriptContext txinfo (Minting mintingCS)
+
+{- | Check builder with provided checker, then build minting context.
+
+ @since 2.1.0
+-}
+checkBuildMinting :: Checker MintingBuilder -> MintingBuilder -> Either String ScriptContext
+checkBuildMinting checker builder =
+    case toList (runChecker checker builder) of
+        [] -> buildMinting builder
+        err -> Left $ show err
 
 -- | Builds minting context; it throwing error when builder fails.
 buildMintingUnsafe ::

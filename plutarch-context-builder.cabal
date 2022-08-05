@@ -90,12 +90,15 @@ library
   other-modules:
     Plutarch.Context.Base
     Plutarch.Context.Minting
+    Plutarch.Context.Phase1
     Plutarch.Context.Spending
     Plutarch.Context.SubBuilder
     Plutarch.Context.TxInfo
 
   build-depends:
     , acc
+    , bytestring
+    , contravariant
     , mtl
     , plutus-core
     , plutus-ledger-api
