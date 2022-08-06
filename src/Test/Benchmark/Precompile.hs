@@ -13,7 +13,7 @@ module Test.Benchmark.Precompile (
   -- Scripts, they can do that regardless of this export.
   CompiledTerm (..),
   compile',
-  toScript,
+  toDScript,
   applyCompiledTerm,
   applyCompiledTerm',
   applyCompiledTerm2,
@@ -31,8 +31,7 @@ import Control.Lens ((^?))
 import Data.Text (Text)
 import Data.Text qualified as Text
 import GHC.Stack (HasCallStack)
-import Plutarch.Evaluate (EvalError, evalScript)
-import Plutarch.Extra.Compile (mustCompile)
+import Plutarch.Evaluate (EvalError)
 import Plutarch.Lift (
   PConstantDecl (pconstantFromRepr),
   PUnsafeLiftDecl (PLifted),
@@ -40,6 +39,14 @@ import Plutarch.Lift (
 import PlutusCore.Builtin (KnownTypeError, readKnownConstant)
 import PlutusCore.Evaluation.Machine.Exception (_UnliftingErrorE)
 import PlutusLedgerApi.V1.Scripts (Script (Script, unScript))
+import Test.Benchmark.DScript (
+  DScript (DScript),
+  debugScript,
+  finalEvalDScript,
+  mustCompileD,
+  mustEvalD,
+  script,
+ )
 import UntypedPlutusCore (Program (Program, _progAnn, _progTerm, _progVer))
 import UntypedPlutusCore.Core.Type qualified as UplcType
 
@@ -59,17 +66,15 @@ applyScript f a =
     (Script Program {_progTerm = fTerm, _progVer = fVer}) = f
     (Script Program {_progTerm = aTerm, _progVer = aVer}) = a
 
--- | Evaluate a 'Script' with errors resulting in exceptions.
-eval :: Script -> Script
-eval s =
-  case res of
-    Left e -> error $ Text.unpack (Text.unlines $ Text.pack (show e) : traces)
-    Right sr -> sr
-  where
-    (res, _, traces) = evalScript s
+applyDScript :: DScript -> DScript -> DScript
+applyDScript f a =
+  DScript
+    { script = applyScript f.script a.script
+    , debugScript = applyScript f.debugScript a.debugScript
+    }
 
 -- | Type-safe wrapper for compiled Plutarch functions.
-newtype CompiledTerm (a :: S -> Type) = CompiledTerm Script
+newtype CompiledTerm (a :: S -> Type) = CompiledTerm DScript
 
 {- | Compile a closed Plutarch 'Term' to a 'CompiledTerm'.
 
@@ -81,11 +86,11 @@ compile' ::
   forall (a :: S -> Type).
   (forall (s :: S). Term s a) ->
   CompiledTerm a
-compile' t = CompiledTerm $ mustCompile t
+compile' t = CompiledTerm $ mustCompileD t
 
 -- | Convert a 'CompiledTerm' to a 'Script'.
-toScript :: forall (a :: S -> Type). CompiledTerm a -> Script
-toScript (CompiledTerm script) = script
+toDScript :: forall (a :: S -> Type). CompiledTerm a -> DScript
+toDScript (CompiledTerm dscript) = dscript
 
 {- | Apply a 'CompiledTerm' to a closed Plutarch 'Term'.
 
@@ -99,7 +104,7 @@ applyCompiledTerm ::
   (forall (s :: S). Term s a) ->
   CompiledTerm b
 applyCompiledTerm (CompiledTerm sf) a =
-  CompiledTerm $ applyScript sf (eval $ mustCompile a)
+  CompiledTerm $ applyDScript sf (mustEvalD $ mustCompileD a)
 
 {- | Apply a 'CompiledTerm' to a closed Plutarch 'Term'.
 
@@ -113,7 +118,7 @@ applyCompiledTerm' ::
   (forall (s :: S). Term s a) ->
   CompiledTerm b
 applyCompiledTerm' (CompiledTerm sf) a =
-  CompiledTerm $ applyScript sf (mustCompile a)
+  CompiledTerm $ applyDScript sf (mustCompileD a)
 
 {- | Apply a 'CompiledTerm' to a 'CompiledTerm'.
 
@@ -127,7 +132,7 @@ applyCompiledTerm2 ::
   CompiledTerm a ->
   CompiledTerm b
 applyCompiledTerm2 (CompiledTerm sf) (CompiledTerm sa) =
-  CompiledTerm $ applyScript sf (eval sa)
+  CompiledTerm $ applyDScript sf (mustEvalD sa)
 
 {- | Apply a 'CompiledTerm' to a 'CompiledTerm'.
 
@@ -141,7 +146,7 @@ applyCompiledTerm2' ::
   CompiledTerm a ->
   CompiledTerm b
 applyCompiledTerm2' (CompiledTerm sf) (CompiledTerm sa) =
-  CompiledTerm $ applyScript sf sa
+  CompiledTerm $ applyDScript sf sa
 
 -- | Alias for 'applyCompiledTerm'.
 (##) ::
@@ -200,7 +205,7 @@ data LiftError
 -}
 pliftCompiled' ::
   forall p. PUnsafeLiftDecl p => CompiledTerm p -> Either LiftError (PLifted p)
-pliftCompiled' prog = case evalScript (toScript prog) of
+pliftCompiled' prog = case finalEvalDScript (toDScript prog) of
   (Right (unScript -> UplcType.Program _ _ term), _, _) ->
     case readKnownConstant term of
       Right r -> case pconstantFromRepr r of

@@ -14,15 +14,16 @@ import Data.Text (Text)
 import Plutarch.Extra.Compile (mustCompile)
 import System.Random (RandomGen)
 import Test.Benchmark.Common (ImplData (..))
+import Test.Benchmark.DScript (mustCompileD)
 import Test.Benchmark.Plutus (
   BudgetExceeded,
   Costs,
   ImplMetaData,
   PlutusCostAxis,
   mkScriptImplMetaData,
-  sampleScript,
+  sampleDScript,
  )
-import Test.Benchmark.Precompile (CompiledTerm, compile', toScript)
+import Test.Benchmark.Precompile (CompiledTerm, compile', toDScript)
 import Test.Benchmark.Sized (
   SSample,
   SUniversalGen,
@@ -41,10 +42,10 @@ mkTermImplMetaData ::
 mkTermImplMetaData name term = mkScriptImplMetaData name $ mustCompile term
 
 sampleTerm :: ClosedTerm a -> Either (BudgetExceeded PlutusCostAxis) Costs
-sampleTerm term = sampleScript $ mustCompile term
+sampleTerm term = sampleDScript $ mustCompileD term
 
 sampleTerm' :: CompiledTerm a -> Either (BudgetExceeded PlutusCostAxis) Costs
-sampleTerm' = sampleScript . toScript
+sampleTerm' = sampleDScript . toDScript
 
 -- | See 'benchAllSizesUniform'.
 pbenchAllSizesUniform ::

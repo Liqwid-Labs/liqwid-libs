@@ -9,7 +9,10 @@ module Test.Benchmark.Plutus (
   Cost (..),
   BudgetExceeded (..),
   Costs (..),
+  ScriptFailure (..),
+  sampleScript',
   sampleScript,
+  sampleDScript,
   statsByAxis',
   statsByAxis,
 ) where
@@ -46,6 +49,7 @@ import Test.Benchmark.Cost (
   samplesToPerAxisStats,
   vecSimpleStats,
  )
+import Test.Benchmark.DScript (DScript (DScript), debugScript, script)
 import Test.Benchmark.Sized (SSample)
 import UntypedPlutusCore.Evaluation.Machine.Cek (
   CekUserError (CekEvaluationFailure, CekOutOfExError),
@@ -94,8 +98,35 @@ data Costs = Costs
 
 makeFieldLabelsNoPrefix ''Costs
 
+newtype ScriptFailure = ScriptFailure {traces :: [Text]}
+
+makeFieldLabelsNoPrefix ''ScriptFailure
+
+-- | Sample Script execution, crash on evaluation failure.
 sampleScript :: Script -> Either (BudgetExceeded PlutusCostAxis) Costs
 sampleScript script =
+  case sampleScript' script of
+    Right costs -> Right costs
+    Left failure ->
+      case failure of
+        Left (ScriptFailure traces) ->
+          error $
+            "Script failed for non-budget reason!\n"
+              <> Text.unpack (Text.unlines traces)
+        Right budgetExceeded -> Left budgetExceeded
+
+-- | Sample Script execution, try debug variant of Script on evaluation failure.
+sampleDScript :: DScript -> Either (BudgetExceeded PlutusCostAxis) Costs
+sampleDScript DScript {script, debugScript} =
+  case sampleScript' script of
+    Right costs -> Right costs
+    Left failure ->
+      case failure of
+        Left _ -> sampleScript debugScript
+        Right budgetExceeded -> Left budgetExceeded
+
+sampleScript' :: Script -> Either (Either ScriptFailure (BudgetExceeded PlutusCostAxis)) Costs
+sampleScript' script =
   case res of
     Right _ -> pure $ Costs {cpuCost, memCost}
     Left (ErrorWithCause evalErr _) ->
@@ -104,15 +135,13 @@ sampleScript script =
         UserEvaluationError e ->
           case e of
             CekEvaluationFailure ->
-              error $
-                "Script failed for non-budget reason!\n"
-                  <> Text.unpack (Text.unlines traces)
+              Left . Left $ ScriptFailure traces
             CekOutOfExError (ExRestrictingBudget (ExBudget rcpu rmem)) ->
               if rcpu < 0
-                then Left $ BudgetExceeded CPU
+                then Left . Right $ BudgetExceeded CPU
                 else
                   if rmem < 0
-                    then Left $ BudgetExceeded Mem
+                    then Left . Right $ BudgetExceeded Mem
                     else
                       error $
                         "Got CekOutOfExError, but ExRestrictingBudget contains "
