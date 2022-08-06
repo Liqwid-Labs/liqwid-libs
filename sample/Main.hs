@@ -17,6 +17,7 @@ main :: IO ()
 main = do
     setLocaleEncoding utf8
     mapM_ (print . pretty) $ runChecker (checkPhase1 :: Checker () TxInfoBuilder) (testSample :: TxInfoBuilder)
+    print $ buildTxInfo testSample
     defaultMain . testGroup "Sample Tests" $
         [ testCase "TxInfo matches with both Minting and Spending Script Purposes" $
             (scriptContextTxInfo <$> a) @?= (scriptContextTxInfo <$> b)
@@ -57,7 +58,7 @@ generalSample =
         ]
 
 testSample :: (Monoid a, Builder a) => a
-testSample =
+testSample = mkOutRefIndices $
     mconcat
         [ input $
             pubKey "aabb"
@@ -66,13 +67,13 @@ testSample =
         , input $
             pubKey "eeee"
                 <> withValue (singleton "cc" "hello" (negate 50) <> singleton "aa" "asdf" 1)
+                <> withRefIndex 2
                 <> withDatum (123 :: Integer)
-                <> withRefIndex 5
         , input $
             pubKey "dddd"
                 <> withValue (singleton "cc" "hello" (negate 50) <> singleton "aa" "asdf" 1)
-                <> withDatum (123 :: Integer)
                 <> withRefIndex 5                
+                <> withDatum (123 :: Integer)
         , output $
             script "cccc"
                 <> withValue (singleton "cc" "hello" 100 <> singleton "aaaa" "hello" 333)

@@ -40,6 +40,7 @@ import Plutarch.Context.Base (
         bbSignatures
     ),
     Builder (..),
+    unpack,
     yieldBaseTxInfo,
     yieldExtraDatums,
     yieldInInfoDatums,
@@ -62,6 +63,7 @@ import PlutusLedgerApi.V2 (
  )
 import qualified PlutusTx.AssocMap as Map (toList)
 import Plutarch.Context.Check
+import Optics
 
 {- | A context builder for Minting. Corresponds to
  'Plutus.V1.Ledger.Contexts.Minting' specifically.
@@ -90,8 +92,7 @@ instance Monoid MintingBuilder where
 
 -- | @since 1.1.0
 instance Builder MintingBuilder where
-    pack = flip MB Nothing
-    unpack = mbInner
+    _bb = iso mbInner (\x -> mempty{mbInner = x})
 
 {- | Set CurrencySymbol for building Minting ScriptContext.
 
@@ -114,7 +115,7 @@ buildMinting ::
     Maybe ScriptContext
 buildMinting builder@(unpack -> BB{..}) = do
     mintingCS <- mbMintingCS builder
-    let (ins, inDat) = yieldInInfoDatums bbInputs builder
+    let (ins, inDat) = yieldInInfoDatums bbInputs
         (outs, outDat) = yieldOutDatums bbOutputs
         mintedValue = yieldMint bbMints
         extraDat = yieldExtraDatums bbDatums

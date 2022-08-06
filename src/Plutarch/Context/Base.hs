@@ -35,6 +35,8 @@ module Plutarch.Context.Base (
     withOutRef,
 
     -- * Others
+    pack,
+    unpack,
     signedWith,
     mint,
     extraData,
@@ -51,9 +53,12 @@ module Plutarch.Context.Base (
     yieldExtraDatums,
     yieldInInfoDatums,
     yieldOutDatums,
+    mkOutRefIndices,
 ) where
 
+import Optics
 import Acc (Acc)
+import GHC.Exts (fromList)
 import Control.Arrow (Arrow ((&&&)))
 import Data.Foldable (Foldable (toList))
 import Data.Kind (Type)
@@ -82,8 +87,8 @@ import PlutusLedgerApi.V2 (
     ValidatorHash,
     Value,
     always,
-    fromList,
  )
+import qualified PlutusTx.AssocMap as AssocMap (fromList)
 
 data DatumType
     = InlineDatum Data
@@ -165,14 +170,18 @@ utxoToTxOut utxo@(UTXO{..}) =
 
  @unpack@ will sometimes lose data.
 
- Typeclass Laws:
- 1. unpack . pack = id
+TODO
 
  @since 1.1.0
 -}
 class Builder a where
-    pack :: BaseBuilder -> a
-    unpack :: a -> BaseBuilder
+    _bb :: Iso' a BaseBuilder
+
+pack :: Builder a => BaseBuilder -> a
+pack = review _bb
+
+unpack :: Builder a => a -> BaseBuilder
+unpack = view _bb
 
 {- | Base builder. Handles basic input, output, signs, mints, and
  extra datums. BaseBuilder provides such basic functionalities for
@@ -218,8 +227,7 @@ instance Monoid BaseBuilder where
 
 -- | @since 1.1.0
 instance Builder BaseBuilder where
-    pack = id
-    unpack = id
+    _bb = iso id id
 
 {- | Adds signer to builder.
 
@@ -352,11 +360,11 @@ yieldBaseTxInfo (unpack -> BB{..}) =
         , txInfoFee = bbFee
         , txInfoMint = mempty
         , txInfoDCert = mempty
-        , txInfoWdrl = fromList []
+        , txInfoWdrl = AssocMap.fromList []
         , txInfoValidRange = bbTimeRange
         , txInfoSignatories = mempty
-        , txInfoRedeemers = fromList []
-        , txInfoData = fromList []
+        , txInfoRedeemers = AssocMap.fromList []
+        , txInfoData = AssocMap.fromList []
         , txInfoId = bbTxId
         }
 
@@ -386,27 +394,15 @@ yieldExtraDatums (toList -> ds) =
  @since 1.1.0
 -}
 yieldInInfoDatums ::
-    (Builder b) =>
     Acc UTXO ->
-    b ->
     ([TxInInfo], [(DatumHash, Datum)])
-yieldInInfoDatums (toList -> inputs) (unpack -> bb) =
-    createTxInInfo &&& createDatumPairs $ inputs
+yieldInInfoDatums (toList -> inputs)  =
+    fmap mkTxInInfo &&& createDatumPairs $ inputs
   where
-    createTxInInfo :: [UTXO] -> [TxInInfo]
-    createTxInInfo = mkTxInInfo 1
-
-    takenIdx = catMaybes $ utxoTxIdx <$> inputs
-
-    mkTxInInfo :: Integer -> [UTXO] -> [TxInInfo]
-    mkTxInInfo _ [] = []
-    mkTxInInfo ind (utxo@(UTXO{..}) : xs)
-        | ind `elem` takenIdx = mkTxInInfo (ind + 1) $ utxo : xs
-        | otherwise = case utxoTxIdx of
-            Just x -> TxInInfo (ref x) (utxoToTxOut utxo) : mkTxInInfo ind xs
-            Nothing -> TxInInfo (ref ind) (utxoToTxOut utxo) : mkTxInInfo (ind + 1) xs
+    mkTxInInfo :: UTXO -> TxInInfo
+    mkTxInInfo utxo@UTXO{..} = TxInInfo ref (utxoToTxOut utxo)
       where
-        ref = TxOutRef $ fromMaybe (bbTxId bb) utxoTxId
+        ref = TxOutRef (fromMaybe "" utxoTxId) (fromMaybe 0 utxoTxIdx)
 
     createDatumPairs :: [UTXO] -> [(DatumHash, Datum)]
     createDatumPairs xs = catMaybes $ utxoDatumPair <$> xs
@@ -426,3 +422,23 @@ yieldOutDatums (toList -> outputs) =
     createTxInInfo xs = utxoToTxOut <$> xs
     createDatumPairs :: [UTXO] -> [(DatumHash, Datum)]
     createDatumPairs xs = catMaybes $ utxoDatumPair <$> xs
+
+mkOutRefIndices ::
+    Builder a =>
+    a ->
+    a
+mkOutRefIndices = over _bb go
+    where
+      go bb@BB{..} = bb{bbInputs = grantIndex bbInputs}
+      
+      grantIndex :: Acc UTXO -> Acc UTXO
+      grantIndex (toList -> xs) = fromList $ grantIndex' 1 [] xs
+
+      grantIndex' :: Integer -> [Integer] -> [UTXO] -> [UTXO]
+      grantIndex' top used (x@(UTXO _ _ _ _ _ Nothing):xs)
+          | top `elem` used = grantIndex' (top + 1) used (x:xs)
+          | otherwise = x{utxoTxIdx = Just top} : grantIndex' (top + 1) (top:used) xs
+      grantIndex' top used (x@(UTXO _ _ _ _ _ (Just i)):xs)
+          | i `elem` used = grantIndex' top used (x{utxoTxIdx = Nothing}:xs)
+          | otherwise = x : grantIndex' top (i:used) xs
+      grantIndex' _ _ [] = []

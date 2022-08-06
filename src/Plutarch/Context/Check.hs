@@ -24,7 +24,7 @@ module Plutarch.Context.Check (
 ) where
 
 import Acc (Acc)
-import Data.Maybe (catMaybes)
+import Data.Maybe (catMaybes, fromMaybe)
 import Data.Foldable (toList)
 import Data.Functor ((<$))
 import Data.Functor.Contravariant (Contravariant (contramap))
@@ -210,9 +210,9 @@ checkInputs =
             (checkFoldable $ checkValue)
         , checkAt AtInputOutRef $
             mconcat $
-            [ contramap (fmap (getTxId . maybe "" id . utxoTxId) . bbInputs . unpack)
+            [ contramap (fmap (getTxId . fromMaybe "" . utxoTxId) . bbInputs . unpack)
                 (checkFoldable $ checkByteString)
-            , contramap (getDups . catMaybes . toList . fmap utxoTxIdx . bbInputs . unpack)
+            , contramap (getDups . toList . fmap (fromMaybe 0 . utxoTxIdx) . bbInputs . unpack)
                 (checkWith $ \x -> checkIfWith null DuplicateTxOutRefIndex)
             ]
         ]

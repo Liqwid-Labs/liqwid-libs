@@ -14,7 +14,8 @@ import Data.Foldable (Foldable (toList))
 import Data.Maybe (catMaybes)
 import Plutarch.Context.Base (
     BaseBuilder (..),
-    Builder (unpack),
+    Builder(..),
+    unpack,
     UTXO (..),
     datumWithHash,
     utxoDatumPair,
@@ -28,6 +29,7 @@ import PlutusLedgerApi.V2 (
     TxOut,
     TxOutRef (TxOutRef),
  )
+import Optics    
 
 {- | Smaller builder that builds context smaller than TxInfo.
 
@@ -35,7 +37,10 @@ import PlutusLedgerApi.V2 (
 -}
 newtype SubBuilder
     = SubBuilder BaseBuilder
-    deriving newtype (Semigroup, Monoid, Builder)
+    deriving newtype (Semigroup, Monoid)
+
+instance Builder SubBuilder where
+    _bb = iso (\(SubBuilder x) -> x) SubBuilder
 
 {- | Builds TxOut from `UTXO`.
 
@@ -66,8 +71,8 @@ buildTxOuts (unpack -> BB{..}) = utxoToTxOut <$> toList bbOutputs
  @since 2.0.0
 -}
 buildTxInInfos :: SubBuilder -> [TxInInfo]
-buildTxInInfos b@(unpack -> BB{..}) =
-    fst $ yieldInInfoDatums bbInputs b
+buildTxInInfos (unpack -> BB{..}) =
+    fst $ yieldInInfoDatums bbInputs
 
 {- | Builds Datum-Hash pair from all inputs, outputs, extra data of given builder.
 

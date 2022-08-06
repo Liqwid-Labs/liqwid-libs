@@ -35,6 +35,7 @@ import Data.Maybe (fromJust)
 import Plutarch.Context.Base (
     BaseBuilder (BB, bbDatums, bbInputs, bbMints, bbOutputs, bbSignatures),
     Builder (..),
+    unpack,
     UTXO,
     utxoToTxOut,
     yieldBaseTxInfo,
@@ -58,7 +59,7 @@ import PlutusLedgerApi.V2 (
     TxOutRef (txOutRefId, txOutRefIdx),
     fromList,
  )
-
+import Optics
 import Plutarch.Context.Check
 
 data ValidatorInputIdentifier
@@ -79,8 +80,7 @@ data SpendingBuilder = SB
 
 -- | @since 1.1.0
 instance Builder SpendingBuilder where
-    pack = flip SB Nothing
-    unpack = sbInner
+    _bb = iso sbInner $ \x -> mempty{sbInner = x}
 
 -- | @since 1.0.0
 instance Semigroup SpendingBuilder where
@@ -179,7 +179,7 @@ buildSpending ::
     Maybe ScriptContext
 buildSpending builder@(unpack -> BB{..}) = do
     vInIden <- sbValidatorInput builder
-    let (ins, inDat) = yieldInInfoDatums bbInputs builder
+    let (ins, inDat) = yieldInInfoDatums bbInputs
         (outs, outDat) = yieldOutDatums bbOutputs
         mintedValue = yieldMint bbMints
         extraDat = yieldExtraDatums bbDatums

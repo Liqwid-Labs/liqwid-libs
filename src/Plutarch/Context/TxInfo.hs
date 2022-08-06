@@ -17,6 +17,7 @@ module Plutarch.Context.TxInfo (
     buildTxInfo,
 ) where
 
+import Optics
 import Data.Foldable (Foldable (toList))
 import Plutarch.Context.Base (
     BaseBuilder (
@@ -28,6 +29,7 @@ import Plutarch.Context.Base (
         bbSignatures
     ),
     Builder (..),
+    unpack,
     yieldBaseTxInfo,
     yieldExtraDatums,
     yieldInInfoDatums,
@@ -54,7 +56,10 @@ import PlutusLedgerApi.V2 (
 -}
 newtype TxInfoBuilder
     = TxInfoBuilder BaseBuilder
-    deriving newtype (Semigroup, Monoid, Builder)
+    deriving newtype (Semigroup, Monoid)
+
+instance Builder TxInfoBuilder where
+    _bb = iso (\(TxInfoBuilder x) -> x) TxInfoBuilder
 
 {- | Builds `TxInfo` from TxInfoBuilder.
 
@@ -62,7 +67,7 @@ newtype TxInfoBuilder
 -}
 buildTxInfo :: TxInfoBuilder -> TxInfo
 buildTxInfo (unpack -> builder@BB{..}) =
-    let (ins, inDat) = yieldInInfoDatums bbInputs builder
+    let (ins, inDat) = yieldInInfoDatums bbInputs
         (outs, outDat) = yieldOutDatums bbOutputs
         mintedValue = yieldMint bbMints
         extraDat = yieldExtraDatums bbDatums

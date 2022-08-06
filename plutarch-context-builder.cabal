@@ -105,6 +105,7 @@ library
     , plutus-ledger-api
     , plutus-tx
     , prettyprinter
+    , optics
 
   hs-source-dirs:  src
 
