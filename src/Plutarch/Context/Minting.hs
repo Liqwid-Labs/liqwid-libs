@@ -61,6 +61,7 @@ import PlutusLedgerApi.V2 (
     fromList,
  )
 import qualified PlutusTx.AssocMap as Map (toList)
+import Plutarch.Context.Check
 
 {- | A context builder for Minting. Corresponds to
  'Plutus.V1.Ledger.Contexts.Minting' specifically.
@@ -140,11 +141,11 @@ buildMinting builder@(unpack -> BB{..}) = do
 
  @since 2.1.0
 -}
-checkBuildMinting :: Checker MintingBuilder -> MintingBuilder -> Either String ScriptContext
+checkBuildMinting :: Checker e MintingBuilder -> MintingBuilder -> Maybe ScriptContext
 checkBuildMinting checker builder =
     case toList (runChecker checker builder) of
         [] -> buildMinting builder
-        err -> Left $ show err
+        _ -> Nothing
 
 -- | Builds minting context; it throwing error when builder fails.
 buildMintingUnsafe ::

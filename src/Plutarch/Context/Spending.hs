@@ -59,6 +59,8 @@ import PlutusLedgerApi.V2 (
     fromList,
  )
 
+import Plutarch.Context.Check
+
 data ValidatorInputIdentifier
     = ValidatorUTXO UTXO
     | ValidatorOutRef TxOutRef
@@ -197,11 +199,11 @@ buildSpending builder@(unpack -> BB{..}) = do
 
  @since 2.1.0
 -}
-checkBuildSpending :: Checker SpendingBuilder -> SpendingBuilder -> Either String ScriptContext
+checkBuildSpending :: Checker e SpendingBuilder -> SpendingBuilder -> Maybe ScriptContext
 checkBuildSpending checker builder =
     case toList (runChecker checker builder) of
         [] -> buildSpending builder
-        err -> Left $ show err
+        _ -> Nothing
 
 -- | Builds spending context; it throwing error when builder fails.
 buildSpendingUnsafe ::

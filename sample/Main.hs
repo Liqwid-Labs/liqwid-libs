@@ -1,46 +1,31 @@
 module Main (main) where
 
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
-import qualified MintingBuilder (specs)
-import Plutarch.Context (
-    Builder,
-    buildMinting,
-    buildSpending,
-    buildTxInfo,
-    buildTxOuts,
-    input,
-    mint,
-    output,
-    pubKey,
-    script,
-    withDatum,
-    withMinting,
-    withRefIndex,
-    withSpendingUTXO,
-    withTxId,
-    withValue,
- )
+import Plutarch.Context
 import PlutusLedgerApi.V2 (
     ScriptContext (scriptContextTxInfo),
     TxInfo (txInfoOutputs),
     singleton,
  )
-import qualified SpendingBuilder (specs)
+-- import qualified SpendingBuilder (specs)
+-- import qualified MintingBuilder (specs)
 import Test.Tasty (defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
+import Prettyprinter (pretty)
 
 main :: IO ()
 main = do
     setLocaleEncoding utf8
+    mapM_ (print . pretty) $ runChecker (checkPhase1 :: Checker () TxInfoBuilder) (testSample :: TxInfoBuilder)
     defaultMain . testGroup "Sample Tests" $
         [ testCase "TxInfo matches with both Minting and Spending Script Purposes" $
             (scriptContextTxInfo <$> a) @?= (scriptContextTxInfo <$> b)
         , testCase "TxInfo from TxInfoBuilder should also match" $
-            (scriptContextTxInfo <$> a) @?= c
+            (scriptContextTxInfo <$> a) @?= Just c
         , testCase "TxOut list from TxInfoBuilder should match one from buildTxOut" $
             (txInfoOutputs . scriptContextTxInfo <$> a) @?= return d
-        , SpendingBuilder.specs
-        , MintingBuilder.specs
+        -- , SpendingBuilder.specs
+        -- , MintingBuilder.specs
         ]
   where
     a = buildMinting (generalSample <> withMinting "aaaa")
@@ -70,3 +55,28 @@ generalSample =
                 <> withValue (singleton "dd" "world" 123)
         , mint $ singleton "aaaa" "hello" 333
         ]
+
+testSample :: (Monoid a, Builder a) => a
+testSample =
+    mconcat
+        [ input $
+            pubKey "aabb"
+                <> withValue (singleton "cc" "hello" 50)
+                <> withRefIndex 5
+        , input $
+            pubKey "eeee"
+                <> withValue (singleton "cc" "hello" (negate 50) <> singleton "aa" "asdf" 1)
+                <> withDatum (123 :: Integer)
+                <> withRefIndex 5
+        , input $
+            pubKey "dddd"
+                <> withValue (singleton "cc" "hello" (negate 50) <> singleton "aa" "asdf" 1)
+                <> withDatum (123 :: Integer)
+                <> withRefIndex 5                
+        , output $
+            script "cccc"
+                <> withValue (singleton "cc" "hello" 100 <> singleton "aaaa" "hello" 333)
+        , mint $ singleton "aaaa" "hello" 333
+        , mint $ singleton "" "" 123
+        , fee $ singleton "aa" "zxcv" 1203
+        ]        
