@@ -1,6 +1,6 @@
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -30,6 +30,7 @@ module Plutarch.Context.Minting (
 
 import Data.Foldable (Foldable (toList))
 import Data.Maybe (fromJust)
+import Optics
 import Plutarch.Context.Base (
     BaseBuilder (
         BB,
@@ -47,6 +48,7 @@ import Plutarch.Context.Base (
     yieldMint,
     yieldOutDatums,
  )
+import Plutarch.Context.Check
 import PlutusLedgerApi.V2 (
     CurrencySymbol,
     ScriptContext (ScriptContext),
@@ -62,8 +64,6 @@ import PlutusLedgerApi.V2 (
     fromList,
  )
 import qualified PlutusTx.AssocMap as Map (toList)
-import Plutarch.Context.Check
-import Optics
 
 {- | A context builder for Minting. Corresponds to
  'Plutus.V1.Ledger.Contexts.Minting' specifically.
@@ -92,7 +92,8 @@ instance Monoid MintingBuilder where
 
 -- | @since 1.1.0
 instance Builder MintingBuilder where
-    _bb = iso mbInner (\x -> mempty{mbInner = x})
+    _bb = lens mbInner (\x b -> x{mbInner = b})
+    pack x = mempty{mbInner = x}
 
 {- | Set CurrencySymbol for building Minting ScriptContext.
 

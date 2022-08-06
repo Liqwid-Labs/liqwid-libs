@@ -17,8 +17,8 @@ module Plutarch.Context.TxInfo (
     buildTxInfo,
 ) where
 
-import Optics
 import Data.Foldable (Foldable (toList))
+import Optics
 import Plutarch.Context.Base (
     BaseBuilder (
         BB,
@@ -59,7 +59,8 @@ newtype TxInfoBuilder
     deriving newtype (Semigroup, Monoid)
 
 instance Builder TxInfoBuilder where
-    _bb = iso (\(TxInfoBuilder x) -> x) TxInfoBuilder
+    _bb = lens (\(TxInfoBuilder x) -> x) (\_ b -> TxInfoBuilder b)
+    pack = TxInfoBuilder
 
 {- | Builds `TxInfo` from TxInfoBuilder.
 

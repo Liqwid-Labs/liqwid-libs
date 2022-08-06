@@ -12,12 +12,13 @@ module Plutarch.Context.SubBuilder (
 
 import Data.Foldable (Foldable (toList))
 import Data.Maybe (catMaybes)
+import Optics
 import Plutarch.Context.Base (
     BaseBuilder (..),
-    Builder(..),
-    unpack,
+    Builder (..),
     UTXO (..),
     datumWithHash,
+    unpack,
     utxoDatumPair,
     utxoToTxOut,
     yieldInInfoDatums,
@@ -29,7 +30,6 @@ import PlutusLedgerApi.V2 (
     TxOut,
     TxOutRef (TxOutRef),
  )
-import Optics    
 
 {- | Smaller builder that builds context smaller than TxInfo.
 
@@ -40,7 +40,8 @@ newtype SubBuilder
     deriving newtype (Semigroup, Monoid)
 
 instance Builder SubBuilder where
-    _bb = iso (\(SubBuilder x) -> x) SubBuilder
+    _bb = lens (\(SubBuilder x) -> x) (\_ b -> SubBuilder b)
+    pack = SubBuilder
 
 {- | Builds TxOut from `UTXO`.
 

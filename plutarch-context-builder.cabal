@@ -77,11 +77,11 @@ common common-tests
     , plutarch-context-builder
     , plutus-core
     , plutus-ledger-api
+    , prettyprinter
     , QuickCheck
     , tasty
     , tasty-hunit
-   , tasty-quickcheck
-    , prettyprinter  
+    , tasty-quickcheck
 
 -- Libraries
 
@@ -90,8 +90,8 @@ library
   exposed-modules: Plutarch.Context
   other-modules:
     Plutarch.Context.Base
-    Plutarch.Context.Minting
     Plutarch.Context.Check
+    Plutarch.Context.Minting
     Plutarch.Context.Spending
     Plutarch.Context.SubBuilder
     Plutarch.Context.TxInfo
@@ -101,11 +101,11 @@ library
     , bytestring
     , contravariant
     , mtl
+    , optics
     , plutus-core
     , plutus-ledger-api
     , plutus-tx
     , prettyprinter
-    , optics
 
   hs-source-dirs:  src
 
@@ -116,7 +116,8 @@ test-suite sample
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:
-    -- MintingBuilder
-    -- SpendingBuilder
+
+  -- MintingBuilder
+  -- SpendingBuilder
 
   hs-source-dirs: sample/

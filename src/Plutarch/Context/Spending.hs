@@ -1,5 +1,5 @@
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -27,16 +27,20 @@ module Plutarch.Context.Spending (
     -- * builder
     buildSpending,
     checkBuildSpending,
-    buildSpendingUnsafe,
+    checkSpending,
 ) where
 
+import Control.Arrow ((&&&))
 import Data.Foldable (Foldable (toList))
-import Data.Maybe (fromJust)
+import Data.Functor.Contravariant (contramap)
+import Data.Functor.Contravariant.Divisible (choose)
+import Data.Maybe (isJust)
+import Optics
 import Plutarch.Context.Base (
     BaseBuilder (BB, bbDatums, bbInputs, bbMints, bbOutputs, bbSignatures),
     Builder (..),
-    unpack,
     UTXO,
+    unpack,
     utxoToTxOut,
     yieldBaseTxInfo,
     yieldExtraDatums,
@@ -44,6 +48,7 @@ import Plutarch.Context.Base (
     yieldMint,
     yieldOutDatums,
  )
+import Plutarch.Context.Check
 import PlutusLedgerApi.V2 (
     ScriptContext (ScriptContext),
     ScriptPurpose (Spending),
@@ -56,11 +61,10 @@ import PlutusLedgerApi.V2 (
         txInfoOutputs,
         txInfoSignatories
     ),
-    TxOutRef (txOutRefId, txOutRefIdx),
+    TxOutRef (..),
     fromList,
  )
-import Optics
-import Plutarch.Context.Check
+import qualified Prettyprinter as P
 
 data ValidatorInputIdentifier
     = ValidatorUTXO UTXO
@@ -80,7 +84,8 @@ data SpendingBuilder = SB
 
 -- | @since 1.1.0
 instance Builder SpendingBuilder where
-    _bb = iso sbInner $ \x -> mempty{sbInner = x}
+    _bb = lens sbInner (\x b -> x{sbInner = b})
+    pack x = mempty{sbInner = x}
 
 -- | @since 1.0.0
 instance Semigroup SpendingBuilder where
@@ -176,9 +181,8 @@ yieldValidatorInput ins = \case
 -}
 buildSpending ::
     SpendingBuilder ->
-    Maybe ScriptContext
-buildSpending builder@(unpack -> BB{..}) = do
-    vInIden <- sbValidatorInput builder
+    ScriptContext
+buildSpending builder@(unpack -> BB{..}) =
     let (ins, inDat) = yieldInInfoDatums bbInputs
         (outs, outDat) = yieldOutDatums bbOutputs
         mintedValue = yieldMint bbMints
@@ -192,21 +196,37 @@ buildSpending builder@(unpack -> BB{..}) = do
                 , txInfoMint = mintedValue
                 , txInfoSignatories = toList $ bbSignatures
                 }
-    vInRef <- yieldValidatorInput ins vInIden
-    Just $ ScriptContext txinfo (Spending vInRef)
+        vInRef = case sbValidatorInput builder >>= yieldValidatorInput ins of
+                     Nothing -> TxOutRef "" 0
+                     Just ref -> ref
+    in ScriptContext txinfo (Spending vInRef)
 
 {- | Check builder with provided checker, then build spending context.
 
  @since 2.1.0
 -}
-checkBuildSpending :: Checker e SpendingBuilder -> SpendingBuilder -> Maybe ScriptContext
+checkBuildSpending :: Checker SpendingError SpendingBuilder -> SpendingBuilder -> ScriptContext
 checkBuildSpending checker builder =
-    case toList (runChecker checker builder) of
+    case toList (runChecker (checker <> checkSpending) builder) of
         [] -> buildSpending builder
-        _ -> Nothing
+        err -> error $ renderErrors err
 
--- | Builds spending context; it throwing error when builder fails.
-buildSpendingUnsafe ::
-    SpendingBuilder ->
-    ScriptContext
-buildSpendingUnsafe = fromJust . buildSpending
+data SpendingError
+    = ValidatorInputDoesNotExists
+    | ValidatorInputNotGiven
+    deriving stock (Show)
+
+instance P.Pretty SpendingError where
+    pretty ValidatorInputDoesNotExists = "Given validator input does not exist in inputs"
+    pretty ValidatorInputNotGiven = "Validator Input is not specified"
+
+checkSpending :: Checker SpendingError SpendingBuilder
+checkSpending =
+    checkAt AtInput $
+        contramap
+            ((fst . yieldInInfoDatums . bbInputs . unpack) &&& sbValidatorInput)
+            ( choose
+                ( \(ins, vin) -> maybe (Left ()) (Right . yieldValidatorInput ins) vin)
+                (checkFail $ OtherError ValidatorInputNotGiven)
+                (checkIf isJust $ OtherError ValidatorInputDoesNotExists)
+            )

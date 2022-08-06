@@ -35,7 +35,6 @@ module Plutarch.Context.Base (
     withOutRef,
 
     -- * Others
-    pack,
     unpack,
     signedWith,
     mint,
@@ -56,13 +55,13 @@ module Plutarch.Context.Base (
     mkOutRefIndices,
 ) where
 
-import Optics
 import Acc (Acc)
-import GHC.Exts (fromList)
 import Control.Arrow (Arrow ((&&&)))
 import Data.Foldable (Foldable (toList))
 import Data.Kind (Type)
 import Data.Maybe (catMaybes, fromMaybe)
+import GHC.Exts (fromList)
+import Optics
 import Plutarch (S)
 import Plutarch.Api.V2 (datumHash)
 import Plutarch.Builtin (PIsData, pdata, pforgetData)
@@ -175,10 +174,8 @@ TODO
  @since 1.1.0
 -}
 class Builder a where
-    _bb :: Iso' a BaseBuilder
-
-pack :: Builder a => BaseBuilder -> a
-pack = review _bb
+    _bb :: Lens' a BaseBuilder
+    pack :: BaseBuilder -> a
 
 unpack :: Builder a => a -> BaseBuilder
 unpack = view _bb
@@ -227,7 +224,8 @@ instance Monoid BaseBuilder where
 
 -- | @since 1.1.0
 instance Builder BaseBuilder where
-    _bb = iso id id
+    _bb = lens id $ const id
+    pack = id
 
 {- | Adds signer to builder.
 
@@ -396,7 +394,7 @@ yieldExtraDatums (toList -> ds) =
 yieldInInfoDatums ::
     Acc UTXO ->
     ([TxInInfo], [(DatumHash, Datum)])
-yieldInInfoDatums (toList -> inputs)  =
+yieldInInfoDatums (toList -> inputs) =
     fmap mkTxInInfo &&& createDatumPairs $ inputs
   where
     mkTxInInfo :: UTXO -> TxInInfo
@@ -428,17 +426,17 @@ mkOutRefIndices ::
     a ->
     a
 mkOutRefIndices = over _bb go
-    where
-      go bb@BB{..} = bb{bbInputs = grantIndex bbInputs}
-      
-      grantIndex :: Acc UTXO -> Acc UTXO
-      grantIndex (toList -> xs) = fromList $ grantIndex' 1 [] xs
+  where
+    go bb@BB{..} = bb{bbInputs = grantIndex bbInputs}
 
-      grantIndex' :: Integer -> [Integer] -> [UTXO] -> [UTXO]
-      grantIndex' top used (x@(UTXO _ _ _ _ _ Nothing):xs)
-          | top `elem` used = grantIndex' (top + 1) used (x:xs)
-          | otherwise = x{utxoTxIdx = Just top} : grantIndex' (top + 1) (top:used) xs
-      grantIndex' top used (x@(UTXO _ _ _ _ _ (Just i)):xs)
-          | i `elem` used = grantIndex' top used (x{utxoTxIdx = Nothing}:xs)
-          | otherwise = x : grantIndex' top (i:used) xs
-      grantIndex' _ _ [] = []
+    grantIndex :: Acc UTXO -> Acc UTXO
+    grantIndex (toList -> xs) = fromList $ grantIndex' 1 [] xs
+
+    grantIndex' :: Integer -> [Integer] -> [UTXO] -> [UTXO]
+    grantIndex' top used (x@(UTXO _ _ _ _ _ Nothing) : xs)
+        | top `elem` used = grantIndex' (top + 1) used (x : xs)
+        | otherwise = x{utxoTxIdx = Just top} : grantIndex' (top + 1) (top : used) xs
+    grantIndex' top used (x@(UTXO _ _ _ _ _ (Just i)) : xs)
+        | i `elem` used = grantIndex' top used (x{utxoTxIdx = Nothing} : xs)
+        | otherwise = x : grantIndex' top (i : used) xs
+    grantIndex' _ _ [] = []

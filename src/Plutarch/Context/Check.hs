@@ -1,45 +1,57 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE DeriveAnyClass #-}
-
 {-# OPTIONS_GHC -Wno-all #-}
 
 module Plutarch.Context.Check (
     Checker (..),
     CheckerErrorType (..),
     CheckerPos (..),
+    CheckerError (..),
+    renderErrors,
+    updatePos,
+    basicError,
+    checkConst,
+    checkAt,
+    checkFoldable,
+    checkIf,
+    checkFail,
+    checkBool,
+    checkWith,
+    checkIfWith,
+    checkByteString,
+    checkValue,
+    checkTxId,
+    checkSignatures,
+    checkZeroSum,
+    checkInputs,
+    checkReferenceInputs,
+    checkMints,
+    checkFee,
+    checkOutputs,
+    checkDatumPairs,
     checkPhase1,
-    -- checkFoldable,
-    -- checkIf,
-    -- checkByteString,
-    -- checkValue,
-    -- checkTxId,
-    -- checkSignatures,
-    -- checkZeroSum,
-    -- checkInputs,
-    -- checkOutputs,
-    -- checkDatumPairs,
-    -- checkPhase1,
 ) where
 
 import Acc (Acc)
-import Data.Maybe (catMaybes, fromMaybe)
 import Data.Foldable (toList)
 import Data.Functor ((<$))
 import Data.Functor.Contravariant (Contravariant (contramap))
-import Data.Functor.Contravariant.Divisible (Divisible (divide, conquer))
+import Data.Functor.Contravariant.Divisible (Decidable (choose, lose), Divisible (conquer, divide))
+import Data.Maybe (catMaybes, fromMaybe)
+import Data.Void (absurd)
 import Plutarch.Context.Base (
     BaseBuilder (..),
     Builder,
     UTXO (..),
     unpack,
  )
-import PlutusLedgerApi.V2
 import PlutusLedgerApi.V1.Bytes
-import qualified Prettyprinter as P
+import PlutusLedgerApi.V2
 import qualified PlutusTx.AssocMap as AssocMap (mapMaybe, toList)
 import PlutusTx.Builtins (lengthOfByteString)
+import qualified Prettyprinter as P
 
 {- | Possible errors from phase-1 checker
 
@@ -47,14 +59,14 @@ import PlutusTx.Builtins (lengthOfByteString)
 -}
 data CheckerErrorType e
     = IncorrectByteString LedgerBytes
-    | NoSignature 
+    | NoSignature
     | OrphanDatum
     | MintingAda Value
     | NonAdaFee Value
     | DuplicateTxOutRefIndex [Integer]
     | NonPositiveValue Value
     | NoZeroSum Value
-    | ErrorOther e
+    | OtherError e
     deriving stock (Show, Eq)
 
 data CheckerPos
@@ -82,18 +94,20 @@ instance P.Pretty e => P.Pretty (CheckerErrorType e) where
     pretty (NonAdaFee val) = "Transaction takes tokens other than Ada as fee:" P.<+> P.pretty val
     pretty (DuplicateTxOutRefIndex idx) = "Overlapping input indices: " P.<+> P.pretty idx
     pretty (NonPositiveValue val) = P.pretty val P.<+> "is an invalid value (contains non positive)."
-    pretty (NoZeroSum val) = "Transaction doesn't not have equal inflow and outflow." <> P.line <>
-                             "Diff:" P.<+> P.pretty val
-    pretty (ErrorOther e) = P.pretty e
+    pretty (NoZeroSum val) =
+        "Transaction doesn't not have equal inflow and outflow." <> P.line
+            <> "Diff:" P.<+> P.pretty val
+    pretty (OtherError e) = P.pretty e
 
 instance P.Pretty CheckerPos where
     pretty = P.pretty . drop 2 . show
 
 instance P.Pretty e => P.Pretty (CheckerError e) where
     pretty (CheckerError (err, at)) =
-        "Error at" P.<+> P.pretty at <> ":" <>
-        P.line <> P.indent 4 (P.pretty err)
-                                      
+        "Error at" P.<+> P.pretty at <> ":"
+            <> P.line
+            <> P.indent 4 (P.pretty err)
+
 {- | Checker that accumulates error.
 
  @since 2.1.0
@@ -110,12 +124,23 @@ instance Divisible (Checker e) where
     divide f x y = Checker $ \(f -> (x', y')) -> (runChecker x x') <> (runChecker y y')
 
 -- | @since 2.1.0
+instance Decidable (Checker e) where
+    lose f = Checker $ \a -> absurd $ f a
+    choose f x y = Checker $ \(f -> c) ->
+        case c of
+            Left x' -> runChecker x x'
+            Right y' -> runChecker y y'
+
+-- | @since 2.1.0
 instance Semigroup (Checker e a) where
     f <> g = Checker $ \y -> runChecker f y <> runChecker g y
 
 -- | @since 2.1.0
 instance Monoid (Checker e a) where
     mempty = Checker $ const mempty
+
+renderErrors :: (Foldable t, P.Pretty e) => t (CheckerError e) -> String
+renderErrors err = show . P.indent 4 $ P.line <> P.vsep (P.pretty <$> toList err)
 
 updatePos :: CheckerPos -> CheckerError a -> CheckerError a
 updatePos at (CheckerError (x, _)) = CheckerError (x, at)
@@ -126,6 +151,9 @@ basicError err = pure $ CheckerError (err, AtTxInfo)
 checkConst :: Bool -> CheckerErrorType e -> Checker e a
 checkConst False err = Checker . const $ basicError err
 checkConst True _ = mempty
+
+checkFail :: CheckerErrorType e -> Checker e a
+checkFail = Checker . const . basicError
 
 checkAt :: CheckerPos -> Checker e a -> Checker e a
 checkAt at c = Checker $
@@ -139,8 +167,8 @@ checkFoldable c = Checker $ \y -> foldMap (runChecker c) y
 checkIf :: (a -> Bool) -> CheckerErrorType e -> Checker e a
 checkIf f err = Checker $ \y ->
     if f y
-    then mempty
-    else basicError err
+        then mempty
+        else basicError err
 
 checkBool :: CheckerErrorType e -> Checker e Bool
 checkBool err = checkIf id err
@@ -151,8 +179,8 @@ checkWith x = Checker $ \y -> runChecker (x y) y
 checkIfWith :: (a -> Bool) -> (a -> CheckerErrorType e) -> Checker e a
 checkIfWith f err = Checker $ \y ->
     if f y
-    then mempty
-    else basicError $ err y
+        then mempty
+        else basicError $ err y
 
 -- | @since 2.1.0
 checkByteString :: Checker e BuiltinByteString
@@ -169,19 +197,21 @@ checkValue = checkWith $ \x -> contramap isPos $ checkBool (NonPositiveValue x)
  @since 2.1.0
 -}
 checkTxId :: Builder a => Checker e a
-checkTxId = checkAt AtTxId $ 
-    contramap (getTxId . bbTxId . unpack) checkByteString
+checkTxId =
+    checkAt AtTxId $
+        contramap (getTxId . bbTxId . unpack) checkByteString
 
 {- | Check if atleast one signature exists and all follows the format.
 
  @since 2.1.0
 -}
 checkSignatures :: Builder a => Checker e a
-checkSignatures = checkAt AtSignatories $
-    mconcat $
-        [ contramap (fmap getPubKeyHash . bbSignatures . unpack) (checkFoldable $ checkByteString)
-        , contramap (length . bbSignatures . unpack) (checkIf (>= 1) $ NoSignature)
-        ]
+checkSignatures =
+    checkAt AtSignatories $
+        mconcat $
+            [ contramap (fmap getPubKeyHash . bbSignatures . unpack) (checkFoldable $ checkByteString)
+            , contramap (length . bbSignatures . unpack) (checkIf (>= 1) $ NoSignature)
+            ]
 
 {- | Check if input, output, mint have zero sum.
 
@@ -204,71 +234,82 @@ checkZeroSum = Checker $
  @since 2.1.0
 -}
 checkInputs :: Builder a => Checker e a
-checkInputs = 
+checkInputs =
     mconcat $
-        [ checkAt AtInput $ contramap (fmap utxoValue . bbInputs . unpack)
-            (checkFoldable $ checkValue)
+        [ checkAt AtInput $
+            contramap
+                (fmap utxoValue . bbInputs . unpack)
+                (checkFoldable $ checkValue)
         , checkAt AtInputOutRef $
             mconcat $
-            [ contramap (fmap (getTxId . fromMaybe "" . utxoTxId) . bbInputs . unpack)
-                (checkFoldable $ checkByteString)
-            , contramap (getDups . toList . fmap (fromMaybe 0 . utxoTxIdx) . bbInputs . unpack)
-                (checkWith $ \x -> checkIfWith null DuplicateTxOutRefIndex)
-            ]
+                [ contramap
+                    (fmap (getTxId . fromMaybe "" . utxoTxId) . bbInputs . unpack)
+                    (checkFoldable $ checkByteString)
+                , contramap
+                    (getDups . toList . fmap (fromMaybe 0 . utxoTxIdx) . bbInputs . unpack)
+                    (checkWith $ \x -> checkIfWith null DuplicateTxOutRefIndex)
+                ]
         ]
-    where
-      getDups :: Eq a => [a] -> [a]
-      getDups (x: xs)
-          | x `elem` xs = if x `elem` dups then dups else x:dups
-          | otherwise = dups
-          where
-            dups = getDups xs
-      getDups [] = []
+  where
+    getDups :: Eq a => [a] -> [a]
+    getDups (x : xs)
+        | x `elem` xs = if x `elem` dups then dups else x : dups
+        | otherwise = dups
+      where
+        dups = getDups xs
+    getDups [] = []
 
 checkReferenceInputs :: Builder a => Checker e a
-checkReferenceInputs = checkAt AtReferenceInput $
-    mconcat $
-        [ contramap (fmap (getTxId . maybe "" id . utxoTxId) . bbReferenceInputs . unpack)
-            (checkFoldable $ checkByteString)
-        , contramap (fmap utxoValue . bbReferenceInputs . unpack)
-            (checkFoldable $ checkValue)
-        ]
+checkReferenceInputs =
+    checkAt AtReferenceInput $
+        mconcat $
+            [ contramap
+                (fmap (getTxId . maybe "" id . utxoTxId) . bbReferenceInputs . unpack)
+                (checkFoldable $ checkByteString)
+            , contramap
+                (fmap utxoValue . bbReferenceInputs . unpack)
+                (checkFoldable $ checkValue)
+            ]
 
 checkMints :: Builder a => Checker e a
-checkMints = checkAt AtMint $
-    contramap (mconcat . toList . bbMints . unpack) nullAda
+checkMints =
+    checkAt AtMint $
+        contramap (mconcat . toList . bbMints . unpack) nullAda
   where
     nullAda :: Checker e Value
     nullAda = checkWith $ \x ->
         contramap
-          (all (\(cs, tk, _) -> cs /= adaSymbol && tk /= adaToken) . flattenValue)
-          (checkBool $ MintingAda x)
-        
+            (all (\(cs, tk, _) -> cs /= adaSymbol && tk /= adaToken) . flattenValue)
+            (checkBool $ MintingAda x)
+
 checkFee :: Builder a => Checker e a
-checkFee = checkAt AtFee $
-    contramap (bbFee . unpack) onlyAda
+checkFee =
+    checkAt AtFee $
+        contramap (bbFee . unpack) onlyAda
   where
     onlyAda :: Checker e Value
     onlyAda = checkWith $ \x ->
         contramap
-          (all (\(cs, tk, _) -> cs == adaSymbol && tk == adaToken) . flattenValue)
-          (checkBool $ NonAdaFee x)
-        
+            (all (\(cs, tk, _) -> cs == adaSymbol && tk == adaToken) . flattenValue)
+            (checkBool $ NonAdaFee x)
+
 {- | Check if all output UTXOs follow format.
 
  @since 2.1.0
 -}
 checkOutputs :: Builder a => Checker e a
-checkOutputs = checkAt AtOutput $
-    contramap (fmap utxoValue . bbOutputs . unpack) (checkFoldable checkValue)
+checkOutputs =
+    checkAt AtOutput $
+        contramap (fmap utxoValue . bbOutputs . unpack) (checkFoldable checkValue)
 
 {- | Check if builder does not provide excess datum.
 
  @since 2.1.0
 -}
 checkDatumPairs :: Builder a => Checker e a
-checkDatumPairs = checkAt AtData $
-    contramap (length . bbDatums . unpack) (checkIf (== 0) OrphanDatum)
+checkDatumPairs =
+    checkAt AtData $
+        contramap (length . bbDatums . unpack) (checkIf (== 0) OrphanDatum)
 
 {- | All checks combined for Phase-1 check.
 
