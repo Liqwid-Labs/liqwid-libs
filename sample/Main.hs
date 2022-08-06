@@ -16,13 +16,15 @@ import PlutusLedgerApi.V2 (
 import Prettyprinter (pretty)
 import Test.Tasty (defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
+import Data.Functor.Contravariant.Divisible (conquer)
 
 main :: IO ()
 main = do
     setLocaleEncoding utf8
-    mapM_ (print . pretty) $ runChecker checkSpending (testSample :: SpendingBuilder)
-    mapM_ (print . pretty) $ runChecker (checkPhase1 :: Checker () SpendingBuilder) (testSample :: SpendingBuilder)
-    print $ checkBuildSpending checkPhase1 testSample
+    -- mapM_ (print . pretty) $ runChecker checkSpending (testSample :: SpendingBuilder)
+    -- mapM_ (print . pretty) $ runChecker (checkPhase1 :: Checker () SpendingBuilder) (testSample :: SpendingBuilder)
+    -- print $ checkBuildSpending checkPhase1 testSample
+    print $ checkBuildMinting conquer (pack . unpack $ testSample)
   --   defaultMain . testGroup "Sample Tests" $
   --       [ testCase "TxInfo matches with both Minting and Spending Script Purposes" $
   --           (scriptContextTxInfo <$> a) @?= (scriptContextTxInfo <$> b)

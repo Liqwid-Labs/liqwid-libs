@@ -82,6 +82,7 @@ common common-tests
     , tasty
     , tasty-hunit
     , tasty-quickcheck
+    , contravariant  
 
 -- Libraries
 

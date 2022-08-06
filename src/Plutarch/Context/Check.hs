@@ -9,6 +9,7 @@ module Plutarch.Context.Check (
     CheckerErrorType (..),
     CheckerPos (..),
     CheckerError (..),
+    flattenValue,
     renderErrors,
     updatePos,
     basicError,

@@ -43,7 +43,6 @@ module Plutarch.Context (
     M.withMinting,
     M.buildMinting,
     M.checkBuildMinting,
-    M.buildMintingUnsafe,
     T.TxInfoBuilder (..),
     T.spends,
     T.mints,
@@ -78,6 +77,7 @@ module Plutarch.Context (
     P1.checkDatumPairs,
     P1.checkPhase1,
     P1.renderErrors,
+    P1.flattenValue,
 ) where
 
 import qualified Plutarch.Context.Base as B

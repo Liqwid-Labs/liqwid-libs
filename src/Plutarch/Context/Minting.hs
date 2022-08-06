@@ -25,11 +25,11 @@ module Plutarch.Context.Minting (
     -- * builder
     buildMinting,
     checkBuildMinting,
-    buildMintingUnsafe,
+    checkMinting,
 ) where
 
+import qualified Prettyprinter as P
 import Data.Foldable (Foldable (toList))
-import Data.Maybe (fromJust)
 import Optics
 import Plutarch.Context.Base (
     BaseBuilder (
@@ -48,6 +48,9 @@ import Plutarch.Context.Base (
     yieldMint,
     yieldOutDatums,
  )
+import Data.Functor.Contravariant (contramap)
+import Data.Functor.Contravariant.Divisible (choose)
+import Control.Arrow ((&&&))
 import Plutarch.Context.Check
 import PlutusLedgerApi.V2 (
     CurrencySymbol,
@@ -60,10 +63,9 @@ import PlutusLedgerApi.V2 (
         txInfoOutputs,
         txInfoSignatories
     ),
-    Value (getValue),
+    Value,
     fromList,
  )
-import qualified PlutusTx.AssocMap as Map (toList)
 
 {- | A context builder for Minting. Corresponds to
  'Plutus.V1.Ledger.Contexts.Minting' specifically.
@@ -113,9 +115,8 @@ withMinting cs = MB mempty $ Just cs
 -}
 buildMinting ::
     MintingBuilder ->
-    Maybe ScriptContext
-buildMinting builder@(unpack -> BB{..}) = do
-    mintingCS <- mbMintingCS builder
+    ScriptContext
+buildMinting builder@(unpack -> BB{..}) =
     let (ins, inDat) = yieldInInfoDatums bbInputs
         (outs, outDat) = yieldOutDatums bbOutputs
         mintedValue = yieldMint bbMints
@@ -130,27 +131,44 @@ buildMinting builder@(unpack -> BB{..}) = do
                 , txInfoMint = mintedValue
                 , txInfoSignatories = toList $ bbSignatures
                 }
-        mintingInfo =
-            filter
-                (\(cs, _) -> cs == mintingCS)
-                $ Map.toList $ getValue mintedValue
-
-    case mintingInfo of
-        [] -> Nothing
-        _ -> Just $ ScriptContext txinfo (Minting mintingCS)
+        
+        mintcs = case mbMintingCS builder of
+            Just cs ->
+                if hasCS mintedValue cs
+                then Minting cs
+                else Minting ""
+            Nothing -> Minting ""
+            
+    in ScriptContext txinfo mintcs
 
 {- | Check builder with provided checker, then build minting context.
 
  @since 2.1.0
 -}
-checkBuildMinting :: Checker e MintingBuilder -> MintingBuilder -> Maybe ScriptContext
+checkBuildMinting :: Checker MintingError MintingBuilder -> MintingBuilder -> ScriptContext
 checkBuildMinting checker builder =
-    case toList (runChecker checker builder) of
+    case toList (runChecker (checker <> checkMinting) builder) of
         [] -> buildMinting builder
-        _ -> Nothing
+        err -> error $ renderErrors err
 
--- | Builds minting context; it throwing error when builder fails.
-buildMintingUnsafe ::
-    MintingBuilder ->
-    ScriptContext
-buildMintingUnsafe = fromJust . buildMinting
+data MintingError
+    = MintingCurrencySymbolNotGiven
+    | MintingCurrencySymbolNotFound
+    deriving stock (Show)
+
+instance P.Pretty MintingError where
+    pretty MintingCurrencySymbolNotGiven = "Minting Currency Symbol is not given"
+    pretty MintingCurrencySymbolNotFound = "Specified Currency Symbol is not found on mints"
+
+checkMinting :: Checker MintingError MintingBuilder
+checkMinting =
+    contramap
+      ((mconcat . toList . bbMints . unpack) &&& mbMintingCS)
+      (choose
+         (\(mints, cs) -> maybe (Left ()) (Right . ( hasCS mints)) cs)
+         (checkFail $ OtherError MintingCurrencySymbolNotGiven)
+         (checkBool $ OtherError MintingCurrencySymbolNotFound))
+
+
+hasCS :: Value -> CurrencySymbol -> Bool      
+hasCS val cs = not . null . filter (\(x, _, _) -> x == cs) . flattenValue $ val
