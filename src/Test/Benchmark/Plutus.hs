@@ -17,7 +17,9 @@ module Test.Benchmark.Plutus (
   statsByAxis,
 ) where
 
+import Codec.Serialise (serialise)
 import Control.Parallel.Strategies (NFData)
+import Data.ByteString.Lazy qualified as LBS
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Vector.Unboxed (Vector)
@@ -38,7 +40,7 @@ import PlutusLedgerApi.V1 (
   ExMemory (..),
   Script,
  )
-import PlutusLedgerApi.V1.Scripts qualified as Scripts
+import PlutusLedgerApi.V1.Scripts (Script (Script))
 import Test.Benchmark.Common (ImplData)
 import Test.Benchmark.Cost (
   AxisMap (AxisMap),
@@ -51,6 +53,7 @@ import Test.Benchmark.Cost (
  )
 import Test.Benchmark.DScript (DScript (DScript), debugScript, script)
 import Test.Benchmark.Sized (SSample)
+import UntypedPlutusCore qualified as UPLC
 import UntypedPlutusCore.Evaluation.Machine.Cek (
   CekUserError (CekEvaluationFailure, CekOutOfExError),
  )
@@ -61,7 +64,9 @@ data ImplMetaData = ImplMetaData
   { name :: Text
   -- ^ Name of the implementation. Make sure it's unique.
   , scriptSize :: Integer
-  -- ^ Size of the script without inputs.
+  -- ^ Size of the script without inputs (number of AST nodes)
+  , scriptSizeBytes :: Int
+  -- ^ Size of the script without inputs (serialized in bytes)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData)
@@ -74,9 +79,11 @@ mkScriptImplMetaData ::
   -- | The implementation without any inputs
   Script ->
   ImplMetaData
-mkScriptImplMetaData name script = ImplMetaData {name, scriptSize}
+mkScriptImplMetaData name script = ImplMetaData {name, scriptSize, scriptSizeBytes}
   where
-    scriptSize = Scripts.scriptSize script
+    Script uplcProg = script
+    scriptSize = UPLC.programSize uplcProg
+    scriptSizeBytes = fromIntegral . LBS.length . serialise $ script
 
 data PlutusCostAxis = CPU | Mem
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic)
