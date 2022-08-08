@@ -32,6 +32,7 @@ import Data.Vector.Unboxed.Base (Vector (V_2))
 import GHC.Generics (Generic)
 import Optics.TH (makeFieldLabelsNoPrefix)
 import Plutarch.Evaluate (evalScript)
+import Plutarch.Extra.DScript (DScript (DScript), debugScript, script)
 import PlutusCore.Evaluation.Machine.ExBudget (
   ExRestrictingBudget (ExRestrictingBudget),
  )
@@ -56,7 +57,6 @@ import Test.Benchmark.Cost (
   samplesToPerAxisStats,
   vecSimpleStats,
  )
-import Test.Benchmark.DScript (DScript (DScript), debugScript, script)
 import Test.Benchmark.Sized (SSample)
 import qualified UntypedPlutusCore as UPLC
 import UntypedPlutusCore.Evaluation.Machine.Cek (
