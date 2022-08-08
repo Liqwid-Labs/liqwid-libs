@@ -54,10 +54,13 @@ import PlutusLedgerApi.V2 (
     LedgerBytes (LedgerBytes),
     TokenName,
     Value (Value, getValue),
+    Credential (PubKeyCredential, ScriptCredential),
     adaSymbol,
     adaToken,
     getPubKeyHash,
     getTxId,
+    ValidatorHash (ValidatorHash),
+    PubKeyHash (PubKeyHash),
  )
 import qualified PlutusTx.AssocMap as AssocMap (mapMaybe, toList)
 import PlutusTx.Builtins (lengthOfByteString)
@@ -268,6 +271,12 @@ checkPositiveValue = checkWith $ \x -> contramap isPos $ checkBool (NonPositiveV
   where
     isPos = all (\(_, _, x) -> x > 0) . flattenValue
 
+checkCredential :: Checker e Credential
+checkCredential = contramap classif checkByteString
+    where
+      classif (PubKeyCredential (PubKeyHash x)) = x
+      classif (ScriptCredential (ValidatorHash x)) = x
+
 {- | Check if TxId follows the format
 
  @since 2.1.0
@@ -313,9 +322,14 @@ checkInputs :: Builder a => Checker e a
 checkInputs =
     mconcat $
         [ checkAt AtInput $
-            contramap
-                (fmap utxoValue . bbInputs . unpack)
-                (checkFoldable $ checkPositiveValue)
+            mconcat $ [
+                contramap
+                    (fmap utxoValue . bbInputs . unpack)
+                    (checkFoldable $ checkPositiveValue)
+                , contramap
+                  (fmap (fromMaybe (PubKeyCredential "") . utxoCredential) . bbInputs . unpack)
+                  (checkFoldable $ checkCredential)
+                ]
         , checkAt AtInputOutRef $
             mconcat $
                 [ contramap -- TODO: we should have `checkMaybe` here.
@@ -344,8 +358,8 @@ checkReferenceInputs =
     checkAt AtReferenceInput $
         mconcat $
             [ contramap
-                (fmap (getTxId . maybe "" id . utxoTxId) . bbReferenceInputs . unpack)
-                (checkFoldable $ checkByteString)
+                (fmap (fromMaybe (PubKeyCredential "") . utxoCredential) . bbReferenceInputs . unpack)
+                (checkFoldable $ checkCredential)
             , contramap
                 (fmap utxoValue . bbReferenceInputs . unpack)
                 (checkFoldable $ checkPositiveValue)
@@ -388,7 +402,12 @@ checkFee =
 checkOutputs :: Builder a => Checker e a
 checkOutputs =
     checkAt AtOutput $
-        contramap (fmap utxoValue . bbOutputs . unpack) (checkFoldable checkPositiveValue)
+      mconcat $
+        [ contramap (fmap utxoValue . bbOutputs . unpack) (checkFoldable checkPositiveValue)
+        , contramap
+            (fmap (fromMaybe (PubKeyCredential "") . utxoCredential) . bbOutputs . unpack)
+            (checkFoldable $ checkCredential)          
+        ]
 
 {- | Check if builder does not provide excess datum.
 
@@ -403,9 +422,8 @@ checkDatumPairs =
 
  @since 2.1.0
 -}
-checkPhase1 :: Builder a => Checker e a
+checkPhase1 :: Builder a => [Checker e a]
 checkPhase1 =
-    mconcat $
         [ checkInputs
         , checkReferenceInputs
         , checkOutputs
