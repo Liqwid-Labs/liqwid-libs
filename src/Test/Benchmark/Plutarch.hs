@@ -1,3 +1,6 @@
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeFamilies #-}
+
 module Test.Benchmark.Plutarch (
   mkTermImplMetaData,
   sampleTerm,
@@ -8,10 +11,11 @@ module Test.Benchmark.Plutarch (
   pbenchSizesRandom,
 ) where
 
-import Control.Monad.Primitive (MonadPrim)
+import Control.Monad.Primitive (MonadPrim, PrimMonad, PrimState)
 import Data.Hashable (Hashable)
 import Data.Text (Text)
 import Plutarch.Extra.Compile (mustCompile)
+import Plutarch.Prelude (ClosedTerm, S, Type)
 import System.Random (RandomGen)
 import Test.Benchmark.Common (ImplData (..))
 import Test.Benchmark.DScript (mustCompileD)
@@ -51,7 +55,8 @@ sampleTerm' = sampleDScript . toDScript
 pbenchAllSizesUniform ::
   forall (a :: Type) (f :: S -> Type) (b :: S -> Type) (m :: Type -> Type) (s :: Type).
   ( Hashable a
-  , MonadPrim s m
+  , PrimMonad m
+  , (s ~ PrimState m)
   ) =>
   -- | Size-dependent input domain generator.
   SUniversalGen a ->

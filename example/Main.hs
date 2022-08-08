@@ -1,7 +1,32 @@
+{-# LANGUAGE OverloadedRecordDot #-}
+{-# LANGUAGE TypeApplications #-}
+
 module Main (main) where
 
 import Control.Monad (replicateM)
 import Data.Text (pack)
+import Plutarch.Prelude (
+  ClosedTerm,
+  PBuiltinList,
+  PInteger,
+  PMaybe,
+  PString,
+  PUnit (PUnit),
+  S,
+  Term,
+  pcon,
+  pconstant,
+  pfind,
+  pfix,
+  phoistAcyclic,
+  pif,
+  plam,
+  plet,
+  (#),
+  (#$),
+  (#==),
+  (:-->),
+ )
 import System.Random.Stateful (runStateGen, uniformRM)
 import Test.Benchmark.Common (ImplData (ImplData), multiImplData)
 import Test.Benchmark.Cost (

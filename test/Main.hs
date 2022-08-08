@@ -5,7 +5,7 @@ module Main (main) where
 import Control.Monad (replicateM)
 import Control.Monad.Loops (iterateUntilM)
 import Data.IntSet (IntSet)
-import Data.IntSet qualified as IntSet
+import qualified Data.IntSet as IntSet
 import Data.List (find, sort)
 import Data.Maybe (isJust)
 import GHC.IO.Encoding (setLocaleEncoding, utf8)

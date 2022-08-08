@@ -1,5 +1,9 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Test.Benchmark.Common (
@@ -13,6 +17,7 @@ module Test.Benchmark.Common (
 import Data.Csv (ToField (toField))
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
+import GHC.Generics (Generic)
 import Optics.TH (makeFieldLabelsNoPrefix)
 
 class ToTitle a where

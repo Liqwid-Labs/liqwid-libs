@@ -1,3 +1,5 @@
+{-# LANGUAGE RankNTypes #-}
+
 {- | Bridge between QuickCheck generators and System.Random
 
  Inspired by hedgehog-quickcheck.
@@ -7,6 +9,7 @@ module Test.Benchmark.QuickCheck (
   randToGen,
 ) where
 
+import Plutarch.Prelude (Type)
 import System.Random (RandomGen, mkStdGen)
 import System.Random.Stateful (Uniform (uniformM), runStateGen)
 import Test.QuickCheck (arbitrary)

@@ -1,8 +1,13 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE NoFieldSelectors #-}
 
@@ -23,10 +28,10 @@ module Test.Benchmark.Cost (
   writeComparisonPerAxisCSVs,
 ) where
 
-import Control.Foldl qualified as Foldl
+import qualified Control.Foldl as Foldl
 import Control.Monad (forM_, void)
 import Control.Parallel.Strategies (NFData)
-import Data.ByteString.Lazy qualified as ByteString
+import qualified Data.ByteString.Lazy as ByteString
 import Data.Csv (
   DefaultOrdered (headerOrder),
   EncodeOptions (encUseCrLf),
@@ -42,7 +47,7 @@ import Data.Csv (
  )
 import Data.Foldable (foldl')
 import Data.Function (on)
-import Data.HashMap.Strict qualified as HashMap
+import qualified Data.HashMap.Strict as HashMap
 import Data.List (sortBy)
 import Data.List.NonEmpty (NonEmpty ((:|)), groupAllWith)
 import Data.Maybe (fromJust)
@@ -50,10 +55,12 @@ import Data.String (IsString (fromString))
 import Data.Text (Text, pack, unpack)
 import Data.Text.Encoding (encodeUtf8)
 import Data.Vector.Unboxed (Vector)
-import Data.Vector.Unboxed qualified as Vector
+import qualified Data.Vector.Unboxed as Vector
+import GHC.Generics (Generic)
 import Optics (sequenceOf, traversed, (%%))
 import Optics.TH (makeFieldLabelsNoPrefix)
 import Path (Dir, Path, Rel, parseRelFile, toFilePath, (</>))
+import Plutarch.Prelude (Type)
 import Test.Benchmark.Common (
   ImplData (ImplData, name, val),
   MultiImplComparisonData (

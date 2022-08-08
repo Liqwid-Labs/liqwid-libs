@@ -1,4 +1,8 @@
-{-# LANGUAGE NoFieldSelectors #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedRecordDot #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Test.Benchmark.DScript (
   DScript (..),
@@ -12,8 +16,9 @@ module Test.Benchmark.DScript (
 
 import Control.DeepSeq (NFData)
 import Data.Text (Text)
-import Data.Text qualified as T
-import Data.Text qualified as Text
+import qualified Data.Text as T
+import qualified Data.Text as Text
+import GHC.Generics (Generic)
 import Plutarch (
   Config (Config, tracingMode),
   TracingMode (DoTracing, NoTracing),
@@ -21,6 +26,7 @@ import Plutarch (
  )
 import Plutarch.Evaluate (EvalError, evalScript)
 import Plutarch.Extra.Compile (mustCompile)
+import Plutarch.Prelude (S, Term, Type)
 import PlutusLedgerApi.V1 (ExBudget, Script)
 import UntypedPlutusCore.Evaluation.Machine.Cek (
   CekUserError (CekEvaluationFailure, CekOutOfExError),
@@ -186,5 +192,5 @@ mustEvalD :: DScript -> DScript
 mustEvalD ds =
   DScript
     { script = mustFinalEvalDScript ds
-    , debugScript = mustEvalScript ds.debugScript
+    , debugScript = mustEvalScript (ds.debugScript)
     }

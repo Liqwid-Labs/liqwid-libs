@@ -1,5 +1,9 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE NoFieldSelectors #-}
 
@@ -62,12 +66,14 @@ import Data.Csv (
   toNamedRecord,
   (.=),
  )
-import Data.HashTable.ST.Basic qualified as HashTable
+import qualified Data.HashTable.ST.Basic as HashTable
 import Data.Hashable (Hashable)
 import Data.Maybe (fromMaybe, isNothing)
 import Data.Primitive.MutVar (newMutVar, readMutVar, writeMutVar)
+import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Optics.TH (makeFieldLabelsNoPrefix)
+import Plutarch.Prelude (Type)
 import System.Random (RandomGen, StdGen, mkStdGen)
 import System.Random.Stateful (
   StateGenM (StateGenM),

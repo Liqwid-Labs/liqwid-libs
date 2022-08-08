@@ -1,4 +1,8 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE NoFieldSelectors #-}
 
@@ -19,12 +23,13 @@ module Test.Benchmark.Plutus (
 
 import Codec.Serialise (serialise)
 import Control.Parallel.Strategies (NFData)
-import Data.ByteString.Lazy qualified as LBS
+import qualified Data.ByteString.Lazy as LBS
 import Data.Text (Text)
-import Data.Text qualified as Text
+import qualified Data.Text as Text
 import Data.Vector.Unboxed (Vector)
-import Data.Vector.Unboxed qualified as Vector
+import qualified Data.Vector.Unboxed as Vector
 import Data.Vector.Unboxed.Base (Vector (V_2))
+import GHC.Generics (Generic)
 import Optics.TH (makeFieldLabelsNoPrefix)
 import Plutarch.Evaluate (evalScript)
 import PlutusCore.Evaluation.Machine.ExBudget (
@@ -53,7 +58,7 @@ import Test.Benchmark.Cost (
  )
 import Test.Benchmark.DScript (DScript (DScript), debugScript, script)
 import Test.Benchmark.Sized (SSample)
-import UntypedPlutusCore qualified as UPLC
+import qualified UntypedPlutusCore as UPLC
 import UntypedPlutusCore.Evaluation.Machine.Cek (
   CekUserError (CekEvaluationFailure, CekOutOfExError),
  )

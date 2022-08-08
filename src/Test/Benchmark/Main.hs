@@ -1,7 +1,9 @@
+{-# LANGUAGE OverloadedRecordDot #-}
+
 module Test.Benchmark.Main (benchMain) where
 
 import Options.Applicative ((<**>))
-import Options.Applicative qualified as Opt
+import qualified Options.Applicative as Opt
 import Path (Dir, Path, Rel, parseRelDir)
 import System.Directory (createDirectoryIfMissing)
 

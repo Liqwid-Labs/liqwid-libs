@@ -1,3 +1,7 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE OverloadedRecordDot #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Use camelCase" #-}
@@ -29,13 +33,14 @@ module Test.Benchmark.Precompile (
 
 import Control.Lens ((^?))
 import Data.Text (Text)
-import Data.Text qualified as Text
+import qualified Data.Text as Text
 import GHC.Stack (HasCallStack)
 import Plutarch.Evaluate (EvalError)
 import Plutarch.Lift (
   PConstantDecl (pconstantFromRepr),
   PUnsafeLiftDecl (PLifted),
  )
+import Plutarch.Prelude (PLift, S, Term, Type, (:-->))
 import PlutusCore.Builtin (KnownTypeError, readKnownConstant)
 import PlutusCore.Evaluation.Machine.Exception (_UnliftingErrorE)
 import PlutusLedgerApi.V1.Scripts (Script (Script, unScript))
@@ -48,7 +53,7 @@ import Test.Benchmark.DScript (
   script,
  )
 import UntypedPlutusCore (Program (Program, _progAnn, _progTerm, _progVer))
-import UntypedPlutusCore.Core.Type qualified as UplcType
+import qualified UntypedPlutusCore.Core.Type as UplcType
 
 -- | Apply a function to an argument on the compiled 'Script' level.
 applyScript :: Script -> Script -> Script
