@@ -149,8 +149,8 @@ buildMinting' builder@(unpack -> BB{..}) =
 
  @since 2.1.0
 -}
-buildMinting :: Checker MintingError MintingBuilder -> MintingBuilder -> ScriptContext
-buildMinting c = buildMinting' . handleErrors (c <> checkMinting)
+buildMinting :: [Checker MintingError MintingBuilder] -> MintingBuilder -> ScriptContext
+buildMinting c = buildMinting' . handleErrors (mconcat c <> checkMinting)
 
 {- | Same as `buildMinting` but instead of throwing error it returns `Either`.
 

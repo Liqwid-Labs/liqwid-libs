@@ -2,11 +2,12 @@ module MintingBuilder (specs) where
 
 import Plutarch.Context (
     MintingBuilder,
-    buildMinting,
     mint,
+    tryBuildMinting,
     withMinting,
  )
 import PlutusLedgerApi.V2 (singleton)
+import qualified Prettyprinter as P
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
 
@@ -15,30 +16,30 @@ specs =
     testGroup
         "Minting Builder Unit Tests"
         [ testCase "MintingBuilder succeeds with single input" $
-            case buildMinting $ singleMint <> withMinting "deadbeef" of
-                Left err -> assertFailure ("buildingMinting failed with error: " <> err)
+            case tryBuildMinting mempty $ singleMint <> withMinting "deadbeef" of
+                Left err -> assertFailure ("buildingMinting failed with error: " <> (show $ P.pretty err))
                 Right _ -> pure ()
         , testCase "MintingBuilder fails if currency symbol can't be found" $
-            case buildMinting $ singleMint <> withMinting "beefbeef" of
+            case tryBuildMinting mempty $ singleMint <> withMinting "beefbeef" of
                 Left _ -> pure ()
                 Right _ ->
                     assertFailure
-                        ( "buildMinting should fail invalid CS is"
+                        ( "tryBuildMinting mempty should fail invalid CS is"
                             <> " passed, but it succeeded."
                         )
         , testCase "MintingBuilder fails with unspecified currency symbol" $
-            case buildMinting mempty of
+            case tryBuildMinting mempty mempty of
                 Left _ -> pure ()
                 Right _ ->
                     assertFailure
-                        ( "buildMinting should fail when mbMintingCS,"
+                        ( "tryBuildMinting mempty should fail when mbMintingCS,"
                             <> " but it passed."
                         )
         , testCase "MintingBuilder works with either of two Minting CS's" $
-            case buildMinting $ doubleMint <> withMinting "deadbeef" of
-                Left err -> assertFailure ("buildMinting failed with error " <> err)
-                Right _ -> case buildMinting $ doubleMint <> withMinting "bebe" of
-                    Left err -> assertFailure ("buildMinting failed with error " <> err)
+            case tryBuildMinting mempty $ doubleMint <> withMinting "deadbeef" of
+                Left err -> assertFailure ("tryBuildMinting mempty failed with error " <> (show $ P.pretty err))
+                Right _ -> case tryBuildMinting mempty $ doubleMint <> withMinting "bebe" of
+                    Left err -> assertFailure ("tryBuildMinting mempty failed with error " <> (show $ P.pretty err))
                     Right _ -> pure ()
         ]
 

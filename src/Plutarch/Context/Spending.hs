@@ -72,6 +72,7 @@ data ValidatorInputIdentifier
     | ValidatorOutRef TxOutRef
     | ValidatorOutRefId TxId
     | ValidatorOutRefIdx Integer
+    deriving stock (Show)
 
 {- | A context builder for spending. Corresponds broadly to validators, and to
  'PlutusLedgerApi.V1.Contexts.Spending' specifically.
@@ -202,8 +203,8 @@ buildSpending' builder@(unpack -> BB{..}) =
 
  @since 2.1.0
 -}
-buildSpending :: Checker SpendingError SpendingBuilder -> SpendingBuilder -> ScriptContext
-buildSpending c = buildSpending' . handleErrors c
+buildSpending :: [Checker SpendingError SpendingBuilder] -> SpendingBuilder -> ScriptContext
+buildSpending c = buildSpending' . handleErrors (mconcat c <> checkSpending)
 
 {- | Same as `buildSpending` but instead of throwing error it returns `Either`.
 
@@ -216,13 +217,16 @@ tryBuildSpending c b = case toList $ runChecker (c <> checkSpending) b of
 
 -- | @since 2.1.0
 data SpendingError
-    = ValidatorInputDoesNotExists
+    = ValidatorInputDoesNotExists ValidatorInputIdentifier
     | ValidatorInputNotGiven
     deriving stock (Show)
 
 -- | @since 2.1.0
 instance P.Pretty SpendingError where
-    pretty ValidatorInputDoesNotExists = "Given validator input does not exist in inputs"
+    pretty (ValidatorInputDoesNotExists x) =
+        "Given validator input does not exist in inputs: "
+            <> P.line
+            <> (P.indent 4 $ P.pretty (show x))
     pretty ValidatorInputNotGiven = "Validator Input is not specified"
 
 -- | @since 2.1.0
@@ -232,7 +236,9 @@ checkSpending =
         contramap
             ((fst . yieldInInfoDatums . bbInputs . unpack) &&& sbValidatorInput)
             ( choose
-                (\(ins, vin) -> maybe (Left ()) (Right . yieldValidatorInput ins) vin)
+                (\(ins, vin) -> maybe (Left ()) (\x -> Right (x, yieldValidatorInput ins x)) vin)
                 (checkFail $ OtherError ValidatorInputNotGiven)
-                (checkIf isJust $ OtherError ValidatorInputDoesNotExists)
+                ( checkWith $ \(vin, _) ->
+                    (checkIf (isJust . snd) $ OtherError $ ValidatorInputDoesNotExists vin)
+                )
             )

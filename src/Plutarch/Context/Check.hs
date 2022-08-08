@@ -16,6 +16,7 @@ module Plutarch.Context.Check (
     checkAt,
     checkFoldable,
     checkIf,
+    checkIfWith,
     checkFail,
     checkBool,
     checkWith,
