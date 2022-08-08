@@ -21,7 +21,7 @@ import qualified Data.Text as Text
 import GHC.Generics (Generic)
 import Plutarch (
     Config (Config, tracingMode),
-    TracingMode (DoTracing, NoTracing),
+    TracingMode (DetTracing, NoTracing),
     compile,
  )
 import Plutarch.Evaluate (EvalError, evalScript)
@@ -50,7 +50,7 @@ checkedCompileD ::
     Either Text DScript
 checkedCompileD term = do
     script <- compile Config{tracingMode = NoTracing} term
-    debugScript <- compile Config{tracingMode = DoTracing} term
+    debugScript <- compile Config{tracingMode = DetTracing} term
     pure $ DScript{script, debugScript}
 
 -- | Like 'mustCompile', but with tracing turned on.
@@ -59,7 +59,7 @@ mustCompileTracing ::
     (forall (s :: S). Term s a) ->
     Script
 mustCompileTracing term =
-    case compile Config{tracingMode = DoTracing} term of
+    case compile Config{tracingMode = DetTracing} term of
         Left err -> error $ unwords ["Plutarch compilation error: ", T.unpack err]
         Right script -> script
 
