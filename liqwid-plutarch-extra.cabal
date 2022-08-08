@@ -104,7 +104,6 @@ library
 
   build-depends:
     , composition-prelude
-    , data-default
     , generics-sop
     , plutarch-extra
     , plutarch-numeric
