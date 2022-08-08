@@ -25,8 +25,9 @@ module Plutarch.Context.Spending (
     withSpendingOutRefIdx,
 
     -- * builder
+    buildSpending',
     buildSpending,
-    checkBuildSpending,
+    tryBuildSpending,
     checkSpending,
 ) where
 
@@ -35,7 +36,7 @@ import Data.Foldable (Foldable (toList))
 import Data.Functor.Contravariant (contramap)
 import Data.Functor.Contravariant.Divisible (choose)
 import Data.Maybe (isJust)
-import Optics
+import Optics (lens)
 import Plutarch.Context.Base (
     BaseBuilder (BB, bbDatums, bbInputs, bbMints, bbOutputs, bbSignatures),
     Builder (..),
@@ -173,16 +174,12 @@ yieldValidatorInput ins = \case
 {- | Builds @ScriptContext@ according to given configuration and
  @SpendingBuilder@.
 
- This function will yield @Nothing@ when the builder was never given a
- validator input--from @inputFromValidator@ or
- @inputFromValidatorWith@.
-
- @since 1.1.0
+ @since 2.1.0
 -}
-buildSpending ::
+buildSpending' ::
     SpendingBuilder ->
     ScriptContext
-buildSpending builder@(unpack -> BB{..}) =
+buildSpending' builder@(unpack -> BB{..}) =
     let (ins, inDat) = yieldInInfoDatums bbInputs
         (outs, outDat) = yieldOutDatums bbOutputs
         mintedValue = yieldMint bbMints
@@ -197,36 +194,45 @@ buildSpending builder@(unpack -> BB{..}) =
                 , txInfoSignatories = toList $ bbSignatures
                 }
         vInRef = case sbValidatorInput builder >>= yieldValidatorInput ins of
-                     Nothing -> TxOutRef "" 0
-                     Just ref -> ref
-    in ScriptContext txinfo (Spending vInRef)
+            Nothing -> TxOutRef "" 0
+            Just ref -> ref
+     in ScriptContext txinfo (Spending vInRef)
 
 {- | Check builder with provided checker, then build spending context.
 
  @since 2.1.0
 -}
-checkBuildSpending :: Checker SpendingError SpendingBuilder -> SpendingBuilder -> ScriptContext
-checkBuildSpending checker builder =
-    case toList (runChecker (checker <> checkSpending) builder) of
-        [] -> buildSpending builder
-        err -> error $ renderErrors err
+buildSpending :: Checker SpendingError SpendingBuilder -> SpendingBuilder -> ScriptContext
+buildSpending c = buildSpending' . handleErrors c
 
+{- | Same as `buildSpending` but instead of throwing error it returns `Either`.
+
+ @since 2.1.0
+-}
+tryBuildSpending :: Checker SpendingError SpendingBuilder -> SpendingBuilder -> Either [CheckerError SpendingError] ScriptContext
+tryBuildSpending c b = case toList $ runChecker (c <> checkSpending) b of
+    [] -> Right $ buildSpending' b
+    errs -> Left $ errs
+
+-- | @since 2.1.0
 data SpendingError
     = ValidatorInputDoesNotExists
     | ValidatorInputNotGiven
     deriving stock (Show)
 
+-- | @since 2.1.0
 instance P.Pretty SpendingError where
     pretty ValidatorInputDoesNotExists = "Given validator input does not exist in inputs"
     pretty ValidatorInputNotGiven = "Validator Input is not specified"
 
+-- | @since 2.1.0
 checkSpending :: Checker SpendingError SpendingBuilder
 checkSpending =
     checkAt AtInput $
         contramap
             ((fst . yieldInInfoDatums . bbInputs . unpack) &&& sbValidatorInput)
             ( choose
-                ( \(ins, vin) -> maybe (Left ()) (Right . yieldValidatorInput ins) vin)
+                (\(ins, vin) -> maybe (Left ()) (Right . yieldValidatorInput ins) vin)
                 (checkFail $ OtherError ValidatorInputNotGiven)
                 (checkIf isJust $ OtherError ValidatorInputDoesNotExists)
             )

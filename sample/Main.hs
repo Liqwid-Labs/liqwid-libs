@@ -1,5 +1,6 @@
 {-# OPTIONS_GHC -Wno-all #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
+
 module Main (main) where
 
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
@@ -13,10 +14,10 @@ import PlutusLedgerApi.V2 (
 -- import qualified SpendingBuilder (specs)
 -- import qualified MintingBuilder (specs)
 
+import Data.Functor.Contravariant.Divisible (conquer)
 import Prettyprinter (pretty)
 import Test.Tasty (defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
-import Data.Functor.Contravariant.Divisible (conquer)
 
 main :: IO ()
 main = do
@@ -25,26 +26,27 @@ main = do
     -- mapM_ (print . pretty) $ runChecker (checkPhase1 :: Checker () SpendingBuilder) (testSample :: SpendingBuilder)
     -- print $ checkBuildSpending checkPhase1 testSample
     print $ checkBuildMinting conquer (pack . unpack $ testSample)
-  --   defaultMain . testGroup "Sample Tests" $
-  --       [ testCase "TxInfo matches with both Minting and Spending Script Purposes" $
-  --           (scriptContextTxInfo <$> a) @?= (scriptContextTxInfo <$> b)
-  --       , testCase "TxInfo from TxInfoBuilder should also match" $
-  --           (scriptContextTxInfo <$> a) @?= Just c
-  --       , testCase "TxOut list from TxInfoBuilder should match one from buildTxOut" $
-  --           (txInfoOutputs . scriptContextTxInfo <$> a) @?= return d
-  --           , SpendingBuilder.specs
-  --           , MintingBuilder.specs
-  --       ]
-  -- where
-  --   a = buildMinting (generalSample <> withMinting "aaaa")
-  --   b =
-  --       buildSpending
-  --           ( generalSample
-  --               <> withSpendingUTXO
-  --                   (pubKey "aabb" <> withValue (singleton "cc" "hello" 123))
-  --           )
-  --   c = buildTxInfo generalSample
-  --   d = buildTxOuts generalSample
+
+--   defaultMain . testGroup "Sample Tests" $
+--       [ testCase "TxInfo matches with both Minting and Spending Script Purposes" $
+--           (scriptContextTxInfo <$> a) @?= (scriptContextTxInfo <$> b)
+--       , testCase "TxInfo from TxInfoBuilder should also match" $
+--           (scriptContextTxInfo <$> a) @?= Just c
+--       , testCase "TxOut list from TxInfoBuilder should match one from buildTxOut" $
+--           (txInfoOutputs . scriptContextTxInfo <$> a) @?= return d
+--           , SpendingBuilder.specs
+--           , MintingBuilder.specs
+--       ]
+-- where
+--   a = buildMinting (generalSample <> withMinting "aaaa")
+--   b =
+--       buildSpending
+--           ( generalSample
+--               <> withSpendingUTXO
+--                   (pubKey "aabb" <> withValue (singleton "cc" "hello" 123))
+--           )
+--   c = buildTxInfo generalSample
+--   d = buildTxOuts generalSample
 
 generalSample :: (Monoid a, Builder a) => a
 generalSample =

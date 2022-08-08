@@ -23,16 +23,16 @@ module Plutarch.Context.Base (
     -- * Modular constructors
     output,
     input,
-    reference,
+    referenceInput,
     credential,
     pubKey,
     script,
-    withTxId,
+    withRefTxId,
     withDatum,
     withInlineDatum,
     withValue,
     withRefIndex,
-    withOutRef,
+    withRef,
 
     -- * Others
     unpack,
@@ -61,7 +61,7 @@ import Data.Foldable (Foldable (toList))
 import Data.Kind (Type)
 import Data.Maybe (catMaybes, fromMaybe)
 import GHC.Exts (fromList)
-import Optics
+import Optics (Lens', lens, over, view)
 import Plutarch (S)
 import Plutarch.Api.V2 (datumHash)
 import Plutarch.Builtin (PIsData, pdata, pforgetData)
@@ -89,6 +89,7 @@ import PlutusLedgerApi.V2 (
  )
 import qualified PlutusTx.AssocMap as AssocMap (fromList)
 
+-- | @since 2.1.0
 data DatumType
     = InlineDatum Data
     | ContextDatum Data
@@ -116,6 +117,7 @@ data UTXO = UTXO
     }
     deriving stock (Show)
 
+-- | @since 2.0.0
 instance Semigroup UTXO where
     (UTXO c v d rs t tidx) <> (UTXO c' v' d' rs' t' tidx') =
         UTXO (choose c c') (v <> v') (choose d d') (choose rs rs') (choose t t') (choose tidx tidx')
@@ -123,6 +125,7 @@ instance Semigroup UTXO where
         choose _ (Just b) = Just b
         choose a Nothing = a
 
+-- | @since 2.0.0
 instance Monoid UTXO where
     mempty = UTXO Nothing mempty Nothing Nothing Nothing Nothing
 
@@ -163,13 +166,47 @@ utxoToTxOut ::
 utxoToTxOut utxo@(UTXO{..}) =
     TxOut (utxoAddress utxo) utxoValue (utxoOutputDatum utxo) utxoReferenceScript
 
-{- | An abstraction for the higher-level builders.
- It allows those builder to integrate base builder functionalities
- without any duplications.
+withDatum ::
+    forall (b :: Type) (p :: S -> Type).
+    (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
+    b ->
+    UTXO
+withDatum dat = mempty{utxoData = Just . ContextDatum . datafy $ dat}
 
- @unpack@ will sometimes lose data.
+withInlineDatum ::
+    forall (b :: Type) (p :: S -> Type).
+    (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
+    b ->
+    UTXO
+withInlineDatum dat = mempty{utxoData = Just . InlineDatum . datafy $ dat}
 
-TODO
+withRefTxId :: TxId -> UTXO
+withRefTxId tid = mempty{utxoTxId = Just tid}
+
+withRefIndex :: Integer -> UTXO
+withRefIndex tidx = mempty{utxoTxIdx = Just tidx}
+
+withRef :: TxOutRef -> UTXO
+withRef (TxOutRef tid idx) = withRefTxId tid <> withRefIndex idx
+
+withValue :: Value -> UTXO
+withValue val = mempty{utxoValue = val}
+
+credential :: Credential -> UTXO
+credential cred = mempty{utxoCredential = Just cred}
+
+pubKey :: PubKeyHash -> UTXO
+pubKey (PubKeyCredential -> cred) = mempty{utxoCredential = Just cred}
+
+script :: ValidatorHash -> UTXO
+script (ScriptCredential -> cred) = mempty{utxoCredential = Just cred}
+
+{- | Interface between specific builders to BaseBuilder.
+ @pack@ will constrct specific builder that contains given BaseBuilder.
+
+ Laws:
+ 1. view _bb . pack = id
+ 2. pack . view _bb = id
 
  @since 1.1.0
 -}
@@ -177,6 +214,7 @@ class Builder a where
     _bb :: Lens' a BaseBuilder
     pack :: BaseBuilder -> a
 
+-- | @since 2.1.0
 unpack :: Builder a => a -> BaseBuilder
 unpack = view _bb
 
@@ -202,10 +240,10 @@ data BaseBuilder = BB
 
 -- | @since 1.1.0
 instance Semigroup BaseBuilder where
-    BB ins refins outs sigs dats ms fval range tid <> BB ins' refins' outs' sigs' dats' ms' fval' range' tid' =
+    BB ins refIns outs sigs dats ms fval range tid <> BB ins' refIns' outs' sigs' dats' ms' fval' range' tid' =
         BB
             (ins <> ins')
-            (refins <> refins')
+            (refIns <> refIns')
             (outs <> outs')
             (sigs <> sigs')
             (dats <> dats')
@@ -222,10 +260,17 @@ instance Semigroup BaseBuilder where
 instance Monoid BaseBuilder where
     mempty = BB mempty mempty mempty mempty mempty mempty mempty always (TxId "")
 
--- | @since 1.1.0
+-- | @since 2.1.0
 instance Builder BaseBuilder where
     _bb = lens id $ const id
     pack = id
+
+datafy ::
+    forall (a :: Type) (p :: S -> Type).
+    (PUnsafeLiftDecl p, PLifted p ~ a, PIsData p) =>
+    a ->
+    Data
+datafy x = plift (pforgetData (pdata (pconstant x)))
 
 {- | Adds signer to builder.
 
@@ -260,13 +305,6 @@ extraData ::
     a
 extraData x = pack $ mempty{bbDatums = pure . datafy $ x}
 
-datafy ::
-    forall (a :: Type) (p :: S -> Type).
-    (PUnsafeLiftDecl p, PLifted p ~ a, PIsData p) =>
-    a ->
-    Data
-datafy x = plift (pforgetData (pdata (pconstant x)))
-
 txId ::
     forall (a :: Type).
     (Builder a) =>
@@ -288,41 +326,6 @@ timeRange ::
     a
 timeRange r = pack $ mempty{bbTimeRange = r}
 
-withDatum ::
-    forall (b :: Type) (p :: S -> Type).
-    (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
-    b ->
-    UTXO
-withDatum dat = mempty{utxoData = Just . ContextDatum . datafy $ dat}
-
-withInlineDatum ::
-    forall (b :: Type) (p :: S -> Type).
-    (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
-    b ->
-    UTXO
-withInlineDatum dat = mempty{utxoData = Just . InlineDatum . datafy $ dat}
-
-withTxId :: TxId -> UTXO
-withTxId tid = mempty{utxoTxId = Just tid}
-
-withRefIndex :: Integer -> UTXO
-withRefIndex tidx = mempty{utxoTxIdx = Just tidx}
-
-withOutRef :: TxOutRef -> UTXO
-withOutRef (TxOutRef tid idx) = withTxId tid <> withRefIndex idx
-
-withValue :: Value -> UTXO
-withValue val = mempty{utxoValue = val}
-
-credential :: Credential -> UTXO
-credential cred = mempty{utxoCredential = Just cred}
-
-pubKey :: PubKeyHash -> UTXO
-pubKey (PubKeyCredential -> cred) = mempty{utxoCredential = Just cred}
-
-script :: ValidatorHash -> UTXO
-script (ScriptCredential -> cred) = mempty{utxoCredential = Just cred}
-
 output ::
     forall (a :: Type).
     (Builder a) =>
@@ -337,12 +340,12 @@ input ::
     a
 input x = pack mempty{bbInputs = pure x}
 
-reference ::
+referenceInput ::
     forall (a :: Type).
     (Builder a) =>
     UTXO ->
     a
-reference x = pack mempty{bbReferenceInputs = pure x}
+referenceInput x = pack mempty{bbReferenceInputs = pure x}
 
 {- | Provide base @TxInfo@ to Continuation Monad.
 
@@ -421,6 +424,14 @@ yieldOutDatums (toList -> outputs) =
     createDatumPairs :: [UTXO] -> [(DatumHash, Datum)]
     createDatumPairs xs = catMaybes $ utxoDatumPair <$> xs
 
+{- | Automatically generate `TxOutRef`s from given builder.
+ It tries to reserve index if given one; otherwise, it grants
+ incremental indeices to each inputs starting from one. If there
+ are duplicate reserved indices, the second occurance will be
+ treated as non-reserved and given incremental index.
+
+ @since 2.1.0
+-}
 mkOutRefIndices ::
     Builder a =>
     a ->

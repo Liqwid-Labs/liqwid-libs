@@ -12,7 +12,7 @@ module Plutarch.Context.SubBuilder (
 
 import Data.Foldable (Foldable (toList))
 import Data.Maybe (catMaybes)
-import Optics
+import Optics (lens)
 import Plutarch.Context.Base (
     BaseBuilder (..),
     Builder (..),

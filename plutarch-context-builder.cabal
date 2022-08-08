@@ -73,6 +73,7 @@ common common-tests
   ghc-options:   -O2 -threaded -rtsopts -with-rtsopts=-N
   build-depends:
     , bytestring
+    , contravariant
     , plutarch
     , plutarch-context-builder
     , plutus-core
@@ -82,7 +83,6 @@ common common-tests
     , tasty
     , tasty-hunit
     , tasty-quickcheck
-    , contravariant  
 
 -- Libraries
 
