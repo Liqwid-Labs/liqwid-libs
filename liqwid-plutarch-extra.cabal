@@ -78,6 +78,7 @@ library
     Plutarch.Extra.Comonad
     Plutarch.Extra.Compile
     Plutarch.Extra.Const
+    Plutarch.Extra.DScript
     Plutarch.Extra.Field
     Plutarch.Extra.FixedDecimal
     Plutarch.Extra.Function
@@ -92,6 +93,7 @@ library
     Plutarch.Extra.Monoid
     Plutarch.Extra.MultiSig
     Plutarch.Extra.Numeric
+    Plutarch.Extra.Precompile
     Plutarch.Extra.Profunctor
     Plutarch.Extra.Record
     Plutarch.Extra.State
@@ -105,9 +107,12 @@ library
   build-depends:
     , composition-prelude
     , data-default
+    , deepseq
     , generics-sop
+    , lens
     , plutarch-extra
     , plutarch-numeric
+    , plutus-core
     , tagged
     , text
 
