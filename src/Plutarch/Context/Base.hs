@@ -426,7 +426,7 @@ yieldOutDatums (toList -> outputs) =
 
 {- | Automatically generate `TxOutRef`s from given builder.
  It tries to reserve index if given one; otherwise, it grants
- incremental indeices to each inputs starting from one. If there
+ incremental indices to each inputs starting from one. If there
  are duplicate reserved indices, the second occurance will be
  treated as non-reserved and given incremental index.
 
