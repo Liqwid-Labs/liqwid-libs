@@ -56,7 +56,7 @@ import PlutusLedgerApi.V2 (
 -}
 newtype TxInfoBuilder
     = TxInfoBuilder BaseBuilder
-    deriving newtype (Semigroup, Monoid)
+    deriving (Semigroup, Monoid) via BaseBuilder
 
 -- | @since 2.1.0
 instance Builder TxInfoBuilder where

@@ -37,7 +37,7 @@ import PlutusLedgerApi.V2 (
 -}
 newtype SubBuilder
     = SubBuilder BaseBuilder
-    deriving newtype (Semigroup, Monoid)
+    deriving (Semigroup, Monoid) via BaseBuilder
 
 instance Builder SubBuilder where
     _bb = lens (\(SubBuilder x) -> x) (\_ b -> SubBuilder b)
@@ -69,7 +69,7 @@ buildTxOuts (unpack -> BB{..}) = utxoToTxOut <$> toList bbOutputs
 
 {- | Builds all TxInInfos from given builder. Returns reason when failed.
 
- @since 2.0.0
+ @since 2.1.0
 -}
 buildTxInInfos :: SubBuilder -> [TxInInfo]
 buildTxInInfos (unpack -> BB{..}) =

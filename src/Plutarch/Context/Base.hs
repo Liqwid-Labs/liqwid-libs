@@ -433,6 +433,7 @@ yieldOutDatums (toList -> outputs) =
  @since 2.1.0
 -}
 mkOutRefIndices ::
+    forall (a :: Type).
     Builder a =>
     a ->
     a
