@@ -1,4 +1,4 @@
-{-# LANGUAGE PatternSynonyms #-}
+
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE RoleAnnotations #-}
@@ -134,7 +134,7 @@ buildMinting' builder@(unpack -> BB{..}) =
                 , txInfoOutputs = outs
                 , txInfoData = fromList $ inDat <> outDat <> extraDat
                 , txInfoMint = mintedValue
-                , txInfoSignatories = toList $ bbSignatures
+                , txInfoSignatories = toList bbSignatures
                 }
 
         mintcs = case mbMintingCS builder of
@@ -159,7 +159,7 @@ buildMinting c = buildMinting' . handleErrors (mconcat c <> checkMinting)
 tryBuildMinting :: Checker MintingError MintingBuilder -> MintingBuilder -> Either [CheckerError MintingError] ScriptContext
 tryBuildMinting c b = case toList $ runChecker (c <> checkMinting) b of
     [] -> Right $ buildMinting' b
-    errs -> Left $ errs
+    errs -> Left errs
 
 -- | @since 2.1.0
 data MintingError
@@ -178,10 +178,10 @@ checkMinting =
     contramap
         ((mconcat . toList . bbMints . unpack) &&& mbMintingCS)
         ( choose
-            (\(mints, cs) -> maybe (Left ()) (Right . (hasCS mints)) cs)
+            (\(mints, cs) -> maybe (Left ()) (Right . hasCS mints) cs)
             (checkFail $ OtherError MintingCurrencySymbolNotGiven)
             (checkBool $ OtherError MintingCurrencySymbolNotFound)
         )
 
 hasCS :: Value -> CurrencySymbol -> Bool
-hasCS val cs = not . null . filter (\(x, _, _) -> x == cs) . flattenValue $ val
+hasCS val cs = not . not . any (\(x, _, _) -> x == cs) . flattenValue $ val

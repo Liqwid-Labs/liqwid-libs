@@ -72,22 +72,22 @@ specs =
                 Right _ -> assertFailure "Builder succeed when it should have failed"
         , testCase "Set input validator identifier with TxOutRef" $
             case tryBuildSpending mempty (sample <> withSpendingOutRef someOutRef) of
-                Left err -> assertFailure $ "Failed with error : " <> (show $ P.pretty err)
+                Left err -> assertFailure $ "Failed with error : " <> show (P.pretty err)
                 Right (scriptContextPurpose -> Spending outref) -> outref @?= someOutRef
                 Right _ -> assertFailure "SpendingBuilder built script context that is not spending"
         , testCase "Set input validator identifier with TxOutRefId" $
             case tryBuildSpending mempty (sample <> withSpendingOutRefId "abababcc") of
-                Left err -> assertFailure $ "Failed with error : " <> (show $ P.pretty err)
+                Left err -> assertFailure $ "Failed with error : " <> show (P.pretty err)
                 Right (scriptContextPurpose -> Spending outref) -> txOutRefId outref @?= "abababcc"
                 Right _ -> assertFailure "SpendingBuilder built script context that is not spending"
         , testCase "Set input validator identifier with TxOutRefIdx" $
             case tryBuildSpending mempty (sample <> withSpendingOutRefIdx 19) of
-                Left err -> assertFailure $ "Failed with error : " <> (show $ P.pretty err)
+                Left err -> assertFailure $ "Failed with error : " <> show (P.pretty err)
                 Right (scriptContextPurpose -> Spending outref) -> txOutRefIdx outref @?= 19
                 Right _ -> assertFailure "SpendingBuilder built script context that is not spending"
         , testCase "Validator identifier should be override-able" $
             case tryBuildSpending mempty (sample <> withSpendingOutRefIdx 19 <> withSpendingOutRef someOutRef) of
-                Left err -> assertFailure $ "Failed with error : " <> (show $ P.pretty err)
+                Left err -> assertFailure $ "Failed with error : " <> show (P.pretty err)
                 Right (scriptContextPurpose -> Spending outref) -> outref @?= someOutRef
                 Right _ -> assertFailure "SpendingBuilder built script context that is not spending"
         , testCase "Validator identifier should be override-able 2" $
@@ -98,7 +98,7 @@ specs =
                     <> withSpendingOutRef someOutRef
                     <> withSpendingOutRefId "abababcc"
                 ) of
-                Left err -> assertFailure $ "Failed with error : " <> (show $ P.pretty err)
+                Left err -> assertFailure $ "Failed with error : " <> show (P.pretty err)
                 Right (scriptContextPurpose -> Spending outref) -> txOutRefId outref @?= "abababcc"
                 Right _ -> assertFailure "SpendingBuilder built script context that is not spending"
         ]

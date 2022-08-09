@@ -192,7 +192,7 @@ buildSpending' builder@(unpack -> BB{..}) =
                 , txInfoOutputs = outs
                 , txInfoData = fromList $ inDat <> outDat <> extraDat
                 , txInfoMint = mintedValue
-                , txInfoSignatories = toList $ bbSignatures
+                , txInfoSignatories = toList bbSignatures
                 }
         vInRef = case sbValidatorInput builder >>= yieldValidatorInput ins of
             Nothing -> TxOutRef "" 0
@@ -213,7 +213,7 @@ buildSpending c = buildSpending' . handleErrors (mconcat c <> checkSpending)
 tryBuildSpending :: Checker SpendingError SpendingBuilder -> SpendingBuilder -> Either [CheckerError SpendingError] ScriptContext
 tryBuildSpending c b = case toList $ runChecker (c <> checkSpending) b of
     [] -> Right $ buildSpending' b
-    errs -> Left $ errs
+    errs -> Left errs
 
 -- | @since 2.1.0
 data SpendingError
@@ -226,7 +226,7 @@ instance P.Pretty SpendingError where
     pretty (ValidatorInputDoesNotExists x) =
         "Given validator input does not exist in inputs: "
             <> P.line
-            <> (P.indent 4 $ P.pretty (show x))
+            <> P.indent 4 (P.pretty (show x))
     pretty ValidatorInputNotGiven = "Validator Input is not specified"
 
 -- | @since 2.1.0
@@ -239,6 +239,6 @@ checkSpending =
                 (\(ins, vin) -> maybe (Left ()) (\x -> Right (x, yieldValidatorInput ins x)) vin)
                 (checkFail $ OtherError ValidatorInputNotGiven)
                 ( checkWith $ \(vin, _) ->
-                    (checkIf (isJust . snd) $ OtherError $ ValidatorInputDoesNotExists vin)
+                    checkIf (isJust . snd) $ OtherError $ ValidatorInputDoesNotExists vin
                 )
             )

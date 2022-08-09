@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveAnyClass #-}
+
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -50,17 +50,17 @@ import Plutarch.Context.Base (
  )
 import PlutusLedgerApi.V2 (
     BuiltinByteString,
+    Credential (PubKeyCredential, ScriptCredential),
     CurrencySymbol,
     LedgerBytes (LedgerBytes),
+    PubKeyHash (PubKeyHash),
     TokenName,
+    ValidatorHash (ValidatorHash),
     Value (Value, getValue),
-    Credential (PubKeyCredential, ScriptCredential),
     adaSymbol,
     adaToken,
     getPubKeyHash,
     getTxId,
-    ValidatorHash (ValidatorHash),
-    PubKeyHash (PubKeyHash),
  )
 import qualified PlutusTx.AssocMap as AssocMap (mapMaybe, toList)
 import PlutusTx.Builtins (lengthOfByteString)
@@ -141,8 +141,8 @@ instance Contravariant (Checker e) where
 
 -- | @since 2.1.0
 instance Divisible (Checker e) where
-    conquer = Checker $ \_ -> mempty
-    divide f x y = Checker $ \(f -> (x', y')) -> (runChecker x x') <> (runChecker y y')
+    conquer = Checker $ const mempty
+    divide f x y = Checker $ \(f -> (x', y')) -> runChecker x x' <> runChecker y y'
 
 -- | @since 2.1.0
 instance Decidable (Checker e) where
@@ -174,7 +174,7 @@ renderErrors err = show . P.indent 4 $ P.line <> P.vsep (P.pretty <$> toList err
 -}
 handleErrors :: P.Pretty e => Checker e a -> a -> a
 handleErrors checker x
-    | null $ errs = x
+    | null errs = x
     | otherwise = error $ renderErrors errs
   where
     errs = runChecker checker x
@@ -199,7 +199,7 @@ checkFail = Checker . const . basicError
  @since 2.1.0
 -}
 checkAt :: CheckerPos -> Checker e a -> Checker e a
-checkAt at c = Checker $ \x -> updatePos at <$> runChecker c x
+checkAt at c = Checker $ (fmap (updatePos at) . runChecker c)
   where
     updatePos at (CheckerError (x, _)) = CheckerError (x, at)
 
@@ -226,7 +226,7 @@ checkIf f err = Checker $ \y ->
  @since 2.1.0
 -}
 checkBool :: CheckerErrorType e -> Checker e Bool
-checkBool err = checkIf id err
+checkBool = checkIf id
 
 {- | Build checker via CPS computation. This allows to pick up
  what is given to checker and use that externally.
@@ -273,9 +273,9 @@ checkPositiveValue = checkWith $ \x -> contramap isPos $ checkBool (NonPositiveV
 
 checkCredential :: Checker e Credential
 checkCredential = contramap classif checkByteString
-    where
-      classif (PubKeyCredential (PubKeyHash x)) = x
-      classif (ScriptCredential (ValidatorHash x)) = x
+  where
+    classif (PubKeyCredential (PubKeyHash x)) = x
+    classif (ScriptCredential (ValidatorHash x)) = x
 
 {- | Check if TxId follows the format
 
@@ -293,8 +293,7 @@ checkTxId =
 checkSignatures :: Builder a => Checker e a
 checkSignatures =
     checkAt AtSignatories $
-        mconcat $
-            [ contramap (fmap getPubKeyHash . bbSignatures . unpack) (checkFoldable $ checkByteString)
+        mconcat [ contramap (fmap getPubKeyHash . bbSignatures . unpack) (checkFoldable $ checkByteString)
             , contramap (length . bbSignatures . unpack) (checkIf (>= 1) $ NoSignature)
             ]
 
@@ -310,7 +309,7 @@ checkZeroSum = Checker $
             i = mconcat . toList $ utxoValue <$> bbInputs
             o = mconcat . toList $ utxoValue <$> bbOutputs
             m = mconcat . toList $ bbMints
-         in if (i <> m /= o <> bbFee)
+         in if i <> m /= o <> bbFee
                 then basicError $ NoZeroSum (diff (i <> m <> bbFee) o)
                 else mempty
 
@@ -320,15 +319,14 @@ checkZeroSum = Checker $
 -}
 checkInputs :: Builder a => Checker e a
 checkInputs =
-    mconcat $
-        [ checkAt AtInput $
-            mconcat $ [
-                contramap
+    mconcat [ checkAt AtInput $
+            mconcat $
+                [ contramap
                     (fmap utxoValue . bbInputs . unpack)
                     (checkFoldable $ checkPositiveValue)
                 , contramap
-                  (fmap (fromMaybe (PubKeyCredential "") . utxoCredential) . bbInputs . unpack)
-                  (checkFoldable $ checkCredential)
+                    (fmap (fromMaybe (PubKeyCredential "") . utxoCredential) . bbInputs . unpack)
+                    (checkFoldable $ checkCredential)
                 ]
         , checkAt AtInputOutRef $
             mconcat $
@@ -356,8 +354,7 @@ checkInputs =
 checkReferenceInputs :: Builder a => Checker e a
 checkReferenceInputs =
     checkAt AtReferenceInput $
-        mconcat $
-            [ contramap
+        mconcat [ contramap
                 (fmap (fromMaybe (PubKeyCredential "") . utxoCredential) . bbReferenceInputs . unpack)
                 (checkFoldable $ checkCredential)
             , contramap
@@ -402,12 +399,11 @@ checkFee =
 checkOutputs :: Builder a => Checker e a
 checkOutputs =
     checkAt AtOutput $
-      mconcat $
-        [ contramap (fmap utxoValue . bbOutputs . unpack) (checkFoldable checkPositiveValue)
-        , contramap
-            (fmap (fromMaybe (PubKeyCredential "") . utxoCredential) . bbOutputs . unpack)
-            (checkFoldable $ checkCredential)          
-        ]
+        mconcat [ contramap (fmap utxoValue . bbOutputs . unpack) (checkFoldable checkPositiveValue)
+            , contramap
+                (fmap (fromMaybe (PubKeyCredential "") . utxoCredential) . bbOutputs . unpack)
+                (checkFoldable $ checkCredential)
+            ]
 
 {- | Check if builder does not provide excess datum.
 
@@ -424,20 +420,20 @@ checkDatumPairs =
 -}
 checkPhase1 :: Builder a => [Checker e a]
 checkPhase1 =
-        [ checkInputs
-        , checkReferenceInputs
-        , checkOutputs
-        , checkDatumPairs
-        , checkMints
-        , checkFee
-        , checkTxId
-        , checkZeroSum
-        , checkSignatures
-        ]
+    [ checkInputs
+    , checkReferenceInputs
+    , checkOutputs
+    , checkDatumPairs
+    , checkMints
+    , checkFee
+    , checkTxId
+    , checkZeroSum
+    , checkSignatures
+    ]
 
 {- | Flatten value into tuple of `CurrencySymbol`, `TokenName`, and `Integer`.
 
  @since 2.1.0
 -}
 flattenValue :: Value -> [(CurrencySymbol, TokenName, Integer)]
-flattenValue x = concat $ (\(cs, z) -> (\(tk, amt) -> (cs, tk, amt)) <$> AssocMap.toList z) <$> AssocMap.toList (getValue x)
+flattenValue x = concatMap (\(cs, z) -> (\(tk, amt) -> (cs, tk, amt)) <$> AssocMap.toList z) (AssocMap.toList (getValue x))

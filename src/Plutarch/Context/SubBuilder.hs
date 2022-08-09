@@ -81,5 +81,5 @@ buildTxInInfos (unpack -> BB{..}) =
 -}
 buildDatumHashPairs :: SubBuilder -> [(DatumHash, Datum)]
 buildDatumHashPairs (unpack -> BB{..}) =
-    catMaybes (utxoDatumPair <$> toList (bbInputs <> bbOutputs))
+    mapMaybe utxoDatumPair (toList (bbInputs <> bbOutputs))
         <> (datumWithHash <$> toList bbDatums)

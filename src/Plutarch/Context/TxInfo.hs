@@ -81,7 +81,7 @@ buildTxInfo (unpack -> builder@BB{..}) =
                 , txInfoOutputs = outs
                 , txInfoData = fromList $ inDat <> outDat <> extraDat
                 , txInfoMint = mintedValue
-                , txInfoSignatories = toList $ bbSignatures
+                , txInfoSignatories = toList bbSignatures
                 }
      in txinfo
 

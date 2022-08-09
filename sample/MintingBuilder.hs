@@ -17,7 +17,7 @@ specs =
         "Minting Builder Unit Tests"
         [ testCase "MintingBuilder succeeds with single input" $
             case tryBuildMinting mempty $ singleMint <> withMinting "deadbeef" of
-                Left err -> assertFailure ("buildingMinting failed with error: " <> (show $ P.pretty err))
+                Left err -> assertFailure ("buildingMinting failed with error: " <> show (P.pretty err))
                 Right _ -> pure ()
         , testCase "MintingBuilder fails if currency symbol can't be found" $
             case tryBuildMinting mempty $ singleMint <> withMinting "beefbeef" of
@@ -37,9 +37,9 @@ specs =
                         )
         , testCase "MintingBuilder works with either of two Minting CS's" $
             case tryBuildMinting mempty $ doubleMint <> withMinting "deadbeef" of
-                Left err -> assertFailure ("tryBuildMinting mempty failed with error " <> (show $ P.pretty err))
+                Left err -> assertFailure ("tryBuildMinting mempty failed with error " <> show (P.pretty err))
                 Right _ -> case tryBuildMinting mempty $ doubleMint <> withMinting "bebe" of
-                    Left err -> assertFailure ("tryBuildMinting mempty failed with error " <> (show $ P.pretty err))
+                    Left err -> assertFailure ("tryBuildMinting mempty failed with error " <> show (P.pretty err))
                     Right _ -> pure ()
         ]
 

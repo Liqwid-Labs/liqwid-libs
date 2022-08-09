@@ -25,11 +25,11 @@ main = do
 
     defaultMain . testGroup "Sample Tests" $
         [ testCase "TxInfo matches with both Minting and Spending Script Purposes" $
-            (scriptContextTxInfo a) @?= (scriptContextTxInfo b)
+            scriptContextTxInfo a @?= scriptContextTxInfo b
         , testCase "TxInfo from TxInfoBuilder should also match" $
-            (scriptContextTxInfo a) @?= c
+            scriptContextTxInfo a @?= c
         , testCase "TxOut list from TxInfoBuilder should match one from buildTxOut" $
-            (txInfoOutputs $ scriptContextTxInfo a) @?= d
+            txInfoOutputs (scriptContextTxInfo a) @?= d
         , SpendingBuilder.specs
         , MintingBuilder.specs
         ]

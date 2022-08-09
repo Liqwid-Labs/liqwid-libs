@@ -406,7 +406,7 @@ yieldInInfoDatums (toList -> inputs) =
         ref = TxOutRef (fromMaybe "" utxoTxId) (fromMaybe 0 utxoTxIdx)
 
     createDatumPairs :: [UTXO] -> [(DatumHash, Datum)]
-    createDatumPairs xs = catMaybes $ utxoDatumPair <$> xs
+    createDatumPairs xs = mapMaybe utxoDatumPair xs
 
 {- | Provide list of TxOut and DatumHash-Datum pair for outputs to
  Continutation Monad.
@@ -422,7 +422,7 @@ yieldOutDatums (toList -> outputs) =
     createTxInInfo :: [UTXO] -> [TxOut]
     createTxInInfo xs = utxoToTxOut <$> xs
     createDatumPairs :: [UTXO] -> [(DatumHash, Datum)]
-    createDatumPairs xs = catMaybes $ utxoDatumPair <$> xs
+    createDatumPairs xs = mapMaybe utxoDatumPair xs
 
 {- | Automatically generate `TxOutRef`s from given builder.
  It tries to reserve index if given one; otherwise, it grants
