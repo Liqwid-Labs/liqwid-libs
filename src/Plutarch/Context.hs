@@ -56,6 +56,8 @@ module Plutarch.Context (
     Sub.buildTxInInfos,
     Sub.buildDatumHashPairs,
     C.Checker (..),
+    C.CheckerError (..),
+    C.CheckerPos (..),
     C.CheckerErrorType (..),
     C.basicError,
     C.checkAt,

@@ -11,8 +11,6 @@ import PlutusLedgerApi.V2 (
 import qualified MintingBuilder (specs)
 import qualified SpendingBuilder (specs)
 
-import Data.Functor.Contravariant.Divisible (conquer)
-import Prettyprinter (pretty)
 import Test.Tasty (defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 
