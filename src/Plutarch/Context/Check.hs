@@ -1,4 +1,3 @@
-
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -199,7 +198,7 @@ checkFail = Checker . const . basicError
  @since 2.1.0
 -}
 checkAt :: CheckerPos -> Checker e a -> Checker e a
-checkAt at c = Checker $ (fmap (updatePos at) . runChecker c)
+checkAt at c = Checker (fmap (updatePos at) . runChecker c)
   where
     updatePos at (CheckerError (x, _)) = CheckerError (x, at)
 
@@ -293,8 +292,9 @@ checkTxId =
 checkSignatures :: Builder a => Checker e a
 checkSignatures =
     checkAt AtSignatories $
-        mconcat [ contramap (fmap getPubKeyHash . bbSignatures . unpack) (checkFoldable $ checkByteString)
-            , contramap (length . bbSignatures . unpack) (checkIf (>= 1) $ NoSignature)
+        mconcat
+            [ contramap (fmap getPubKeyHash . bbSignatures . unpack) (checkFoldable checkByteString)
+            , contramap (length . bbSignatures . unpack) (checkIf (>= 1) NoSignature)
             ]
 
 {- | Check if input, output, mint have zero sum.
@@ -319,20 +319,21 @@ checkZeroSum = Checker $
 -}
 checkInputs :: Builder a => Checker e a
 checkInputs =
-    mconcat [ checkAt AtInput $
-            mconcat $
+    mconcat
+        [ checkAt AtInput $
+            mconcat
                 [ contramap
                     (fmap utxoValue . bbInputs . unpack)
-                    (checkFoldable $ checkPositiveValue)
+                    (checkFoldable checkPositiveValue)
                 , contramap
                     (fmap (fromMaybe (PubKeyCredential "") . utxoCredential) . bbInputs . unpack)
-                    (checkFoldable $ checkCredential)
+                    (checkFoldable checkCredential)
                 ]
         , checkAt AtInputOutRef $
-            mconcat $
+            mconcat
                 [ contramap -- TODO: we should have `checkMaybe` here.
                     (fmap (getTxId . fromMaybe "" . utxoTxId) . bbInputs . unpack)
-                    (checkFoldable $ checkByteString)
+                    (checkFoldable checkByteString)
                 , contramap
                     (getDups . toList . fmap (fromMaybe 0 . utxoTxIdx) . bbInputs . unpack)
                     (checkWith $ \x -> checkIfWith null DuplicateTxOutRefIndex)
@@ -354,12 +355,13 @@ checkInputs =
 checkReferenceInputs :: Builder a => Checker e a
 checkReferenceInputs =
     checkAt AtReferenceInput $
-        mconcat [ contramap
+        mconcat
+            [ contramap
                 (fmap (fromMaybe (PubKeyCredential "") . utxoCredential) . bbReferenceInputs . unpack)
-                (checkFoldable $ checkCredential)
+                (checkFoldable checkCredential)
             , contramap
                 (fmap utxoValue . bbReferenceInputs . unpack)
-                (checkFoldable $ checkPositiveValue)
+                (checkFoldable checkPositiveValue)
             ]
 
 {- | Check if minted tokens are valid.
@@ -399,10 +401,11 @@ checkFee =
 checkOutputs :: Builder a => Checker e a
 checkOutputs =
     checkAt AtOutput $
-        mconcat [ contramap (fmap utxoValue . bbOutputs . unpack) (checkFoldable checkPositiveValue)
+        mconcat
+            [ contramap (fmap utxoValue . bbOutputs . unpack) (checkFoldable checkPositiveValue)
             , contramap
                 (fmap (fromMaybe (PubKeyCredential "") . utxoCredential) . bbOutputs . unpack)
-                (checkFoldable $ checkCredential)
+                (checkFoldable checkCredential)
             ]
 
 {- | Check if builder does not provide excess datum.

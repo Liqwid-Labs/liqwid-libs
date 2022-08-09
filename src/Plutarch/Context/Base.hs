@@ -59,7 +59,7 @@ import Acc (Acc)
 import Control.Arrow (Arrow ((&&&)))
 import Data.Foldable (Foldable (toList))
 import Data.Kind (Type)
-import Data.Maybe (catMaybes, fromMaybe)
+import Data.Maybe (fromMaybe, mapMaybe)
 import GHC.Exts (fromList)
 import Optics (Lens', lens, over, view)
 import Plutarch (S)
@@ -406,7 +406,7 @@ yieldInInfoDatums (toList -> inputs) =
         ref = TxOutRef (fromMaybe "" utxoTxId) (fromMaybe 0 utxoTxIdx)
 
     createDatumPairs :: [UTXO] -> [(DatumHash, Datum)]
-    createDatumPairs xs = mapMaybe utxoDatumPair xs
+    createDatumPairs = mapMaybe utxoDatumPair
 
 {- | Provide list of TxOut and DatumHash-Datum pair for outputs to
  Continutation Monad.
@@ -422,7 +422,7 @@ yieldOutDatums (toList -> outputs) =
     createTxInInfo :: [UTXO] -> [TxOut]
     createTxInInfo xs = utxoToTxOut <$> xs
     createDatumPairs :: [UTXO] -> [(DatumHash, Datum)]
-    createDatumPairs xs = mapMaybe utxoDatumPair xs
+    createDatumPairs = mapMaybe utxoDatumPair
 
 {- | Automatically generate `TxOutRef`s from given builder.
  It tries to reserve index if given one; otherwise, it grants

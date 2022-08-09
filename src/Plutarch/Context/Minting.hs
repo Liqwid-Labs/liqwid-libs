@@ -1,4 +1,3 @@
-
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE RoleAnnotations #-}
@@ -184,4 +183,4 @@ checkMinting =
         )
 
 hasCS :: Value -> CurrencySymbol -> Bool
-hasCS val cs = not . not . any (\(x, _, _) -> x == cs) . flattenValue $ val
+hasCS val cs = any (\(x, _, _) -> x == cs) . flattenValue $ val

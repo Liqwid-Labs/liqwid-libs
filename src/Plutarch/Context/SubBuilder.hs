@@ -11,7 +11,7 @@ module Plutarch.Context.SubBuilder (
 ) where
 
 import Data.Foldable (Foldable (toList))
-import Data.Maybe (catMaybes)
+import Data.Maybe (mapMaybe)
 import Optics (lens)
 import Plutarch.Context.Base (
     BaseBuilder (..),
