@@ -15,10 +15,11 @@ import Control.Monad.Primitive (MonadPrim, PrimMonad, PrimState)
 import Data.Hashable (Hashable)
 import Data.Text (Text)
 import Plutarch.Extra.Compile (mustCompile)
+import Plutarch.Extra.DScript (mustCompileD)
+import Plutarch.Extra.Precompile (CompiledTerm, compile', toDScript)
 import Plutarch.Prelude (ClosedTerm, S, Type)
 import System.Random (RandomGen)
 import Test.Benchmark.Common (ImplData (..))
-import Test.Benchmark.DScript (mustCompileD)
 import Test.Benchmark.Plutus (
   BudgetExceeded,
   Costs,
@@ -27,7 +28,6 @@ import Test.Benchmark.Plutus (
   mkScriptImplMetaData,
   sampleDScript,
  )
-import Test.Benchmark.Precompile (CompiledTerm, compile', toDScript)
 import Test.Benchmark.Sized (
   SSample,
   SUniversalGen,

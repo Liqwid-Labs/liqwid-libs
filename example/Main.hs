@@ -5,6 +5,7 @@ module Main (main) where
 
 import Control.Monad (replicateM)
 import Data.Text (pack)
+import Plutarch.Extra.Precompile (CompiledTerm, compile', (##))
 import Plutarch.Prelude (
   ClosedTerm,
   PBuiltinList,
@@ -38,7 +39,6 @@ import Test.Benchmark.Cost (
 import Test.Benchmark.Main (benchMain)
 import Test.Benchmark.Plutarch (mkTermImplMetaData, sampleTerm, sampleTerm')
 import Test.Benchmark.Plutus (statsByAxis')
-import Test.Benchmark.Precompile (CompiledTerm, compile', (##))
 import Test.Benchmark.Sized (
   Cardinality (Cardinality),
   SUniversalGen (SUniversalGen),

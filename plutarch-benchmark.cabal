@@ -92,12 +92,10 @@ library
   exposed-modules:
     Test.Benchmark.Common
     Test.Benchmark.Cost
-    Test.Benchmark.DScript
     Test.Benchmark.Exhaustive
     Test.Benchmark.Main
     Test.Benchmark.Plutarch
     Test.Benchmark.Plutus
-    Test.Benchmark.Precompile
     Test.Benchmark.QuickCheck
     Test.Benchmark.Sized
 
@@ -142,6 +140,7 @@ benchmark plutarch-benchmark-example
     , directory
     , hashable
     , hashtables
+    , liqwid-plutarch-extra
     , monad-loops
     , mtl
     , optparse-applicative
@@ -169,6 +168,7 @@ test-suite plutarch-benchmark-test
     , directory
     , hashable
     , hashtables
+    , liqwid-plutarch-extra
     , monad-loops
     , mtl
     , optparse-applicative

@@ -26,8 +26,8 @@
 
 
     plutarch-numeric.url = "github:Liqwid-Labs/plutarch-numeric?ref=main";
-    # TODO: set this back to staging once `mustCompile` is merged
-    liqwid-plutarch-extra.url = "github:Liqwid-Labs/liqwid-plutarch-extra?ref=mustCompile";
+    # TODO: set this back to staging once `compilation-utilities` is merged
+    liqwid-plutarch-extra.url = "github:Liqwid-Labs/liqwid-plutarch-extra?ref=compilation-utilities";
     plutarch-quickcheck.url = "github:Liqwid-Labs/plutarch-quickcheck?ref=main";
     plutarch-context-builder.url = "github:Liqwid-Labs/plutarch-context-builder?ref=staging";
   };

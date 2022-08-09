@@ -3812,16 +3812,16 @@
         "plutarch-quickcheck": "plutarch-quickcheck"
       },
       "locked": {
-        "lastModified": 1659474844,
-        "narHash": "sha256-8fRoOmwpAkCKWYn405H8bWJavKE5m82QVX3Tctkan1I=",
+        "lastModified": 1659990285,
+        "narHash": "sha256-pj1dmQEAGezZfBsg1m2IqsyQDJ2rPL61NiR8kgF8ZU0=",
         "owner": "Liqwid-Labs",
         "repo": "liqwid-plutarch-extra",
-        "rev": "608884725490e0cc36197e0ad69febbff6465276",
+        "rev": "6791ac9e8af2ab020be42afbf23970390b114f8e",
         "type": "github"
       },
       "original": {
         "owner": "Liqwid-Labs",
-        "ref": "mustCompile",
+        "ref": "compilation-utilities",
         "repo": "liqwid-plutarch-extra",
         "type": "github"
       }
