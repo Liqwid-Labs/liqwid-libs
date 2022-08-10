@@ -49,7 +49,7 @@
           "${inputs.plutarch-context-builder}"
         ])
         (liqwid-nix.addChecks {
-          testSuite = "liqwid-plutarch-extra:test:liqwid-plutarch-extra-test";
+          #          testSuite = "liqwid-plutarch-extra:test:liqwid-plutarch-extra-test";
           liqwid-plutarch-extra = "liqwid-plutarch-extra:lib:liqwid-plutarch-extra";
         })
         (liqwid-nix.enableFormatCheck [
