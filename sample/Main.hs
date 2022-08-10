@@ -1,10 +1,16 @@
 module Main (main) where
 
-import GHC.IO.Encoding
-import qualified MintingBuilder
+import GHC.IO.Encoding (setLocaleEncoding, utf8)
 import Plutarch.Context
-import PlutusLedgerApi.V1
-import qualified SpendingBuilder
+import PlutusLedgerApi.V2 (
+    ScriptContext (scriptContextTxInfo),
+    TxInfo (txInfoOutputs),
+    singleton,
+ )
+
+import qualified MintingBuilder (specs)
+import qualified SpendingBuilder (specs)
+
 import Test.Tasty (defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 
@@ -13,27 +19,25 @@ main = do
     setLocaleEncoding utf8
     defaultMain . testGroup "Sample Tests" $
         [ testCase "TxInfo matches with both Minting and Spending Script Purposes" $
-            (scriptContextTxInfo <$> a) @?= (scriptContextTxInfo <$> b)
+            scriptContextTxInfo a @?= scriptContextTxInfo b
         , testCase "TxInfo from TxInfoBuilder should also match" $
-            (scriptContextTxInfo <$> a) @?= c
+            scriptContextTxInfo a @?= c
         , testCase "TxOut list from TxInfoBuilder should match one from buildTxOut" $
-            (txInfoOutputs . scriptContextTxInfo <$> a) @?= return d
-        , testCase "DatumHash pair list from TxInfoBuilder should match one from buildDatumHashPairs" $
-            (txInfoData . scriptContextTxInfo <$> a) @?= return e
+            txInfoOutputs (scriptContextTxInfo a) @?= d
         , SpendingBuilder.specs
         , MintingBuilder.specs
         ]
   where
-    a = buildMinting (generalSample <> withMinting "aaaa")
+    a = buildMinting mempty (generalSample <> withMinting "aaaa")
     b =
         buildSpending
+            mempty
             ( generalSample
                 <> withSpendingUTXO
                     (pubKey "aabb" <> withValue (singleton "cc" "hello" 123))
             )
     c = buildTxInfo generalSample
     d = buildTxOuts generalSample
-    e = buildDatumHashPairs generalSample
 
 generalSample :: (Monoid a, Builder a) => a
 generalSample =
@@ -46,7 +50,7 @@ generalSample =
             pubKey "eeee"
                 <> withValue (singleton "cc" "hello" 123)
                 <> withDatum (123 :: Integer)
-                <> withTxId "eeff"
+                <> withRefTxId "eeff"
         , output $
             script "cccc"
                 <> withValue (singleton "dd" "world" 123)

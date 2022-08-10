@@ -1,5 +1,8 @@
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ViewPatterns #-}
 
 {- | Module: Plutarch.Context.Minting
  Copyright: (C) Liqwid Labs 2022
@@ -19,24 +22,45 @@ module Plutarch.Context.Minting (
     withMinting,
 
     -- * builder
+    buildMinting',
     buildMinting,
-    buildMintingUnsafe,
+    tryBuildMinting,
+    checkMinting,
 ) where
 
-import Control.Monad.Cont (ContT (runContT))
-import Control.Monad.Reader (MonadTrans (lift))
+import Control.Arrow ((&&&))
 import Data.Foldable (Foldable (toList))
+import Data.Functor.Contravariant (contramap)
+import Data.Functor.Contravariant.Divisible (choose)
+import Optics (lens)
 import Plutarch.Context.Base (
-    BaseBuilder (bbDatums, bbInputs, bbMints, bbOutputs, bbSignatures),
+    BaseBuilder (
+        BB,
+        bbDatums,
+        bbInputs,
+        bbMints,
+        bbOutputs,
+        bbSignatures
+    ),
     Builder (..),
+    unpack,
     yieldBaseTxInfo,
     yieldExtraDatums,
     yieldInInfoDatums,
     yieldMint,
     yieldOutDatums,
  )
-
-import PlutusLedgerApi.V1.Contexts (
+import Plutarch.Context.Check (
+    Checker (runChecker),
+    CheckerError,
+    CheckerErrorType (OtherError),
+    checkBool,
+    checkFail,
+    flattenValue,
+    handleErrors,
+ )
+import PlutusLedgerApi.V2 (
+    CurrencySymbol,
     ScriptContext (ScriptContext),
     ScriptPurpose (Minting),
     TxInfo (
@@ -46,11 +70,10 @@ import PlutusLedgerApi.V1.Contexts (
         txInfoOutputs,
         txInfoSignatories
     ),
+    Value,
+    fromList,
  )
-import PlutusLedgerApi.V1.Value (
-    CurrencySymbol,
-    flattenValue,
- )
+import qualified Prettyprinter as P (Pretty (pretty))
 
 {- | A context builder for Minting. Corresponds to
  'Plutus.V1.Ledger.Contexts.Minting' specifically.
@@ -79,8 +102,8 @@ instance Monoid MintingBuilder where
 
 -- | @since 1.1.0
 instance Builder MintingBuilder where
-    pack = flip MB Nothing
-    unpack = mbInner
+    _bb = lens mbInner (\x b -> x{mbInner = b})
+    pack x = mempty{mbInner = x}
 
 {- | Set CurrencySymbol for building Minting ScriptContext.
 
@@ -92,46 +115,72 @@ withMinting cs = MB mempty $ Just cs
 {- | Builds @ScriptContext@ according to given configuration and
  @MintingBuilder@.
 
- This function will yield @Nothing@ when @mint@ interface was never
- called with a non-empty value, or when the specified currency symbol
- @CurrencySymbol@ cannot be found.
-
- @since 1.1.0
+ @since 2.1.0
 -}
-buildMinting ::
-    MintingBuilder ->
-    Either String ScriptContext
-buildMinting builder = flip runContT Right $
-    case mbMintingCS builder of
-        Nothing -> lift $ Left "No minting currency symbol specified"
-        Just mintingCS -> do
-            let bb = unpack builder
-
-            (ins, inDat) <- yieldInInfoDatums (bbInputs bb) builder
-            (outs, outDat) <- yieldOutDatums (bbOutputs bb)
-            mintedValue <- yieldMint (bbMints bb)
-            extraDat <- yieldExtraDatums (bbDatums bb)
-            base <- yieldBaseTxInfo builder
-
-            let txinfo =
-                    base
-                        { txInfoInputs = ins
-                        , txInfoOutputs = outs
-                        , txInfoData = inDat <> outDat <> extraDat
-                        , txInfoMint = mintedValue
-                        , txInfoSignatories = toList $ bbSignatures bb
-                        }
-                mintingInfo =
-                    filter
-                        (\(cs, _, _) -> cs == mintingCS)
-                        $ flattenValue mintedValue
-
-            case mintingInfo of
-                [] -> lift $ Left "Minting CS not found"
-                _ -> return $ ScriptContext txinfo (Minting mintingCS)
-
--- | Builds minting context; it throwing error when builder fails.
-buildMintingUnsafe ::
+buildMinting' ::
     MintingBuilder ->
     ScriptContext
-buildMintingUnsafe = either error id . buildMinting
+buildMinting' builder@(unpack -> BB{..}) =
+    let (ins, inDat) = yieldInInfoDatums bbInputs
+        (outs, outDat) = yieldOutDatums bbOutputs
+        mintedValue = yieldMint bbMints
+        extraDat = yieldExtraDatums bbDatums
+        base = yieldBaseTxInfo builder
+
+        txinfo =
+            base
+                { txInfoInputs = ins
+                , txInfoOutputs = outs
+                , txInfoData = fromList $ inDat <> outDat <> extraDat
+                , txInfoMint = mintedValue
+                , txInfoSignatories = toList bbSignatures
+                }
+
+        mintcs = case mbMintingCS builder of
+            Just cs ->
+                if hasCS mintedValue cs
+                    then Minting cs
+                    else Minting ""
+            Nothing -> Minting ""
+     in ScriptContext txinfo mintcs
+
+{- | Check builder with provided checker, then build minting context.
+
+ @since 2.1.0
+-}
+buildMinting :: [Checker MintingError MintingBuilder] -> MintingBuilder -> ScriptContext
+buildMinting c = buildMinting' . handleErrors (mconcat c <> checkMinting)
+
+{- | Same as `buildMinting` but instead of throwing error it returns `Either`.
+
+ @since 2.1.0
+-}
+tryBuildMinting :: Checker MintingError MintingBuilder -> MintingBuilder -> Either [CheckerError MintingError] ScriptContext
+tryBuildMinting c b = case toList $ runChecker (c <> checkMinting) b of
+    [] -> Right $ buildMinting' b
+    errs -> Left errs
+
+-- | @since 2.1.0
+data MintingError
+    = MintingCurrencySymbolNotGiven
+    | MintingCurrencySymbolNotFound
+    deriving stock (Show)
+
+-- | @since 2.1.0
+instance P.Pretty MintingError where
+    pretty MintingCurrencySymbolNotGiven = "Minting Currency Symbol is not given"
+    pretty MintingCurrencySymbolNotFound = "Specified Currency Symbol is not found on mints"
+
+-- | @since 2.1.0
+checkMinting :: Checker MintingError MintingBuilder
+checkMinting =
+    contramap
+        ((mconcat . toList . bbMints . unpack) &&& mbMintingCS)
+        ( choose
+            (\(mints, cs) -> maybe (Left ()) (Right . hasCS mints) cs)
+            (checkFail $ OtherError MintingCurrencySymbolNotGiven)
+            (checkBool $ OtherError MintingCurrencySymbolNotFound)
+        )
+
+hasCS :: Value -> CurrencySymbol -> Bool
+hasCS val cs = any (\(x, _, _) -> x == cs) . flattenValue $ val

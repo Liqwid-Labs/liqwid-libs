@@ -1,3 +1,4 @@
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ViewPatterns #-}
 
 {- | Module: Plutarch.Context.TxInfo
@@ -10,24 +11,32 @@
  possible Script Context from TxInfo.
 -}
 module Plutarch.Context.TxInfo (
+    TxInfoBuilder (..),
     spends,
     mints,
     buildTxInfo,
-    buildTxInfoUnsafe,
 ) where
 
-import Control.Monad.Cont (ContT (runContT))
 import Data.Foldable (Foldable (toList))
+import Optics (lens)
 import Plutarch.Context.Base (
-    BaseBuilder (bbDatums, bbInputs, bbMints, bbOutputs, bbSignatures),
+    BaseBuilder (
+        BB,
+        bbDatums,
+        bbInputs,
+        bbMints,
+        bbOutputs,
+        bbSignatures
+    ),
     Builder (..),
+    unpack,
     yieldBaseTxInfo,
     yieldExtraDatums,
     yieldInInfoDatums,
     yieldMint,
     yieldOutDatums,
  )
-import PlutusLedgerApi.V1 (
+import PlutusLedgerApi.V2 (
     ScriptContext (ScriptContext),
     ScriptPurpose (Spending),
     TxInInfo (txInInfoOutRef),
@@ -38,6 +47,7 @@ import PlutusLedgerApi.V1 (
         txInfoOutputs,
         txInfoSignatories
     ),
+    fromList,
  )
 
 {- | Builder that builds TxInfo.
@@ -46,36 +56,34 @@ import PlutusLedgerApi.V1 (
 -}
 newtype TxInfoBuilder
     = TxInfoBuilder BaseBuilder
-    deriving newtype (Semigroup, Monoid, Builder)
+    deriving (Semigroup, Monoid) via BaseBuilder
+
+-- | @since 2.1.0
+instance Builder TxInfoBuilder where
+    _bb = lens (\(TxInfoBuilder x) -> x) (\_ b -> TxInfoBuilder b)
+    pack = TxInfoBuilder
 
 {- | Builds `TxInfo` from TxInfoBuilder.
 
  @since 2.0.0
 -}
-buildTxInfo :: TxInfoBuilder -> Either String TxInfo
-buildTxInfo (unpack -> builder) = flip runContT Right $ do
-    let bb = unpack builder
+buildTxInfo :: TxInfoBuilder -> TxInfo
+buildTxInfo (unpack -> builder@BB{..}) =
+    let (ins, inDat) = yieldInInfoDatums bbInputs
+        (outs, outDat) = yieldOutDatums bbOutputs
+        mintedValue = yieldMint bbMints
+        extraDat = yieldExtraDatums bbDatums
+        base = yieldBaseTxInfo builder
 
-    (ins, inDat) <- yieldInInfoDatums (bbInputs bb) builder
-    (outs, outDat) <- yieldOutDatums (bbOutputs bb)
-    mintedValue <- yieldMint (bbMints bb)
-    extraDat <- yieldExtraDatums (bbDatums bb)
-    base <- yieldBaseTxInfo builder
-
-    let txinfo =
+        txinfo =
             base
                 { txInfoInputs = ins
                 , txInfoOutputs = outs
-                , txInfoData = inDat <> outDat <> extraDat
+                , txInfoData = fromList $ inDat <> outDat <> extraDat
                 , txInfoMint = mintedValue
-                , txInfoSignatories = toList $ bbSignatures bb
+                , txInfoSignatories = toList bbSignatures
                 }
-
-    return txinfo
-
--- | Builds TxInfo; it throwing error when builder fails.
-buildTxInfoUnsafe :: TxInfoBuilder -> TxInfo
-buildTxInfoUnsafe = either error id . buildTxInfo
+     in txinfo
 
 spends :: TxInfo -> [ScriptContext]
 spends txinfo =

@@ -1,3 +1,5 @@
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -23,20 +25,54 @@ module Plutarch.Context.Spending (
     withSpendingOutRefIdx,
 
     -- * builder
+    buildSpending',
     buildSpending,
-    buildSpendingUnsafe,
+    tryBuildSpending,
+    checkSpending,
 ) where
 
-import Control.Monad.Cont (ContT (runContT), MonadTrans (lift))
+import Control.Arrow ((&&&))
 import Data.Foldable (Foldable (toList))
-import Plutarch.Context.Base
-import PlutusLedgerApi.V1.Contexts
+import Data.Functor.Contravariant (contramap)
+import Data.Functor.Contravariant.Divisible (choose)
+import Data.Maybe (isJust)
+import Optics (lens)
+import Plutarch.Context.Base (
+    BaseBuilder (BB, bbDatums, bbInputs, bbMints, bbOutputs, bbSignatures),
+    Builder (..),
+    UTXO,
+    unpack,
+    utxoToTxOut,
+    yieldBaseTxInfo,
+    yieldExtraDatums,
+    yieldInInfoDatums,
+    yieldMint,
+    yieldOutDatums,
+ )
+import Plutarch.Context.Check
+import PlutusLedgerApi.V2 (
+    ScriptContext (ScriptContext),
+    ScriptPurpose (Spending),
+    TxId,
+    TxInInfo (txInInfoOutRef, txInInfoResolved),
+    TxInfo (
+        txInfoData,
+        txInfoInputs,
+        txInfoMint,
+        txInfoOutputs,
+        txInfoSignatories
+    ),
+    TxOutRef (..),
+    fromList,
+ )
+import qualified Prettyprinter as P
 
 data ValidatorInputIdentifier
     = ValidatorUTXO UTXO
     | ValidatorOutRef TxOutRef
     | ValidatorOutRefId TxId
     | ValidatorOutRefIdx Integer
+    deriving stock (Show)
 
 {- | A context builder for spending. Corresponds broadly to validators, and to
  'PlutusLedgerApi.V1.Contexts.Spending' specifically.
@@ -50,8 +86,8 @@ data SpendingBuilder = SB
 
 -- | @since 1.1.0
 instance Builder SpendingBuilder where
-    pack = flip SB Nothing
-    unpack = sbInner
+    _bb = lens sbInner (\x b -> x{sbInner = b})
+    pack x = mempty{sbInner = x}
 
 -- | @since 1.0.0
 instance Semigroup SpendingBuilder where
@@ -123,56 +159,86 @@ withSpendingOutRefIdx tidx =
 yieldValidatorInput ::
     [TxInInfo] ->
     ValidatorInputIdentifier ->
-    ContT a (Either String) TxOutRef
+    Maybe TxOutRef
 yieldValidatorInput ins = \case
     ValidatorUTXO utxo -> go txInInfoResolved (utxoToTxOut utxo)
     ValidatorOutRef outref -> go txInInfoOutRef outref
     ValidatorOutRefId tid -> go (txOutRefId . txInInfoOutRef) tid
     ValidatorOutRefIdx tidx -> go (txOutRefIdx . txInInfoOutRef) tidx
   where
-    go :: (Eq b) => (TxInInfo -> b) -> b -> ContT c (Either String) TxOutRef
+    go :: (Eq b) => (TxInInfo -> b) -> b -> Maybe TxOutRef
     go f x =
         case filter (\(f -> y) -> y == x) ins of
-            [] -> lift $ Left "Given validator input identifier does not exist in inputs."
+            [] -> Nothing
             (r : _) -> return $ txInInfoOutRef r
 
 {- | Builds @ScriptContext@ according to given configuration and
  @SpendingBuilder@.
 
- This function will yield @Nothing@ when the builder was never given a
- validator input--from @inputFromValidator@ or
- @inputFromValidatorWith@.
-
- @since 1.1.0
+ @since 2.1.0
 -}
-buildSpending ::
-    SpendingBuilder ->
-    Either String ScriptContext
-buildSpending builder = flip runContT Right $
-    case sbValidatorInput builder of
-        Nothing -> lift $ Left "No validator input specified"
-        Just vInIden -> do
-            let bb = unpack builder
-
-            (ins, inDat) <- yieldInInfoDatums (bbInputs bb) builder
-            (outs, outDat) <- yieldOutDatums (bbOutputs bb)
-            mintedValue <- yieldMint (bbMints bb)
-            extraDat <- yieldExtraDatums (bbDatums bb)
-            base <- yieldBaseTxInfo builder
-            vInRef <- yieldValidatorInput ins vInIden
-
-            let txinfo =
-                    base
-                        { txInfoInputs = ins
-                        , txInfoOutputs = outs
-                        , txInfoData = inDat <> outDat <> extraDat
-                        , txInfoMint = mintedValue
-                        , txInfoSignatories = toList $ bbSignatures bb
-                        }
-            return $ ScriptContext txinfo (Spending vInRef)
-
--- | Builds spending context; it throwing error when builder fails.
-buildSpendingUnsafe ::
+buildSpending' ::
     SpendingBuilder ->
     ScriptContext
-buildSpendingUnsafe = either error id . buildSpending
+buildSpending' builder@(unpack -> BB{..}) =
+    let (ins, inDat) = yieldInInfoDatums bbInputs
+        (outs, outDat) = yieldOutDatums bbOutputs
+        mintedValue = yieldMint bbMints
+        extraDat = yieldExtraDatums bbDatums
+        base = yieldBaseTxInfo builder
+        txinfo =
+            base
+                { txInfoInputs = ins
+                , txInfoOutputs = outs
+                , txInfoData = fromList $ inDat <> outDat <> extraDat
+                , txInfoMint = mintedValue
+                , txInfoSignatories = toList bbSignatures
+                }
+        vInRef = case sbValidatorInput builder >>= yieldValidatorInput ins of
+            Nothing -> TxOutRef "" 0
+            Just ref -> ref
+     in ScriptContext txinfo (Spending vInRef)
+
+{- | Check builder with provided checker, then build spending context.
+
+ @since 2.1.0
+-}
+buildSpending :: [Checker SpendingError SpendingBuilder] -> SpendingBuilder -> ScriptContext
+buildSpending c = buildSpending' . handleErrors (mconcat c <> checkSpending)
+
+{- | Same as `buildSpending` but instead of throwing error it returns `Either`.
+
+ @since 2.1.0
+-}
+tryBuildSpending :: Checker SpendingError SpendingBuilder -> SpendingBuilder -> Either [CheckerError SpendingError] ScriptContext
+tryBuildSpending c b = case toList $ runChecker (c <> checkSpending) b of
+    [] -> Right $ buildSpending' b
+    errs -> Left errs
+
+-- | @since 2.1.0
+data SpendingError
+    = ValidatorInputDoesNotExists ValidatorInputIdentifier
+    | ValidatorInputNotGiven
+    deriving stock (Show)
+
+-- | @since 2.1.0
+instance P.Pretty SpendingError where
+    pretty (ValidatorInputDoesNotExists x) =
+        "Given validator input does not exist in inputs: "
+            <> P.line
+            <> P.indent 4 (P.pretty (show x))
+    pretty ValidatorInputNotGiven = "Validator Input is not specified"
+
+-- | @since 2.1.0
+checkSpending :: Checker SpendingError SpendingBuilder
+checkSpending =
+    checkAt AtInput $
+        contramap
+            ((fst . yieldInInfoDatums . bbInputs . unpack) &&& sbValidatorInput)
+            ( choose
+                (\(ins, vin) -> maybe (Left ()) (\x -> Right (x, yieldValidatorInput ins x)) vin)
+                (checkFail $ OtherError ValidatorInputNotGiven)
+                ( checkWith $ \(vin, _) ->
+                    checkIf (isJust . snd) $ OtherError $ ValidatorInputDoesNotExists vin
+                )
+            )

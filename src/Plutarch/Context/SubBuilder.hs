@@ -10,15 +10,25 @@ module Plutarch.Context.SubBuilder (
     buildDatumHashPairs,
 ) where
 
-import Plutarch.Context.Base
-
-import Control.Monad.Cont (ContT (runContT))
 import Data.Foldable (Foldable (toList))
-import Data.Maybe (catMaybes)
-import PlutusLedgerApi.V1.Contexts (TxInInfo (..), TxOut (..), TxOutRef (..))
-import PlutusLedgerApi.V1.Scripts (
-    Datum (..),
+import Data.Maybe (mapMaybe)
+import Optics (lens)
+import Plutarch.Context.Base (
+    BaseBuilder (..),
+    Builder (..),
+    UTXO (..),
+    datumWithHash,
+    unpack,
+    utxoDatumPair,
+    utxoToTxOut,
+    yieldInInfoDatums,
+ )
+import PlutusLedgerApi.V2 (
+    Datum,
     DatumHash,
+    TxInInfo (TxInInfo),
+    TxOut,
+    TxOutRef (TxOutRef),
  )
 
 {- | Smaller builder that builds context smaller than TxInfo.
@@ -27,7 +37,11 @@ import PlutusLedgerApi.V1.Scripts (
 -}
 newtype SubBuilder
     = SubBuilder BaseBuilder
-    deriving newtype (Semigroup, Monoid, Builder)
+    deriving (Semigroup, Monoid) via BaseBuilder
+
+instance Builder SubBuilder where
+    _bb = lens (\(SubBuilder x) -> x) (\_ b -> SubBuilder b)
+    pack = SubBuilder
 
 {- | Builds TxOut from `UTXO`.
 
@@ -55,12 +69,11 @@ buildTxOuts (unpack -> BB{..}) = utxoToTxOut <$> toList bbOutputs
 
 {- | Builds all TxInInfos from given builder. Returns reason when failed.
 
- @since 2.0.0
+ @since 2.1.0
 -}
-buildTxInInfos :: SubBuilder -> Either String [TxInInfo]
-buildTxInInfos b@(unpack -> BB{..}) = flip runContT Right $ do
-    (ins, _) <- yieldInInfoDatums bbInputs b
-    return ins
+buildTxInInfos :: SubBuilder -> [TxInInfo]
+buildTxInInfos (unpack -> BB{..}) =
+    fst $ yieldInInfoDatums bbInputs
 
 {- | Builds Datum-Hash pair from all inputs, outputs, extra data of given builder.
 
@@ -68,5 +81,5 @@ buildTxInInfos b@(unpack -> BB{..}) = flip runContT Right $ do
 -}
 buildDatumHashPairs :: SubBuilder -> [(DatumHash, Datum)]
 buildDatumHashPairs (unpack -> BB{..}) =
-    catMaybes (utxoDatumPair <$> toList (bbInputs <> bbOutputs))
+    mapMaybe utxoDatumPair (toList (bbInputs <> bbOutputs))
         <> (datumWithHash <$> toList bbDatums)
