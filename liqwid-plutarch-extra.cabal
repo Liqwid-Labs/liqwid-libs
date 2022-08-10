@@ -73,6 +73,7 @@ library
     Plutarch.Extra.Boring
     Plutarch.Extra.Category
     Plutarch.Extra.Comonad
+    Plutarch.Extra.Compile
     Plutarch.Extra.Const
     Plutarch.Extra.Field
     Plutarch.Extra.FixedDecimal
@@ -103,10 +104,12 @@ library
 
   build-depends:
     , composition-prelude
+    , data-default
     , generics-sop
     , plutarch-extra
     , plutarch-numeric
     , tagged
+    , text
 
   hs-source-dirs:  src
 
