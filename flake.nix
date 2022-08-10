@@ -24,7 +24,7 @@
         "plutarch/haskell-nix/nixpkgs-unstable";
     };
 
-    liqwid-nix.url = "github:Liqwid-Labs/liqwid-nix";
+    liqwid-nix.url = "github:Liqwid-Labs/liqwid-nix?ref=emiflake/consistent-nixpkgs";
   };
 
   outputs = inputs@{ liqwid-nix, ... }:
