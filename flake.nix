@@ -25,7 +25,7 @@
     };
 
     plutarch-quickcheck.url =
-      "github:liqwid-labs/plutarch-quickcheck?ref=plutus-v2-migration";
+      "github:liqwid-labs/plutarch-quickcheck?ref=seungheonoh/pq2";
     plutarch-numeric.url =
       "github:liqwid-labs/plutarch-numeric?ref=main";
     plutarch-context-builder.url =

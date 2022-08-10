@@ -7022,16 +7022,16 @@
         "plutarch-numeric": "plutarch-numeric_3"
       },
       "locked": {
-        "lastModified": 1659631953,
-        "narHash": "sha256-SXq726mIx36PDPuzXpL14p8cze/jZqpAbpqlGm+RFJo=",
+        "lastModified": 1660145145,
+        "narHash": "sha256-q5YD7pmOzvJooFUXqGNQDIrhyKY00spzkO2zaJ+3PG0=",
         "owner": "liqwid-labs",
         "repo": "plutarch-quickcheck",
-        "rev": "70be6e2076fd72957de903a3b9d5d83591f8dcd7",
+        "rev": "69ccf47794a2f497d23a2ca5fd1c522280b4b48e",
         "type": "github"
       },
       "original": {
         "owner": "liqwid-labs",
-        "ref": "plutus-v2-migration",
+        "ref": "seungheonoh/pq2",
         "repo": "plutarch-quickcheck",
         "type": "github"
       }

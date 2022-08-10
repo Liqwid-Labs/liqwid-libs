@@ -1,6 +1,29 @@
-# Revision history for `liqwid-plutarch-extra`
+# Revision history for `liqwid-plutarch-extra` (aka "LPE")
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
+
+## 3.0.0 -- 2022-08-10
+
+This major version bump includes updates to use plutus V2 (post-Vasil) API types. 
+We have decided that we will _not_ provide backports or updates for V1 API types
+in the future.
+
+Where re-exports from `Plutarch.Api.V1` exist, import from the `Plutarch.Api.V2` 
+modules have be made instead. This will not have any effect on client code, but 
+should clarify that these functions are indeed suitable for inclusion in V2 scripts.
+
+### Modified
+ - Nix flake points at a more recent version of nixpkgs, and temporarily points at a branch of `plutarch-quickcheck`
+ - Names of modules referencing specific versions of the API (such as `Plutarch.Api.V1.AssetClass`) have been
+   renamed to remove these references (i.e., becoming `Plutarch.Extra.AssetClass`). We will only support the 
+   more current API version in the future.
+ - `pfindTxOutDatum` has been updated to work with V2 style datums (i.e., including a case for inline datums.)
+   
+### Removed
+ - `plutarch-quickcheck` (aka PQ), which is a dependency of LPE, upgraded to V2 API types as part of a PR that also 
+   made major changes to its internals. See [here](https://github.com/Liqwid-Labs/plutarch-quickcheck/pull/26).
+   As a result, some existing tests for LPE have been temporarily removed. [Issue #53](https://github.com/Liqwid-Labs/liqwid-plutarch-extra/issues/53)
+   has been opened to port these tests to PQ2.0
 
 ## 2.0.0 -- 2022-08-02
 
