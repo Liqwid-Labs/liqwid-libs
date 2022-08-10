@@ -17,7 +17,7 @@ module Plutarch.Extra.Precompile (
     -- Scripts, they can do that regardless of this export.
     CompiledTerm (..),
     compile',
-    toDScript,
+    toDebuggableScript,
     applyCompiledTerm,
     applyCompiledTerm',
     applyCompiledTerm2,
@@ -36,10 +36,10 @@ import Data.Text (Text)
 import qualified Data.Text as Text
 import GHC.Stack (HasCallStack)
 import Plutarch.Evaluate (EvalError)
-import Plutarch.Extra.DScript (
-    DScript (DScript),
+import Plutarch.Extra.DebuggableScript (
+    DebuggableScript (DebuggableScript),
     debugScript,
-    finalEvalDScript,
+    finalEvalDebuggableScript,
     mustCompileD,
     mustEvalD,
     script,
@@ -71,15 +71,15 @@ applyScript f a =
     (Script Program{_progTerm = fTerm, _progVer = fVer}) = f
     (Script Program{_progTerm = aTerm, _progVer = aVer}) = a
 
-applyDScript :: DScript -> DScript -> DScript
-applyDScript f a =
-    DScript
+applyDebuggableScript :: DebuggableScript -> DebuggableScript -> DebuggableScript
+applyDebuggableScript f a =
+    DebuggableScript
         { script = applyScript f.script a.script
         , debugScript = applyScript f.debugScript a.debugScript
         }
 
 -- | Type-safe wrapper for compiled Plutarch functions.
-newtype CompiledTerm (a :: S -> Type) = CompiledTerm DScript
+newtype CompiledTerm (a :: S -> Type) = CompiledTerm DebuggableScript
 
 {- | Compile a closed Plutarch 'Term' to a 'CompiledTerm'.
 
@@ -94,8 +94,8 @@ compile' ::
 compile' t = CompiledTerm $ mustCompileD t
 
 -- | Convert a 'CompiledTerm' to a 'Script'.
-toDScript :: forall (a :: S -> Type). CompiledTerm a -> DScript
-toDScript (CompiledTerm dscript) = dscript
+toDebuggableScript :: forall (a :: S -> Type). CompiledTerm a -> DebuggableScript
+toDebuggableScript (CompiledTerm dscript) = dscript
 
 {- | Apply a 'CompiledTerm' to a closed Plutarch 'Term'.
 
@@ -109,7 +109,7 @@ applyCompiledTerm ::
     (forall (s :: S). Term s a) ->
     CompiledTerm b
 applyCompiledTerm (CompiledTerm sf) a =
-    CompiledTerm $ applyDScript sf (mustEvalD $ mustCompileD a)
+    CompiledTerm $ applyDebuggableScript sf (mustEvalD $ mustCompileD a)
 
 {- | Apply a 'CompiledTerm' to a closed Plutarch 'Term'.
 
@@ -123,7 +123,7 @@ applyCompiledTerm' ::
     (forall (s :: S). Term s a) ->
     CompiledTerm b
 applyCompiledTerm' (CompiledTerm sf) a =
-    CompiledTerm $ applyDScript sf (mustCompileD a)
+    CompiledTerm $ applyDebuggableScript sf (mustCompileD a)
 
 {- | Apply a 'CompiledTerm' to a 'CompiledTerm'.
 
@@ -137,7 +137,7 @@ applyCompiledTerm2 ::
     CompiledTerm a ->
     CompiledTerm b
 applyCompiledTerm2 (CompiledTerm sf) (CompiledTerm sa) =
-    CompiledTerm $ applyDScript sf (mustEvalD sa)
+    CompiledTerm $ applyDebuggableScript sf (mustEvalD sa)
 
 {- | Apply a 'CompiledTerm' to a 'CompiledTerm'.
 
@@ -151,7 +151,7 @@ applyCompiledTerm2' ::
     CompiledTerm a ->
     CompiledTerm b
 applyCompiledTerm2' (CompiledTerm sf) (CompiledTerm sa) =
-    CompiledTerm $ applyDScript sf sa
+    CompiledTerm $ applyDebuggableScript sf sa
 
 -- | Alias for 'applyCompiledTerm'.
 (##) ::
