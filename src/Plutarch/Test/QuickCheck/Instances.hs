@@ -31,6 +31,8 @@ import Plutarch (
     pto,
     (#),
     (#$),
+    Config (..),
+    TracingMode (DoTracing),
  )
 import Plutarch.Api.V1 (
     AmountGuarantees (NonZero),
@@ -192,7 +194,7 @@ instance (forall (s :: S). Eq (Term s a)) => Eq (TestableTerm a) where
 -}
 instance PShow a => Show (TestableTerm a) where
     show (TestableTerm term) =
-        case compile def $ ptraceError (pshow term) of
+        case compile (Config {tracingMode = DoTracing}) $ ptraceError (pshow term) of
             Left err -> show err
             Right (evalScript -> (_, _, trace)) ->
                 T.unpack . T.intercalate " " $ trace
