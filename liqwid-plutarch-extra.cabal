@@ -78,7 +78,7 @@ library
     Plutarch.Extra.Comonad
     Plutarch.Extra.Compile
     Plutarch.Extra.Const
-    Plutarch.Extra.DScript
+    Plutarch.Extra.DebuggableScript
     Plutarch.Extra.Field
     Plutarch.Extra.FixedDecimal
     Plutarch.Extra.Function

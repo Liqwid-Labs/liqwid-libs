@@ -210,7 +210,7 @@ data LiftError
 -}
 pliftCompiled' ::
     forall p. PUnsafeLiftDecl p => CompiledTerm p -> Either LiftError (PLifted p)
-pliftCompiled' prog = case finalEvalDScript (toDScript prog) of
+pliftCompiled' prog = case finalEvalDebuggableScript (toDebuggableScript prog) of
     (Right (unScript -> UplcType.Program _ _ term), _, _) ->
         case readKnownConstant term of
             Right r -> case pconstantFromRepr r of

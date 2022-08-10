@@ -4,12 +4,12 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE RankNTypes #-}
 
-module Plutarch.Extra.DScript (
-    DScript (..),
+module Plutarch.Extra.DebuggableScript (
+    DebuggableScript (..),
     checkedCompileD,
     mustCompileD,
-    mustFinalEvalDScript,
-    finalEvalDScript,
+    mustFinalEvalDebuggableScript,
+    finalEvalDebuggableScript,
     mustEvalScript,
     mustEvalD,
 ) where
@@ -35,7 +35,7 @@ import UntypedPlutusCore.Evaluation.Machine.Cek (
  )
 
 -- | A 'Script' with a debug fallback that has tracing turned on.
-data DScript = DScript {script :: Script, debugScript :: Script}
+data DebuggableScript = DebuggableScript {script :: Script, debugScript :: Script}
     deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
 
@@ -47,11 +47,11 @@ data DScript = DScript {script :: Script, debugScript :: Script}
 checkedCompileD ::
     forall (a :: S -> Type).
     (forall (s :: S). Term s a) ->
-    Either Text DScript
+    Either Text DebuggableScript
 checkedCompileD term = do
     script <- compile Config{tracingMode = NoTracing} term
     debugScript <- compile Config{tracingMode = DetTracing} term
-    pure $ DScript{script, debugScript}
+    pure $ DebuggableScript{script, debugScript}
 
 -- | Like 'mustCompile', but with tracing turned on.
 mustCompileTracing ::
@@ -70,19 +70,19 @@ mustCompileTracing term =
 mustCompileD ::
     forall (a :: S -> Type).
     (forall (s :: S). Term s a) ->
-    DScript
+    DebuggableScript
 mustCompileD term =
-    DScript
+    DebuggableScript
         { script = mustCompile term
         , debugScript = mustCompileTracing term
         }
 
-{- | Final evaluation of a 'DScript' to a 'Script', with errors resulting in
+{- | Final evaluation of a 'DebuggableScript' to a 'Script', with errors resulting in
  exceptions.
 -}
-mustFinalEvalDScript :: DScript -> Script
-mustFinalEvalDScript s =
-    let (res, _, traces) = finalEvalDScript s
+mustFinalEvalDebuggableScript :: DebuggableScript -> Script
+mustFinalEvalDebuggableScript s =
+    let (res, _, traces) = finalEvalDebuggableScript s
      in case res of
             Right r -> r
             Left err ->
@@ -94,14 +94,14 @@ mustFinalEvalDScript s =
                         , Text.unpack (Text.unlines traces)
                         ]
 
-{- | Final evaluation of a 'DScript', with full 'evalScript' result.
+{- | Final evaluation of a 'DebuggableScript', with full 'evalScript' result.
 
  Falls back to the debug script if a 'UserEvaluationError' occurs. Verifies that
  the debug script results in a 'UserEvaluationError' too, throws an exception
  otherwise.
 -}
-finalEvalDScript :: DScript -> (Either EvalError Script, ExBudget, [Text])
-finalEvalDScript DScript{script, debugScript} =
+finalEvalDebuggableScript :: DebuggableScript -> (Either EvalError Script, ExBudget, [Text])
+finalEvalDebuggableScript DebuggableScript{script, debugScript} =
     case res of
         Right _ -> r
         Left (ErrorWithCause evalErr _) ->
@@ -109,13 +109,13 @@ finalEvalDScript DScript{script, debugScript} =
                 UserEvaluationError e ->
                     case e of
                         CekEvaluationFailure ->
-                            verifyDebugScriptOutput evalErr
+                            verifyDebuggableScriptOutput evalErr
                         _ -> r
                 _ -> r
   where
     r@(res, _, _) = evalScript script
     r'@(res', _, traces) = evalScript debugScript
-    verifyDebugScriptOutput origEvalErr =
+    verifyDebuggableScriptOutput origEvalErr =
         case res' of
             Right _ ->
                 error $
@@ -176,21 +176,21 @@ mustEvalScript s =
   where
     (res, _, traces) = evalScript s
 
-{- | Evaluate a 'DScript' to a 'DScript', with errors resulting in exceptions.
+{- | Evaluate a 'DebuggableScript' to a 'DebuggableScript', with errors resulting in exceptions.
 
  This is mostly useful for pre-evaluating arguments to a thing being
  tested/benchmarked.
  Lazyness defers the evaluation (and exception) until it's needed, so the debug
  script causes no unneccessary work.
 -}
-mustEvalD :: DScript -> DScript
+mustEvalD :: DebuggableScript -> DebuggableScript
 -- - If something else tries to use 'script' and it fails, we must fall
---   back to 'debugScript', this is just what 'mustEvalDScript' does.
+--   back to 'debugScript', this is just what 'mustEvalDebuggableScript' does.
 -- - If something tries to use 'debugScript' directly (because another
 --   Script in some expression failed already), there is nothing to fall
 --   back to, so we need only 'mustEvalScript'.
 mustEvalD ds =
-    DScript
-        { script = mustFinalEvalDScript ds
+    DebuggableScript
+        { script = mustFinalEvalDebuggableScript ds
         , debugScript = mustEvalScript (ds.debugScript)
         }

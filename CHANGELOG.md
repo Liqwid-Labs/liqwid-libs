@@ -2,6 +2,18 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 2.1.0 -- 2022-08-09
+
+### Added
+ - A `Plutarch.Extra.DebuggableScript` module, containing utilities for lazy
+   compilation of scripts-with-tracing as a fallback when the script-without-tracing
+   fails. This is useful for testing and benchmarking, since tracing is only turned on
+   when error messages are actually needed.
+ - A `Plutarch.Extra.Precompile` module, containing utilities for compiling
+   scripts and arguments separately and applying them in various ways and from
+   various types. This is useful for benchmarking and testing, since it will lead to
+   performance increases and more accurate measurements of performance.
+
 ## 2.0.0 -- 2022-08-02
 
 ### Added 
