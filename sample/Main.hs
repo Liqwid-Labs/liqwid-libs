@@ -17,13 +17,6 @@ import Test.Tasty.HUnit (testCase, (@?=))
 main :: IO ()
 main = do
     setLocaleEncoding utf8
-    print $
-        buildSpending
-            checkPhase1
-            ( generalSamplea
-                <> withSpendingOutRefIdx 1
-            )
-
     defaultMain . testGroup "Sample Tests" $
         [ testCase "TxInfo matches with both Minting and Spending Script Purposes" $
             scriptContextTxInfo a @?= scriptContextTxInfo b
@@ -63,27 +56,3 @@ generalSample =
                 <> withValue (singleton "dd" "world" 123)
         , mint $ singleton "aaaa" "hello" 333
         ]
-
-generalSamplea :: (Monoid a, Builder a) => a
-generalSamplea =
-    mkOutRefIndices $
-        mconcat
-            [ input $
-                pubKey "aaaaaaaaaaaaaaaaaaaaaaaaaaaacccccccccccccccccccccccccccc"
-                    <> withValue (singleton "cc" "hello" 50)
-                    <> withRefTxId "cccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
-            , input $
-                pubKey "aaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccaa"
-                    <> withValue (singleton "cc" "hello" (negate 50) <> singleton "" "" 100)
-                    <> withDatum (123 :: Integer)
-                    <> withRefTxId "ffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
-            , referenceInput $
-                pubKey "aaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccaa"
-                    <> withValue (singleton "cc" "hello" 50)
-            , output $
-                script "aaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccaaaaaaaa"
-                    <> withValue (singleton "cc" "hello" 100 <> singleton "aaaa" "hello" 333)
-            , mint $ singleton "aaaa" "hello" 330
-            , fee $ singleton "cc" "non Ada Fee" 330
-            , txId "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
-            ]
