@@ -184,6 +184,7 @@ class (PLamArgs p ~ args) => HaskEquiv (h :: Type) (p :: S -> Type) args where
     haskEquiv :: h -> TestableTerm p -> NP Gen args -> Property
 
 -- TODO: Shrinking support
+
 -- | @since 2.0.0
 instance
     forall ha hb pa pb hbArgs.

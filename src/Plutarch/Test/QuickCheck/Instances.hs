@@ -21,9 +21,11 @@ import Data.Default (Default (def))
 import qualified Data.Text as T (intercalate, pack, unpack)
 import qualified GHC.Exts as Exts (IsList (fromList, toList))
 import Plutarch (
+    Config (..),
     PlutusType,
     S,
     Term,
+    TracingMode (DoTracing),
     compile,
     pcon,
     plam,
@@ -31,8 +33,6 @@ import Plutarch (
     pto,
     (#),
     (#$),
-    Config (..),
-    TracingMode (DoTracing),
  )
 import Plutarch.Api.V1 (
     AmountGuarantees (NonZero),
@@ -194,7 +194,7 @@ instance (forall (s :: S). Eq (Term s a)) => Eq (TestableTerm a) where
 -}
 instance PShow a => Show (TestableTerm a) where
     show (TestableTerm term) =
-        case compile (Config {tracingMode = DoTracing}) $ ptraceError (pshow term) of
+        case compile (Config{tracingMode = DoTracing}) $ ptraceError (pshow term) of
             Left err -> show err
             Right (evalScript -> (_, _, trace)) ->
                 T.unpack . T.intercalate " " $ trace
