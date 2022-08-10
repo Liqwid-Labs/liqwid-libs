@@ -6,7 +6,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### Changed
 
- - Scripts compiled with 'mustCompile' now enable detail trace.
+ - Scripts compiled with 'mustCompile' now enable deterministic tracing.
 
 ## 2.0.0 -- 2022-08-02
 
