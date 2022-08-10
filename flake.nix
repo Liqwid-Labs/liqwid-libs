@@ -3,7 +3,7 @@
 
   inputs = {
     nixpkgs.follows = "plutarch/nixpkgs";
-    nixpkgs-latest.url = "github:NixOS/nixpkgs?rev=a0a69be4b5ee63f1b5e75887a406e9194012b492";
+    nixpkgs-latest.url = "github:NixOS/nixpkgs?rev=cf63df0364f67848083ff75bc8ac9b7ca7aa5a01";
     # temporary fix for nix versions that have the transitive follows bug
     # see https://github.com/NixOS/nix/issues/6013
     nixpkgs-2111 = { url = "github:NixOS/nixpkgs/nixpkgs-21.11-darwin"; };
@@ -16,9 +16,6 @@
     # Plutarch and its friends
     plutarch = {
       url = "github:Plutonomicon/plutarch-plutus?ref=staging";
-
-      inputs.haskell-nix-extra-hackage.url =
-        "github:mlabs-haskell/haskell-nix-extra-hackage?ref=main";
 
       inputs.emanote.follows =
         "plutarch/haskell-nix/nixpkgs-unstable";
