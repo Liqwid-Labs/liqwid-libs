@@ -8,6 +8,9 @@ module Plutarch.Extra.Maybe (
     ptraceIfNothing,
     pisJust,
     pmaybe,
+    pfromMaybe,
+    pjust,
+    pnothing,
 
     -- * Utility functions for working with 'PMaybeData'
     pfromDJust,
@@ -95,13 +98,41 @@ pisJust = phoistAcyclic $
 
     @since 1.1.0
 -}
-pmaybe ::
+pfromMaybe ::
     forall (a :: S -> Type) (s :: S).
     Term s (a :--> PMaybe a :--> a)
-pmaybe = phoistAcyclic $
+pfromMaybe = phoistAcyclic $
     plam $ \e a -> pmatch a $ \case
         PJust a' -> a'
         PNothing -> e
+
+{- | Construct a 'PJust' value.
+
+ @since 2.0.2
+-}
+pjust :: forall (a :: S -> Type) (s :: S). Term s (a :--> PMaybe a)
+pjust = phoistAcyclic $ plam $ pcon . PJust
+
+{- | Construct a 'PNothing' value.
+
+ @since 2.0.2
+-}
+pnothing :: forall (a :: S -> Type) (s :: S). Term s (PMaybe a)
+pnothing = phoistAcyclic $ pcon PNothing
+
+{- | Given a default value, a function and a 'PMaybe' value, yields the default
+      value if the 'PMaybe' value is 'PNothing' and applies the function to the
+      value stored in the 'PJust' otherwise.
+
+ @since 2.0.2
+-}
+pmaybe ::
+    forall (b :: S -> Type) (a :: S -> Type) (s :: S).
+    Term s (b :--> (a :--> b) :--> PMaybe a :--> b)
+pmaybe = phoistAcyclic $
+    plam $ \d f -> flip pmatch $ \case
+        PJust v -> f # v
+        _ -> d
 
 --------------------------------------------------------------------------------
 -- Utility functions for working with 'PMaybeData'.
