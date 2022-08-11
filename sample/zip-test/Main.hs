@@ -107,7 +107,9 @@ main = do
     -- This will fix some problems regarding text encoding.
     setLocaleEncoding utf8
     defaultMain . adjustOption go $
-        testGroup "" [ testProperty "Length should be eqaul" zipLengthProperty
+        testGroup
+            ""
+            [ testProperty "Length should be eqaul" zipLengthProperty
             , testProperty "zipped list should have length of shorter list" zipUnevenProperty
             , testProperty "zipped list has correct values" zipContentProperty
             ]

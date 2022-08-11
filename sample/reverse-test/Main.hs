@@ -78,7 +78,9 @@ main = do
     -- This will fix some problems regarding text encoding.
     setLocaleEncoding utf8
     defaultMain . adjustOption go $
-        testGroup "" [ testProperty "Correct 'preverse'" propCorrect
+        testGroup
+            ""
+            [ testProperty "Correct 'preverse'" propCorrect
             , expectFail $ testProperty "Wrong 'preverse'" propWrong
             , testProperty "Correct 'preverse' with custom generator" propCustom
             ]
