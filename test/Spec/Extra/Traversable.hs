@@ -18,7 +18,7 @@ li :: Term s (PBuiltinList PInteger)
 li = pcons # 10 #$ pcons # 20 #$ pcons # 30 #$ pnil
 
 sample :: Term s (PMaybe (PBuiltinList PInteger))
-sample = ptraverse # (plam $ \x -> pcon $ PJust x) # li
+sample = ptraverse # plam (\x -> pcon $ PJust x) # li
 
 trav :: Term s (PMaybe (PBuiltinList PInteger))
 trav = pcon $ PJust li

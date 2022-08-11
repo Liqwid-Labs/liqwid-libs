@@ -47,6 +47,8 @@ import Plutarch.Extra.DebuggableScript (
 import Plutarch.Lift (
     PConstantDecl (pconstantFromRepr),
     PUnsafeLiftDecl (PLifted),
+    (LiftError (LiftError_EvalError, LiftError_KnownTypeError,
+                LiftError_FromRepr, LiftError_CompilationError)
  )
 import Plutarch.Prelude (PLift, S, Term, Type, (:-->))
 import PlutusCore.Builtin (KnownTypeError, readKnownConstant)
@@ -193,16 +195,9 @@ infixl 7 ###
 
 infixl 7 ###~
 
---  Copied and adapted the stuff below from 'Plutarch.Lift'. Including
---  'LiftError', because the data constructors aren't exported there. Also
---  added trace messages in the exceptions.
+--  Copied and adapted the stuff below from 'Plutarch.Lift'.
+--  Also added trace messages in the exceptions.
 
--- | Error during script evaluation.
-data LiftError
-    = LiftError_EvalError EvalError [Text]
-    | LiftError_KnownTypeError KnownTypeError
-    | LiftError_FromRepr
-    deriving stock (Eq)
 
 {- | Convert a 'CompiledTerm' to the associated Haskell value. Fail otherwise.
 
