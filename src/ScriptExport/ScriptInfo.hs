@@ -12,6 +12,7 @@ module ScriptExport.ScriptInfo (
   ScriptInfo (..),
 
   -- * Introduction functions
+  mkScriptInfo,
   mkValidatorInfo,
   mkPolicyInfo,
 ) where
