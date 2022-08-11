@@ -12,8 +12,10 @@ bug-reports:
 license:
 
 -- license-file:       LICENSE
-author:             Koz Ross
-maintainer:         Koz Ross <koz@mlabs.city>
+author:             Koz Ross, Seungheon Oh
+maintainer:
+  Koz Ross <koz@mlabs.city>, Seungheon Oh <seungheon.ooh@gmail.com>  
+
 copyright:          (C) 2022 Liqwid Labs
 category:           Plutarch
 build-type:         Simple
@@ -66,20 +68,56 @@ common common-lang
 
   default-language:   Haskell2010
 
+common common-tests
+  import:        common-lang
+  ghc-options:   -O2 -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+    , bytestring
+    , contravariant
+    , plutarch
+    , plutarch-context-builder
+    , plutus-core
+    , plutus-ledger-api
+    , prettyprinter
+    , QuickCheck
+    , tasty
+    , tasty-hunit
+    , tasty-quickcheck
+
 -- Libraries
 
 library
   import:          common-lang
-  exposed-modules:
-    Plutarch.Context.Config
+  exposed-modules: Plutarch.Context
+  other-modules:
+    Plutarch.Context.Base
+    Plutarch.Context.Check
     Plutarch.Context.Minting
     Plutarch.Context.Spending
+    Plutarch.Context.SubBuilder
+    Plutarch.Context.TxInfo
 
-  other-modules:   Plutarch.Context.Base
   build-depends:
     , acc
+    , bytestring
+    , contravariant
     , mtl
+    , optics
     , plutus-core
     , plutus-ledger-api
+    , plutus-tx
+    , prettyprinter
 
   hs-source-dirs:  src
+
+-- Tests
+
+test-suite sample
+  import:         common-tests
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  other-modules:
+    MintingBuilder
+    SpendingBuilder
+
+  hs-source-dirs: sample/

@@ -1,149 +1,269 @@
 {-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ViewPatterns #-}
 
+{- | Module: Plutarch.Context.Base
+ Copyright: (C) Liqwid Labs 2022
+ Maintainer: Seungheon Oh <seungheon.ooh@gmail.com>
+ Portability: GHC only
+ Stability: Experimental
+
+ Fundamental interfaces for all other higher-level context-builders.
+ Such specific builders are abstracted from 'BaseBuilder'. All
+ interfaces here return instances of the 'Builder' typeclass. And as
+ a result, they can be used by all other instances of 'Builder'.
+-}
 module Plutarch.Context.Base (
-    UTXOType (..),
-    SideUTXO (..),
-    sideAddress,
-    sideData,
-    sideToTxOut,
+    -- * Types
+    Builder (..),
     BaseBuilder (..),
-    Build,
-    runBuild,
-    freshOutRefIndex,
-    baseTxInfo,
-    toInInfoDatums,
-    toTxOutDatums,
-    combineExternalMints,
+    UTXO (..),
+
+    -- * Modular constructors
+    output,
+    input,
+    referenceInput,
+    credential,
+    pubKey,
+    script,
+    withRefTxId,
+    withDatum,
+    withInlineDatum,
+    withValue,
+    withRefIndex,
+    withRef,
+
+    -- * Others
+    unpack,
     signedWith,
     mint,
     extraData,
-    inputFromPubKey,
-    inputFromPubKeyWith,
-    inputFromOtherScript,
-    outputToPubKey,
-    outputToPubKeyWith,
-    outputToOtherScript,
-    input,
-    output,
-    datafy,
+    txId,
+    fee,
+    timeRange,
+
+    -- * Builder components
+    utxoToTxOut,
     datumWithHash,
+    utxoDatumPair,
+    yieldBaseTxInfo,
+    yieldMint,
+    yieldExtraDatums,
+    yieldInInfoDatums,
+    yieldOutDatums,
+    mkOutRefIndices,
 ) where
 
 import Acc (Acc)
-import Control.Applicative (Alternative)
-import Control.Monad (foldM, guard)
-import Control.Monad.RWS.Strict (RWST, evalRWST)
-import Control.Monad.Reader (MonadReader, asks)
-import Control.Monad.State (get, modify)
-import Data.Foldable (traverse_)
+import Control.Arrow (Arrow ((&&&)))
+import Data.Foldable (Foldable (toList))
 import Data.Kind (Type)
+import Data.Maybe (fromMaybe, mapMaybe)
+import GHC.Exts (fromList)
+import Optics (Lens', lens, over, view)
 import Plutarch (S)
-import Plutarch.Api.V1 (datumHash)
+import Plutarch.Api.V2 (datumHash)
 import Plutarch.Builtin (PIsData, pdata, pforgetData)
-import Plutarch.Context.Config (
-    ContextConfig (
-        configCurrencySymbol,
-        configFee,
-        configTimeRange,
-        configTxId,
-        configValidatorHash
-    ),
- )
-import Plutarch.Lift (PUnsafeLiftDecl (PLifted), pconstant, plift)
-import PlutusCore.Data (Data)
-import PlutusLedgerApi.V1 (BuiltinData (BuiltinData))
-import PlutusLedgerApi.V1.Address (
-    Address,
-    pubKeyHashAddress,
-    scriptHashAddress,
- )
-import PlutusLedgerApi.V1.Contexts (
+import Plutarch.Lift (PUnsafeLiftDecl (..), pconstant, plift)
+import PlutusLedgerApi.V2 (
+    Address (Address),
+    BuiltinData (BuiltinData),
+    Credential (..),
+    Data,
+    Datum (Datum),
+    DatumHash,
+    Interval,
+    OutputDatum (..),
+    POSIXTime,
+    PubKeyHash (PubKeyHash),
+    ScriptHash,
     TxId (TxId),
     TxInInfo (TxInInfo),
-    TxInfo (
-        TxInfo,
-        txInfoDCert,
-        txInfoData,
-        txInfoFee,
-        txInfoId,
-        txInfoInputs,
-        txInfoMint,
-        txInfoOutputs,
-        txInfoSignatories,
-        txInfoValidRange,
-        txInfoWdrl
-    ),
+    TxInfo (..),
     TxOut (TxOut),
     TxOutRef (TxOutRef),
+    ValidatorHash,
+    Value,
+    always,
  )
-import PlutusLedgerApi.V1.Crypto (PubKeyHash)
-import PlutusLedgerApi.V1.Scripts (Datum (Datum), DatumHash, ValidatorHash)
-import PlutusLedgerApi.V1.Value (CurrencySymbol, Value, symbols)
+import qualified PlutusTx.AssocMap as AssocMap (fromList)
 
-data UTXOType
-    = PubKeyUTXO PubKeyHash (Maybe Data)
-    | ScriptUTXO ValidatorHash Data
+-- | @since 2.1.0
+data DatumType
+    = InlineDatum Data
+    | ContextDatum Data
     deriving stock (Show)
 
-data SideUTXO (a :: Type) = SideUTXO UTXOType a
-    deriving stock (Show)
+{- | 'UTXO' is used to represent any input or output of a transaction in the builders.
 
-sideAddress :: forall (a :: Type). SideUTXO a -> Address
-sideAddress (SideUTXO typ _) = case typ of
-    PubKeyUTXO pkh _ -> pubKeyHashAddress pkh
-    ScriptUTXO vh _ -> scriptHashAddress vh
+A UTXO' contains:
 
-sideData :: forall (a :: Type). SideUTXO a -> Maybe (DatumHash, Datum)
-sideData (SideUTXO typ _) = case typ of
-    PubKeyUTXO _ dat -> datumWithHash <$> dat
-    ScriptUTXO _ dat -> Just . datumWithHash $ dat
+  - A `Value` of one or more assets.
+  - An `Address` that it exists at.
+  - Potentially some Plutus 'Data'.
 
-sideToTxOut ::
-    forall (a :: Type).
-    (a -> Value) ->
-    SideUTXO a ->
-    TxOut
-sideToTxOut f side@(SideUTXO _ x) =
-    let address = sideAddress side
-        sData = sideData side
-        value = f x
-     in TxOut address value . fmap fst $ sData
+This is different from `TxOut`, in that we store the 'Data' fully instead of the 'DatumHash'.
 
-data BaseBuilder (a :: Type) = BB
-    { bbInputs :: Acc (SideUTXO Value)
-    , bbOutputs :: Acc (SideUTXO Value)
-    , bbSignatures :: Acc PubKeyHash
-    , bbDatums :: Acc Data
-    , bbMints :: Acc Value
+ @since 2.0.0
+-}
+data UTXO = UTXO
+    { utxoCredential :: Maybe Credential
+    , utxoValue :: Value
+    , utxoData :: Maybe DatumType
+    , utxoReferenceScript :: Maybe ScriptHash
+    , utxoTxId :: Maybe TxId
+    , utxoTxIdx :: Maybe Integer
     }
     deriving stock (Show)
 
-instance Semigroup (BaseBuilder a) where
-    BB ins outs sigs dats ms <> BB ins' outs' sigs' dats' ms' =
-        BB (ins <> ins') (outs <> outs') (sigs <> sigs') (dats <> dats') (ms <> ms')
+-- | @since 2.0.0
+instance Semigroup UTXO where
+    (UTXO c v d rs t tidx) <> (UTXO c' v' d' rs' t' tidx') =
+        UTXO (choose c c') (v <> v') (choose d d') (choose rs rs') (choose t t') (choose tidx tidx')
+      where
+        choose _ (Just b) = Just b
+        choose a Nothing = a
 
-instance Monoid (BaseBuilder a) where
-    mempty = BB mempty mempty mempty mempty mempty
+-- | @since 2.0.0
+instance Monoid UTXO where
+    mempty = UTXO Nothing mempty Nothing Nothing Nothing Nothing
 
-signedWith ::
-    forall (a :: Type).
-    PubKeyHash ->
-    BaseBuilder a
-signedWith pkh = mempty{bbSignatures = pure pkh}
+{- | Pulls address output of given UTXO'
 
-mint ::
-    forall (a :: Type).
-    Value ->
-    BaseBuilder a
-mint val = mempty{bbMints = pure val}
+ @since 1.1.0
+-}
+utxoAddress :: UTXO -> Address
+utxoAddress UTXO{..} = case utxoCredential of
+    Just cred -> Address cred Nothing
+    Nothing -> Address (PubKeyCredential $ PubKeyHash "") Nothing
 
-extraData ::
-    forall (d :: Type) (a :: Type) (p :: S -> Type).
-    (PUnsafeLiftDecl p, PLifted p ~ d, PIsData p) =>
-    d ->
-    BaseBuilder a
-extraData x = mempty{bbDatums = pure . datafy $ x}
+datumWithHash :: Data -> (DatumHash, Datum)
+datumWithHash d = (datumHash dt, dt)
+  where
+    dt :: Datum
+    dt = Datum . BuiltinData $ d
+
+utxoOutputDatum :: UTXO -> OutputDatum
+utxoOutputDatum (utxoData -> d') = case d' of
+    Nothing -> NoOutputDatum
+    Just (InlineDatum d) -> OutputDatum (Datum . BuiltinData $ d)
+    Just (ContextDatum d) -> OutputDatumHash (datumHash . Datum . BuiltinData $ d)
+
+utxoDatumPair :: UTXO -> Maybe (DatumHash, Datum)
+utxoDatumPair u =
+    utxoData u >>= \case
+        InlineDatum _ -> Nothing
+        ContextDatum d -> Just $ datumWithHash d
+
+{- | Construct TxOut of given UTXO
+
+ @since 1.1.0
+-}
+utxoToTxOut ::
+    UTXO ->
+    TxOut
+utxoToTxOut utxo@(UTXO{..}) =
+    TxOut (utxoAddress utxo) utxoValue (utxoOutputDatum utxo) utxoReferenceScript
+
+withDatum ::
+    forall (b :: Type) (p :: S -> Type).
+    (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
+    b ->
+    UTXO
+withDatum dat = mempty{utxoData = Just . ContextDatum . datafy $ dat}
+
+withInlineDatum ::
+    forall (b :: Type) (p :: S -> Type).
+    (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
+    b ->
+    UTXO
+withInlineDatum dat = mempty{utxoData = Just . InlineDatum . datafy $ dat}
+
+withRefTxId :: TxId -> UTXO
+withRefTxId tid = mempty{utxoTxId = Just tid}
+
+withRefIndex :: Integer -> UTXO
+withRefIndex tidx = mempty{utxoTxIdx = Just tidx}
+
+withRef :: TxOutRef -> UTXO
+withRef (TxOutRef tid idx) = withRefTxId tid <> withRefIndex idx
+
+withValue :: Value -> UTXO
+withValue val = mempty{utxoValue = val}
+
+credential :: Credential -> UTXO
+credential cred = mempty{utxoCredential = Just cred}
+
+pubKey :: PubKeyHash -> UTXO
+pubKey (PubKeyCredential -> cred) = mempty{utxoCredential = Just cred}
+
+script :: ValidatorHash -> UTXO
+script (ScriptCredential -> cred) = mempty{utxoCredential = Just cred}
+
+{- | Interface between specific builders to BaseBuilder.
+ @pack@ will constrct specific builder that contains given BaseBuilder.
+
+ Laws:
+ 1. view _bb . pack = id
+ 2. pack . view _bb = id
+
+ @since 1.1.0
+-}
+class Builder a where
+    _bb :: Lens' a BaseBuilder
+    pack :: BaseBuilder -> a
+
+-- | @since 2.1.0
+unpack :: Builder a => a -> BaseBuilder
+unpack = view _bb
+
+{- | Base builder. Handles basic input, output, signs, mints, and
+ extra datums. BaseBuilder provides such basic functionalities for
+ @ScriptContext@ creation, leaving specific builders only with
+ minimal logical checkings.
+
+ @since 1.1.0
+-}
+data BaseBuilder = BB
+    { bbInputs :: Acc UTXO
+    , bbReferenceInputs :: Acc UTXO
+    , bbOutputs :: Acc UTXO
+    , bbSignatures :: Acc PubKeyHash
+    , bbDatums :: Acc Data
+    , bbMints :: Acc Value
+    , bbFee :: Value
+    , bbTimeRange :: Interval POSIXTime
+    , bbTxId :: TxId
+    }
+    deriving stock (Show)
+
+-- | @since 1.1.0
+instance Semigroup BaseBuilder where
+    BB ins refIns outs sigs dats ms fval range tid <> BB ins' refIns' outs' sigs' dats' ms' fval' range' tid' =
+        BB
+            (ins <> ins')
+            (refIns <> refIns')
+            (outs <> outs')
+            (sigs <> sigs')
+            (dats <> dats')
+            (ms <> ms')
+            (fval <> fval')
+            (choose bbTimeRange range range')
+            (choose bbTxId tid tid')
+      where
+        choose f a b
+            | f mempty == b = a
+            | otherwise = b
+
+-- | @since 1.1.0
+instance Monoid BaseBuilder where
+    mempty = BB mempty mempty mempty mempty mempty mempty mempty always (TxId "")
+
+-- | @since 2.1.0
+instance Builder BaseBuilder where
+    _bb = lens id $ const id
+    pack = id
 
 datafy ::
     forall (a :: Type) (p :: S -> Type).
@@ -152,196 +272,183 @@ datafy ::
     Data
 datafy x = plift (pforgetData (pdata (pconstant x)))
 
-inputFromPubKey ::
+{- | Adds signer to builder.
+
+ @since 1.1.0
+-}
+signedWith ::
     forall (a :: Type).
+    (Builder a) =>
     PubKeyHash ->
-    Value ->
-    BaseBuilder a
-inputFromPubKey pkh = input . pubSideGeneral pkh
+    a
+signedWith pkh = pack $ mempty{bbSignatures = pure pkh}
 
-outputToPubKey ::
+{- | Mint given value.
+
+ @since 1.1.0
+-}
+mint ::
     forall (a :: Type).
-    PubKeyHash ->
+    (Builder a) =>
     Value ->
-    BaseBuilder a
-outputToPubKey pkh = output . pubSideGeneral pkh
+    a
+mint val = pack $ mempty{bbMints = pure val}
 
-inputFromPubKeyWith ::
-    forall (b :: Type) (a :: Type) (p :: S -> Type).
-    (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
-    PubKeyHash ->
-    Value ->
-    b ->
-    BaseBuilder a
-inputFromPubKeyWith pkh val = input . pubSideGeneralWith pkh val
+{- | Append extra datum to @ScriptContex@.
 
-outputToPubKeyWith ::
-    forall (b :: Type) (a :: Type) (p :: S -> Type).
-    (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
-    PubKeyHash ->
-    Value ->
-    b ->
-    BaseBuilder a
-outputToPubKeyWith pkh val = output . pubSideGeneralWith pkh val
+ @since 1.1.0
+-}
+extraData ::
+    forall (a :: Type) (d :: Type) (p :: S -> Type).
+    (Builder a, PUnsafeLiftDecl p, PLifted p ~ d, PIsData p) =>
+    d ->
+    a
+extraData x = pack $ mempty{bbDatums = pure . datafy $ x}
 
-inputFromOtherScript ::
-    forall (b :: Type) (a :: Type) (p :: S -> Type).
-    (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
-    ValidatorHash ->
-    Value ->
-    b ->
-    BaseBuilder a
-inputFromOtherScript vh val = input . scriptSideGeneral vh val
-
-outputToOtherScript ::
-    forall (b :: Type) (a :: Type) (p :: S -> Type).
-    (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
-    ValidatorHash ->
-    Value ->
-    b ->
-    BaseBuilder a
-outputToOtherScript vh val = output . scriptSideGeneral vh val
-
-datumWithHash :: Data -> (DatumHash, Datum)
-datumWithHash d = (datumHash dt, dt)
-  where
-    dt :: Datum
-    dt = Datum . BuiltinData $ d
-
--- Build monad and helpers
-
-newtype Build (a :: Type) = Build (RWST ContextConfig () Integer Maybe a)
-    deriving
-        ( Functor
-        , Applicative
-        , Alternative
-        , Monad
-        , MonadReader ContextConfig
-        )
-        via (RWST ContextConfig () Integer Maybe)
-
-runBuild ::
+txId ::
     forall (a :: Type).
-    Build a ->
-    ContextConfig ->
-    Maybe a
-runBuild (Build comp) config = fst <$> evalRWST comp config 1
+    (Builder a) =>
+    TxId ->
+    a
+txId tid = pack $ mempty{bbTxId = tid}
 
-freshOutRefIndex :: Build Integer
-freshOutRefIndex = Build $ do
-    curr <- get
-    modify (+ 1)
-    pure curr
-
-baseTxInfo :: Build TxInfo
-baseTxInfo = do
-    fee <- asks configFee
-    time <- asks configTimeRange
-    pure $
-        TxInfo
-            { txInfoInputs = mempty
-            , txInfoOutputs = mempty
-            , txInfoFee = fee
-            , txInfoMint = mempty
-            , txInfoDCert = mempty
-            , txInfoWdrl = mempty
-            , txInfoValidRange = time
-            , txInfoSignatories = mempty
-            , txInfoData = mempty
-            , txInfoId = TxId "testTx"
-            }
-
-toInInfoDatums ::
-    forall (f :: Type -> Type) (a :: Type).
-    (Foldable f, Applicative f, forall b. Monoid (f b)) =>
-    (a -> Value) ->
-    f (SideUTXO a) ->
-    Build (f TxInInfo, f (DatumHash, Datum))
-toInInfoDatums proj = foldM go (mempty, mempty)
-  where
-    go ::
-        (f TxInInfo, f (DatumHash, Datum)) ->
-        SideUTXO a ->
-        Build (f TxInInfo, f (DatumHash, Datum))
-    go (acc1, acc2) sideUtxo = do
-        ourAddress <- asks (scriptHashAddress . configValidatorHash)
-        guard (ourAddress /= sideAddress sideUtxo)
-        ref <- asks (TxOutRef . configTxId) <*> freshOutRefIndex
-        let mSideData = sideData sideUtxo
-        let txOut = sideToTxOut proj sideUtxo
-        let txInInfo = TxInInfo ref txOut
-        pure . (pure txInInfo <> acc1,) $ case mSideData of
-            Nothing -> acc2
-            Just sd -> pure sd <> acc2
-
-toTxOutDatums ::
-    forall (f :: Type -> Type) (a :: Type).
-    (Foldable f, Applicative f, forall b. Monoid (f b)) =>
-    (a -> Value) ->
-    f (SideUTXO a) ->
-    (f TxOut, f (DatumHash, Datum))
-toTxOutDatums proj = foldr go (mempty, mempty)
-  where
-    go ::
-        SideUTXO a ->
-        (f TxOut, f (DatumHash, Datum)) ->
-        (f TxOut, f (DatumHash, Datum))
-    go sideUtxo (acc1, acc2) =
-        let txOut = sideToTxOut proj sideUtxo
-            mSideData = sideData sideUtxo
-         in (acc1 <> pure txOut,) $ case mSideData of
-                Nothing -> acc2
-                Just sd -> acc2 <> pure sd
-
-combineExternalMints ::
-    forall (f :: Type -> Type).
-    (Foldable f) =>
-    f Value ->
-    Build Value
-combineExternalMints = foldM go mempty
-  where
-    go :: Value -> Value -> Build Value
-    go acc val =
-        (acc <>) <$> do
-            traverse_ checkSyms . symbols $ val
-            pure val
-    checkSyms :: CurrencySymbol -> Build ()
-    checkSyms sym =
-        asks configCurrencySymbol >>= (guard . (sym /=))
-
--- Helpers
-
-input ::
+fee ::
     forall (a :: Type).
-    SideUTXO Value ->
-    BaseBuilder a
-input x = mempty{bbInputs = pure x}
+    (Builder a) =>
+    Value ->
+    a
+fee val = pack $ mempty{bbFee = val}
+
+timeRange ::
+    forall (a :: Type).
+    (Builder a) =>
+    Interval POSIXTime ->
+    a
+timeRange r = pack $ mempty{bbTimeRange = r}
 
 output ::
     forall (a :: Type).
-    SideUTXO Value ->
-    BaseBuilder a
-output x = mempty{bbOutputs = pure x}
+    (Builder a) =>
+    UTXO ->
+    a
+output x = pack mempty{bbOutputs = pure x}
 
-pubSideGeneral :: PubKeyHash -> Value -> SideUTXO Value
-pubSideGeneral pkh = SideUTXO (PubKeyUTXO pkh Nothing)
+input ::
+    forall (a :: Type).
+    (Builder a) =>
+    UTXO ->
+    a
+input x = pack mempty{bbInputs = pure x}
 
-pubSideGeneralWith ::
-    forall (b :: Type) (p :: S -> Type).
-    (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
-    PubKeyHash ->
-    Value ->
-    b ->
-    SideUTXO Value
-pubSideGeneralWith pkh val x =
-    SideUTXO (PubKeyUTXO pkh . Just . datafy $ x) val
+referenceInput ::
+    forall (a :: Type).
+    (Builder a) =>
+    UTXO ->
+    a
+referenceInput x = pack mempty{bbReferenceInputs = pure x}
 
-scriptSideGeneral ::
-    forall (b :: Type) (p :: S -> Type).
-    (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
-    ValidatorHash ->
-    Value ->
-    b ->
-    SideUTXO Value
-scriptSideGeneral vh val x =
-    SideUTXO (ScriptUTXO vh . datafy $ x) val
+{- | Provide base @TxInfo@ to Continuation Monad.
+
+ @since 1.1.0
+-}
+yieldBaseTxInfo ::
+    (Builder b) => b -> TxInfo
+yieldBaseTxInfo (unpack -> BB{..}) =
+    TxInfo
+        { txInfoInputs = mempty
+        , txInfoReferenceInputs = mempty
+        , txInfoOutputs = mempty
+        , txInfoFee = bbFee
+        , txInfoMint = mempty
+        , txInfoDCert = mempty
+        , txInfoWdrl = AssocMap.fromList []
+        , txInfoValidRange = bbTimeRange
+        , txInfoSignatories = mempty
+        , txInfoRedeemers = AssocMap.fromList []
+        , txInfoData = AssocMap.fromList []
+        , txInfoId = bbTxId
+        }
+
+{- | Provide total mints to Continuation Monad.
+
+ @since 1.1.0
+-}
+yieldMint ::
+    Acc Value ->
+    Value
+yieldMint (toList -> vals) =
+    mconcat vals
+
+{- | Provide DatumHash-Datum pair to Continuation Monad.
+
+ @since 1.1.0
+-}
+yieldExtraDatums ::
+    Acc Data ->
+    [(DatumHash, Datum)]
+yieldExtraDatums (toList -> ds) =
+    datumWithHash <$> ds
+
+{- | Provide list of TxInInfo and DatumHash-Datum pair for inputs to
+ Continutation Monad.
+
+ @since 1.1.0
+-}
+yieldInInfoDatums ::
+    Acc UTXO ->
+    ([TxInInfo], [(DatumHash, Datum)])
+yieldInInfoDatums (toList -> inputs) =
+    fmap mkTxInInfo &&& createDatumPairs $ inputs
+  where
+    mkTxInInfo :: UTXO -> TxInInfo
+    mkTxInInfo utxo@UTXO{..} = TxInInfo ref (utxoToTxOut utxo)
+      where
+        ref = TxOutRef (fromMaybe "" utxoTxId) (fromMaybe 0 utxoTxIdx)
+
+    createDatumPairs :: [UTXO] -> [(DatumHash, Datum)]
+    createDatumPairs = mapMaybe utxoDatumPair
+
+{- | Provide list of TxOut and DatumHash-Datum pair for outputs to
+ Continutation Monad.
+
+ @since 1.1.0
+-}
+yieldOutDatums ::
+    Acc UTXO ->
+    ([TxOut], [(DatumHash, Datum)])
+yieldOutDatums (toList -> outputs) =
+    createTxInInfo &&& createDatumPairs $ outputs
+  where
+    createTxInInfo :: [UTXO] -> [TxOut]
+    createTxInInfo xs = utxoToTxOut <$> xs
+    createDatumPairs :: [UTXO] -> [(DatumHash, Datum)]
+    createDatumPairs = mapMaybe utxoDatumPair
+
+{- | Automatically generate `TxOutRef`s from given builder.
+ It tries to reserve index if given one; otherwise, it grants
+ incremental indices to each inputs starting from one. If there
+ are duplicate reserved indices, the second occurance will be
+ treated as non-reserved and given incremental index.
+
+ @since 2.1.0
+-}
+mkOutRefIndices ::
+    forall (a :: Type).
+    Builder a =>
+    a ->
+    a
+mkOutRefIndices = over _bb go
+  where
+    go bb@BB{..} = bb{bbInputs = grantIndex bbInputs}
+
+    grantIndex :: Acc UTXO -> Acc UTXO
+    grantIndex (toList -> xs) = fromList $ grantIndex' 1 [] xs
+
+    grantIndex' :: Integer -> [Integer] -> [UTXO] -> [UTXO]
+    grantIndex' top used (x@(UTXO _ _ _ _ _ Nothing) : xs)
+        | top `elem` used = grantIndex' (top + 1) used (x : xs)
+        | otherwise = x{utxoTxIdx = Just top} : grantIndex' (top + 1) (top : used) xs
+    grantIndex' top used (x@(UTXO _ _ _ _ _ (Just i)) : xs)
+        | i `elem` used = grantIndex' top used (x{utxoTxIdx = Nothing} : xs)
+        | otherwise = x : grantIndex' top (i : used) xs
+    grantIndex' _ _ [] = []
