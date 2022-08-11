@@ -33,6 +33,8 @@ import Test.QuickCheck (
     vectorOf,
  )
 
+-- TODO: Generate function with more arguments
+-- TODO: ^ would this be possible want script size is limited?
 data PFun (a :: S -> Type) (b :: S -> Type) where
     PFun ::
         (PLift a, PLift b) =>

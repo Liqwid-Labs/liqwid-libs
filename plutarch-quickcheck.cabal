@@ -63,6 +63,7 @@ common common-tests
   build-depends:
     , base                    ^>=4.16
     , bytestring
+    , generics-sop
     , plutarch
     , plutarch-quickcheck
     , QuickCheck
@@ -134,3 +135,9 @@ test-suite reverse-test
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   hs-source-dirs: sample/reverse-test
+
+test-suite zip-test
+  import:         common-tests
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  hs-source-dirs: sample/zip-test

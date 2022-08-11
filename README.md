@@ -1,46 +1,37 @@
 # `plutarch-quickcheck`
-Public discussion and assistance can be found on [discord](https://discord.gg/yGkjxrYueB) @ #liqwid-plutarch-extra
+Public discussion and assistance can be found on [discord](https://discord.gg/yGkjxrYueB) @ #liqwid-libs
 
 ## What is this?
 
-A helper library to write Plutarch-oriented QuickCheck property tests. It
-includes support for both 'general' QuickCheck-based property testing and testing (some) Plutarch type class laws. These helpers
-integrate seamlessly with
-[`tasty-quickcheck`](https://hackage.haskell.org/package/tasty-quickcheck).
+A helper library to write Plutarch-oriented QuickCheck property tests. 
+Interfaces `plutarch-quickcheck` provide are designed to look and feel
+like writting regular `QuickCheck` properties. 
 
 ## What _exactly_ does this do for me?
 
-QuickCheck is a folkloric minefield and can be quite tedious to use correctly.
-Furthermore, its interactions with Plutarch can be non-obvious, and much
-of the built-in functionality it provides is not very useful for it.
-Furthermore, while Plutarch type classes do have laws, verifying them by hand
-can be complex and error-prone. Lastly, the error output of QuickCheck
-(and, by extension, `tasty-quickcheck`) can be hard to understand.
+`plutarch-quickcheck` *lifts* property written in Plutarch code into 
+`QuickCheck`. For example,
 
-`plutarch-quickcheck` aims to fix all of these issues:
+```hs
+additionCommutative :: Term s (PInteger :--> PInteger :--> PBool)
+additionCommutative = plam $ \x y -> x + y #== y + x
 
-* As long as you can provide generators and shrinkers, you don't have to
-  interact with any other part of QuickCheck _at all_; this library handles the
-  boilerplate. This applies equally to both general properties and laws checks.
-* Issues of QuickCheck coverage, especially for conditional properties, are
-  handled automatically: you never have to consider this.
-* Whenever possible, `plutarch-quickcheck` will ensure that things are defined,
-  and behaving sensibly relative to one another, and will inform you (quite
-  loudly) if not.
-* Error output tries to be as helpful as it can, both by using prettyprinting
-  and also explaining in more natural language what exactly went wrong.
-* We provide extensive documentation to assist you, including both examples and
-  Haddocks. Never step on any QuickCheck rakes again!
+quickCheck $ fromPFun additionCommutative -- Magic!
+-- +++ OK, passed 100 tests.
+```
 
-Currently, we can test the following type class laws:
+It also provides other utilities like generations of 
+arbitrary Plutarch function (at this point, only ones with single
+argument) and defining property from Haskell equivlant definition of 
+Plutarch function.
 
-* `PConstantDecl` and `PUnsafeLiftDecl`
+```hs
+pfunctionGeneration :: Term s (PFun PInteger PInteger :--> PBool)
+pfunctionGeneration = plam $ \(PFn (f :: Term s (PInteger :--> PInteger))) -> ...
 
-We aim to add more as we go. Furthermore, we also provide helpful instances of
-QuickCheck type classes (`Arbitrary`, `CoArbitrary` and `Function`) for several
-Plutarch-related data types:
-
-* `Data` (from `PlutusCore.Data`)
+reverseProperty :: Property
+reverseProperty = haskEquiv' reverse (preverse @PBuiltinList)
+```
 
 # How do I use this?
 
@@ -49,14 +40,13 @@ already comfortable with `tasty-quickcheck` and property testing in general; for
 those who are not, or those who prefer to learn from examples, we provide three
 executable examples:
 
-* `examples/square-tests`, which demonstrates basic usage of both universal and
-  conditional properties;
-* `examples/zip-tests`, which demonstrates conditional properties with crashing
-  cases; and
-* `examples/natural-tests`, which demonstrates law checking.
+* `examples/reverse-tests`, which demonstrates how to define property 
+using definition of behavior in Haskell. 
+* `examples/zip-tests`, which demonstrates how to use `fromPFun` to 
+define Plutarch property. 
 
 Users new to the library can read the examples as code, as well as execute the
-tests with `cabal new-test` to see what they do.
+tests with `cabal *-test` to see what they do.
 
 We also have [a wiki
 article](https://github.com/Liqwid-Labs/plutarch-quickcheck/wiki/Testing-without-tears:-good-practices-and-tips)

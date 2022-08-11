@@ -26,9 +26,6 @@ module Plutarch.Test.QuickCheck (
     arbitraryPLift,
     PFun (..),
     pattern PFn,
-    applyPFun,
-    plamTable,
-    plamFinite,
     TestableTerm (..),
     PArbitrary (..),
     pconstantT,
@@ -219,18 +216,31 @@ haskEquiv' ::
     Property
 haskEquiv' h p = haskEquiv h (TestableTerm p) $ hcpure (Proxy @Arbitrary) arbitrary
 
+{- | Placeholder for a polymorphic type. Plutarch equivalence of QuickCheck's `A`.
+
+ @since 2.0.0
+-}
 type PA :: S -> Type
 type PA = PInteger
 
+{- | Same as `PA`.
+
+ @since 2.0.0
+-}
 type PB :: S -> Type
 type PB = PInteger
 
+{- | Same as `PA`.
+
+ @since 2.0.0
+-}
 type PC :: S -> Type
 type PC = PInteger
 
-{-
-This shinker "simplifies" underlaying plutarch representation. When
-shrinking List, this shinker is always preferable.
+{- | This shinker "simplifies" underlaying plutarch representation. When
+     shrinking List, this shinker is always preferable.
+
+ @since 2.0.0
 -}
 shrinkPLift ::
     forall a.
@@ -241,6 +251,11 @@ shrinkPLift ::
     [TestableTerm a]
 shrinkPLift = fmap pconstantT . shrink . pliftT
 
+{- | This generator uses `Arbitrary` instance of Haskell representation to
+     make value and lift that into Plutarch.
+
+ @since 2.0.0
+-}
 arbitraryPLift ::
     forall a.
     ( PLift a
