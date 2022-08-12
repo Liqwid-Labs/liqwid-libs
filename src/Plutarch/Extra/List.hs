@@ -1,6 +1,4 @@
 {-# LANGUAGE PackageImports #-}
--- FIXME (see https://github.com/Liqwid-Labs/liqwid-plutarch-extra/issues/56)
-{-# LANGUAGE PartialTypeSignatures #-}
 
 {- | Module: Plutarch.Extra.List
  Description: Duplicated functions from `liqwid-plutarch-extra`
