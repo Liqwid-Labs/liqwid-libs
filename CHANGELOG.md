@@ -2,11 +2,23 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-## 2.0.1 -- 2022-08-08
+
+## 2.0.2 -- 2022-08-08
 
 ### Changed
 
  - Scripts compiled with 'mustCompile' now enable deterministic tracing.
+
+## 2.0.1 -- 2022-08-11
+
+### Added
+
+- `pjust` and `pnothing` for easier construction of `PJust` value.
+- `pmaybe` which has the same semantics as `Data.Maybe.maybe`.
+
+### Changed
+
+- Rename the original `pamybe` to `pfromMaybe`.
 
 ## 2.0.0 -- 2022-08-02
 
