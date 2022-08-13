@@ -48,6 +48,7 @@ import Data.Csv (
 import Data.Foldable (foldl')
 import Data.Function (on)
 import qualified Data.HashMap.Strict as HashMap
+import Data.Kind (Type)
 import Data.List (sortBy)
 import Data.List.NonEmpty (NonEmpty ((:|)), groupAllWith)
 import Data.Maybe (fromJust)
@@ -60,7 +61,6 @@ import GHC.Generics (Generic)
 import Optics (sequenceOf, traversed, (%%))
 import Optics.TH (makeFieldLabelsNoPrefix)
 import Path (Dir, Path, Rel, parseRelFile, toFilePath, (</>))
-import Plutarch.Prelude (Type)
 import Test.Benchmark.Common (
   ImplData (ImplData, name, val),
   MultiImplComparisonData (

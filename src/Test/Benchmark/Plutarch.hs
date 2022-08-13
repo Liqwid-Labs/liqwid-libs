@@ -13,11 +13,12 @@ module Test.Benchmark.Plutarch (
 
 import Control.Monad.Primitive (MonadPrim, PrimMonad, PrimState)
 import Data.Hashable (Hashable)
+import Data.Kind (Type)
 import Data.Text (Text)
 import Plutarch.Extra.Compile (mustCompile)
 import Plutarch.Extra.DScript (mustCompileD)
 import Plutarch.Extra.Precompile (CompiledTerm, compile', toDScript)
-import Plutarch.Prelude (ClosedTerm, S, Type)
+import Plutarch.Prelude (ClosedTerm, S)
 import System.Random (RandomGen)
 import Test.Benchmark.Common (ImplData (..))
 import Test.Benchmark.Plutus (
