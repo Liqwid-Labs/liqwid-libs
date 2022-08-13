@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -45,10 +44,14 @@ import Plutarch.Extra.DebuggableScript (
     script,
  )
 import Plutarch.Lift (
+    LiftError (
+        LiftError_CompilationError,
+        LiftError_EvalError,
+        LiftError_FromRepr,
+        LiftError_KnownTypeError
+    ),
     PConstantDecl (pconstantFromRepr),
     PUnsafeLiftDecl (PLifted),
-    (LiftError (LiftError_EvalError, LiftError_KnownTypeError,
-                LiftError_FromRepr, LiftError_CompilationError)
  )
 import Plutarch.Prelude (PLift, S, Term, Type, (:-->))
 import PlutusCore.Builtin (KnownTypeError, readKnownConstant)
@@ -197,7 +200,6 @@ infixl 7 ###~
 
 --  Copied and adapted the stuff below from 'Plutarch.Lift'.
 --  Also added trace messages in the exceptions.
-
 
 {- | Convert a 'CompiledTerm' to the associated Haskell value. Fail otherwise.
 

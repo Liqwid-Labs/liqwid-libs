@@ -3,8 +3,9 @@
 module Plutarch.Extra.Compile (mustCompile) where
 
 import qualified Data.Text as T
-import Plutarch (ClosedTerm, Config (..), TracingMode (DetTracing), compile)
-import PlutusLedgerApi.V1 (Script)
+import Plutarch (Config (..), TracingMode (DetTracing), compile)
+import Plutarch.Prelude
+import PlutusLedgerApi.V2 (Script)
 
 {- | Compile a ClosedTerm, throwing an error if unsuccessful.
 
