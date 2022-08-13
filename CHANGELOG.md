@@ -25,6 +25,12 @@ should clarify that these functions are indeed suitable for inclusion in V2 scri
    As a result, some existing tests for LPE have been temporarily removed. [Issue #53](https://github.com/Liqwid-Labs/liqwid-plutarch-extra/issues/53)
    has been opened to port these tests to PQ2.0
 
+## 2.0.2 -- 2022-08-08
+
+### Changed
+
+ - Scripts compiled with 'mustCompile' now enable deterministic tracing.
+
 ## 2.0.1 -- 2022-08-11
 
 ### Added
