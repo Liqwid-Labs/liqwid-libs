@@ -1,7 +1,8 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Benchmark.Plutarch (
+-- | @since 1.0.0
+module Plutarch.Benchmark.Plutarch (
   mkTermImplMetaData,
   sampleTerm,
   sampleTerm',
@@ -13,22 +14,18 @@ module Test.Benchmark.Plutarch (
 
 import Control.Monad.Primitive (MonadPrim, PrimMonad, PrimState)
 import Data.Hashable (Hashable)
+import Data.Kind (Type)
 import Data.Text (Text)
-import Plutarch.Extra.Compile (mustCompile)
-import Plutarch.Extra.DScript (mustCompileD)
-import Plutarch.Extra.Precompile (CompiledTerm, compile', toDScript)
-import Plutarch.Prelude (ClosedTerm, S, Type)
-import System.Random (RandomGen)
-import Test.Benchmark.Common (ImplData (..))
-import Test.Benchmark.Plutus (
+import Plutarch.Benchmark.Common (ImplData (..))
+import Plutarch.Benchmark.Plutus (
   BudgetExceeded,
   Costs,
   ImplMetaData,
   PlutusCostAxis,
   mkScriptImplMetaData,
-  sampleDScript,
+  sampleDebuggableScript,
  )
-import Test.Benchmark.Sized (
+import Plutarch.Benchmark.Sized (
   SSample,
   SUniversalGen,
   benchAllSizesUniform,
@@ -36,8 +33,15 @@ import Test.Benchmark.Sized (
   benchSizesRandom,
   benchSizesRandomCached,
  )
+import Plutarch.Extra.Compile (mustCompile)
+import Plutarch.Extra.DebuggableScript (mustCompileD)
+import Plutarch.Extra.Precompile (CompiledTerm, compile', toDebuggableScript)
+import Plutarch.Prelude (ClosedTerm, S)
+import System.Random (RandomGen)
 
+-- | @since 1.0.0
 mkTermImplMetaData ::
+  forall (a :: S -> Type).
   -- | Name of the implementation. Make sure it's unique.
   Text ->
   -- | The implementation without any inputs
@@ -45,15 +49,23 @@ mkTermImplMetaData ::
   ImplMetaData
 mkTermImplMetaData name term = mkScriptImplMetaData name $ mustCompile term
 
+-- | @since 1.0.0
 sampleTerm :: ClosedTerm a -> Either (BudgetExceeded PlutusCostAxis) Costs
-sampleTerm term = sampleDScript $ mustCompileD term
+sampleTerm term = sampleDebuggableScript $ mustCompileD term
 
+-- | @since 1.0.0
 sampleTerm' :: CompiledTerm a -> Either (BudgetExceeded PlutusCostAxis) Costs
-sampleTerm' = sampleDScript . toDScript
+sampleTerm' = sampleDebuggableScript . toDebuggableScript
 
 -- | See 'benchAllSizesUniform'.
+-- | @since 1.0.0
 pbenchAllSizesUniform ::
-  forall (a :: Type) (f :: S -> Type) (b :: S -> Type) (m :: Type -> Type) (s :: Type).
+  forall
+    (a :: Type)
+    (f :: S -> Type)
+    (b :: S -> Type)
+    (m :: Type -> Type)
+    (s :: Type).
   ( Hashable a
   , PrimMonad m
   , (s ~ PrimState m)
@@ -91,8 +103,14 @@ pbenchAllSizesUniform
       pfun' = compile' pfun
 
 -- | See 'benchNonTinySizesRandomUniform'.
+-- | @since 1.0.0
 pbenchNonTinySizesRandomUniform ::
-  forall (a :: Type) (f :: S -> Type) (b :: S -> Type) (m :: Type -> Type) (s :: Type).
+  forall
+    (a :: Type)
+    (f :: S -> Type)
+    (b :: S -> Type)
+    (m :: Type -> Type)
+    (s :: Type).
   ( Hashable a
   , MonadPrim s m
   ) =>
@@ -126,8 +144,14 @@ pbenchNonTinySizesRandomUniform
       pfun' = compile' pfun
 
 -- | See 'benchSizesRandomCached'.
+-- | @since 1.0.0
 pbenchSizesRandomCached ::
-  forall (a :: Type) (f :: S -> Type) (b :: S -> Type) (m :: Type -> Type) (s :: Type).
+  forall
+    (a :: Type)
+    (f :: S -> Type)
+    (b :: S -> Type)
+    (m :: Type -> Type)
+    (s :: Type).
   ( Hashable a
   , MonadPrim s m
   ) =>
@@ -161,8 +185,14 @@ pbenchSizesRandomCached
       pfun' = compile' pfun
 
 -- | See 'benchSizesRandomCached'.
+-- | @since 1.0.0
 pbenchSizesRandom ::
-  forall (a :: Type) (f :: S -> Type) (b :: S -> Type) (m :: Type -> Type) (s :: Type).
+  forall
+    (a :: Type)
+    (f :: S -> Type)
+    (b :: S -> Type)
+    (m :: Type -> Type)
+    (s :: Type).
   ( Hashable a
   , MonadPrim s m
   ) =>

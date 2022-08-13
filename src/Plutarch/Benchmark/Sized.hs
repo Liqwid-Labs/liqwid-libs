@@ -43,8 +43,10 @@
 
  'benchSizesRandom' does no deduplication and no result caching. It is suitable
  for any distribution.
+
+ @since 1.0.0
 -}
-module Test.Benchmark.Sized (
+module Plutarch.Benchmark.Sized (
   SSample (..),
   Cardinality (..),
   SUniversalGen (..),
@@ -68,12 +70,12 @@ import Data.Csv (
  )
 import qualified Data.HashTable.ST.Basic as HashTable
 import Data.Hashable (Hashable)
+import Data.Kind (Type)
 import Data.Maybe (fromMaybe, isNothing)
 import Data.Primitive.MutVar (newMutVar, readMutVar, writeMutVar)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Optics.TH (makeFieldLabelsNoPrefix)
-import Plutarch.Prelude (Type)
 import System.Random (RandomGen, StdGen, mkStdGen)
 import System.Random.Stateful (
   StateGenM (StateGenM),
@@ -84,7 +86,8 @@ import System.Random.Stateful (
 import Text.Printf (printf)
 
 -- | Holds sample and metadata for a certain input size
-data SSample s = SSample
+-- | @since 1.0.0
+data SSample (s :: Type) = SSample
   { inputSize :: Int
   , coverage :: Maybe Float
   -- ^ Sample size / Number of possible inputs at that size
@@ -96,6 +99,7 @@ data SSample s = SSample
 
 makeFieldLabelsNoPrefix ''SSample
 
+-- | @since 1.0.0
 instance ToNamedRecord (SSample ()) where
   toNamedRecord (SSample {..}) =
     namedRecord
@@ -105,6 +109,7 @@ instance ToNamedRecord (SSample ()) where
       , "sample size" .= sampleSize
       ]
 
+-- | @since 1.0.0
 instance DefaultOrdered (SSample ()) where
   headerOrder _ =
     header
@@ -113,6 +118,7 @@ instance DefaultOrdered (SSample ()) where
       , "sample size"
       ]
 
+-- | @since 1.0.0
 data Cardinality
   = Cardinality {exact :: Natural}
   | HugeCardinality
@@ -120,7 +126,8 @@ data Cardinality
 
 makeFieldLabelsNoPrefix ''Cardinality
 
-countCardinalityUpTo :: Int -> [a] -> Cardinality
+-- | @since 1.0.0
+countCardinalityUpTo :: forall (a :: Type). Int -> [a] -> Cardinality
 countCardinalityUpTo lim xs = go xs 0
   where
     go [] c = Cardinality $ fromIntegral c
@@ -139,6 +146,8 @@ countCardinalityUpTo lim xs = go xs 0
 
  This is intended for uniform distributions only. The 'exhaustiveGen' is assumed
  to generate each possible input value only once.
+
+ @since 1.0.0
 -}
 data SUniversalGen (a :: Type) = SUniversalGen
   { cardinalityOfSize :: Maybe (Int -> Cardinality)
@@ -184,6 +193,8 @@ makeFieldLabelsNoPrefix ''SUniversalGen
  The list of sample elements '[s]' should be not be kept in memory, better
  process it into arrays right away, or write to file.
  TODO An actual Stream might be a better choice
+
+ @since 1.0.0
 -}
 benchAllSizesUniform ::
   forall (a :: Type) (se :: Type) (m :: Type -> Type) (s :: Type).
@@ -237,6 +248,7 @@ benchAllSizesUniform
       )
       sizes
 
+-- | @since 1.0.0
 benchInputSizeUniversal ::
   forall (a :: Type) (se :: Type) (m :: Type -> Type) (s :: Type).
   ( Hashable a
@@ -312,7 +324,8 @@ benchInputSizeUniversal
                   else genRandomDedup sampleSize (randomGen inputSize)
               )
 
-verifyCard :: Natural -> Int -> [a] -> [a]
+-- | @since 1.0.0
+verifyCard :: forall (a :: Type). Natural -> Int -> [a] -> [a]
 verifyCard card inputSize = go (fromIntegral card :: Integer)
   where
     go n (x : xs) = x : go (n - 1) xs
@@ -342,6 +355,8 @@ verifyCard card inputSize = go (fromIntegral card :: Integer)
 
  The list of sample elements '[s]' should be not be kept in memory, better
  process it into arrays right away, or write to file.
+
+ @since 1.0.0
 -}
 benchNonTinySizesRandomUniform ::
   forall (a :: Type) (se :: Type) (m :: Type -> Type) (s :: Type).
@@ -400,6 +415,8 @@ benchNonTinySizesRandomUniform
  It needs worker threads and channels, with one thread doing the HT
  updates as well as lookups. Might need to defer updates until all
  worker threads are "fed".
+
+ @since 1.0.0
 -}
 benchSizesRandomCached ::
   forall (a :: Type) (se :: Type) (m :: Type -> Type) (s :: Type).
@@ -454,6 +471,8 @@ benchSizesRandomCached
 
  The list of sample elements '[s]' should be not be kept in memory, better
  process it into arrays right away, or write to file.
+
+ @since 1.0.0
 -}
 benchSizesRandom ::
   forall (a :: Type) (se :: Type) (m :: Type -> Type).
@@ -483,6 +502,7 @@ benchSizesRandom
         let sample = parMap rdeepseq sampleFun inputs
         pure $ SSample {inputSize, coverage = Nothing, sampleSize, sample}
 
+-- | @since 1.0.0
 genRandomDedup ::
   forall (g :: Type) (a :: Type) (m :: Type -> Type) (s :: Type).
   ( MonadPrim s m
@@ -508,6 +528,7 @@ genRandomDedup sampleSize gen = do
           else loop n
   loop sampleSize
 
+-- | @since 1.0.0
 genRandomSubset ::
   forall (g :: Type) (a :: Type) (m :: Type -> Type) (s :: Type).
   ( MonadPrim s m

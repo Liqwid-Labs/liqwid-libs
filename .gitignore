@@ -52,7 +52,7 @@ cabal.project.local*
 # Notes
 *.txt
 
-# ctags 
+# ctags
 tags
 TAGS
 
@@ -65,3 +65,6 @@ TAGS
 *.hoo
 *.warn
 haddock/
+
+# Benchmark output
+benchmark-output/

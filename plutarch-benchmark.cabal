@@ -1,9 +1,9 @@
 cabal-version:      3.0
-name:               plutarch-benchmark 
+name:               plutarch-benchmark
 version:            0.1
 synopsis:           Benchmark plutarch code and compare implementations
 description:
-  A library containing utilities to concurrently compare 
+  A library containing utilities to concurrently compare
   several implementations of plutarch functions across
   different metrics such as Min/Max/Mean CPU or Mem usage.
 
@@ -90,14 +90,14 @@ flag development
 library
   import:          common-lang
   exposed-modules:
-    Test.Benchmark.Common
-    Test.Benchmark.Cost
-    Test.Benchmark.Exhaustive
-    Test.Benchmark.Main
-    Test.Benchmark.Plutarch
-    Test.Benchmark.Plutus
-    Test.Benchmark.QuickCheck
-    Test.Benchmark.Sized
+    Plutarch.Benchmark.Common
+    Plutarch.Benchmark.Cost
+    Plutarch.Benchmark.Exhaustive
+    Plutarch.Benchmark.Main
+    Plutarch.Benchmark.Plutarch
+    Plutarch.Benchmark.Plutus
+    Plutarch.Benchmark.QuickCheck
+    Plutarch.Benchmark.Sized
 
   build-depends:
     , acc
