@@ -22,7 +22,7 @@ module Plutarch.Extra.MultiSig (
 
 import qualified GHC.Generics as GHC (Generic)
 import Generics.SOP (Generic)
-import Plutarch.Api.V1 (PPubKeyHash, PTxInfo)
+import Plutarch.Api.V2 (PPubKeyHash, PTxInfo)
 import Plutarch.DataRepr (
     DerivePConstantViaData (DerivePConstantViaData),
     PDataFields,

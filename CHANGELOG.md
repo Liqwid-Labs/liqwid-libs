@@ -1,8 +1,9 @@
-# Revision history for `liqwid-plutarch-extra`
+# Revision history for `liqwid-plutarch-extra` (aka "LPE")
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-## 2.1.0 -- 2022-08-09
+
+## 3.1.0 -- 2022-08-09
 
 ### Added
  - A `Plutarch.Extra.DebuggableScript` module, containing utilities for lazy
@@ -14,9 +15,49 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
    various types. This is useful for benchmarking and testing, since it will lead to
    performance increases and more accurate measurements of performance.
 
+## 3.0.0 -- 2022-08-10
+
+This major version bump includes updates to use plutus V2 (post-Vasil) API types.
+We have decided that we will _not_ provide backports or updates for V1 API types
+in the future.
+
+Where re-exports from `Plutarch.Api.V1` exist, import from the `Plutarch.Api.V2`
+modules have be made instead. This will not have any effect on client code, but
+should clarify that these functions are indeed suitable for inclusion in V2 scripts.
+
+### Modified
+ - Nix flake points at a more recent version of nixpkgs, and temporarily points at a branch of `plutarch-quickcheck`
+ - Names of modules referencing specific versions of the API (such as `Plutarch.Api.V1.AssetClass`) have been
+   renamed to remove these references (i.e., becoming `Plutarch.Extra.AssetClass`). We will only support the
+   more current API version in the future.
+ - `pfindTxOutDatum` has been updated to work with V2 style datums (i.e., including a case for inline datums.)
+
+### Removed
+ - `plutarch-quickcheck` (aka PQ), which is a dependency of LPE, upgraded to V2 API types as part of a PR that also
+   made major changes to its internals. See [here](https://github.com/Liqwid-Labs/plutarch-quickcheck/pull/26).
+   As a result, some existing tests for LPE have been temporarily removed. [Issue #53](https://github.com/Liqwid-Labs/liqwid-plutarch-extra/issues/53)
+   has been opened to port these tests to PQ2.0
+
+## 2.0.2 -- 2022-08-08
+
+### Changed
+
+ - Scripts compiled with 'mustCompile' now enable deterministic tracing.
+
+## 2.0.1 -- 2022-08-11
+
+### Added
+
+- `pjust` and `pnothing` for easier construction of `PJust` value.
+- `pmaybe` which has the same semantics as `Data.Maybe.maybe`.
+
+### Changed
+
+- Rename the original `pamybe` to `pfromMaybe`.
+
 ## 2.0.0 -- 2022-08-02
 
-### Added 
+### Added
  - A `Plutarch.Oprhans` module, holding downcasted instances of semigroup and monoid when the upcasted type has the appropriate instances.
  - `pflip` to `Plutarch.Extra.Function`
  - `Plutarch.Extra.IsData` a `PlutusTypeEnumData` as a deriving strategy for `PlutusType`
@@ -25,7 +66,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 ### Changed
 
  - Update to [`Liqwid.nix`](https://github.com/liqwid-Labs/liqwid-nix)
- - Update to Plutarch version 1.2. See the [CHANGELOG](https://github.com/Plutonomicon/plutarch-plutus/blob/v1.2.0/CHANGELOG.md) 
+ - Update to Plutarch version 1.2. See the [CHANGELOG](https://github.com/Plutonomicon/plutarch-plutus/blob/v1.2.0/CHANGELOG.md)
    for full details.
    - The flake now points at the `Plutonomicon` repository, instead of the Liqwid Labs fork.
    - Changes to deriving strategies and constraints may cause some API breakage. In particular,
@@ -85,7 +126,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   better folding, for example.
 - `PSemiTraversable` now has a `psemitraverse_` method, with similar benefits to
   `ptraverse_`.
-- `psemifold`, `psemifoldMap` and `psemifoldComonad` gained a `PSubcategory t a` 
+- `psemifold`, `psemifoldMap` and `psemifoldComonad` gained a `PSubcategory t a`
   constraint, as the 'container' is guaranteed non-empty in such a case.
 - Significant performance improvements for `PTraversable` and `PSemiTraversable`
   instances.
@@ -111,7 +152,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 #### AssocMap (`Plutarch.Extra.Map.Unsorted`)
 
-- `psort` 
+- `psort`
 - `pkeysEqual`
 - `pmapUnionWith` -> `punionWith`
 
@@ -151,7 +192,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 #### `TermCont` (`Plutarch.Extra.TermCont`)
 
-- Re-exports from `plutarch-extra` 
+- Re-exports from `plutarch-extra`
 - `tcassert` -> `passertC`
 - `pguardWithC`
 - 'pguardShowC'

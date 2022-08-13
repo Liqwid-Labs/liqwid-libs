@@ -36,9 +36,6 @@ ifdef FLAGS
 GHC_FLAGS = --ghc-options "$(FLAGS)"
 endif
 
-ci: requires_nix_shell
-	nix build '.#check.x86_64-linux'
-
 build: requires_nix_shell
 	cabal v2-build $(GHC_FLAGS)
 
@@ -79,6 +76,9 @@ format_check:
 	cabal-fmt -c $(CABAL_SOURCES)
 
 # Execute CI
+ci:
+	nix build '.#check.x86_64-linux'
+
 
 NIX_SHELL = nix develop
 HLS_SHELL = $(NIX_SHELL) -c nix-shell -p bashInteractive haskell-language-server
