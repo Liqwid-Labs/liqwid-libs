@@ -14,7 +14,7 @@ import qualified Data.ByteString.Char8 as C (ByteString, pack)
 import Data.ByteString.Hash (sha2_256)
 import Data.Tagged (Tagged (Tagged))
 import Data.Universe (Finite (..), Universe (..))
-import Plutarch.Api.V1 (PScriptContext)
+import Plutarch.Api.V2 (PScriptContext)
 import Plutarch.Context
 import Plutarch.Extra.MultiSig (
     MultiSig (MultiSig),

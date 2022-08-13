@@ -1,7 +1,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Plutarch.Api.V1.Value (
+module Plutarch.Extra.Value (
     psingletonValue,
     passetClassValue,
     pvalueOf,
@@ -28,17 +28,19 @@ import Plutarch (
     type (:-->),
  )
 import Plutarch.Api.V1 (
-    AmountGuarantees (..),
-    KeyGuarantees,
     PCurrencySymbol,
     PMap (PMap),
     PTokenName,
     PValue (PValue),
  )
-import Plutarch.Api.V1.AssetClass (PAssetClass)
+import Plutarch.Api.V2 (
+    AmountGuarantees (..),
+    KeyGuarantees,
+ )
 import Plutarch.Bool (PBool, (#&&), (#<=), (#==))
 import Plutarch.Builtin (pdata, pfromData, ppairDataBuiltin, psndBuiltin)
 import Plutarch.DataRepr (pfield)
+import Plutarch.Extra.AssetClass (PAssetClass)
 import qualified Plutarch.Extra.List
 import Plutarch.Extra.Map (plookup)
 import Plutarch.Extra.Maybe (pexpectJustC)

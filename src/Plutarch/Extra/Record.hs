@@ -60,8 +60,8 @@ mkRecordConstr ::
     forall (r :: [PLabeledType]) (s :: S) (pt :: S -> Type).
     PlutusType pt =>
     -- | The constructor. This is just the Haskell-level constructor for the type.
-    --   For 'Plutarch.Api.V1.Maybe.PMaybeData', this would
-    --   be 'Plutarch.Api.V1.Maybe.PDJust', or 'Plutarch.Api.V1.Maybe.PNothing'.
+    --   For 'Plutarch.Api.V2.Maybe.PMaybeData', this would
+    --   be 'Plutarch.Api.V2.Maybe.PDJust', or 'Plutarch.Api.V2.Maybe.PNothing'.
     (forall s'. Term s' (PDataRecord r) -> pt s') ->
     -- | The morphism that builds the record.
     RecordMorphism s '[] r ->

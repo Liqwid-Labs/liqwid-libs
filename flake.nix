@@ -3,10 +3,11 @@
 
   inputs = {
     nixpkgs.follows = "plutarch/nixpkgs";
-    nixpkgs-latest.url = "github:NixOS/nixpkgs?rev=a0a69be4b5ee63f1b5e75887a406e9194012b492";
+    nixpkgs-latest.url = "github:NixOS/nixpkgs";
     # temporary fix for nix versions that have the transitive follows bug
     # see https://github.com/NixOS/nix/issues/6013
     nixpkgs-2111 = { url = "github:NixOS/nixpkgs/nixpkgs-21.11-darwin"; };
+    nixpkgs-2205 = { url = "github:NixOS/nixpkgs/22.05"; };
 
     haskell-nix-extra-hackage.follows = "plutarch/haskell-nix-extra-hackage";
     haskell-nix.follows = "plutarch/haskell-nix";
@@ -15,8 +16,7 @@
 
     # Plutarch and its friends
     plutarch = {
-      url = "github:Plutonomicon/plutarch-plutus?ref=staging";
-
+      url = "github:Plutonomicon/plutarch-plutus";
       inputs.emanote.follows =
         "plutarch/haskell-nix/nixpkgs-unstable";
       inputs.nixpkgs.follows =
@@ -24,7 +24,7 @@
     };
 
     plutarch-quickcheck.url =
-      "github:liqwid-labs/plutarch-quickcheck?ref=staging";
+      "github:liqwid-labs/plutarch-quickcheck?ref=seungheonoh/pq2";
     plutarch-numeric.url =
       "github:liqwid-labs/plutarch-numeric?ref=main";
     plutarch-context-builder.url =
@@ -42,15 +42,12 @@
       [
         liqwid-nix.haskellProject
         liqwid-nix.plutarchProject
+        liqwid-nix.addBuildChecks
         (liqwid-nix.addDependencies [
           "${inputs.plutarch-quickcheck}"
           "${inputs.plutarch-numeric}"
           "${inputs.plutarch-context-builder}"
         ])
-        (liqwid-nix.addChecks {
-          testSuite = "liqwid-plutarch-extra:test:liqwid-plutarch-extra-test";
-          liqwid-plutarch-extra = "liqwid-plutarch-extra:lib:liqwid-plutarch-extra";
-        })
         (liqwid-nix.enableFormatCheck [
           "-XTemplateHaskell"
           "-XOverloadedRecordDot"
@@ -59,6 +56,7 @@
         ])
         liqwid-nix.enableCabalFormatCheck
         liqwid-nix.enableNixFormatCheck
+        liqwid-nix.enableLintCheck
       ]
     ).toFlake;
 }

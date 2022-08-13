@@ -42,7 +42,7 @@ import Generics.SOP (
     unI,
  )
 import qualified Generics.SOP as SOP
-import Plutarch.Builtin (PIsData (pdataImpl, pfromDataImpl), pasInt)
+import Plutarch.Builtin (pasInt)
 import Plutarch.Extra.TermCont (pletC)
 import Plutarch.Internal.Generic (PGeneric)
 import Plutarch.Internal.PlutusType (DerivePlutusType (..), PlutusTypeStrat (..))
@@ -56,11 +56,9 @@ import Plutarch.Prelude (
     Term,
     Type,
     pif,
-    pto,
     unTermCont,
     (#),
  )
-import Plutarch.Unsafe (punsafeCoerce)
 import PlutusLedgerApi.V1 (BuiltinData (BuiltinData), UnsafeFromData (unsafeFromBuiltinData))
 import PlutusTx (Data (List), FromData (fromBuiltinData), ToData (toBuiltinData), fromData, toData)
 import Prelude
@@ -207,19 +205,6 @@ instance PlutusTypeStrat PlutusTypeEnumData where
     type DerivedPInner PlutusTypeEnumData a = PInteger
     derivedPCon = fromInteger . toInteger . fromEnum
     derivedPMatch = pmatchEnum
-
-instance
-    {-# OVERLAPPABLE #-}
-    ( DerivePlutusType a
-    , DPTStrat a ~ PlutusTypeEnumData
-    ) =>
-    PIsData a
-    where
-    pfromDataImpl d =
-        punsafeCoerce (pfromDataImpl @PInteger $ punsafeCoerce d)
-
-    pdataImpl x =
-        pdataImpl $ pto x
 
 {- |
   Wrapper for deriving `PConstantDecl` using an Integer representation via 'Enum'.

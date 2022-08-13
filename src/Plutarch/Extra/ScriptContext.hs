@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module Plutarch.Api.V1.ScriptContext (
+module Plutarch.Extra.ScriptContext (
     paddressFromValidatorHash,
     paddressFromPubKeyHash,
     pownTxOutRef,
@@ -41,12 +41,17 @@ import Plutarch (
  )
 import Plutarch.Api.V1 (
     AmountGuarantees (NoGuarantees, NonZero, Positive),
+    PCredential (PPubKeyCredential, PScriptCredential),
+    PValidatorHash,
+    PValue,
+ )
+import Plutarch.Api.V2 (
     KeyGuarantees (Sorted, Unsorted),
     PAddress (PAddress),
-    PCredential (PPubKeyCredential, PScriptCredential),
     PDatum,
     PDatumHash,
-    PMaybeData (PDJust),
+    PMaybeData,
+    POutputDatum (PNoOutputDatum, POutputDatum, POutputDatumHash),
     PPubKeyHash,
     PScriptContext,
     PScriptPurpose (PSpending),
@@ -56,13 +61,11 @@ import Plutarch.Api.V1 (
     PTxInfo,
     PTxOut (PTxOut),
     PTxOutRef,
-    PValidatorHash,
-    PValue,
  )
-import Plutarch.Api.V1.AssetClass (PAssetClass, passetClassValueOf)
 import Plutarch.Bool (PBool, PPartialOrd ((#<)), pif, pnot, (#==))
 import Plutarch.Builtin (PAsData, PBuiltinList, PData, pdata, pfromData)
 import Plutarch.DataRepr (pdcons, pdnil, pfield)
+import Plutarch.Extra.AssetClass (PAssetClass, passetClassValueOf)
 import Plutarch.Extra.List (pfirstJust, plookupTuple)
 import Plutarch.Extra.Maybe (pisJust)
 import Plutarch.Extra.TermCont (pletC, pmatchC, ptryFromC)
@@ -323,7 +326,8 @@ pfindTxOutDatum ::
         )
 pfindTxOutDatum = phoistAcyclic $
     plam $ \datums out -> unTermCont $ do
-        datumHash' <- pmatchC $ pfromData $ pfield @"datumHash" # out
-        pure $ case datumHash' of
-            PDJust ((pfield @"_0" #) -> datumHash) -> pfindDatum # datumHash # datums
-            _ -> pcon PNothing
+        datumType <- pmatchC $ pfromData $ pfield @"datum" # out
+        pure $ case datumType of
+            POutputDatumHash ((pfield @"datumHash" #) -> datumHash) -> pfindDatum # datumHash # datums
+            POutputDatum ((pfield @"outputDatum" #) -> datum) -> pcon $ PJust datum
+            PNoOutputDatum _ -> pcon PNothing

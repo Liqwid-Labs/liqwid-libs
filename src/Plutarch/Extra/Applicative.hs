@@ -31,7 +31,7 @@ import Plutarch (
     (#$),
     type (:-->),
  )
-import Plutarch.Api.V1.Maybe (PMaybeData (PDJust, PDNothing))
+import Plutarch.Api.V2 (PMaybeData (PDJust, PDNothing))
 import Plutarch.Bool (PBool, pif, (#<=))
 import Plutarch.Builtin (PBuiltinList, pdata, pfromData)
 import Plutarch.DataRepr (pdcons, pdnil, pfield)
