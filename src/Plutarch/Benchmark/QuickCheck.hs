@@ -4,7 +4,7 @@
 
  Inspired by hedgehog-quickcheck.
 -}
-module Test.Benchmark.QuickCheck (
+module Plutarch.Benchmark.QuickCheck (
   genToRand,
   randToGen,
 ) where

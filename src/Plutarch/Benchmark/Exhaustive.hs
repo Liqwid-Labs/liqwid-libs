@@ -3,13 +3,13 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 -- | Helpers for making exhaustive generators.
-module Test.Benchmark.Exhaustive (exhGenBags, exhGenSets, cardSets) where
+module Plutarch.Benchmark.Exhaustive (exhGenBags, exhGenSets, cardSets) where
 
 import Acc (Acc, fromReverseList)
 import Control.Monad (join)
 import GHC.Exts (IsList (toList))
 import Numeric.SpecFunctions (choose)
-import Test.Benchmark.Sized (Cardinality (..))
+import Plutarch.Benchmark.Sized (Cardinality (..))
 
 {- | Exhaustively generate lists (bags) of a given size.
 

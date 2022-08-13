@@ -44,7 +44,7 @@
  'benchSizesRandom' does no deduplication and no result caching. It is suitable
  for any distribution.
 -}
-module Test.Benchmark.Sized (
+module Plutarch.Benchmark.Sized (
   SSample (..),
   Cardinality (..),
   SUniversalGen (..),

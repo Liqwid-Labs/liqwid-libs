@@ -6,7 +6,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Benchmark.Common (
+module Plutarch.Benchmark.Common (
   ToTitle (..),
   ImplData (..),
   MultiImplData (..),

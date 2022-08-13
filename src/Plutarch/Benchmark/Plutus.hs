@@ -6,7 +6,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE NoFieldSelectors #-}
 
-module Test.Benchmark.Plutus (
+module Plutarch.Benchmark.Plutus (
   ImplMetaData (..),
   mkScriptImplMetaData,
   PlutusCostAxis (..),
@@ -31,6 +31,17 @@ import qualified Data.Vector.Unboxed as Vector
 import Data.Vector.Unboxed.Base (Vector (V_2))
 import GHC.Generics (Generic)
 import Optics.TH (makeFieldLabelsNoPrefix)
+import Plutarch.Benchmark.Common (ImplData)
+import Plutarch.Benchmark.Cost (
+  AxisMap (AxisMap),
+  BudgetExceeded (BudgetExceeded),
+  CostAxis,
+  CostVector (..),
+  SimpleStats,
+  samplesToPerAxisStats,
+  vecSimpleStats,
+ )
+import Plutarch.Benchmark.Sized (SSample)
 import Plutarch.Evaluate (evalScript)
 import Plutarch.Extra.DScript (DScript (DScript), debugScript, script)
 import PlutusCore.Evaluation.Machine.ExBudget (
@@ -47,17 +58,6 @@ import PlutusLedgerApi.V1 (
   Script,
  )
 import PlutusLedgerApi.V1.Scripts (Script (Script))
-import Test.Benchmark.Common (ImplData)
-import Test.Benchmark.Cost (
-  AxisMap (AxisMap),
-  BudgetExceeded (BudgetExceeded),
-  CostAxis,
-  CostVector (..),
-  SimpleStats,
-  samplesToPerAxisStats,
-  vecSimpleStats,
- )
-import Test.Benchmark.Sized (SSample)
 import qualified UntypedPlutusCore as UPLC
 import UntypedPlutusCore.Evaluation.Machine.Cek (
   CekUserError (CekEvaluationFailure, CekOutOfExError),

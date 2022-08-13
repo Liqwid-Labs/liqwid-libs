@@ -5,6 +5,21 @@ module Main (main) where
 
 import Control.Monad (replicateM)
 import Data.Text (pack)
+import Plutarch.Benchmark.Common (ImplData (ImplData), multiImplData)
+import Plutarch.Benchmark.Cost (
+  meanVal,
+  rankOnPerAxisStat,
+  writeComparisonPerAxisCSVs,
+  writePerAxisCSVs,
+ )
+import Plutarch.Benchmark.Main (benchMain)
+import Plutarch.Benchmark.Plutarch (mkTermImplMetaData, sampleTerm, sampleTerm')
+import Plutarch.Benchmark.Plutus (statsByAxis')
+import Plutarch.Benchmark.Sized (
+  Cardinality (Cardinality),
+  SUniversalGen (SUniversalGen),
+  benchAllSizesUniform,
+ )
 import Plutarch.Extra.Precompile (CompiledTerm, compile', (##))
 import Plutarch.Prelude (
   ClosedTerm,
@@ -29,21 +44,6 @@ import Plutarch.Prelude (
   (:-->),
  )
 import System.Random.Stateful (runStateGen, uniformRM)
-import Test.Benchmark.Common (ImplData (ImplData), multiImplData)
-import Test.Benchmark.Cost (
-  meanVal,
-  rankOnPerAxisStat,
-  writeComparisonPerAxisCSVs,
-  writePerAxisCSVs,
- )
-import Test.Benchmark.Main (benchMain)
-import Test.Benchmark.Plutarch (mkTermImplMetaData, sampleTerm, sampleTerm')
-import Test.Benchmark.Plutus (statsByAxis')
-import Test.Benchmark.Sized (
-  Cardinality (Cardinality),
-  SUniversalGen (SUniversalGen),
-  benchAllSizesUniform,
- )
 
 -- | Waste budget proportional to the argument
 pwaste ::

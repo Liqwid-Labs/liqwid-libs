@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 
-module Test.Benchmark.Main (benchMain) where
+module Plutarch.Benchmark.Main (benchMain) where
 
 import Options.Applicative ((<**>))
 import qualified Options.Applicative as Opt

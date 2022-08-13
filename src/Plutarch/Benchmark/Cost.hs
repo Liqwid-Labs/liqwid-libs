@@ -11,7 +11,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE NoFieldSelectors #-}
 
-module Test.Benchmark.Cost (
+module Plutarch.Benchmark.Cost (
   AxisMap (..),
   axes,
   axisLookup,
@@ -61,7 +61,7 @@ import GHC.Generics (Generic)
 import Optics (sequenceOf, traversed, (%%))
 import Optics.TH (makeFieldLabelsNoPrefix)
 import Path (Dir, Path, Rel, parseRelFile, toFilePath, (</>))
-import Test.Benchmark.Common (
+import Plutarch.Benchmark.Common (
   ImplData (ImplData, name, val),
   MultiImplComparisonData (
     MultiImplComparisonData,
@@ -73,7 +73,7 @@ import Test.Benchmark.Common (
   MultiImplData (MultiImplData, implNames, name, val),
   ToTitle (toTitle),
  )
-import Test.Benchmark.Sized (
+import Plutarch.Benchmark.Sized (
   SSample (SSample),
   coverage,
   inputSize,
