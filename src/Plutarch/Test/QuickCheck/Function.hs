@@ -21,6 +21,8 @@ import Data.Kind (Type)
 import Data.List (intercalate, nubBy)
 import Data.Universe (Finite (universeF))
 import Plutarch (S, Term, plam, (#), (#$), type (:-->))
+import Plutarch.Extra.List (plookup)
+import Plutarch.Extra.Maybe (pmaybe)
 import Plutarch.Lift (PLift, PUnsafeLiftDecl (PLifted), pconstant)
 import Plutarch.Maybe (pfromJust)
 import Plutarch.Prelude (
@@ -166,40 +168,3 @@ plamFinite f = plam $ \x -> pfromJust #$ plookup # x # table
   where
     table :: Term s (PBuiltinList (PBuiltinPair a b))
     table = pconstant $ (id &&& f) <$> universeF
-
---------------------------------------------------------------------------------
--- The following functions are copies of the versions present in
--- `liqwid-plutarch-extra`, and are inserted here to avoid cyclic dependency
--- issues
-
--- | Extract a 'PMaybe' by providing a default value in case of 'PJust'.
-pmaybe ::
-    forall (a :: S -> Type) (s :: S).
-    Term s (a :--> PMaybe a :--> a)
-pmaybe = phoistAcyclic $
-    plam $ \e a -> pmatch a $ \case
-        PJust a' -> a'
-        PNothing -> e
-
--- | /O(n)/. Find the value for a given key in an associative list.
-plookup ::
-    forall (a :: S -> Type) (b :: S -> Type) (s :: S) list.
-    (PEq a, PIsListLike list (PBuiltinPair a b)) =>
-    Term s (a :--> list (PBuiltinPair a b) :--> PMaybe b)
-plookup =
-    phoistAcyclic $
-        plam $ \k xs ->
-            pmatch (pfind' (\p -> pfstBuiltin # p #== k) # xs) $ \case
-                PNothing -> pcon PNothing
-                PJust p -> pcon (PJust (psndBuiltin # p))
-
--- | Get the first element that matches a predicate or return Nothing.
-pfind' ::
-    forall (a :: S -> Type) (s :: S) list.
-    PIsListLike list a =>
-    (Term s a -> Term s PBool) ->
-    Term s (list a :--> PMaybe a)
-pfind' p =
-    precList
-        (\self x xs -> pif (p x) (pcon (PJust x)) (self # xs))
-        (const $ pcon PNothing)

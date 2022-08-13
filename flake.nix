@@ -28,9 +28,6 @@
     plutarch-numeric.url =
       "github:liqwid-labs/plutarch-numeric?ref=main";
 
-    liqwid-plutarch-extra.url =
-      "github:liqwid-labs/liqwid-plutarch-extra?ref=seungheonoh/agoraUtils";
-
     liqwid-nix.url = "github:Liqwid-Labs/liqwid-nix";
   };
 
@@ -42,7 +39,6 @@
       }
       [
         (liqwid-nix.addDependencies [
-          "${inputs.liqwid-plutarch-extra}"
           "${inputs.plutarch-numeric}"
         ])
         liqwid-nix.plutarchProject
