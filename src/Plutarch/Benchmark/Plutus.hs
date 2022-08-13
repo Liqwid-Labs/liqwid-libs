@@ -16,7 +16,7 @@ module Plutarch.Benchmark.Plutus (
   ScriptFailure (..),
   sampleScript',
   sampleScript,
-  sampleDScript,
+  sampleDebuggableScript,
   statsByAxis',
   statsByAxis,
 ) where
@@ -43,7 +43,11 @@ import Plutarch.Benchmark.Cost (
  )
 import Plutarch.Benchmark.Sized (SSample)
 import Plutarch.Evaluate (evalScript)
-import Plutarch.Extra.DScript (DScript (DScript), debugScript, script)
+import Plutarch.Extra.DebuggableScript (
+  DebuggableScript (DebuggableScript),
+  debugScript,
+  script,
+ )
 import PlutusCore.Evaluation.Machine.ExBudget (
   ExRestrictingBudget (ExRestrictingBudget),
  )
@@ -84,7 +88,12 @@ mkScriptImplMetaData ::
   -- | The implementation without any inputs
   Script ->
   ImplMetaData
-mkScriptImplMetaData name script = ImplMetaData {name, scriptSize, scriptSizeBytes}
+mkScriptImplMetaData name script =
+  ImplMetaData
+    { name
+    , scriptSize
+    , scriptSizeBytes
+    }
   where
     Script uplcProg = script
     scriptSize = UPLC.programSize uplcProg
@@ -128,8 +137,12 @@ sampleScript script =
         Right budgetExceeded -> Left budgetExceeded
 
 -- | Sample Script execution, try debug variant of Script on evaluation failure.
-sampleDScript :: DScript -> Either (BudgetExceeded PlutusCostAxis) Costs
-sampleDScript DScript {script, debugScript} =
+sampleDebuggableScript ::
+  DebuggableScript ->
+  Either
+    (BudgetExceeded PlutusCostAxis)
+    Costs
+sampleDebuggableScript DebuggableScript {script, debugScript} =
   case sampleScript' script of
     Right costs -> Right costs
     Left failure ->
@@ -137,7 +150,14 @@ sampleDScript DScript {script, debugScript} =
         Left _ -> sampleScript debugScript
         Right budgetExceeded -> Left budgetExceeded
 
-sampleScript' :: Script -> Either (Either ScriptFailure (BudgetExceeded PlutusCostAxis)) Costs
+sampleScript' ::
+  Script ->
+  Either
+    ( Either
+        ScriptFailure
+        (BudgetExceeded PlutusCostAxis)
+    )
+    Costs
 sampleScript' script =
   case res of
     Right _ -> pure $ Costs {cpuCost, memCost}

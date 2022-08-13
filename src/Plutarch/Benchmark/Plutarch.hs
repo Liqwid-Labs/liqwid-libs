@@ -22,7 +22,7 @@ import Plutarch.Benchmark.Plutus (
   ImplMetaData,
   PlutusCostAxis,
   mkScriptImplMetaData,
-  sampleDScript,
+  sampleDebuggableScript,
  )
 import Plutarch.Benchmark.Sized (
   SSample,
@@ -33,8 +33,8 @@ import Plutarch.Benchmark.Sized (
   benchSizesRandomCached,
  )
 import Plutarch.Extra.Compile (mustCompile)
-import Plutarch.Extra.DScript (mustCompileD)
-import Plutarch.Extra.Precompile (CompiledTerm, compile', toDScript)
+import Plutarch.Extra.DebuggableScript (mustCompileD)
+import Plutarch.Extra.Precompile (CompiledTerm, compile', toDebuggableScript)
 import Plutarch.Prelude (ClosedTerm, S)
 import System.Random (RandomGen)
 
@@ -47,14 +47,19 @@ mkTermImplMetaData ::
 mkTermImplMetaData name term = mkScriptImplMetaData name $ mustCompile term
 
 sampleTerm :: ClosedTerm a -> Either (BudgetExceeded PlutusCostAxis) Costs
-sampleTerm term = sampleDScript $ mustCompileD term
+sampleTerm term = sampleDebuggableScript $ mustCompileD term
 
 sampleTerm' :: CompiledTerm a -> Either (BudgetExceeded PlutusCostAxis) Costs
-sampleTerm' = sampleDScript . toDScript
+sampleTerm' = sampleDebuggableScript . toDebuggableScript
 
 -- | See 'benchAllSizesUniform'.
 pbenchAllSizesUniform ::
-  forall (a :: Type) (f :: S -> Type) (b :: S -> Type) (m :: Type -> Type) (s :: Type).
+  forall
+    (a :: Type)
+    (f :: S -> Type)
+    (b :: S -> Type)
+    (m :: Type -> Type)
+    (s :: Type).
   ( Hashable a
   , PrimMonad m
   , (s ~ PrimState m)
@@ -93,7 +98,12 @@ pbenchAllSizesUniform
 
 -- | See 'benchNonTinySizesRandomUniform'.
 pbenchNonTinySizesRandomUniform ::
-  forall (a :: Type) (f :: S -> Type) (b :: S -> Type) (m :: Type -> Type) (s :: Type).
+  forall
+    (a :: Type)
+    (f :: S -> Type)
+    (b :: S -> Type)
+    (m :: Type -> Type)
+    (s :: Type).
   ( Hashable a
   , MonadPrim s m
   ) =>
@@ -128,7 +138,12 @@ pbenchNonTinySizesRandomUniform
 
 -- | See 'benchSizesRandomCached'.
 pbenchSizesRandomCached ::
-  forall (a :: Type) (f :: S -> Type) (b :: S -> Type) (m :: Type -> Type) (s :: Type).
+  forall
+    (a :: Type)
+    (f :: S -> Type)
+    (b :: S -> Type)
+    (m :: Type -> Type)
+    (s :: Type).
   ( Hashable a
   , MonadPrim s m
   ) =>
@@ -163,7 +178,12 @@ pbenchSizesRandomCached
 
 -- | See 'benchSizesRandomCached'.
 pbenchSizesRandom ::
-  forall (a :: Type) (f :: S -> Type) (b :: S -> Type) (m :: Type -> Type) (s :: Type).
+  forall
+    (a :: Type)
+    (f :: S -> Type)
+    (b :: S -> Type)
+    (m :: Type -> Type)
+    (s :: Type).
   ( Hashable a
   , MonadPrim s m
   ) =>
