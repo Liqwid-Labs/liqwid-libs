@@ -17,7 +17,6 @@ module Plutarch.Test.QuickCheck.Instances (
 ) where
 
 import Data.ByteString (ByteString)
-import Data.Default (Default (def))
 import qualified Data.Text as T (intercalate, pack, unpack)
 import qualified GHC.Exts as Exts (IsList (fromList, toList))
 import Plutarch (
@@ -70,7 +69,6 @@ import Plutarch.Api.V2 (
     PPubKeyHash (PPubKeyHash),
     PStakingCredential (PStakingHash, PStakingPtr),
  )
-import Plutarch.Builtin (ppairDataBuiltin)
 import Plutarch.Evaluate (evalScript)
 import Plutarch.Extra.TermCont (pletC)
 import Plutarch.Lift (PUnsafeLiftDecl (PLifted), plift)
@@ -115,7 +113,6 @@ import Plutarch.Prelude (
     pnumerator,
     pshow,
     psingleton,
-    psndBuiltin,
     ptraceError,
     (:-->),
  )
@@ -131,7 +128,6 @@ import Test.QuickCheck (
     elements,
     frequency,
     functionMap,
-    sized,
     variant,
     vectorOf,
  )
@@ -288,12 +284,6 @@ instance PArbitrary PUnit where
 instance PCoArbitrary PUnit where
     pcoarbitrary (pliftT -> x) = coarbitrary x
 
-genByteStringUpto :: Int -> Gen ByteString
-genByteStringUpto m = sized go
-  where
-    go :: Int -> Gen ByteString
-    go s = chooseInt (0, min m s) >>= genByteString
-
 genByteString :: Int -> Gen ByteString
 genByteString l = Exts.fromList <$> vectorOf l arbitrary
 
@@ -367,8 +357,8 @@ instance PArbitrary a => PArbitrary (PMaybe a) where
 
 instance PCoArbitrary a => PCoArbitrary (PMaybe a) where
     pcoarbitrary (TestableTerm x)
-        | plift $ pisJust # x = variant 1 . pcoarbitrary (TestableTerm $ pfromJust # x)
-        | otherwise = variant 0
+        | plift $ pisJust # x = variant (1 :: Integer) . pcoarbitrary (TestableTerm $ pfromJust # x)
+        | otherwise = variant (0 :: Integer)
 
 -- | @since 2.0.0
 instance (PIsData a, PArbitrary a) => PArbitrary (PMaybeData a) where
@@ -388,15 +378,35 @@ instance (PIsData a, PArbitrary a) => PArbitrary (PMaybeData a) where
 
 instance (PIsData a, PCoArbitrary a) => PCoArbitrary (PMaybeData a) where
     pcoarbitrary (TestableTerm x)
-        | plift $ pisDJust # x = variant 1 . pcoarbitrary (TestableTerm $ pfromDJust # x)
-        | otherwise = variant 0
+        | plift $ pisDJust # x = variant (1 :: Integer) . pcoarbitrary (TestableTerm $ pfromDJust # x)
+        | otherwise = variant (0 :: Integer)
 
+isRight ::
+    forall
+        {a :: S -> Type}
+        {b :: S -> Type}.
+    TestableTerm (PEither a b) ->
+    TestableTerm PBool
 isRight = flip pmatchT $ \case
     PRight _ -> pconstant True
     _ -> pconstant False
+
+pright ::
+    forall
+        {a :: S -> Type}
+        {b :: S -> Type}.
+    TestableTerm (PEither a b) ->
+    TestableTerm b
 pright = flip pmatchT $ \case
     PRight a -> a
     _ -> ptraceError "asked for PRight when it is PLeft"
+
+pleft ::
+    forall
+        {b1 :: S -> Type}
+        {b2 :: S -> Type}.
+    TestableTerm (PEither b1 b2) ->
+    TestableTerm b1
 pleft = flip pmatchT $ \case
     PLeft a -> a
     _ -> ptraceError "asked for PLeft when it is PRight"
@@ -420,8 +430,8 @@ instance (PArbitrary a, PArbitrary b) => PArbitrary (PEither a b) where
 
 instance (PCoArbitrary a, PCoArbitrary b) => PCoArbitrary (PEither a b) where
     pcoarbitrary x
-        | pliftT $ isRight x = variant 0 . pcoarbitrary (pright x)
-        | otherwise = variant 1 . pcoarbitrary (pleft x)
+        | pliftT $ isRight x = variant (0 :: Integer) . pcoarbitrary (pright x)
+        | otherwise = variant (1 :: Integer) . pcoarbitrary (pleft x)
 
 {- | Unfortunately, it is impossible to create @PBuiltinPair@ at the
      Plutarch level without getting into manipulating raw Plutus
@@ -544,9 +554,6 @@ instance
     where
     pcoarbitrary x = pcoarbitrary (ptFstT x) . pcoarbitrary (ptSndT x)
 
-psimplify :: (PLift a) => TestableTerm a -> TestableTerm a
-psimplify (TestableTerm x) = pconstantT $ plift x
-
 constrPList :: (PIsListLike b a) => [TestableTerm a] -> TestableTerm (b a)
 constrPList [] = TestableTerm pnil
 constrPList ((TestableTerm x) : xs) =
@@ -574,8 +581,8 @@ shrinkPListLike xs' = constrPList <$> shrink (convToList xs')
 coArbitraryPListLike ::
     (PCoArbitrary a, PCoArbitrary (b a), PIsListLike b a) => TestableTerm (b a) -> Gen c -> Gen c
 coArbitraryPListLike (TestableTerm x)
-    | plift (pnull # x) = variant 0
-    | otherwise = variant 1 . pcoarbitrary (TestableTerm $ phead # x) . pcoarbitrary (TestableTerm $ ptail # x)
+    | plift (pnull # x) = variant (0 :: Integer)
+    | otherwise = variant (1 :: Integer) . pcoarbitrary (TestableTerm $ phead # x) . pcoarbitrary (TestableTerm $ ptail # x)
 
 -- | @since 2.0.0
 instance (PArbitrary a, PIsListLike PBuiltinList a) => PArbitrary (PBuiltinList a) where
@@ -600,7 +607,7 @@ instance
     , PIsData a
     , PIsData b
     ) =>
-    PArbitrary (PMap Unsorted a b)
+    PArbitrary (PMap 'Unsorted a b)
     where
     parbitrary = do
         (TestableTerm x) <- parbitrary
@@ -619,7 +626,7 @@ instance
     , PIsData b
     , POrd a
     ) =>
-    PArbitrary (PMap Sorted a b)
+    PArbitrary (PMap 'Sorted a b)
     where
     parbitrary = do
         (TestableTerm x) <- parbitrary
@@ -756,7 +763,7 @@ instance PArbitrary PTokenName where
         return $ pconT $ PTokenName $ pconstant tn
 
 -- | @since 2.0.0
-instance PArbitrary (PValue Unsorted NoGuarantees) where
+instance PArbitrary (PValue 'Unsorted 'NoGuarantees) where
     parbitrary = do
         (TestableTerm val) <- parbitrary
         return $ pconT $ PValue val
@@ -766,7 +773,7 @@ instance PArbitrary (PValue Unsorted NoGuarantees) where
         unValue = flip pmatchT $ \(PValue a) -> a
 
 -- | @since 2.0.0
-instance PArbitrary (PValue Unsorted NonZero) where
+instance PArbitrary (PValue 'Unsorted 'NonZero) where
     parbitrary = do
         (TestableTerm val) <- parbitrary
         return $
@@ -781,7 +788,7 @@ instance PArbitrary (PValue Unsorted NonZero) where
             pconT $ PValue $ Assoc.pmap # plam (\x -> Assoc.pfilter # plam (\y -> pnot # (y #== 0)) # x) # val
 
 -- | @since 2.0.0
-instance PArbitrary (PValue Unsorted Positive) where
+instance PArbitrary (PValue 'Unsorted 'Positive) where
     parbitrary = do
         (TestableTerm val) <- parbitrary
         return $
@@ -796,7 +803,7 @@ instance PArbitrary (PValue Unsorted Positive) where
             pconT $ PValue $ Assoc.pmap # plam (\x -> Assoc.pfilter # plam (\y -> pnot # (0 #< y)) # x) # val
 
 -- | @since 2.0.0
-instance PArbitrary (PValue Sorted NoGuarantees) where
+instance PArbitrary (PValue 'Sorted 'NoGuarantees) where
     parbitrary = do
         (TestableTerm val) <- parbitrary
         return $ pconT $ PValue val
@@ -806,7 +813,7 @@ instance PArbitrary (PValue Sorted NoGuarantees) where
         unValue = flip pmatchT $ \(PValue a) -> a
 
 -- | @since 2.0.0
-instance PArbitrary (PValue Sorted NonZero) where
+instance PArbitrary (PValue 'Sorted 'NonZero) where
     parbitrary = do
         (TestableTerm val) <- parbitrary
         return $
@@ -823,9 +830,9 @@ instance PArbitrary (PValue Sorted NonZero) where
             pconT $ PValue $ Assoc.pmap # plam (\x -> Assoc.pfilter # plam (\y -> pnot # (y #== 0)) # x) # val
 
 -- | @since 2.0.0
-instance PArbitrary (PValue Sorted Positive) where
+instance PArbitrary (PValue 'Sorted 'Positive) where
     parbitrary = do
-        (TestableTerm val) <- (parbitrary :: Gen (TestableTerm (PValue Sorted NonZero)))
+        (TestableTerm val) <- (parbitrary :: Gen (TestableTerm (PValue 'Sorted 'NonZero)))
         return $
             pconT $
                 PValue $
@@ -847,7 +854,7 @@ psort ::
     (PIsData k, POrd k) =>
     Term s (PMap 'Unsorted k v :--> PMap 'Sorted k v)
 psort = phoistAcyclic $
-    plam $ \(pto -> l :: (Term _ (PBuiltinList _))) ->
+    plam $ \(pto -> l :: (Term s' (PBuiltinList a'))) ->
         pcon $ PMap $ pmsortBy # pkvPairLt # l
 
 -- | Extracts the element out of a 'PDJust' and throws an error if its argument is 'PDNothing'.
@@ -893,7 +900,7 @@ pmsortBy = phoistAcyclic $
     plam $ \comp xs ->
         mergeAll # comp # (Plutarch.List.pmap # psingleton # xs)
   where
-    mergeAll :: Term _ ((a :--> a :--> PBool) :--> l (l a) :--> l a)
+    mergeAll :: Term s' ((a :--> a :--> PBool) :--> l (l a) :--> l a)
     mergeAll = phoistAcyclic $
         pfix #$ plam $ \self comp xs ->
             pif (pnull # xs) pnil $
@@ -901,7 +908,7 @@ pmsortBy = phoistAcyclic $
                     ys = ptail # xs
                  in pif (pnull # ys) y $
                         self # comp #$ mergePairs # comp # xs
-    mergePairs :: Term _ ((a :--> a :--> PBool) :--> l (l a) :--> l (l a))
+    mergePairs :: Term s' ((a :--> a :--> PBool) :--> l (l a) :--> l (l a))
     mergePairs = phoistAcyclic $
         pfix #$ plam $ \self comp xs ->
             pif (pnull # xs) pnil $
@@ -952,23 +959,3 @@ pkvPairLt = phoistAcyclic $
 -- | Get the key of a key-value pair.
 pkvPairKey :: (PIsData k) => Term s (PBuiltinPair (PAsData k) (PAsData v) :--> k)
 pkvPairKey = phoistAcyclic $ plam $ \(pfromData . (pfstBuiltin #) -> key) -> key
-
--- | / O(n) /. Map a function over all values in a 'PMap'.
-pmap ::
-    forall (k :: S -> Type) (a :: S -> Type) (b :: S -> Type) (keys :: KeyGuarantees) (s :: S).
-    (PIsData k, PIsData a, PIsData b) =>
-    Term s ((a :--> b) :--> PMap keys k a :--> PMap keys k b)
-pmap = phoistAcyclic $
-    plam $ \f (pto -> (ps :: Term _ (PBuiltinList _))) ->
-        pcon $
-            PMap $
-                Plutarch.List.pmap
-                    # plam
-                        ( \kv ->
-                            let k = pfstBuiltin # kv
-                                v = psndBuiltin # kv
-
-                                nv = pdata $ f # pfromData v
-                             in ppairDataBuiltin # k # nv
-                        )
-                    # ps

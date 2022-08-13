@@ -13,25 +13,44 @@
 module Main (main) where
 
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
-import Plutarch.Builtin
-import Plutarch.Lift (
-    PConstantDecl (PConstantRepr, PConstanted, pconstantFromRepr, pconstantToRepr),
-    PUnsafeLiftDecl (PLifted),
+import Plutarch.Builtin ()
+import Plutarch.List (puncons)
+import Plutarch.Prelude (
+    PBool,
+    PBuiltinList,
+    PElemConstraint,
+    PListLike,
+    PMaybe (PJust, PNothing),
+    PPair (PPair),
+    S,
+    Term,
+    Type,
+    pcons,
+    pconstant,
+    pfix,
+    phoistAcyclic,
+    pif,
+    plam,
+    plength,
+    plet,
+    pmatch,
+    pnil,
+    tcont,
+    unTermCont,
+    (#),
+    (#$),
+    (#&&),
+    (#<),
+    (#==),
+    (:-->),
  )
-import Plutarch.List
-import Plutarch.Prelude
-import Plutarch.Test.QuickCheck
+import Plutarch.Test.QuickCheck (PA, fromPFun)
 
-import GHC.Generics (Generic)
 import Test.QuickCheck (
-    NonNegative (NonNegative),
     arbitrary,
-    getNonNegative,
-    shrink,
  )
-import Test.Tasty
-import Test.Tasty.ExpectedFailure
-import Test.Tasty.QuickCheck
+import Test.Tasty (adjustOption, defaultMain, testGroup)
+import Test.Tasty.QuickCheck (Property, QuickCheckTests, forAll, testProperty)
 
 pZip ::
     forall
@@ -83,7 +102,16 @@ zipUnevenProperty = forAll arbitrary $ fromPFun go
 zipContentProperty :: Property
 zipContentProperty = forAll arbitrary $ fromPFun go
   where
-    check :: Term s ((PA :--> PA :--> PA) :--> PBuiltinList PA :--> PBuiltinList PA :--> PBuiltinList PA :--> PBool)
+    check ::
+        forall {s :: S}.
+        Term
+            s
+            ( (PA :--> PA :--> PA)
+                :--> PBuiltinList PA
+                :--> PBuiltinList PA
+                :--> PBuiltinList PA
+                :--> PBool
+            )
     check = plam $ \f ->
         pfix #$ plam $ \self l1 l2 zl -> unTermCont $ do
             t1 <- tcont $ pmatch $ puncons # l1
@@ -97,7 +125,14 @@ zipContentProperty = forAll arbitrary $ fromPFun go
                     pure $ (f # ta # tb) #== tc #&& (self # tas # tbs # tcs)
                 _ -> pure $ pconstant True
 
-    go :: Term s (PBuiltinList PA :--> PBuiltinList PA :--> PBool)
+    go ::
+        forall {s :: S}.
+        Term
+            s
+            ( PBuiltinList PA
+                :--> PBuiltinList PA
+                :--> PBool
+            )
     go = plam $ \l1 l2 -> unTermCont $ do
         zl <- tcont $ plet $ pZip @PBuiltinList # plam (+) # l1 # l2
         pure $ check # plam (+) # l1 # l2 # zl
@@ -110,11 +145,13 @@ main = do
         testGroup
             ""
             [ testProperty "Length should be eqaul" zipLengthProperty
-            , testProperty "zipped list should have length of shorter list" zipUnevenProperty
+            , testProperty
+                "zipped list should have length of shorter list"
+                zipUnevenProperty
             , testProperty "zipped list has correct values" zipContentProperty
             ]
   where
-    -- 100 test is way too small for property to search a counterexample,
-    -- it is recommanded to use at least 10,000. However, more is the better.
+    -- 100 tests is way too small for a property to reliably find a counterexample,
+    -- it is recommended to use at least 10,000. However, more is better.
     go :: QuickCheckTests -> QuickCheckTests
     go = max 10_000

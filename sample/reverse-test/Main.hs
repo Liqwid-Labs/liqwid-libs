@@ -13,24 +13,42 @@
 module Main (main) where
 
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
-import Plutarch.Lift (
-    PConstantDecl (PConstantRepr, PConstanted, pconstantFromRepr, pconstantToRepr),
-    PUnsafeLiftDecl (PLifted),
+import Plutarch.Prelude (
+    PBuiltinList,
+    PInteger,
+    PIsListLike,
+    S,
+    Term,
+    Type,
+    pcons,
+    pfoldl,
+    phoistAcyclic,
+    plam,
+    pnil,
+    (#),
+    (:-->),
  )
-import Plutarch.Prelude
-import Plutarch.Test.QuickCheck
 
-import GHC.Generics (Generic)
-import Generics.SOP (NP (..))
-import Test.QuickCheck (
-    NonNegative (NonNegative),
-    arbitrary,
-    getNonNegative,
-    shrink,
+import Plutarch.Test.QuickCheck (
+    TestableTerm (TestableTerm),
+    haskEquiv,
+    haskEquiv',
+    pconstantT,
  )
-import Test.Tasty
-import Test.Tasty.ExpectedFailure
-import Test.Tasty.QuickCheck
+
+import Generics.SOP (NP (Nil, (:*)))
+import Test.QuickCheck (
+    arbitrary,
+ )
+import Test.Tasty (adjustOption, defaultMain, testGroup)
+import Test.Tasty.ExpectedFailure (expectFail)
+import Test.Tasty.QuickCheck (
+    Gen,
+    Property,
+    QuickCheckTests,
+    testProperty,
+    vectorOf,
+ )
 
 -- This is the "correct" implmentation of reversing function.
 preverseCorrect ::
@@ -48,7 +66,7 @@ preverseWrong ::
 preverseWrong = plam id
 
 -- Haskell equivalence of reversing function.
-hreverse :: [a] -> [a]
+hreverse :: forall {a :: Type}. [a] -> [a]
 hreverse (x : xs) = reverse xs ++ [x]
 hreverse [] = []
 
@@ -85,7 +103,7 @@ main = do
             , testProperty "Correct 'preverse' with custom generator" propCustom
             ]
   where
-    -- 100 test is way too small for property to search a counterexample,
-    -- it is recommanded to use at least 10,000. However, more is the better.
+    -- 100 tests is way too small for a property test to search for a counterexample,
+    -- it is recommanded to use at least 10,000. However, more is better.
     go :: QuickCheckTests -> QuickCheckTests
     go = max 10_000

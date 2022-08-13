@@ -11,7 +11,7 @@ bug-reports:        https://github.com/Liqwid-Labs/plutarch-quickcheck/issues
 license:            Apache-2.0
 license-file:       LICENSE
 author:             Seungheon Oh
-maintainer:         Seungheon Oh <seungheon.ooh@gmail.com>
+maintainer:         Seungheon Oh <seungheon@mlabs.city>
 copyright:          (C) 2022 Liqwid Labs
 category:           Test
 build-type:         Simple
@@ -28,6 +28,12 @@ source-repository head
 
 common common-lang
   ghc-options:
+    -Wall -Wcompat -Wincomplete-uni-patterns -Wno-unused-do-bind
+    -Wno-partial-type-signatures -Wmissing-export-lists
+    -Wincomplete-record-updates -Wmissing-deriving-strategies
+    -Wno-name-shadowing -Wunused-foralls -fprint-explicit-foralls
+    -fprint-explicit-kinds
+
   build-depends:
     , base      ^>=4.16
     , plutarch
@@ -69,7 +75,6 @@ common common-tests
     , QuickCheck
     , tasty
     , tasty-expected-failure
-    , tasty-hunit
     , tasty-quickcheck
 
   default-extensions:
@@ -131,13 +136,19 @@ library
 -- Tests
 
 test-suite reverse-test
-  import:         common-tests
+  import:
+    common-tests,
+    common-lang
+
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   hs-source-dirs: sample/reverse-test
 
 test-suite zip-test
-  import:         common-tests
+  import:
+    common-tests,
+    common-lang
+
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   hs-source-dirs: sample/zip-test

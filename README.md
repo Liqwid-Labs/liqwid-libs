@@ -9,7 +9,7 @@ like writting regular `QuickCheck` properties.
 
 ## What _exactly_ does this do for me?
 
-`plutarch-quickcheck` *lifts* property written in Plutarch code into 
+`plutarch-quickcheck` *lifts* a property written in Plutarch code into 
 `QuickCheck`. For example,
 
 ```hs
@@ -20,10 +20,10 @@ quickCheck $ fromPFun additionCommutative -- Magic!
 -- +++ OK, passed 100 tests.
 ```
 
-It also provides other utilities like generations of 
-arbitrary Plutarch function (at this point, only ones with single
-argument) and defining property from Haskell equivlant definition of 
-Plutarch function.
+The library also provides other utilities such as generation of 
+arbitrary Plutarch functions and defining properties for Plutarch functions 
+verified by the equivalent Haskell definition. Currently, only functions with 
+a single arguement are supported.
 
 ```hs
 pfunctionGeneration :: Term s (PFun PInteger PInteger :--> PBool)
@@ -40,13 +40,13 @@ already comfortable with `tasty-quickcheck` and property testing in general; for
 those who are not, or those who prefer to learn from examples, we provide three
 executable examples:
 
-* `examples/reverse-tests`, which demonstrates how to define property 
-using definition of behavior in Haskell. 
+* `examples/reverse-tests`, which demonstrates how to define a property 
+using a Haskell definition for intended behavior.
 * `examples/zip-tests`, which demonstrates how to use `fromPFun` to 
-define Plutarch property. 
+define a Plutarch property. 
 
 Users new to the library can read the examples as code, as well as execute the
-tests with `cabal *-test` to see what they do.
+tests with `cabal test` to see what they do.
 
 We also have [a wiki
 article](https://github.com/Liqwid-Labs/plutarch-quickcheck/wiki/Testing-without-tears:-good-practices-and-tips)

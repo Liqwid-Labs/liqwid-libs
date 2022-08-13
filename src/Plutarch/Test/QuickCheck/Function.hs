@@ -23,8 +23,28 @@ import Data.Universe (Finite (universeF))
 import Plutarch (S, Term, plam, (#), (#$), type (:-->))
 import Plutarch.Lift (PLift, PUnsafeLiftDecl (PLifted), pconstant)
 import Plutarch.Maybe (pfromJust)
-import Plutarch.Prelude (PBool, PBuiltinList, PBuiltinPair, PEq, PIsListLike, PMaybe (PJust, PNothing), pcon, pfstBuiltin, phoistAcyclic, pif, pmatch, precList, psndBuiltin, (#==))
-import Plutarch.Test.QuickCheck.Instances (TestableTerm (TestableTerm, unTestableTerm))
+import Plutarch.Prelude (
+    PBool,
+    PBuiltinList,
+    PBuiltinPair,
+    PEq,
+    PIsListLike,
+    PMaybe (PJust, PNothing),
+    pcon,
+    pfstBuiltin,
+    phoistAcyclic,
+    pif,
+    pmatch,
+    precList,
+    psndBuiltin,
+    (#==),
+ )
+import Plutarch.Test.QuickCheck.Instances (
+    TestableTerm (
+        TestableTerm,
+        unTestableTerm
+    ),
+ )
 import Test.QuickCheck (
     Arbitrary (arbitrary, shrink),
     CoArbitrary (coarbitrary),
@@ -43,13 +63,22 @@ data PFun (a :: S -> Type) (b :: S -> Type) where
         (TestableTerm (a :--> b)) ->
         PFun a b
 
+{-# COMPLETE PFn #-}
+pattern PFn ::
+    forall
+        {a :: S -> Type}
+        {b :: S -> Type}.
+    (PUnsafeLiftDecl a, PUnsafeLiftDecl b) =>
+    (forall (s :: S). Term s (a :--> b)) ->
+    PFun a b
 pattern PFn f <- (unTestableTerm . applyPFun -> f)
 
-applyPFun :: (PLift a, PLift b) => PFun a b -> TestableTerm (a :--> b)
+applyPFun :: forall {a :: S -> Type} {b :: S -> Type}.
+  (PLift a, PLift b) => PFun a b -> TestableTerm (a :--> b)
 applyPFun (PFun _ _ f) = f
 
 mkPFun ::
-    forall (a :: S -> Type) (b :: S -> Type) (s :: S).
+    forall (a :: S -> Type) (b :: S -> Type).
     ( PLift a
     , PLift b
     , PEq a
@@ -60,7 +89,7 @@ mkPFun ::
 mkPFun t d = PFun t d $ TestableTerm $ plamTable t d
 
 instance
-    forall (a :: S -> Type) (b :: S -> Type) (s :: S).
+    forall (a :: S -> Type) (b :: S -> Type).
     ( PLift a
     , PLift b
     , Arbitrary (PLifted a)
@@ -83,7 +112,7 @@ instance
         [mkPFun t' d' | (t', d') <- shrink (t, d)]
 
 instance
-    forall (a :: S -> Type) (b :: S -> Type) (s :: S).
+    forall (a :: S -> Type) (b :: S -> Type).
     ( PLift a
     , PLift b
     , Show (PLifted a)
@@ -94,7 +123,7 @@ instance
     show = showPFun
 
 showPFun ::
-    forall (a :: S -> Type) (b :: S -> Type) (s :: S).
+    forall (a :: S -> Type) (b :: S -> Type).
     ( PLift a
     , PLift b
     , Show (PLifted a)
