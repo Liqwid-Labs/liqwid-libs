@@ -11,6 +11,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE NoFieldSelectors #-}
 
+-- | @since 1.0.0
 module Plutarch.Benchmark.Cost (
   AxisMap (..),
   axes,
@@ -81,7 +82,7 @@ import Plutarch.Benchmark.Sized (
   sampleSize,
  )
 
-class Eq a => CostAxis a where
+class Eq (a :: Type) => CostAxis a where
   axisName :: a -> Text
   axes :: [a]
   default axisName :: Show a => a -> Text
@@ -93,14 +94,17 @@ class Eq a => CostAxis a where
 
  All axes always have a value in this Map. If you want a subset of your axes,
  use a different type.
+
+ @since 1.0.0
 -}
-newtype AxisMap a b = AxisMap {pairs :: [(a, b)]}
+newtype AxisMap (a :: Type) (b :: Type) = AxisMap {pairs :: [(a, b)]}
   deriving stock (Show, Functor, Generic)
   deriving anyclass (NFData)
 
 makeFieldLabelsNoPrefix ''AxisMap
 
-instance (CostAxis a) => Applicative (AxisMap a) where
+-- | @since 1.0.0
+instance forall (a :: Type). (CostAxis a) => Applicative (AxisMap a) where
   pure x = AxisMap $ map (,x) axes
   f <*> b =
     AxisMap $
@@ -108,16 +112,20 @@ instance (CostAxis a) => Applicative (AxisMap a) where
         (\axis -> (axis, axisLookup axis f $ axisLookup axis b))
         axes
 
-axisLookup :: (CostAxis a) => a -> AxisMap a b -> b
+-- | @since 1.0.0
+axisLookup :: forall (a :: Type) (b :: Type). (CostAxis a) => a -> AxisMap a b -> b
 axisLookup axis (AxisMap pairs) = fromJust $ lookup axis pairs
 
-newtype BudgetExceeded axis = BudgetExceeded {exceededAxis :: axis}
+-- | @since 1.0.0
+newtype BudgetExceeded (axis :: Type) = BudgetExceeded {exceededAxis :: axis}
   deriving stock (Show, Eq, Generic)
   deriving anyclass (NFData)
 
 -- | Unboxed Vector of Double, for use with statistics libraries.
+-- | @since 1.0.0
 newtype CostVector = CostVector (Vector Double)
 
+-- | @since 1.0.0
 data SimpleStats = SimpleStats
   { minVal :: Double
   , meanVal :: Double
@@ -129,6 +137,7 @@ data SimpleStats = SimpleStats
 
 makeFieldLabelsNoPrefix ''SimpleStats
 
+-- | @since 1.0.0
 instance ToNamedRecord SimpleStats where
   toNamedRecord (SimpleStats {..}) =
     namedRecord
@@ -138,6 +147,7 @@ instance ToNamedRecord SimpleStats where
       , "stddev" .= stddev
       ]
 
+-- | @since 1.0.0
 instance DefaultOrdered SimpleStats where
   headerOrder _ =
     header
@@ -147,7 +157,9 @@ instance DefaultOrdered SimpleStats where
       , "stddev"
       ]
 
+-- | @since 1.0.0
 instance
+  forall (axis :: Type).
   CostAxis axis =>
   ToNamedRecord (SSample (Either (BudgetExceeded axis) SimpleStats))
   where
@@ -166,7 +178,9 @@ instance
         <> ["budget" .= ("" :: String)]
         <> HashMap.toList (toNamedRecord simpleStats)
 
+-- | @since 1.0.0
 instance
+  forall (axis :: Type) (s :: Type).
   (CostAxis axis, ToField s) =>
   ToNamedRecord (SSample [ImplData (Either (BudgetExceeded axis) s)])
   where
@@ -178,7 +192,9 @@ instance
           [1 :: Int ..]
           ranks
 
+-- | @since 1.0.0
 instance
+  forall (axis :: Type) (s :: Type).
   ( CostAxis axis
   , ToField s
   ) =>
@@ -187,7 +203,9 @@ instance
   toField (Left (BudgetExceeded axis)) = encodeUtf8 (axisName axis) <> "!"
   toField (Right s) = toField s
 
+-- | @since 1.0.0
 instance
+  forall (axis :: Type).
   CostAxis axis =>
   DefaultOrdered (SSample (Either (BudgetExceeded axis) SimpleStats))
   where
@@ -196,6 +214,7 @@ instance
       <> header ["budget"]
       <> headerOrder (undefined :: SimpleStats)
 
+-- | @since 1.0.0
 vecSimpleStats :: CostVector -> SimpleStats
 vecSimpleStats (CostVector vec) = flip Foldl.fold (Vector.toList vec) $ do
   -- TODO maybe use foldl-statistics
@@ -205,7 +224,8 @@ vecSimpleStats (CostVector vec) = flip Foldl.fold (Vector.toList vec) $ do
   stddev <- Foldl.std
   pure $ SimpleStats {..}
 
-cvSimpleStats :: AxisMap axis CostVector -> AxisMap axis SimpleStats
+-- | @since 1.0.0
+cvSimpleStats :: forall (axis :: Type). AxisMap axis CostVector -> AxisMap axis SimpleStats
 cvSimpleStats = fmap vecSimpleStats
 
 {- | Convert 'benchSizes..' result for statistics libraries.
@@ -218,8 +238,11 @@ cvSimpleStats = fmap vecSimpleStats
 
  Composing this with 'benchSizes..' and friends also ensures that no references
  to the list are kept, allowing immediate GC on it.
+
+ @since 1.0.0
 -}
 costSampleToVectors ::
+  forall (sampleElem :: Type) (axis :: Type).
   (Int -> [sampleElem] -> AxisMap axis CostVector) ->
   SSample [Either (BudgetExceeded axis) sampleElem] ->
   SSample (Either (BudgetExceeded axis) (AxisMap axis CostVector))
@@ -228,7 +251,9 @@ costSampleToVectors toVecs ssample@SSample {sampleSize, sample = eCosts} =
    in ssample {sample = eCostVecs}
 
 -- | Postprocesses 'benchSizes..' output into per-axis statistics.
+-- | @since 1.0.0
 samplesToPerAxisStats ::
+  forall (axis :: Type) (sampleElem :: Type) (stats :: Type).
   (CostAxis axis, Eq axis) =>
   -- | The 'vecsFun': Converts sample elements (also given the sample size) to
   -- cost vectors.
@@ -245,6 +270,7 @@ samplesToPerAxisStats vecsFun statsFun ssamples =
     sAllStats = (fmap . fmap . fmap . fmap) statsFun scvs
 
 -- | Rank multiple implementations by some statistic.
+-- | @since 1.0.0
 rankOnPerAxisStat ::
   forall (axis :: Type) (stats :: Type) (s :: Type).
   (CostAxis axis, Eq axis, Ord s) =>
@@ -322,7 +348,9 @@ rankOnPerAxisStat
       cmp (Right a) (Right b) = compare a b
 
 -- | Write per-axis titled data to CSV files.
+-- | @since 1.0.0
 writePerAxisCSVs ::
+  forall (a :: Type) (d :: Type).
   ( CostAxis a
   , DefaultOrdered d
   , ToNamedRecord d
@@ -346,8 +374,11 @@ writePerAxisCSVs dir titled = do
  This exists because 'DefaultOrdered' for the column headers can't be
  implemented in this case, since the number of compared implementations isn't
  fixed, and we need one column per rank.
+
+ @since 1.0.0
 -}
 writeComparisonPerAxisCSVs ::
+  forall (a :: Type) (d :: Type).
   ( CostAxis a
   , ToNamedRecord d
   ) =>

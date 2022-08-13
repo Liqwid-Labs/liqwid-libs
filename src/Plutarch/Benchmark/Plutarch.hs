@@ -1,6 +1,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeFamilies #-}
 
+-- | @since 1.0.0
 module Plutarch.Benchmark.Plutarch (
   mkTermImplMetaData,
   sampleTerm,
@@ -38,7 +39,9 @@ import Plutarch.Extra.Precompile (CompiledTerm, compile', toDebuggableScript)
 import Plutarch.Prelude (ClosedTerm, S)
 import System.Random (RandomGen)
 
+-- | @since 1.0.0
 mkTermImplMetaData ::
+  forall (a :: S -> Type).
   -- | Name of the implementation. Make sure it's unique.
   Text ->
   -- | The implementation without any inputs
@@ -46,13 +49,16 @@ mkTermImplMetaData ::
   ImplMetaData
 mkTermImplMetaData name term = mkScriptImplMetaData name $ mustCompile term
 
+-- | @since 1.0.0
 sampleTerm :: ClosedTerm a -> Either (BudgetExceeded PlutusCostAxis) Costs
 sampleTerm term = sampleDebuggableScript $ mustCompileD term
 
+-- | @since 1.0.0
 sampleTerm' :: CompiledTerm a -> Either (BudgetExceeded PlutusCostAxis) Costs
 sampleTerm' = sampleDebuggableScript . toDebuggableScript
 
 -- | See 'benchAllSizesUniform'.
+-- | @since 1.0.0
 pbenchAllSizesUniform ::
   forall
     (a :: Type)
@@ -97,6 +103,7 @@ pbenchAllSizesUniform
       pfun' = compile' pfun
 
 -- | See 'benchNonTinySizesRandomUniform'.
+-- | @since 1.0.0
 pbenchNonTinySizesRandomUniform ::
   forall
     (a :: Type)
@@ -137,6 +144,7 @@ pbenchNonTinySizesRandomUniform
       pfun' = compile' pfun
 
 -- | See 'benchSizesRandomCached'.
+-- | @since 1.0.0
 pbenchSizesRandomCached ::
   forall
     (a :: Type)
@@ -177,6 +185,7 @@ pbenchSizesRandomCached
       pfun' = compile' pfun
 
 -- | See 'benchSizesRandomCached'.
+-- | @since 1.0.0
 pbenchSizesRandom ::
   forall
     (a :: Type)

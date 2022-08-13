@@ -3,6 +3,8 @@
 {- | Bridge between QuickCheck generators and System.Random
 
  Inspired by hedgehog-quickcheck.
+
+ @since 1.0.0
 -}
 module Plutarch.Benchmark.QuickCheck (
   genToRand,
@@ -18,6 +20,8 @@ import Test.QuickCheck.Random (mkQCGen)
 
 {- | Converts a QuickCheck Gen to a pure function in terms of
  System.Random.RandomGen
+
+ @since 1.0.0
 -}
 genToRand ::
   forall (a :: Type) (g :: Type).
@@ -32,6 +36,8 @@ genToRand (MkGen runQcGen) size g = runStateGen g $ \stateGen -> do
 
 {- | Converts a pure function in terms of System.Random.RandomGen to a
  QuickCheck Gen
+
+@since 1.0.0
 -}
 randToGen ::
   forall (a :: Type).

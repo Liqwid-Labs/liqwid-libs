@@ -2,11 +2,16 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
--- | Helpers for making exhaustive generators.
+{- | Module: Plutarch.Benchmark.Exhaustive
+Description: Helpers for making exhaustive generators.
+
+@since 1.0.0
+-}
 module Plutarch.Benchmark.Exhaustive (exhGenBags, exhGenSets, cardSets) where
 
 import Acc (Acc, fromReverseList)
 import Control.Monad (join)
+import Data.Kind (Type)
 import GHC.Exts (IsList (toList))
 import Numeric.SpecFunctions (choose)
 import Plutarch.Benchmark.Sized (Cardinality (..))
@@ -17,8 +22,11 @@ import Plutarch.Benchmark.Sized (Cardinality (..))
  Duplicate elements are allowed.
  Output list elements are ordered like in the input list of unique elements.
  Thus, duplicate elements are always grouped in a contiguous sublist.
+
+ @since 1.0.0
 -}
 exhGenBags ::
+  forall (a :: Type).
   -- | number of elems to be generated
   Int ->
   -- | choice of unique elements (a set)
@@ -35,7 +43,9 @@ exhGenBags num choice = map toList $ go num choice
     go _ [] = error "no choice"
 
 -- | Exhaustively generate lists (subsets) of a given size.
+-- @since 1.0.0
 exhGenSets ::
+  forall (a :: Type).
   -- | number of elems to be generated
   Int ->
   -- | choice of unique elements (the superset)
@@ -58,6 +68,8 @@ exhGenSets num choice = go num (length choice) choice
 {- | Cardinality of list of subsets, given set size and size of superset
 
  Use in conjunction with 'exhGenSets'.
+
+ @since 1.0.0
 -}
 cardSets :: Int -> Int -> Cardinality
 cardSets n k =

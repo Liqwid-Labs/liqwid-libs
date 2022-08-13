@@ -7,10 +7,12 @@ import qualified Options.Applicative as Opt
 import Path (Dir, Path, Rel, parseRelDir)
 import System.Directory (createDirectoryIfMissing)
 
+-- | @since 1.0.0
 newtype Options = Options
   { output :: FilePath
   }
 
+-- | @since 1.0.0
 outputOpt :: Opt.Parser FilePath
 outputOpt =
   Opt.strOption
@@ -21,9 +23,11 @@ outputOpt =
         <> Opt.help "The output directory for writing benchmark results."
     )
 
+-- | @since 1.0.0
 benchOpt :: Opt.Parser Options
 benchOpt = Options <$> outputOpt
 
+-- | @since 1.0.0
 parseOptions :: IO Options
 parseOptions = Opt.execParser p
   where
@@ -37,6 +41,8 @@ parseOptions = Opt.execParser p
 {- | Passes the benchmark output directory to the argument.
 
  Ensures that the output dir exists and is a dir.
+
+ @since 1.0.0
 -}
 benchMain :: (Path Rel Dir -> IO ()) -> IO ()
 benchMain run = do

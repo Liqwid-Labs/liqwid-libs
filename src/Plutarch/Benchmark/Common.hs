@@ -6,6 +6,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+-- | @since 1.0.0
 module Plutarch.Benchmark.Common (
   ToTitle (..),
   ImplData (..),
@@ -16,17 +17,20 @@ module Plutarch.Benchmark.Common (
 
 import Data.Csv (ToField (toField))
 import Data.Text (Text)
+import Data.Kind (Type)
 import Data.Text.Encoding (encodeUtf8)
 import GHC.Generics (Generic)
 import Optics.TH (makeFieldLabelsNoPrefix)
 
-class ToTitle a where
+class ToTitle (a :: Type) where
   toTitle :: a -> Text
 
 {- | A value tagged with the name of the implementation that it is associated
  with.
+
+ @since 1.0.0
 -}
-data ImplData a = ImplData
+data ImplData (a :: Type) = ImplData
   { name :: Text
   -- ^ the name of the implementation
   , val :: a
@@ -36,10 +40,13 @@ data ImplData a = ImplData
 
 makeFieldLabelsNoPrefix ''ImplData
 
-instance ToTitle (ImplData a) where
+-- | @since 1.0.0
+instance forall (a :: Type). ToTitle (ImplData a) where
   toTitle = (.name)
 
+-- | @since 1.0.0
 instance
+  forall (v :: Type).
   ToField v =>
   ToField (ImplData v)
   where
@@ -47,7 +54,8 @@ instance
     encodeUtf8 (toTitle implData) <> " (" <> toField implData.val <> ")"
 
 -- | A value associated with multiple implementations.
-data MultiImplData a = MultiImplData
+-- | @since 1.0.0
+data MultiImplData (a :: Type) = MultiImplData
   { name :: Text
   -- ^ the name of the group of implementations
   , implNames :: [Text]
@@ -59,15 +67,18 @@ data MultiImplData a = MultiImplData
 
 makeFieldLabelsNoPrefix ''MultiImplData
 
-multiImplData :: Text -> [ImplData a] -> MultiImplData [ImplData a]
+-- | @since 1.0.0
+multiImplData :: forall {a :: Type}. Text -> [ImplData a] -> MultiImplData [ImplData a]
 multiImplData name list =
   MultiImplData {name, implNames = map (.name) list, val = list}
 
-instance ToTitle (MultiImplData a) where
+-- | @since 1.0.0
+instance forall (a :: Type). ToTitle (MultiImplData a) where
   toTitle a = a.name <> " implementations"
 
 -- | A value associated with multiple implementations.
-data MultiImplComparisonData a = MultiImplComparisonData
+-- | @since 1.0.0
+data MultiImplComparisonData (a :: Type) = MultiImplComparisonData
   { name :: Text
   -- ^ the name of the group of implementations
   , implNames :: [Text]
@@ -81,5 +92,6 @@ data MultiImplComparisonData a = MultiImplComparisonData
 
 makeFieldLabelsNoPrefix ''MultiImplComparisonData
 
-instance ToTitle (MultiImplComparisonData a) where
+-- | @since 1.0.0
+instance forall (a :: Type). ToTitle (MultiImplComparisonData a) where
   toTitle a = a.name <> " implementations " <> a.comparisonName

@@ -6,6 +6,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE NoFieldSelectors #-}
 
+-- | @since 1.0.0
 module Plutarch.Benchmark.Plutus (
   ImplMetaData (..),
   mkScriptImplMetaData,
@@ -69,6 +70,7 @@ import UntypedPlutusCore.Evaluation.Machine.Cek (
 
 -- TODO add script hash, maybe also git commit hash, mtime
 -- TODO actually make use of this and write to some file
+-- | @since 1.0.0
 data ImplMetaData = ImplMetaData
   { name :: Text
   -- ^ Name of the implementation. Make sure it's unique.
@@ -82,6 +84,7 @@ data ImplMetaData = ImplMetaData
 
 makeFieldLabelsNoPrefix ''ImplMetaData
 
+-- | @since 1.0.0
 mkScriptImplMetaData ::
   -- | Name of the implementation. Make sure it's unique.
   Text ->
@@ -99,17 +102,20 @@ mkScriptImplMetaData name script =
     scriptSize = UPLC.programSize uplcProg
     scriptSizeBytes = fromIntegral . LBS.length . serialise $ script
 
+-- | @since 1.0.0
 data PlutusCostAxis = CPU | Mem
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic)
   deriving anyclass (CostAxis, NFData)
 
 -- | Based on Int, since the Plutus budget types are Int internally as well
+-- | @since 1.0.0
 newtype Cost (a :: PlutusCostAxis) = Cost {value :: Int}
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData)
 
 makeFieldLabelsNoPrefix ''Cost
 
+-- | @since 1.0.0
 data Costs = Costs
   { cpuCost :: Cost 'CPU
   , memCost :: Cost 'Mem
@@ -119,11 +125,13 @@ data Costs = Costs
 
 makeFieldLabelsNoPrefix ''Costs
 
+-- | @since 1.0.0
 newtype ScriptFailure = ScriptFailure {traces :: [Text]}
 
 makeFieldLabelsNoPrefix ''ScriptFailure
 
 -- | Sample Script execution, crash on evaluation failure.
+-- | @since 1.0.0
 sampleScript :: Script -> Either (BudgetExceeded PlutusCostAxis) Costs
 sampleScript script =
   case sampleScript' script of
@@ -137,6 +145,7 @@ sampleScript script =
         Right budgetExceeded -> Left budgetExceeded
 
 -- | Sample Script execution, try debug variant of Script on evaluation failure.
+-- | @since 1.0.0
 sampleDebuggableScript ::
   DebuggableScript ->
   Either
@@ -150,6 +159,7 @@ sampleDebuggableScript DebuggableScript {script, debugScript} =
         Left _ -> sampleScript debugScript
         Right budgetExceeded -> Left budgetExceeded
 
+-- | @since 1.0.0
 sampleScript' ::
   Script ->
   Either
@@ -183,6 +193,7 @@ sampleScript' script =
     cpuCost = Cost $ fromIntegral rawCpu
     memCost = Cost $ fromIntegral rawMem
 
+-- | @since 1.0.0
 plutusCostsToVecs :: Int -> [Costs] -> AxisMap PlutusCostAxis CostVector
 plutusCostsToVecs sampleSize costs =
   AxisMap [(CPU, CostVector cpuVec), (Mem, CostVector memVec)]
@@ -195,6 +206,7 @@ plutusCostsToVecs sampleSize costs =
       (fromIntegral cpu, fromIntegral mem)
 
 -- | Postprocesses 'benchSizes..' output into per-axis statistics.
+-- | @since 1.0.0
 statsByAxis' ::
   [SSample [Either (BudgetExceeded PlutusCostAxis) Costs]] ->
   AxisMap
@@ -204,6 +216,7 @@ statsByAxis' =
   samplesToPerAxisStats plutusCostsToVecs vecSimpleStats
 
 -- | Postprocesses 'benchSizes..' output into per-axis statistics.
+-- | @since 1.0.0
 statsByAxis ::
   ImplData [SSample [Either (BudgetExceeded PlutusCostAxis) Costs]] ->
   ImplData
