@@ -26,20 +26,9 @@ import Plutarch.Extra.Maybe (pmaybe)
 import Plutarch.Lift (PLift, PUnsafeLiftDecl (PLifted), pconstant)
 import Plutarch.Maybe (pfromJust)
 import Plutarch.Prelude (
-    PBool,
     PBuiltinList,
     PBuiltinPair,
     PEq,
-    PIsListLike,
-    PMaybe (PJust, PNothing),
-    pcon,
-    pfstBuiltin,
-    phoistAcyclic,
-    pif,
-    pmatch,
-    precList,
-    psndBuiltin,
-    (#==),
  )
 import Plutarch.Test.QuickCheck.Instances (
     TestableTerm (
@@ -75,8 +64,11 @@ pattern PFn ::
     PFun a b
 pattern PFn f <- (unTestableTerm . applyPFun -> f)
 
-applyPFun :: forall {a :: S -> Type} {b :: S -> Type}.
-  (PLift a, PLift b) => PFun a b -> TestableTerm (a :--> b)
+applyPFun ::
+    forall {a :: S -> Type} {b :: S -> Type}.
+    (PLift a, PLift b) =>
+    PFun a b ->
+    TestableTerm (a :--> b)
 applyPFun (PFun _ _ f) = f
 
 mkPFun ::

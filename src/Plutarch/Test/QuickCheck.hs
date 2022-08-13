@@ -97,8 +97,10 @@ type family TestableFun (b :: PTermType) (p :: S -> Type) where
     TestableFun _ PBool = TestableTerm PBool
     TestableFun 'PTerm (a :--> b) = TestableTerm a -> TestableFun (PTT b) b
     TestableFun 'LastPTerm (a :--> b) = TestableTerm a -> TestableFun (PTT b) b
-    TestableFun 'PFunction ((a :--> b) :--> c) = PFun a b -> TestableFun (PTT c) c
-    TestableFun 'LastPFunction ((a :--> b) :--> c) = PFun a b -> TestableFun (PTT c) c
+    TestableFun 'PFunction ((a :--> b) :--> c) =
+        PFun a b -> TestableFun (PTT c) c
+    TestableFun 'LastPFunction ((a :--> b) :--> c) =
+        PFun a b -> TestableFun (PTT c) c
 
 {- | Convert Plutarch function into testable Haskell function that takes
      `TestableTerm`. It also converts plutarch function into `PFun`.
@@ -106,7 +108,10 @@ type family TestableFun (b :: PTermType) (p :: S -> Type) where
  @since 2.0.0
 -}
 class FromPFunN (a :: S -> Type) (b :: S -> Type) (c :: PTermType) where
-    fromPFun' :: Proxy c -> (forall s. Term s (a :--> b)) -> TestableFun c (a :--> b)
+    fromPFun' ::
+        Proxy c ->
+        (forall s. Term s (a :--> b)) ->
+        TestableFun c (a :--> b)
 
 -- | @since 2.0.0
 instance
@@ -124,7 +129,12 @@ instance FromPFunN a PBool 'LastPTerm where
 
 -- | @since 2.0.0
 instance
-    forall (a :: S -> Type) (b :: S -> Type) (c :: S -> Type) (d :: S -> Type) (e :: S -> Type).
+    forall
+        (a :: S -> Type)
+        (b :: S -> Type)
+        (c :: S -> Type)
+        (d :: S -> Type)
+        (e :: S -> Type).
     ( c ~ (d :--> e)
     , PLift a
     , PLift b
@@ -132,7 +142,8 @@ instance
     ) =>
     FromPFunN (a :--> b) c 'PFunction
     where
-    fromPFun' _ f (PFun _ _ (unTestableTerm -> x)) = fromPFun' (Proxy @(PTT c)) $ f # x
+    fromPFun' _ f (PFun _ _ (unTestableTerm -> x)) =
+        fromPFun' (Proxy @(PTT c)) $ f # x
 
 -- | @since 2.0.0
 instance
@@ -144,7 +155,8 @@ instance
     where
     fromPFun' _ f (TestableTerm x) = fromPFun' (Proxy @(PTT b)) $ f # x
 
-{- | Converts Plutarch Functions into `Testable` Haskell function of TestableTerms.
+{- | Converts Plutarch Functions into `Testable` Haskell function of
+  TestableTerms.
 
  @since 2.0.0
 -}
@@ -175,14 +187,25 @@ type family PLamArgs (p :: S -> Type) :: [Type] where
 
  @since 2.0.0
 -}
-class (PLamArgs p ~ args) => HaskEquiv (h :: Type) (p :: S -> Type) args where
+class
+    (PLamArgs p ~ args) =>
+    HaskEquiv
+        (h :: Type)
+        (p :: S -> Type)
+        (args :: [Type])
+    where
     haskEquiv :: h -> TestableTerm p -> NP Gen args -> Property
 
 -- TODO: Shrinking support
 
 -- | @since 2.0.0
 instance
-    forall ha hb pa pb hbArgs.
+    forall
+        (ha :: Type)
+        (hb :: Type)
+        (pa :: S -> Type)
+        (pb :: S -> Type)
+        (hbArgs :: [Type]).
     ( PLamArgs pb ~ hbArgs
     , HaskEquiv hb pb hbArgs
     , PLifted pa ~ ha
@@ -195,7 +218,11 @@ instance
         forAll g $ \(TestableTerm x) -> haskEquiv (h $ plift x) (TestableTerm $ p # x) gs
 
 -- | @since 2.0.0
-instance (PLamArgs p ~ '[], PLift p, PLifted p ~ h, Eq h) => HaskEquiv h p '[] where
+instance
+    forall (p :: S -> Type) (h :: Type).
+    (PLamArgs p ~ '[], PLift p, PLifted p ~ h, Eq h) =>
+    HaskEquiv h p '[]
+    where
     haskEquiv h (TestableTerm p) _ = property $ plift p == h
 
 {- | Simplified version of `haskEquiv`. It will use arbitrary instead of
@@ -212,9 +239,14 @@ haskEquiv' ::
     h ->
     (forall s. Term s p) ->
     Property
-haskEquiv' h p = haskEquiv h (TestableTerm p) $ hcpure (Proxy @Arbitrary) arbitrary
+haskEquiv' h p =
+    haskEquiv h (TestableTerm p) $
+        hcpure
+            (Proxy @Arbitrary)
+            arbitrary
 
-{- | Placeholder for a polymorphic type. Plutarch equivalence of QuickCheck's `A`.
+{- | Placeholder for a polymorphic type. Plutarch equivalence of QuickCheck's
+  `A`.
 
  @since 2.0.0
 -}

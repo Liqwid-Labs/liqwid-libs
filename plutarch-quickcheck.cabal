@@ -131,7 +131,6 @@ library
     , tagged
     , tasty
     , tasty-expected-failure
-    , tasty-hunit
     , tasty-quickcheck
     , text
     , universe
