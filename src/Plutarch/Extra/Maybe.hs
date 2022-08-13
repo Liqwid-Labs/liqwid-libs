@@ -31,7 +31,7 @@ module Plutarch.Extra.Maybe (
 ) where
 
 import Data.Kind (Type)
-import Plutarch.Api.V1.Maybe (PMaybeData (PDJust, PDNothing))
+import Plutarch.Api.V2 (PMaybeData (PDJust, PDNothing))
 import Plutarch.Bool (PBool)
 import Plutarch.Builtin (PIsData, pdata, pfromData)
 import Plutarch.DataRepr (pdcons, pdnil, pfield)
