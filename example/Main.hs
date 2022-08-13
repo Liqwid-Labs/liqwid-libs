@@ -13,8 +13,8 @@ import Plutarch.Benchmark.Cost (
   writePerAxisCSVs,
  )
 import Plutarch.Benchmark.Main (benchMain)
-import Plutarch.Benchmark.Plutarch (mkTermImplMetaData, sampleTerm, sampleTerm')
-import Plutarch.Benchmark.Plutus (statsByAxis')
+import Plutarch.Benchmark.Plutarch (mkTermImplMetaData, pbenchAllSizesUniform, sampleTerm, sampleTerm')
+import Plutarch.Benchmark.Plutus (statsByAxis, statsByAxis')
 import Plutarch.Benchmark.Sized (
   Cardinality (Cardinality),
   SUniversalGen (SUniversalGen),
@@ -79,6 +79,7 @@ main = benchMain $ \dir -> do
           (\size -> replicateM size [0 .. 9])
           (\size -> flip runStateGen (replicateM size . uniformRM (0, 9)))
 
+  -- lower level style, using Plutarch.Benchmark.Sized directly
   let pfind3 :: CompiledTerm (PBuiltinList PInteger :--> PMaybe PInteger) =
         compile' $ pfind # plam (#== 3)
   stats1 <-
@@ -90,13 +91,15 @@ main = benchMain $ \dir -> do
         [0 .. 10]
   writePerAxisCSVs dir stats1
 
-  let pfind4 :: CompiledTerm (PBuiltinList PInteger :--> PMaybe PInteger) =
-        compile' $ pfind # plam (#== 4)
+  -- higher level, using Plutarch.Benchmark.Plutarch
+  let pfind4 = pfind # plam (#== 4)
   stats2 <-
-    ImplData "find 4" . statsByAxis'
-      <$> benchAllSizesUniform
+    statsByAxis
+      <$> pbenchAllSizesUniform
         gen
-        (\list -> sampleTerm' $ pfind4 ## pconstant list)
+        "pfind4"
+        pfind4
+        (\f list -> f ## pconstant list)
         10000
         [0 .. 10]
   writePerAxisCSVs dir stats2
