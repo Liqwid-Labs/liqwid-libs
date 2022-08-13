@@ -2,6 +2,11 @@
 
 module Plutarch.Extra.Compile (mustCompile) where
 
+import Data.Default (Default (def))
+import qualified Data.Text as T
+import Plutarch (compile)
+import Plutarch.Prelude
+import PlutusLedgerApi.V2 (Script)
 import qualified Data.Text as T
 import Plutarch (ClosedTerm, Config (..), TracingMode (DetTracing), compile)
 import PlutusLedgerApi.V1 (Script)
