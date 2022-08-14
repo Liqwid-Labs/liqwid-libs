@@ -30,11 +30,16 @@ common common-lang
     -Wmissing-export-lists -Wmissing-deriving-strategies -Werror
     -Wno-partial-type-signatures
 
+  mixins:
+    base hiding (Prelude),
+    pprelude (PPrelude as Prelude)
+
   build-depends:
     , base               ^>=4.16
     , plutarch
     , plutus-ledger-api
     , plutus-tx
+    , pprelude
 
   default-extensions:
     BangPatterns
@@ -63,6 +68,14 @@ common common-lang
   default-language:   Haskell2010
 
 -- Libraries
+
+library pprelude
+  default-language: Haskell2010
+  exposed-modules:  PPrelude
+  hs-source-dirs:   src
+  build-depends:
+    , base
+    , plutarch
 
 library
   import:          common-lang
@@ -111,35 +124,3 @@ library
     , text
 
   hs-source-dirs:  src
-
---test-suite liqwid-plutarch-extra-test
---  import:         common-lang
---  type:           exitcode-stdio-1.0
---  main-is:        Spec.hs
---  ghc-options:    -O2 -threaded -rtsopts -with-rtsopts=-N
---  build-depends:
---  , bytestring
---  , containers
---    , liqwid-plutarch-extra
---    , mtl
---    , plutarch-context-builder
---    , plutarch-quickcheck
---    , plutus-core
---    , QuickCheck
---    , quickcheck-instances
---    , tagged
---    , tasty
---    , tasty-hunit
---    , tasty-quickcheck
---    , universe
---
---  other-modules:
---    Spec.Extra.List
---    Spec.Extra.Map
---    Spec.Extra.Map.Sorted
---    Spec.Extra.MultiSig
---    Spec.Extra.Traversable
---    Spec.Utils
---
---  hs-source-dirs: test
---

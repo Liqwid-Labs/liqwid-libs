@@ -11,21 +11,8 @@ module Plutarch.Extra.AssetClass (
     pvalueOf,
 ) where
 
-import Data.Kind (Type)
 import qualified GHC.Generics as GHC
 import Generics.SOP (Generic)
-import Plutarch (
-    DerivePlutusType (..),
-    PlutusType,
-    S,
-    Term,
-    pcon,
-    phoistAcyclic,
-    plam,
-    unTermCont,
-    (#),
-    type (:-->),
- )
 import Plutarch.Api.V1 (
     PCurrencySymbol,
     PTokenName,
@@ -36,29 +23,9 @@ import Plutarch.Api.V2 (
     AmountGuarantees,
     KeyGuarantees,
  )
-import Plutarch.Bool (PBool, PEq ((#==)))
-import Plutarch.Builtin (
-    PAsData,
-    PBuiltinPair,
-    PIsData,
-    pdata,
-    pfromData,
-    pfstBuiltin,
-    psndBuiltin,
- )
-import Plutarch.DataRepr (
-    PDataFields,
-    PDataRecord,
-    PLabeledType ((:=)),
-    PlutusTypeData,
-    pdcons,
-    pdnil,
-    pfield,
- )
+import Plutarch.DataRepr (PDataFields)
 import Plutarch.Extra.TermCont (pletC, pmatchC)
-import Plutarch.Integer (PInteger)
-import Plutarch.List (pfind)
-import Plutarch.Maybe (PMaybe (PJust, PNothing))
+import Prelude hiding (Generic)
 
 -- | @since 1.0.0
 newtype PAssetClass (s :: S)

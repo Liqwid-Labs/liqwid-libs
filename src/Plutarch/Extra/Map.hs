@@ -16,7 +16,6 @@ module Plutarch.Extra.Map (
 ) where
 
 import Data.Foldable (foldl')
-import Data.Kind (Type)
 import Plutarch.Api.V1.AssocMap (KeyGuarantees, PMap (PMap))
 import Plutarch.Builtin (ppairDataBuiltin)
 import Plutarch.Extra.Functor (pfmap)
@@ -24,35 +23,7 @@ import Plutarch.Extra.List (pmapMaybe)
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.Extra.Traversable (pfoldMap)
 import qualified Plutarch.List
-import Plutarch.Prelude (
-    PAsData,
-    PBool,
-    PBuiltinList (PCons, PNil),
-    PBuiltinPair,
-    PEq ((#==)),
-    PIsData,
-    PMaybe (PJust, PNothing),
-    POrd,
-    S,
-    Term,
-    pcon,
-    pdata,
-    pfind,
-    pfoldl,
-    pfromData,
-    pfstBuiltin,
-    phoistAcyclic,
-    pif,
-    plam,
-    pmatch,
-    psndBuiltin,
-    pto,
-    ptraceError,
-    unTermCont,
-    (#),
-    (#<),
-    type (:-->),
- )
+import Prelude hiding (pmap)
 
 -- | @since 1.0.0
 plookup ::

@@ -4,10 +4,9 @@ module Plutarch.Extra.Profunctor (
     PProfunctor (..),
 ) where
 
-import Data.Kind (Constraint, Type)
+import Data.Kind (Constraint)
 import Generics.SOP (Top)
 import Plutarch.Extra.Function (pidentity)
-import Plutarch.Prelude (S, Term, phoistAcyclic, plam, (#), type (:-->))
 
 -- | @since 1.0.0
 class PProfunctor (p :: (S -> Type) -> (S -> Type) -> S -> Type) where

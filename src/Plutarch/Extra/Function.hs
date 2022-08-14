@@ -7,22 +7,6 @@ module Plutarch.Extra.Function (
     pflip,
 ) where
 
-import Data.Kind (Type)
-import Plutarch.Prelude (
-    PAsData,
-    PBuiltinPair,
-    PIsData,
-    S,
-    Term,
-    pfromData,
-    pfstBuiltin,
-    phoistAcyclic,
-    plam,
-    psndBuiltin,
-    (#),
-    type (:-->),
- )
-
 -- | @since 1.0.0
 pconst ::
     forall (a :: S -> Type) (b :: S -> Type) (s :: S).

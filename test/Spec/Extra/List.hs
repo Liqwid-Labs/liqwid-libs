@@ -31,13 +31,6 @@ import Prelude hiding (last)
 
 --------------------------------------------------------------------------------
 
-import Plutarch (Term, phoistAcyclic, plam, (#), type (:-->))
-import Plutarch.Bool ((#<))
-import Plutarch.Builtin (PBuiltinList, PBuiltinPair, pfstBuiltin, psndBuiltin)
-import Plutarch.Integer (PInteger)
-
---------------------------------------------------------------------------------
-
 import Plutarch.Extra.List (pisSorted, pisUniq, pmergeBy, pmsort, pnubSort)
 
 --------------------------------------------------------------------------------

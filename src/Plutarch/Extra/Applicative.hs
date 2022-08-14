@@ -24,39 +24,6 @@ import Plutarch.Extra.Function (papply, pconst)
 import Plutarch.Extra.Functor (PFunctor (PSubcategory))
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.List (puncons)
-import Plutarch.Prelude (
-    PBool,
-    PBuiltinList,
-    PEither (PLeft, PRight),
-    PElemConstraint,
-    PInteger,
-    PList,
-    PListLike,
-    PMaybe (PJust, PNothing),
-    PPair (PPair),
-    S,
-    Term,
-    Type,
-    pcon,
-    pconcat,
-    pcons,
-    pdata,
-    pdcons,
-    pdnil,
-    pfield,
-    pfix,
-    pfromData,
-    phoistAcyclic,
-    pif,
-    plam,
-    pmap,
-    pnil,
-    unTermCont,
-    (#),
-    (#$),
-    (#<=),
-    (:-->),
- )
 
 -- | @since 1.0.0
 class (PFunctor f) => PApply (f :: (S -> Type) -> S -> Type) where

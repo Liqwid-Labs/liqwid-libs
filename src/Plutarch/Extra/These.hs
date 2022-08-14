@@ -17,8 +17,6 @@ module Plutarch.Extra.These (
     fromPDThese,
 ) where
 
-import Data.Kind (Type)
-import GHC.Generics (Generic)
 import Generics.SOP (Top)
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
 import Plutarch.Extra.Bool (pcompare)
@@ -29,34 +27,6 @@ import Plutarch.Extra.Functor (
  )
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.Extra.Traversable (PTraversable (ptraverse, ptraverse_))
-import Plutarch.Prelude (
-    DPTStrat,
-    DerivePlutusType,
-    PAsData,
-    PBool (PFalse, PTrue),
-    PDataRecord,
-    PEq,
-    PIsData,
-    PLabeledType ((:=)),
-    POrd,
-    PPartialOrd (..),
-    PlutusType,
-    PlutusTypeData,
-    PlutusTypeScott,
-    S,
-    Term,
-    pcon,
-    pdata,
-    pdcons,
-    pdnil,
-    pfield,
-    pfromData,
-    phoistAcyclic,
-    plam,
-    unTermCont,
-    (#),
-    type (:-->),
- )
 import Plutarch.Show (PShow)
 
 {- | A data type which contains an @a@, a @b@, or both. This uses a

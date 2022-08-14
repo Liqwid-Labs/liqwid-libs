@@ -2,19 +2,7 @@
 
 module Plutarch.Extra.Numeric (peven) where
 
-import Data.Kind (Type)
 import Plutarch.Num (PNum)
-import Plutarch.Prelude (
-    PBool,
-    PEq ((#==)),
-    PIntegral (prem),
-    S,
-    Term,
-    phoistAcyclic,
-    plam,
-    (#),
-    type (:-->),
- )
 
 -- | @since 1.0.0
 peven ::

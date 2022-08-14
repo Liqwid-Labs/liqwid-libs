@@ -18,40 +18,15 @@ module Plutarch.Extra.FixedDecimal (
 import Control.Composition (on, (.*))
 import Data.Bifunctor (first)
 import Data.Proxy (Proxy (Proxy))
-import GHC.Generics (Generic)
 import GHC.TypeLits (KnownNat, Nat, natVal)
 import qualified Generics.SOP as SOP
 import Plutarch.Api.V1 (AmountGuarantees, KeyGuarantees, PValue)
-import Plutarch.Api.V1.Value (psingletonValue)
 import Plutarch.Extra.Function (pflip)
+import Plutarch.Extra.Value (psingletonValue)
 import Plutarch.Num (PNum (..))
 import qualified Plutarch.Numeric.Additive as A (
     AdditiveMonoid (..),
     AdditiveSemigroup (..),
- )
-import Plutarch.Prelude (
-    DerivePlutusType (..),
-    PAsData,
-    PData,
-    PEq,
-    PInteger,
-    PIntegral (pdiv),
-    PIsData,
-    POrd,
-    PPartialOrd,
-    PTryFrom,
-    PlutusType,
-    PlutusTypeNewtype,
-    S,
-    Term,
-    pcon,
-    pconstant,
-    phoistAcyclic,
-    plam,
-    pto,
-    (#),
-    (#$),
-    type (:-->),
  )
 import Plutarch.Show (PShow)
 import Plutarch.TryFrom (PTryFrom (PTryFromExcess, ptryFrom'))

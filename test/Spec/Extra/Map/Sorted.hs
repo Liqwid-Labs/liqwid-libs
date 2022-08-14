@@ -26,11 +26,7 @@ import qualified GHC.Generics as GHC
 
 --------------------------------------------------------------------------------
 
-import Plutarch (Term, phoistAcyclic, plam, (#), type (:-->))
-import Plutarch.Api.V2.AssocMap (KeyGuarantees (..), PMap)
-import Plutarch.Bool (PBool)
-import Plutarch.Builtin (PBuiltinPair, pfstBuiltin, psndBuiltin)
-import Plutarch.Integer (PInteger)
+import Plutarch.Api.V1.AssocMap (KeyGuarantees (..), PMap)
 import Plutarch.Unsafe (punsafeCoerce)
 import qualified PlutusTx.AssocMap as AssocMap
 

@@ -7,8 +7,6 @@ module Plutarch.Extra.Identity (
     PIdentity (..),
 ) where
 
-import Data.Kind (Type)
-import GHC.Generics (Generic)
 import Generics.SOP (Top)
 import qualified Generics.SOP as SOP
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
@@ -20,23 +18,6 @@ import Plutarch.Extra.Comonad (
 import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap))
 import Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Num (PNum)
-import Plutarch.Prelude (
-    DerivePlutusType (..),
-    PEq,
-    PIntegral,
-    PIsData,
-    POrd,
-    PPartialOrd,
-    PlutusType,
-    PlutusTypeNewtype,
-    S,
-    Term,
-    pcon,
-    phoistAcyclic,
-    plam,
-    unTermCont,
-    (#),
- )
 import Plutarch.Show (PShow)
 
 {- | Just a value of type @a@.

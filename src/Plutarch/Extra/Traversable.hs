@@ -23,7 +23,6 @@ module Plutarch.Extra.Traversable (
     pall,
 ) where
 
-import Data.Kind (Type)
 import Plutarch.Api.V1.Maybe (PMaybeData (PDJust, PDNothing))
 import Plutarch.Extra.Applicative (
     PApplicative (ppure),
@@ -45,34 +44,7 @@ import Plutarch.Extra.Sum (PSum (PSum))
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.List (puncons)
 import Plutarch.Num (PNum)
-import Plutarch.Prelude (
-    PBool,
-    PBuiltinList,
-    PEither (PLeft, PRight),
-    PInteger,
-    PList,
-    PMaybe (PJust, PNothing),
-    PPair (PPair),
-    PUnit,
-    S,
-    Term,
-    pcon,
-    pcons,
-    pdata,
-    pdcons,
-    pdnil,
-    pfield,
-    pfix,
-    pfromData,
-    phoistAcyclic,
-    plam,
-    pmatch,
-    pnil,
-    unTermCont,
-    (#),
-    (#$),
-    type (:-->),
- )
+import Prelude hiding (pall, pany, plength)
 
 -- | @since 1.0.0
 class (PFunctor t) => PTraversable (t :: (S -> Type) -> S -> Type) where

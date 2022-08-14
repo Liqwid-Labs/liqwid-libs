@@ -23,51 +23,12 @@ module Plutarch.Extra.List (
     module Extra,
 ) where
 
-import Data.Kind (Type)
 import Plutarch.Api.V1.Tuple (PTuple)
 import "plutarch-extra" Plutarch.Extra.List as Extra (
     pcheckSorted,
     preverse,
  )
 import Plutarch.Extra.TermCont (pletC)
-import Plutarch.Prelude (
-    PAsData,
-    PBool (..),
-    PBuiltinPair,
-    PEq (..),
-    PInteger,
-    PIsData,
-    PIsListLike,
-    PListLike (..),
-    PMaybe (PJust, PNothing),
-    POrd,
-    S,
-    Term,
-    pcon,
-    pconstant,
-    pfield,
-    pfix,
-    pfromData,
-    pfstBuiltin,
-    phoistAcyclic,
-    pif,
-    plam,
-    plength,
-    plet,
-    pmap,
-    pmatch,
-    precList,
-    psingleton,
-    psndBuiltin,
-    unTermCont,
-    (#),
-    (#$),
-    (#<),
-    (#<=),
-    (#||),
-    type (:-->),
- )
-import Prelude hiding (last)
 
 {- | True if a list is not empty.
 

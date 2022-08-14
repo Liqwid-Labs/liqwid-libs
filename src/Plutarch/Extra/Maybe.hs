@@ -30,32 +30,7 @@ module Plutarch.Extra.Maybe (
     passertPDJust,
 ) where
 
-import Data.Kind (Type)
 import Plutarch.Api.V1.Maybe (PMaybeData (PDJust, PDNothing))
-import Plutarch.Prelude (
-    PBool,
-    PIsData,
-    PMaybe (PJust, PNothing),
-    PString,
-    S,
-    Term,
-    TermCont,
-    pcon,
-    pconstant,
-    pdata,
-    pdcons,
-    pdnil,
-    pfield,
-    pfromData,
-    phoistAcyclic,
-    plam,
-    pmatch,
-    ptraceError,
-    tcont,
-    (#),
-    (#$),
-    type (:-->),
- )
 
 --------------------------------------------------------------------------------
 -- Utility functions for working with 'PMaybe'.

@@ -14,28 +14,11 @@ module Plutarch.Extra.State (
     pmodify,
 ) where
 
-import Data.Kind (Type)
-import GHC.Generics (Generic)
 import Generics.SOP (Top)
 import qualified Generics.SOP as SOP
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
 import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap))
 import Plutarch.Extra.TermCont (pmatchC)
-import Plutarch.Prelude (
-    DerivePlutusType (..),
-    PPair (PPair),
-    PUnit (PUnit),
-    PlutusType,
-    PlutusTypeNewtype,
-    S,
-    Term,
-    pcon,
-    phoistAcyclic,
-    plam,
-    unTermCont,
-    (#),
-    type (:-->),
- )
 
 -- | @since 1.0.0
 newtype PState (s :: S -> Type) (a :: S -> Type) (s' :: S)

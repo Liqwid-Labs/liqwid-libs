@@ -14,7 +14,7 @@ module Plutarch.Extra.Functor (
     pvoid,
 ) where
 
-import Data.Kind (Constraint, Type)
+import Data.Kind (Constraint)
 import Generics.SOP (Top)
 import Plutarch.Api.V1.AssocMap (KeyGuarantees, PMap (PMap))
 import Plutarch.Api.V1.Maybe (PMaybeData (PDJust, PDNothing))
@@ -23,32 +23,6 @@ import Plutarch.Extra.Boring (PBoring (pboring))
 import Plutarch.Extra.Function (pconst, pidentity)
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.Lift (PUnsafeLiftDecl)
-import Plutarch.Prelude (
-    PAsData,
-    PBuiltinList,
-    PBuiltinPair,
-    PEither (PLeft, PRight),
-    PIsData,
-    PList,
-    PMaybe (PJust, PNothing),
-    PPair (PPair),
-    S,
-    Term,
-    pcon,
-    pdata,
-    pdcons,
-    pdnil,
-    pfield,
-    pfromData,
-    pfstBuiltin,
-    phoistAcyclic,
-    plam,
-    pmap,
-    psndBuiltin,
-    unTermCont,
-    (#),
-    type (:-->),
- )
 
 {- | Describes a Plutarch-level covariant endofunctor. However, unlike in
  Haskell, the endofunctor is defined over a subcategory of @Plut@, rather than

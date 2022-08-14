@@ -9,17 +9,6 @@ module Plutarch.Extra.Boring (
     mapBoring,
 ) where
 
-import Data.Kind (Type)
-import Plutarch.Prelude (
-    PUnit (PUnit),
-    S,
-    Term,
-    pcon,
-    phoistAcyclic,
-    plam,
-    type (:-->),
- )
-
 {- | Represents singleton values. They are \'boring\' as having a value of that
  type tells you absolutely nothing, as they're all the same.
 

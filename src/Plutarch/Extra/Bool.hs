@@ -2,9 +2,6 @@ module Plutarch.Extra.Bool (
     pcompare,
 ) where
 
-import Data.Kind (Type)
-import Plutarch.Prelude (POrd, S, Term, pif, (#<), (#==))
-
 {- | Perform a \'three-way\' comparison on two 'Term's, then return a result
  based on the outcome.
 

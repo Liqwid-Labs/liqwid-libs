@@ -13,9 +13,7 @@ module Plutarch.Extra.Tagged (
 ) where
 
 import Data.Bifunctor (first)
-import Data.Kind (Type)
 import Data.Tagged (Tagged (Tagged))
-import GHC.Generics (Generic)
 import Generics.SOP (Top)
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
 import Plutarch.Extra.Boring (PBoring (pboring))
@@ -34,27 +32,6 @@ import Plutarch.Lift (
     PUnsafeLiftDecl (PLifted),
  )
 import Plutarch.Num (PNum (..))
-import Plutarch.Prelude (
-    DPTStrat,
-    DerivePlutusType,
-    PAsData,
-    PData,
-    PEq,
-    PIntegral,
-    PIsData,
-    POrd,
-    PPartialOrd,
-    PSubtype,
-    PlutusType,
-    PlutusTypeNewtype,
-    S,
-    Term,
-    pcon,
-    phoistAcyclic,
-    plam,
-    unTermCont,
-    (#),
- )
 import Plutarch.Show (PShow)
 import Plutarch.TryFrom (PTryFrom (PTryFromExcess, ptryFrom'))
 import Plutarch.Unsafe (punsafeCoerce)

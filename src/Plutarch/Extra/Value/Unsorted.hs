@@ -1,15 +1,5 @@
 module Plutarch.Extra.Value.Unsorted (psort) where
 
-import Plutarch (
-    S,
-    Term,
-    pcon,
-    phoistAcyclic,
-    plam,
-    pmatch,
-    (#),
-    type (:-->),
- )
 import Plutarch.Api.V1 (
     PValue (PValue),
  )

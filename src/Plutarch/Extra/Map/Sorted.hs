@@ -3,39 +3,10 @@
 
 module Plutarch.Extra.Map.Sorted (pkeysEqual, punionWith) where
 
-import Data.Kind (Type)
 import Plutarch.Api.V1.AssocMap (KeyGuarantees (..), PMap (PMap))
 import Plutarch.Builtin (ppairDataBuiltin)
 import Plutarch.Extra.Map (pkeys)
 import Plutarch.Extra.TermCont (pletC)
-import Plutarch.Prelude (
-    PAsData,
-    PBool,
-    PBuiltinList,
-    PBuiltinPair,
-    PEq ((#==)),
-    PIsData,
-    PListLike (..),
-    POrd,
-    S,
-    Term,
-    pcon,
-    pdata,
-    pfix,
-    pfromData,
-    pfstBuiltin,
-    phoistAcyclic,
-    pif,
-    plam,
-    plistEquals,
-    psndBuiltin,
-    pto,
-    unTermCont,
-    (#),
-    (#$),
-    (#<),
-    type (:-->),
- )
 
 {- | / O(n) /. True if both maps have exactly the same keys.
 
