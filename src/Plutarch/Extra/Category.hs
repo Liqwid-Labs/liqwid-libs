@@ -6,8 +6,8 @@ module Plutarch.Extra.Category (
 ) where
 
 import Data.Kind (Type)
-import Plutarch (S, Term, phoistAcyclic, plam, (#), (:-->))
 import Plutarch.Extra.Profunctor (PProfunctor (PCoSubcategory, PContraSubcategory, prmap))
+import Plutarch.Prelude (S, Term, phoistAcyclic, plam, (#), (:-->))
 
 -- | @since 1.0.0
 class (PProfunctor p) => PSemigroupoid (p :: (S -> Type) -> (S -> Type) -> S -> Type) where

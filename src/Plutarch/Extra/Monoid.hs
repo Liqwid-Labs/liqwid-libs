@@ -14,20 +14,22 @@ import Control.Composition ((.*))
 import Data.Function (on)
 import GHC.Generics (Generic)
 import qualified Generics.SOP as SOP
-import Plutarch (
+import Plutarch.Prelude (
     DerivePlutusType (DPTStrat),
+    PBool,
+    PEq,
+    PIsData,
     PlutusType,
     PlutusTypeNewtype,
     S,
     Term,
     pcon,
+    pconstant,
     plam,
     pto,
+    (#&&),
     type (:-->),
  )
-import Plutarch.Bool (PBool, PEq, (#&&))
-import Plutarch.Builtin (PIsData)
-import Plutarch.Lift (pconstant)
 import Plutarch.Show (PShow)
 import Plutarch.Unsafe (punsafeCoerce)
 

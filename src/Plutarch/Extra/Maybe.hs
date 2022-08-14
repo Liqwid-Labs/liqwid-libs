@@ -31,26 +31,31 @@ module Plutarch.Extra.Maybe (
 ) where
 
 import Data.Kind (Type)
-import Plutarch.Api.V2 (PMaybeData (PDJust, PDNothing))
-import Plutarch.Bool (PBool)
-import Plutarch.Builtin (PIsData, pdata, pfromData)
-import Plutarch.DataRepr (pdcons, pdnil, pfield)
-import Plutarch.Lift (pconstant)
-import Plutarch.Maybe (PMaybe (PJust, PNothing))
+import Plutarch.Api.V1.Maybe (PMaybeData (PDJust, PDNothing))
 import Plutarch.Prelude (
+    PBool,
+    PIsData,
+    PMaybe (PJust, PNothing),
+    PString,
     S,
     Term,
+    TermCont,
     pcon,
+    pconstant,
+    pdata,
+    pdcons,
+    pdnil,
+    pfield,
+    pfromData,
     phoistAcyclic,
     plam,
     pmatch,
+    ptraceError,
+    tcont,
     (#),
     (#$),
     type (:-->),
  )
-import Plutarch.String (PString)
-import Plutarch.TermCont (TermCont, tcont)
-import Plutarch.Trace (ptraceError)
 
 --------------------------------------------------------------------------------
 -- Utility functions for working with 'PMaybe'.

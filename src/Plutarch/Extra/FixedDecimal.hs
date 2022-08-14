@@ -21,12 +21,9 @@ import Data.Proxy (Proxy (Proxy))
 import GHC.Generics (Generic)
 import GHC.TypeLits (KnownNat, Nat, natVal)
 import qualified Generics.SOP as SOP
-import Plutarch.Api.V1 (PValue)
-import Plutarch.Api.V2 (AmountGuarantees, KeyGuarantees)
-import Plutarch.Bool (PEq, POrd, PPartialOrd)
+import Plutarch.Api.V1 (AmountGuarantees, KeyGuarantees, PValue)
+import Plutarch.Api.V1.Value (psingletonValue)
 import Plutarch.Extra.Function (pflip)
-import Plutarch.Extra.Value (psingletonValue)
-import Plutarch.Integer (PInteger, PIntegral (pdiv))
 import Plutarch.Num (PNum (..))
 import qualified Plutarch.Numeric.Additive as A (
     AdditiveMonoid (..),
@@ -36,7 +33,12 @@ import Plutarch.Prelude (
     DerivePlutusType (..),
     PAsData,
     PData,
+    PEq,
+    PInteger,
+    PIntegral (pdiv),
     PIsData,
+    POrd,
+    PPartialOrd,
     PTryFrom,
     PlutusType,
     PlutusTypeNewtype,

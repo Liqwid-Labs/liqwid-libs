@@ -17,8 +17,21 @@ import Data.Kind (Type)
 import GHC.Generics (Generic)
 import Generics.SOP (Top)
 import qualified Generics.SOP as SOP
-import Plutarch (
+import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
+import Plutarch.Extra.Boring (PBoring (pboring))
+import Plutarch.Extra.Functor (
+    PBifunctor (PSubcategoryLeft, PSubcategoryRight, pbimap, psecond),
+    PFunctor (PSubcategory, pfmap),
+ )
+import Plutarch.Extra.TermCont (pmatchC)
+import Plutarch.Num (PNum)
+import Plutarch.Prelude (
     DerivePlutusType (..),
+    PEq,
+    PIntegral,
+    PIsData,
+    POrd,
+    PPartialOrd,
     PlutusType,
     PlutusTypeNewtype,
     S,
@@ -29,17 +42,6 @@ import Plutarch (
     unTermCont,
     (#),
  )
-import Plutarch.Bool (PEq, POrd, PPartialOrd)
-import Plutarch.Builtin (PIsData)
-import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
-import Plutarch.Extra.Boring (PBoring (pboring))
-import Plutarch.Extra.Functor (
-    PBifunctor (PSubcategoryLeft, PSubcategoryRight, pbimap, psecond),
-    PFunctor (PSubcategory, pfmap),
- )
-import Plutarch.Extra.TermCont (pmatchC)
-import Plutarch.Integer (PIntegral)
-import Plutarch.Num (PNum)
 import Plutarch.Show (PShow)
 import Plutarch.Unsafe (punsafeCoerce)
 

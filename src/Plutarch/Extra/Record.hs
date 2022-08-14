@@ -17,9 +17,8 @@ import Data.Kind (Type)
 import GHC.OverloadedLabels (IsLabel (..))
 import GHC.TypeLits (Symbol)
 import Generics.SOP (SListI)
-import Plutarch (PlutusType, S, Term, pcon)
-import Plutarch.Builtin (PAsData)
-import Plutarch.DataRepr (PDataRecord (PDCons), PLabeledType (..), pdnil)
+import Plutarch.DataRepr (PDataRecord (PDCons))
+import Plutarch.Prelude (PAsData, PLabeledType (..), PlutusType, S, Term, pcon, pdnil)
 import Prelude (($))
 
 -- | Like 'Data.Proxy.Proxy' but local to this module.

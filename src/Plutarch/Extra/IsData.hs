@@ -61,7 +61,26 @@ import Plutarch.Prelude (
  )
 import PlutusLedgerApi.V1 (BuiltinData (BuiltinData), UnsafeFromData (unsafeFromBuiltinData))
 import PlutusTx (Data (List), FromData (fromBuiltinData), ToData (toBuiltinData), fromData, toData)
-import Prelude
+import Prelude (
+    Bounded,
+    Enum,
+    Integer,
+    Maybe (Just, Nothing),
+    enumFrom,
+    error,
+    fmap,
+    foldr,
+    fromEnum,
+    fromInteger,
+    maxBound,
+    minBound,
+    pure,
+    toEnum,
+    toInteger,
+    ($),
+    (.),
+    (<$>),
+ )
 
 --------------------------------------------------------------------------------
 -- ProductIsData

@@ -17,39 +17,42 @@ module Plutarch.Extra.Map (
 
 import Data.Foldable (foldl')
 import Data.Kind (Type)
-import Plutarch (
-    S,
-    Term,
-    pcon,
-    phoistAcyclic,
-    plam,
-    pmatch,
-    pto,
-    unTermCont,
-    (#),
-    type (:-->),
- )
 import Plutarch.Api.V1.AssocMap (KeyGuarantees, PMap (PMap))
-import Plutarch.Bool (PBool, PEq ((#==)), POrd, pif, (#<))
-import Plutarch.Builtin (
-    PAsData,
-    PBuiltinList (PCons, PNil),
-    PBuiltinPair,
-    PIsData,
-    pdata,
-    pfromData,
-    pfstBuiltin,
-    ppairDataBuiltin,
-    psndBuiltin,
- )
+import Plutarch.Builtin (ppairDataBuiltin)
 import Plutarch.Extra.Functor (pfmap)
 import Plutarch.Extra.List (pmapMaybe)
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.Extra.Traversable (pfoldMap)
-import Plutarch.List (pfind, pfoldl)
 import qualified Plutarch.List
-import Plutarch.Maybe (PMaybe (PJust, PNothing))
-import Plutarch.Trace (ptraceError)
+import Plutarch.Prelude (
+    PAsData,
+    PBool,
+    PBuiltinList (PCons, PNil),
+    PBuiltinPair,
+    PEq ((#==)),
+    PIsData,
+    PMaybe (PJust, PNothing),
+    POrd,
+    S,
+    Term,
+    pcon,
+    pdata,
+    pfind,
+    pfoldl,
+    pfromData,
+    pfstBuiltin,
+    phoistAcyclic,
+    pif,
+    plam,
+    pmatch,
+    psndBuiltin,
+    pto,
+    ptraceError,
+    unTermCont,
+    (#),
+    (#<),
+    type (:-->),
+ )
 
 -- | @since 1.0.0
 plookup ::

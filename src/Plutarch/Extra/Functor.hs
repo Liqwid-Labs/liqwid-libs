@@ -16,38 +16,39 @@ module Plutarch.Extra.Functor (
 
 import Data.Kind (Constraint, Type)
 import Generics.SOP (Top)
-import Plutarch (
-    S,
-    Term,
-    pcon,
-    phoistAcyclic,
-    plam,
-    unTermCont,
-    (#),
-    type (:-->),
- )
 import Plutarch.Api.V1.AssocMap (KeyGuarantees, PMap (PMap))
-import Plutarch.Api.V2 (PMaybeData (PDJust, PDNothing))
-import Plutarch.Builtin (
-    PAsData,
-    PBuiltinList,
-    PBuiltinPair,
-    PIsData,
-    pdata,
-    pfromData,
-    pfstBuiltin,
-    ppairDataBuiltin,
-    psndBuiltin,
- )
-import Plutarch.DataRepr (pdcons, pdnil, pfield)
-import Plutarch.Either (PEither (PLeft, PRight))
+import Plutarch.Api.V1.Maybe (PMaybeData (PDJust, PDNothing))
+import Plutarch.Builtin (ppairDataBuiltin)
 import Plutarch.Extra.Boring (PBoring (pboring))
 import Plutarch.Extra.Function (pconst, pidentity)
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.Lift (PUnsafeLiftDecl)
-import Plutarch.List (PList, pmap)
-import Plutarch.Maybe (PMaybe (PJust, PNothing))
-import Plutarch.Pair (PPair (PPair))
+import Plutarch.Prelude (
+    PAsData,
+    PBuiltinList,
+    PBuiltinPair,
+    PEither (PLeft, PRight),
+    PIsData,
+    PList,
+    PMaybe (PJust, PNothing),
+    PPair (PPair),
+    S,
+    Term,
+    pcon,
+    pdata,
+    pdcons,
+    pdnil,
+    pfield,
+    pfromData,
+    pfstBuiltin,
+    phoistAcyclic,
+    plam,
+    pmap,
+    psndBuiltin,
+    unTermCont,
+    (#),
+    type (:-->),
+ )
 
 {- | Describes a Plutarch-level covariant endofunctor. However, unlike in
  Haskell, the endofunctor is defined over a subcategory of @Plut@, rather than

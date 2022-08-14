@@ -20,15 +20,6 @@ module Plutarch.Extra.These (
 import Data.Kind (Type)
 import GHC.Generics (Generic)
 import Generics.SOP (Top)
-import Plutarch.Bool (PBool (PFalse, PTrue), PEq, POrd, PPartialOrd (..))
-import Plutarch.Builtin (PAsData, PIsData, pdata, pfromData)
-import Plutarch.DataRepr (
-    PDataRecord,
-    PLabeledType ((:=)),
-    pdcons,
-    pdnil,
-    pfield,
- )
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
 import Plutarch.Extra.Bool (pcompare)
 import Plutarch.Extra.Boring (pboring)
@@ -41,12 +32,25 @@ import Plutarch.Extra.Traversable (PTraversable (ptraverse, ptraverse_))
 import Plutarch.Prelude (
     DPTStrat,
     DerivePlutusType,
+    PAsData,
+    PBool (PFalse, PTrue),
+    PDataRecord,
+    PEq,
+    PIsData,
+    PLabeledType ((:=)),
+    POrd,
+    PPartialOrd (..),
     PlutusType,
     PlutusTypeData,
     PlutusTypeScott,
     S,
     Term,
     pcon,
+    pdata,
+    pdcons,
+    pdnil,
+    pfield,
+    pfromData,
     phoistAcyclic,
     plam,
     unTermCont,

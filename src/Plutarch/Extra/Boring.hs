@@ -10,7 +10,8 @@ module Plutarch.Extra.Boring (
 ) where
 
 import Data.Kind (Type)
-import Plutarch (
+import Plutarch.Prelude (
+    PUnit (PUnit),
     S,
     Term,
     pcon,
@@ -18,7 +19,6 @@ import Plutarch (
     plam,
     type (:-->),
  )
-import Plutarch.Unit (PUnit (PUnit))
 
 {- | Represents singleton values. They are \'boring\' as having a value of that
  type tells you absolutely nothing, as they're all the same.

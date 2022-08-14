@@ -24,24 +24,7 @@ module Plutarch.Extra.Traversable (
 ) where
 
 import Data.Kind (Type)
-import Plutarch (
-    S,
-    Term,
-    pcon,
-    pfix,
-    phoistAcyclic,
-    plam,
-    pmatch,
-    unTermCont,
-    (#),
-    (#$),
-    type (:-->),
- )
-import Plutarch.Api.V2 (PMaybeData (PDJust, PDNothing))
-import Plutarch.Bool (PBool)
-import Plutarch.Builtin (PBuiltinList, pdata, pfromData)
-import Plutarch.DataRepr (pdcons, pdnil, pfield)
-import Plutarch.Either (PEither (PLeft, PRight))
+import Plutarch.Api.V1.Maybe (PMaybeData (PDJust, PDNothing))
 import Plutarch.Extra.Applicative (
     PApplicative (ppure),
     PApply (pliftA2),
@@ -60,12 +43,36 @@ import Plutarch.Extra.Monoid (
  )
 import Plutarch.Extra.Sum (PSum (PSum))
 import Plutarch.Extra.TermCont (pletC, pmatchC)
-import Plutarch.Integer (PInteger)
-import Plutarch.List (PList, pcons, pnil, puncons)
-import Plutarch.Maybe (PMaybe (PJust, PNothing))
-import Plutarch.Num
-import Plutarch.Pair (PPair (PPair))
-import Plutarch.Unit (PUnit)
+import Plutarch.List (puncons)
+import Plutarch.Num (PNum)
+import Plutarch.Prelude (
+    PBool,
+    PBuiltinList,
+    PEither (PLeft, PRight),
+    PInteger,
+    PList,
+    PMaybe (PJust, PNothing),
+    PPair (PPair),
+    PUnit,
+    S,
+    Term,
+    pcon,
+    pcons,
+    pdata,
+    pdcons,
+    pdnil,
+    pfield,
+    pfix,
+    pfromData,
+    phoistAcyclic,
+    plam,
+    pmatch,
+    pnil,
+    unTermCont,
+    (#),
+    (#$),
+    type (:-->),
+ )
 
 -- | @since 1.0.0
 class (PFunctor t) => PTraversable (t :: (S -> Type) -> S -> Type) where
