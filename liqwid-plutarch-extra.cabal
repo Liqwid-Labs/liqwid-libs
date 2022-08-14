@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               liqwid-plutarch-extra
-version:            1.2.0
+version:            3.0.1
 synopsis:           A collection of Plutarch extras from Liqwid Labs
 description:        Several useful data types and functions for Plutarch.
 homepage:           https://github.com/Liqwid-Labs/liqwid-plutarch-extra
@@ -69,6 +69,7 @@ library
   exposed-modules:
     Plutarch.Extra.Applicative
     Plutarch.Extra.AssetClass
+    Plutarch.Extra.Bind
     Plutarch.Extra.Bool
     Plutarch.Extra.Boring
     Plutarch.Extra.Category
@@ -92,6 +93,7 @@ library
     Plutarch.Extra.Profunctor
     Plutarch.Extra.Record
     Plutarch.Extra.ScriptContext
+    Plutarch.Extra.Star
     Plutarch.Extra.State
     Plutarch.Extra.Sum
     Plutarch.Extra.Tagged
