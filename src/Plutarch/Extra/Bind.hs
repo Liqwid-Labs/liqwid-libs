@@ -44,7 +44,7 @@ import Prelude hiding (head, tail)
  * @(m '#>>=' f) '#>>=' g@ @=@ @m '#>>=' ('plam' '$' \x -> (f '#' x) '#>>=' g)@
  * @f '#<*>' x@ @=@ @f '#>>=' ('#<$>' x)@
 
- @since 1.2.1
+ @since 3.0.1
 -}
 class (PApply f) => PBind (f :: (S -> Type) -> S -> Type) where
     -- | '>>=', but as a function on 'Term's.
@@ -57,21 +57,21 @@ class (PApply f) => PBind (f :: (S -> Type) -> S -> Type) where
 
 infixl 1 #>>=
 
--- | @since 1.2.1
+-- | @since 3.0.1
 instance PBind PMaybe where
     {-# INLINEABLE (#>>=) #-}
     xs #>>= f = pmatch xs $ \case
         PNothing -> pcon PNothing
         PJust t -> f # t
 
--- | @since 1.2.1
+-- | @since 3.0.1
 instance PBind PMaybeData where
     {-# INLINEABLE (#>>=) #-}
     xs #>>= f = pmatch xs $ \case
         PDNothing t -> pcon . PDNothing $ t
         PDJust t -> f # pfromData (pfield @"_0" # t)
 
--- | @since 1.2.1
+-- | @since 3.0.1
 instance PBind PList where
     (#>>=) ::
         forall (a :: S -> Type) (b :: S -> Type) (s :: S).
@@ -84,7 +84,7 @@ instance PBind PList where
         go :: Term s a -> Term s (PList a) -> Term s (PList b)
         go head tail = pconcat # (f # head) # (tail #>>= f)
 
--- | @since 1.2.1
+-- | @since 3.0.1
 instance PBind PBuiltinList where
     (#>>=) ::
         forall (a :: S -> Type) (b :: S -> Type) (s :: S).
@@ -98,7 +98,7 @@ instance PBind PBuiltinList where
         go :: Term s a -> Term s (PBuiltinList a) -> Term s (PBuiltinList b)
         go head tail = pconcat # (f # head) # (tail #>>= f)
 
--- | @since 1.2.1
+-- | @since 3.0.1
 instance (forall (s :: S). Semigroup (Term s a)) => PBind (PPair a) where
     {-# INLINEABLE (#>>=) #-}
     xs #>>= f = pmatch xs $ \case
@@ -107,7 +107,7 @@ instance (forall (s :: S). Semigroup (Term s a)) => PBind (PPair a) where
 
 {- | Forwards the /first/ 'PLeft'.
 
- @since 1.2.1
+ @since 3.0.1
 -}
 instance PBind (PEither e) where
     {-# INLINEABLE (#>>=) #-}
@@ -117,7 +117,7 @@ instance PBind (PEither e) where
 
 {- | \'Flattens\' two identical 'PBind' layers into one.
 
- @since 1.2.1
+ @since 3.0.1
 -}
 pjoin ::
     forall (a :: S -> Type) (f :: (S -> Type) -> S -> Type) (s :: S).

@@ -1,6 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -15,29 +15,34 @@ module Plutarch.Extra.FixedDecimal (
     toPInteger,
 ) where
 
+import Control.Composition (on, (.*))
 import Data.Bifunctor (first)
 import Data.Proxy (Proxy (Proxy))
+import GHC.Generics (Generic)
 import GHC.TypeLits (KnownNat, Nat, natVal)
-import Generics.SOP (I (I))
-import Generics.SOP.TH (deriveGeneric)
-import Plutarch.Api.V1 (AmountGuarantees, KeyGuarantees, PValue)
-import Plutarch.Api.V1.Value (psingletonValue)
-import Plutarch.Bool (PEq, POrd)
+import qualified Generics.SOP as SOP
+import Plutarch.Api.V1 (PValue)
+import Plutarch.Api.V2 (AmountGuarantees, KeyGuarantees)
+import Plutarch.Bool (PEq, POrd, PPartialOrd)
+import Plutarch.Extra.Function (pflip)
+import Plutarch.Extra.Value (psingletonValue)
 import Plutarch.Integer (PInteger, PIntegral (pdiv))
+import Plutarch.Num (PNum (..))
 import qualified Plutarch.Numeric.Additive as A (
     AdditiveMonoid (..),
     AdditiveSemigroup (..),
  )
 import Plutarch.Prelude (
-    DerivePNewtype (..),
+    DerivePlutusType (..),
     PAsData,
-    PCon (pcon),
     PData,
     PIsData,
     PTryFrom,
     PlutusType,
+    PlutusTypeNewtype,
     S,
     Term,
+    pcon,
     pconstant,
     phoistAcyclic,
     plam,
@@ -57,44 +62,37 @@ import Plutarch.Unsafe (punsafeCoerce)
 -}
 newtype PFixedDecimal (unit :: Nat) (s :: S)
     = PFixedDecimal (Term s PInteger)
+    deriving stock
+        ( -- | @since 1.0.0
+          Generic
+        )
+    deriving anyclass
+        ( -- | @since 1.0.0
+          SOP.Generic
+        , -- | @since 1.0.0
+          PlutusType
+        , -- | @since 1.0.0
+          PIsData
+        , -- | @since 1.4.0
+          PEq
+        , -- | @since 1.4.0
+          PPartialOrd
+        , -- | @since 1.0.0
+          POrd
+        , -- | @since 1.0.0
+          PShow
+        )
 
-deriveGeneric ''PFixedDecimal
+-- | @since 1.4.0
+instance DerivePlutusType (PFixedDecimal a) where
+    type DPTStrat _ = PlutusTypeNewtype
 
-deriving anyclass instance PShow (PFixedDecimal unit)
-
--- | @since 1.0.0
-deriving via
-    (DerivePNewtype (PFixedDecimal u) PInteger)
-    instance
-        (PlutusType (PFixedDecimal u))
-
--- | @since 1.0.0
-deriving via
-    (DerivePNewtype (PFixedDecimal u) PInteger)
-    instance
-        PIsData (PFixedDecimal u)
-
--- | @since 1.0.0
-deriving via
-    (DerivePNewtype (PFixedDecimal u) PInteger)
-    instance
-        PEq (PFixedDecimal u)
-
--- | @since 1.0.0
-deriving via
-    (DerivePNewtype (PFixedDecimal u) PInteger)
-    instance
-        POrd (PFixedDecimal u)
-
--- | @since 1.0.0
-instance KnownNat u => Num (Term s (PFixedDecimal u)) where
-    (+) = (+)
-    (-) = (-)
-    (pto -> x) * (pto -> y) =
-        pcon . PFixedDecimal $ pdiv # (x * y) # pconstant (natVal (Proxy @u))
-    abs = abs
-    signum = signum
-    fromInteger = pcon . PFixedDecimal . (* pconstant (natVal (Proxy @u))) . pconstant
+instance KnownNat u => PNum (PFixedDecimal u) where
+    (#*) =
+        (pcon . PFixedDecimal)
+            .* (pflip # pdiv # pconstant (natVal (Proxy @u)) #)
+            .* (#*) `on` punsafeCoerce
+    pfromInteger = pcon . PFixedDecimal . (* pconstant (natVal (Proxy @u))) . pconstant
 
 -- | @since 1.0.0
 instance PTryFrom PData (PAsData (PFixedDecimal unit)) where
@@ -111,11 +109,11 @@ class DivideSemigroup a => DivideMonoid a where
 -- | @since 1.0.0
 instance KnownNat u => DivideSemigroup (Term s (PFixedDecimal u)) where
     divide (pto -> x) (pto -> y) =
-        pcon . PFixedDecimal $ pdiv # (x * (pconstant $ natVal (Proxy @u))) # y
+        pcon . PFixedDecimal $ pdiv # (x * pconstant (natVal (Proxy @u))) # y
 
 -- | @since 1.0.0
 instance KnownNat u => DivideMonoid (Term s (PFixedDecimal u)) where
-    one = fromInteger 1
+    one = 1
 
 -- | @since 1.0.0
 instance KnownNat u => A.AdditiveSemigroup (Term s (PFixedDecimal u)) where
@@ -137,7 +135,7 @@ decimalToAdaValue ::
 decimalToAdaValue =
     phoistAcyclic $
         plam $ \(pto -> dec) ->
-            let adaValue = (pdiv # dec # (pconstant (natVal (Proxy @unit)))) * pconstant 1000000
+            let adaValue = (pdiv # dec # pconstant (natVal (Proxy @unit))) * pconstant 1000000
              in psingletonValue # pconstant "" # pconstant "" #$ adaValue
 
 {- | Convert @PInteger@ to @PFixedDecimal@.
@@ -160,4 +158,4 @@ toPInteger ::
     KnownNat unit =>
     Term s (PFixedDecimal unit :--> PInteger)
 toPInteger =
-    phoistAcyclic $ plam $ \d -> pdiv # pto d # (pconstant (natVal (Proxy @unit)))
+    phoistAcyclic $ plam $ \d -> pdiv # pto d # pconstant (natVal (Proxy @unit))

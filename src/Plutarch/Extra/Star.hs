@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -10,10 +12,12 @@ module Plutarch.Extra.Star (
 ) where
 
 import Data.Kind (Type)
+import GHC.Generics (Generic)
 import Generics.SOP (Top)
 import Plutarch (
-    DerivePNewtype (DerivePNewtype),
+    DerivePlutusType (DPTStrat),
     PlutusType,
+    PlutusTypeNewtype,
     S,
     Term,
     pcon,
@@ -42,20 +46,27 @@ import Plutarch.Extra.TermCont (pmatchC)
  ordinary Plutarch ':-->' at /both/ ends of a 'PStar', provided @f@ is at
  least 'PFunctor'.
 
- @since 1.2.1
+ @since 3.0.1
 -}
 newtype PStar (f :: (S -> Type) -> S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S)
     = PStar (Term s (a :--> f b))
-    deriving
-        ( -- | @since 1.2.1
+    deriving stock
+        ( -- | @since 3.0.1
+          Generic
+        )
+    deriving anyclass
+        ( -- | @since 3.0.1
           PlutusType
         )
-        via (DerivePNewtype (PStar f a b) (a :--> f b))
+
+-- | @since 3.0.1
+instance DerivePlutusType (PStar f a b) where
+    type DPTStrat _ = PlutusTypeNewtype
 
 {- | If @f@ is at least a 'PFunctor', we can pre-process and post-process work
  done in @PStar f@ using pure functions.
 
- @since 1.2.1
+ @since 3.0.1
 -}
 instance (PFunctor f) => PProfunctor (PStar f) where
     type PContraSubcategory (PStar f) = Top
@@ -68,7 +79,7 @@ instance (PFunctor f) => PProfunctor (PStar f) where
 {- | Strengthening @f@ to 'PBind' allows us to compose @PStar f@ computations
  like ordinary Plutarch functions.
 
- @since 1.2.1
+ @since 3.0.1
 -}
 instance (PBind f) => PSemigroupoid (PStar f) where
     {-# INLINEABLE (#>>>) #-}
@@ -79,7 +90,7 @@ instance (PBind f) => PSemigroupoid (PStar f) where
 {- | Strengthening @f@ by adding 'PApplicative' gives us an identity, which
  makes us a full category, on par with @Plut@ as evidenced by ':-->'.
 ,
- @since 1.2.1
+ @since 3.0.1
 -}
 instance
     (PApplicative f, PBind f) =>
@@ -92,7 +103,7 @@ instance
  @b@ in an effect @f@. If @f@ is /only/ a 'PFunctor', we can only lift, but
  not compose.
 
- @since 1.2.1
+ @since 3.0.1
 -}
 instance (PFunctor f) => PFunctor (PStar f a) where
     type PSubcategory (PStar f a) = PSubcategory f
@@ -105,7 +116,7 @@ instance (PFunctor f) => PFunctor (PStar f a) where
  computations in @PStar f a@ using the same \'view\' as in the 'PFunctor'
  instance.
 
- @since 1.2.1
+ @since 3.0.1
 -}
 instance (PApply f) => PApply (PStar f a) where
     pliftA2 = phoistAcyclic $
@@ -117,7 +128,7 @@ instance (PApply f) => PApply (PStar f a) where
 {- | Strengthening to 'PApplicative' for @f@ allows arbitrary lifts into @PStar
  f a@, using the same \'view\' as in the 'PFunctor' instance.
 
- @since 1.2.1
+ @since 3.0.1
 -}
 instance (PApplicative f) => PApplicative (PStar f a) where
     ppure = phoistAcyclic $ plam $ \x -> pcon . PStar . plam $ \_ -> ppure # x
@@ -126,7 +137,7 @@ instance (PApplicative f) => PApplicative (PStar f a) where
  of the result of a @PStar f a@, using the same \'view\' as the 'PFunctor'
  instance.
 
- @since 1.2.1
+ @since 3.0.1
 -}
 instance (PBind f) => PBind (PStar f a) where
     {-# INLINEABLE (#>>=) #-}
@@ -138,7 +149,7 @@ instance (PBind f) => PBind (PStar f a) where
  you want to build up a large computation using 'PStar' instances, then
  execute.
 
- @since 1.2.1
+ @since 3.0.1
 -}
 papplyStar ::
     forall (a :: S -> Type) (b :: S -> Type) (f :: (S -> Type) -> S -> Type) (s :: S).

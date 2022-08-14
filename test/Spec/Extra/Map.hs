@@ -24,7 +24,7 @@ import qualified Data.Set as S
 
 --------------------------------------------------------------------------------
 
-import Plutarch (PCon (pcon), Term, phoistAcyclic, plam, (#))
+import Plutarch (Term, pcon, phoistAcyclic, plam, (#))
 import Plutarch.Integer (PInteger)
 import Plutarch.Lift (pconstant, plift)
 import Plutarch.Maybe (PMaybe (..))
@@ -38,7 +38,6 @@ import Control.Monad.Cont (cont, runCont)
 
 import Plutarch.Extra.Map (pupdate)
 import qualified Spec.Extra.Map.Sorted as Sorted
-import qualified Spec.Extra.Map.Unsorted as Unsorted
 
 --------------------------------------------------------------------------------
 
@@ -46,7 +45,6 @@ tests :: [TestTree]
 tests =
     [ testProperty "'pupdate' updates assoc maps as 'update' does" prop_updateAssocMapParity
     , testGroup "sorted map" Sorted.tests
-    , testGroup "unsorted map" Unsorted.tests
     ]
 
 --------------------------------------------------------------------------------

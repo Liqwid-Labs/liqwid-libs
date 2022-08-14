@@ -20,7 +20,7 @@ import Plutarch (
     type (:-->),
  )
 import Plutarch.Api.V1.AssocMap (KeyGuarantees (..), PMap (PMap))
-import Plutarch.Bool (PBool (PFalse), PEq ((#==)), POrd ((#<)), pif)
+import Plutarch.Bool (PBool (PFalse), PEq ((#==)), POrd, pif, (#<))
 import Plutarch.Builtin (
     PBuiltinList,
     PIsData,
