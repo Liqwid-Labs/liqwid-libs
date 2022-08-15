@@ -25,9 +25,6 @@
         "plutarch/haskell-nix/nixpkgs-unstable";
     };
 
-    plutarch-numeric.url =
-      "github:liqwid-labs/plutarch-numeric?ref=main";
-
     liqwid-nix.url = "github:Liqwid-Labs/liqwid-nix";
   };
 
@@ -38,9 +35,6 @@
         src = ./.;
       }
       [
-        (liqwid-nix.addDependencies [
-          "${inputs.plutarch-numeric}"
-        ])
         liqwid-nix.plutarchProject
         liqwid-nix.haskellProject
         liqwid-nix.addBuildChecks
