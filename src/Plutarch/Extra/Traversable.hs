@@ -1,5 +1,6 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-missing-import-lists #-}
 
 module Plutarch.Extra.Traversable (
     -- * Type classes

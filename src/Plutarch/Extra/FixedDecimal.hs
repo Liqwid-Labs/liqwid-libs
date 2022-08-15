@@ -23,7 +23,7 @@ import qualified Generics.SOP as SOP
 import Plutarch.Api.V1 (AmountGuarantees, KeyGuarantees, PValue)
 import Plutarch.Extra.Function (pflip)
 import Plutarch.Extra.Value (psingletonValue)
-import Plutarch.Num (PNum (..))
+import Plutarch.Num (PNum (pfromInteger, (#*)))
 import qualified Plutarch.Numeric.Additive as A (
     AdditiveMonoid (..),
     AdditiveSemigroup (..),

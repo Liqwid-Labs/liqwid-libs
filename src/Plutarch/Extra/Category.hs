@@ -1,6 +1,6 @@
 module Plutarch.Extra.Category (
-    PSemigroupoid (..),
-    PCategory (..),
+    PSemigroupoid ((#>>>)),
+    PCategory (pidentity),
     pconst,
     (#<<<),
 ) where

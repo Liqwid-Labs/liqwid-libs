@@ -31,7 +31,7 @@ import Plutarch.Lift (
     PConstantDecl (PConstantRepr, PConstanted, pconstantFromRepr, pconstantToRepr),
     PUnsafeLiftDecl (PLifted),
  )
-import Plutarch.Num (PNum (..))
+import Plutarch.Num (PNum)
 import Plutarch.Show (PShow)
 import Plutarch.TryFrom (PTryFrom (PTryFromExcess, ptryFrom'))
 import Plutarch.Unsafe (punsafeCoerce)

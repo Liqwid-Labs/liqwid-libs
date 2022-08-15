@@ -1,6 +1,7 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-missing-import-lists #-}
 
 module Plutarch.Extra.Bind (
     -- * Type class

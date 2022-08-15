@@ -31,7 +31,7 @@ import Plutarch.DataRepr (
 import Plutarch.Extra.TermCont (pletFieldsC)
 import Plutarch.Lift (PConstantDecl, PLifted, PUnsafeLiftDecl)
 import Plutarch.Prelude (
-    DerivePlutusType (..),
+    DerivePlutusType (DPTStrat),
     PAsData,
     PBool,
     PBuiltinList,

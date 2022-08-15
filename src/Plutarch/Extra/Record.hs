@@ -11,14 +11,14 @@ module Plutarch.Extra.Record (
     FieldName,
 ) where
 
-import Control.Category (Category (..))
+import Control.Category (Category (id, (.)))
 import Data.Coerce (coerce)
 import Data.Kind (Type)
-import GHC.OverloadedLabels (IsLabel (..))
+import GHC.OverloadedLabels (IsLabel (fromLabel))
 import GHC.TypeLits (Symbol)
 import Generics.SOP (SListI)
 import Plutarch.DataRepr (PDataRecord (PDCons))
-import Plutarch.Prelude (PAsData, PLabeledType (..), PlutusType, S, Term, pcon, pdnil)
+import Plutarch.Prelude (PAsData, PLabeledType ((:=)), PlutusType, S, Term, pcon, pdnil)
 import Prelude (($))
 
 -- | Like 'Data.Proxy.Proxy' but local to this module.

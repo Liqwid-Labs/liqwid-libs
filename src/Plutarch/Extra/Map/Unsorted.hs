@@ -7,7 +7,7 @@ module Plutarch.Extra.Map.Unsorted (
     punionWith,
 ) where
 
-import Plutarch.Api.V1.AssocMap (KeyGuarantees (..), PMap (PMap))
+import Plutarch.Api.V1.AssocMap (KeyGuarantees (Sorted, Unsorted), PMap (PMap))
 import Plutarch.Extra.List (pmsortBy)
 import Plutarch.Extra.Map (pkeys, pkvPairLt)
 import qualified Plutarch.Extra.Map.Sorted as SortedMap

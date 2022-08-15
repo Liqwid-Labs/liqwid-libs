@@ -31,7 +31,7 @@ import qualified Plutarch.Extra.List
 import Plutarch.Extra.Map (plookup)
 import Plutarch.Extra.Maybe (pexpectJustC)
 import Plutarch.Extra.TermCont (pletC, pmatchC)
-import PlutusLedgerApi.V1.Value (AssetClass (..))
+import PlutusLedgerApi.V1.Value (AssetClass (AssetClass))
 
 {- | Create a `PValue` that only contains specific amount tokens of the given symbol and name.
 

@@ -28,7 +28,7 @@ common common-lang
     -Wall -Wcompat -Wincomplete-uni-patterns
     -Wincomplete-record-updates -Wredundant-constraints
     -Wmissing-export-lists -Wmissing-deriving-strategies -Werror
-    -Wno-partial-type-signatures
+    -Wno-partial-type-signatures -Wmissing-import-lists
 
   mixins:
     base hiding (Prelude),

@@ -3,7 +3,7 @@
 
 module Plutarch.Extra.Map.Sorted (pkeysEqual, punionWith) where
 
-import Plutarch.Api.V1.AssocMap (KeyGuarantees (..), PMap (PMap))
+import Plutarch.Api.V1.AssocMap (KeyGuarantees (Sorted), PMap (PMap))
 import Plutarch.Builtin (ppairDataBuiltin)
 import Plutarch.Extra.Map (pkeys)
 import Plutarch.Extra.TermCont (pletC)
