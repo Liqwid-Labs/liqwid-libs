@@ -125,6 +125,7 @@ import Test.QuickCheck (
     elements,
     frequency,
     functionMap,
+    sized,
     variant,
     vectorOf,
  )

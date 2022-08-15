@@ -9,8 +9,15 @@ like writting regular `QuickCheck` properties.
 
 ## What _exactly_ does this do for me?
 
-`plutarch-quickcheck` *lifts* a property written in Plutarch code into 
-`QuickCheck`. For example,
+`QuickCheck`'s interactions with Plutarch can be non-obvious, and much
+of the built-in functionality it provides is not very useful for it.
+For example, `Arbitrary` typeclass that provide random values for 
+properties cannot be used for defining arbitrary Plutarch values.
+
+`plutarch-quikchceck` defines alternative interfaces like
+`PArbitrary`, providing interfaces that feels like using normal
+`QuickCheck`. As demonstrated below, one can easily define a property
+in Plutarch function and use it directly.
 
 ```hs
 additionCommutative :: Term s (PInteger :--> PInteger :--> PBool)
