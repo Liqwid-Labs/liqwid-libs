@@ -20,5 +20,4 @@ main = do
             [ testGroup "list utilities" List.tests
             , testGroup "map utilities" Map.tests
             , testGroup "traversable" Traversable.tests
-            -- , testGroup "multisig" MultiSig.tests
             ]

@@ -3,7 +3,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-missing-import-lists #-}
 
 module Plutarch.Extra.AssetClass (
     PAssetClass (..),
@@ -12,8 +11,8 @@ module Plutarch.Extra.AssetClass (
     pvalueOf,
 ) where
 
-import qualified GHC.Generics as GHC
-import Generics.SOP (Generic)
+import qualified GHC.Generics as GHC (Generic)
+import qualified Generics.SOP as SOP (Generic)
 import Plutarch.Api.V1 (
     PCurrencySymbol,
     PTokenName,
@@ -26,7 +25,6 @@ import Plutarch.Api.V2 (
  )
 import Plutarch.DataRepr (PDataFields)
 import Plutarch.Extra.TermCont (pletC, pmatchC)
-import Prelude hiding (Generic)
 
 -- | @since 1.0.0
 newtype PAssetClass (s :: S)
@@ -45,7 +43,7 @@ newtype PAssetClass (s :: S)
         )
     deriving anyclass
         ( -- | @since 0.1.0
-          Generic
+          SOP.Generic
         )
     deriving anyclass
         ( -- | @since 0.1.0

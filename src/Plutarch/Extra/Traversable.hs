@@ -1,6 +1,5 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-missing-import-lists #-}
 
 module Plutarch.Extra.Traversable (
     -- * Type classes
@@ -18,10 +17,10 @@ module Plutarch.Extra.Traversable (
     pfoldComonad,
 
     -- ** Specialized folds
-    plength,
     psum,
-    pany,
-    pall,
+    Plutarch.Extra.Traversable.plength,
+    Plutarch.Extra.Traversable.pany,
+    Plutarch.Extra.Traversable.pall,
 ) where
 
 import Plutarch.Api.V1.Maybe (PMaybeData (PDJust, PDNothing))
@@ -45,7 +44,6 @@ import Plutarch.Extra.Sum (PSum (PSum))
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.List (puncons)
 import Plutarch.Num (PNum)
-import Prelude hiding (pall, pany, plength)
 
 -- | @since 1.0.0
 class (PFunctor t) => PTraversable (t :: (S -> Type) -> S -> Type) where

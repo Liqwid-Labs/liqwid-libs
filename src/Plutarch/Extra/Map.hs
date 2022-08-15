@@ -1,7 +1,6 @@
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# OPTIONS_GHC -Wno-missing-import-lists #-}
 
 module Plutarch.Extra.Map (
     plookup,
@@ -9,7 +8,7 @@ module Plutarch.Extra.Map (
     pmapFromList,
     pkeys,
     pupdate,
-    pmap,
+    Plutarch.Extra.Map.pmap,
     pkvPairKey,
     pkvPairLt,
     pfoldlWithKey,
@@ -24,7 +23,6 @@ import Plutarch.Extra.List (pmapMaybe)
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.Extra.Traversable (pfoldMap)
 import qualified Plutarch.List
-import Prelude hiding (pmap)
 
 -- | @since 1.0.0
 plookup ::

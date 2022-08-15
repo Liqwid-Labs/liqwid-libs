@@ -1,7 +1,6 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-missing-import-lists #-}
 
 module Plutarch.Extra.Bind (
     -- * Type class
@@ -16,7 +15,6 @@ import Plutarch.Extra.Applicative (PApply)
 import Plutarch.Extra.Function (pidentity)
 import Plutarch.Extra.Functor (PSubcategory)
 import Plutarch.Lift (PUnsafeLiftDecl)
-import Prelude hiding (head, tail)
 
 {- | Gives the capability to bind a Kleisli arrow over @f@ to a value:
  essentially, the equivalent of Haskell's '>>='. Unlike Haskell, we don't
@@ -66,7 +64,7 @@ instance PBind PList where
     xs #>>= f = pelimList go pnil xs
       where
         go :: Term s a -> Term s (PList a) -> Term s (PList b)
-        go head tail = pconcat # (f # head) # (tail #>>= f)
+        go h t = pconcat # (f # h) # (t #>>= f)
 
 -- | @since 3.0.1
 instance PBind PBuiltinList where
@@ -80,7 +78,7 @@ instance PBind PBuiltinList where
     xs #>>= f = pelimList go pnil xs
       where
         go :: Term s a -> Term s (PBuiltinList a) -> Term s (PBuiltinList b)
-        go head tail = pconcat # (f # head) # (tail #>>= f)
+        go h t = pconcat # (f # h) # (t #>>= f)
 
 -- | @since 3.0.1
 instance (forall (s :: S). Semigroup (Term s a)) => PBind (PPair a) where

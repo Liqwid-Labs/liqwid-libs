@@ -25,8 +25,8 @@ import Plutarch.Extra.Function (pflip)
 import Plutarch.Extra.Value (psingletonValue)
 import Plutarch.Num (PNum (pfromInteger, (#*)))
 import qualified Plutarch.Numeric.Additive as A (
-    AdditiveMonoid (..),
-    AdditiveSemigroup (..),
+    AdditiveMonoid (zero),
+    AdditiveSemigroup ((+)),
  )
 import Plutarch.Show (PShow)
 import Plutarch.TryFrom (PTryFrom (PTryFromExcess, ptryFrom'))

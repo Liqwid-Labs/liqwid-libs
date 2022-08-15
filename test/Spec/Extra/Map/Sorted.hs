@@ -26,7 +26,7 @@ import qualified GHC.Generics as GHC
 
 --------------------------------------------------------------------------------
 
-import Plutarch.Api.V1.AssocMap (KeyGuarantees (..), PMap)
+import Plutarch.Api.V1.AssocMap (KeyGuarantees (Sorted, Unsorted), PMap)
 import Plutarch.Unsafe (punsafeCoerce)
 import qualified PlutusTx.AssocMap as AssocMap
 
