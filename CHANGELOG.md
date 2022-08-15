@@ -2,8 +2,7 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-
-## 3.1.0 -- 2022-08-09
+## 3.0.2 -- 2022-08-09
 
 ### Added
  - A `Plutarch.Extra.DebuggableScript` module, containing utilities for lazy
@@ -14,6 +13,20 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
    scripts and arguments separately and applying them in various ways and from
    various types. This is useful for benchmarking and testing, since it will lead to
    performance increases and more accurate measurements of performance.
+
+## 3.0.1 -- 2022-08-15
+
+### Added
+
+- `PBind` type class, for effect types with meaningful bind semantics. This is a
+  direct equivalent to `Bind` from `semigroupoids`.
+- `pjoin` and `#>>=`, as direct equivalents to `join` and `>>-` from
+  `semigroupoids`, over `Term`s.
+- Instances of `PBind` for `PMaybe`, `PMaybeData`, `PList`, `PBuiltinList`,
+  `PPair s` (for semigroupal `s`), `PEither e`, `PIdentity` and `PState s`.
+- Newtype `PStar` representing Kleisli arrows, as well as some helper functions.
+- Instances of `PProfunctor`, `PSemigroupoid`, `PCategory`, `PFunctor`,
+  `PApply`, `PApplicative`, `PBind` for `PStar` (in various parameterizations).
 
 ## 3.0.0 -- 2022-08-10
 
