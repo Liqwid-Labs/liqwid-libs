@@ -143,7 +143,11 @@ instance Testable (TestableTerm PBool) where
 
  @since 2.0.0
 -}
-data TestableTerm a = TestableTerm {unTestableTerm :: forall s. Term s a}
+data TestableTerm a = TestableTerm
+    { unTestableTerm :: forall s. Term s a
+    -- ^ Converts @TestableTerm@ back into Plutarch @ClosedTerm@
+    -- @since 2.0.0
+    }
 
 -- | @since 2.0.0
 instance (forall (s :: S). Num (Term s a)) => Num (TestableTerm a) where
@@ -259,8 +263,8 @@ instance PCoArbitrary PUnit where
 
 -- | @since 2.0.0
 instance PArbitrary PByteString where
-    parbitrary = do
-        len <- chooseInt (0, 64)
+    parbitrary = sized $ \r -> do
+        len <- chooseInt (0, r)
         bs <- genByteString len
         return $ TestableTerm $ pconstant bs
 
@@ -288,9 +292,8 @@ instance PArbitrary PRational where
         return $ TestableTerm $ pcon $ PRational x y
 
     pshrink (TestableTerm x) =
-        [ TestableTerm $ pcon $ PRational a b
+        [ TestableTerm $ pcon $ PRational a (pdenominator # x)
         | (TestableTerm a) <- shrink (TestableTerm $ pnumerator # x)
-        , (TestableTerm b) <- shrink (TestableTerm $ pdenominator # x)
         ]
 
 instance PCoArbitrary PRational where
@@ -649,14 +652,14 @@ instance PArbitrary PPubKeyHash where
 -- | @since 2.0.0
 instance PArbitrary PValidatorHash where
     parbitrary = do
-        -- PubKeyHash should be 28 bytes long
+        -- ValidatorHash should be 28 bytes long
         bs <- genByteString 28
         return $ pconT $ PValidatorHash $ pconstant bs
 
 -- | @since 2.0.0
 instance PArbitrary PStakeValidatorHash where
     parbitrary = do
-        -- PubKeyHash should be 28 bytes long
+        -- StakeValidatorHash should be 28 bytes long
         bs <- genByteString 28
         return $ pconT $ PStakeValidatorHash $ pconstant bs
 
