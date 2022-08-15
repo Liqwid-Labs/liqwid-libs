@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ViewPatterns #-}
+
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Use camelCase" #-}
@@ -17,6 +17,7 @@ module Plutarch.Extra.Precompile (
     CompiledTerm (..),
     compile',
     toDebuggableScript,
+    toEvaluatedTerm,
     applyCompiledTerm,
     applyCompiledTerm',
     applyCompiledTerm2,
@@ -31,6 +32,7 @@ module Plutarch.Extra.Precompile (
 ) where
 
 import Control.Lens ((^?))
+import Data.Default (def)
 import Data.Text (Text)
 import qualified Data.Text as Text
 import GHC.Stack (HasCallStack)
@@ -41,8 +43,10 @@ import Plutarch.Extra.DebuggableScript (
     finalEvalDebuggableScript,
     mustCompileD,
     mustEvalD,
+    mustFinalEvalDebuggableScript,
     script,
  )
+import Plutarch.Internal (ClosedTerm, Config, RawTerm (RCompiled), Term (..), TermResult (TermResult), compile)
 import Plutarch.Lift (
     LiftError (
         LiftError_CompilationError,
@@ -52,12 +56,16 @@ import Plutarch.Lift (
     ),
     PConstantDecl (pconstantFromRepr),
     PUnsafeLiftDecl (PLifted),
+    plift,
+    plift',
  )
 import Plutarch.Prelude (PLift, S, Term, Type, (:-->))
 import PlutusCore.Builtin (KnownTypeError, readKnownConstant)
+import PlutusCore.Evaluation.Machine.ExBudget (ExBudget)
 import PlutusCore.Evaluation.Machine.Exception (_UnliftingErrorE)
 import PlutusLedgerApi.V1.Scripts (Script (Script, unScript))
 import UntypedPlutusCore (Program (Program, _progAnn, _progTerm, _progVer))
+import qualified UntypedPlutusCore as UPLC
 import qualified UntypedPlutusCore.Core.Type as UplcType
 
 -- | Apply a function to an argument on the compiled 'Script' level.
@@ -101,6 +109,11 @@ compile' t = CompiledTerm $ mustCompileD t
 -- | Convert a 'CompiledTerm' to a 'Script'.
 toDebuggableScript :: forall (a :: S -> Type). CompiledTerm a -> DebuggableScript
 toDebuggableScript (CompiledTerm dscript) = dscript
+
+toEvaluatedTerm :: CompiledTerm a -> (forall (s :: S). Term s a)
+toEvaluatedTerm ct =
+    let Script prog = mustFinalEvalDebuggableScript (toDebuggableScript ct)
+     in Term $ const $ pure $ TermResult (RCompiled $ UPLC._progTerm prog) []
 
 {- | Apply a 'CompiledTerm' to a closed Plutarch 'Term'.
 
@@ -198,23 +211,13 @@ infixl 7 ###
 
 infixl 7 ###~
 
---  Copied and adapted the stuff below from 'Plutarch.Lift'.
---  Also added trace messages in the exceptions.
-
 {- | Convert a 'CompiledTerm' to the associated Haskell value. Fail otherwise.
 
  This will fully evaluate the compiled term, and convert the resulting value.
 -}
 pliftCompiled' ::
     forall p. PUnsafeLiftDecl p => CompiledTerm p -> Either LiftError (PLifted p)
-pliftCompiled' prog = case finalEvalDebuggableScript (toDebuggableScript prog) of
-    (Right (unScript -> UplcType.Program _ _ term), _, _) ->
-        case readKnownConstant term of
-            Right r -> case pconstantFromRepr r of
-                Just h -> Right h
-                Nothing -> Left LiftError_FromRepr
-            Left e -> Left $ LiftError_KnownTypeError e
-    (Left e, _, logs) -> Left $ LiftError_EvalError e logs
+pliftCompiled' ct = plift' def $ toEvaluatedTerm ct
 
 -- | Like `pliftCompiled'` but throws on failure.
 pliftCompiled ::
@@ -222,16 +225,4 @@ pliftCompiled ::
     (HasCallStack, PLift p) =>
     CompiledTerm p ->
     PLifted p
-pliftCompiled prog = case pliftCompiled' prog of
-    Right x -> x
-    Left LiftError_FromRepr ->
-        error "plift failed: pconstantFromRepr returned 'Nothing'"
-    Left (LiftError_KnownTypeError e) ->
-        let unliftErrMaybe = e ^? _UnliftingErrorE
-         in error $
-                "plift failed: incorrect type: "
-                    <> maybe "absurd evaluation failure" show unliftErrMaybe
-    Left (LiftError_EvalError e logs) ->
-        error $
-            "plift failed: erring term: "
-                <> Text.unpack (Text.unlines $ Text.pack (show e) : logs)
+pliftCompiled ct = plift $ toEvaluatedTerm ct

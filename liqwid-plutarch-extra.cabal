@@ -112,6 +112,7 @@ library
     , lens
     , plutarch-extra
     , plutarch-numeric
+    , plutus-core
     , tagged
     , text
 
@@ -133,7 +134,7 @@ test-suite liqwid-plutarch-extra-test
     , tagged
     , text
 
-  hs-source-dirs:  src
+  hs-source-dirs: src
 
 --test-suite liqwid-plutarch-extra-test
 --  import:         common-lang
