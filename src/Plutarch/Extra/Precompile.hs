@@ -1,6 +1,5 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE RankNTypes #-}
-
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Use camelCase" #-}
@@ -31,22 +30,17 @@ module Plutarch.Extra.Precompile (
     pliftCompiled,
 ) where
 
-import Control.Lens ((^?))
 import Data.Default (def)
-import Data.Text (Text)
-import qualified Data.Text as Text
 import GHC.Stack (HasCallStack)
-import Plutarch.Evaluate (EvalError)
 import Plutarch.Extra.DebuggableScript (
     DebuggableScript (DebuggableScript),
     debugScript,
-    finalEvalDebuggableScript,
     mustCompileD,
     mustEvalD,
     mustFinalEvalDebuggableScript,
     script,
  )
-import Plutarch.Internal (ClosedTerm, Config, RawTerm (RCompiled), Term (..), TermResult (TermResult), compile)
+import Plutarch.Internal (RawTerm (RCompiled), Term (..), TermResult (TermResult))
 import Plutarch.Lift (
     LiftError (
         LiftError_CompilationError,
@@ -54,16 +48,12 @@ import Plutarch.Lift (
         LiftError_FromRepr,
         LiftError_KnownTypeError
     ),
-    PConstantDecl (pconstantFromRepr),
     PUnsafeLiftDecl (PLifted),
     plift,
     plift',
  )
-import Plutarch.Prelude (PLift, S, Term, Type, (:-->))
-import PlutusCore.Builtin (KnownTypeError, readKnownConstant)
-import PlutusCore.Evaluation.Machine.ExBudget (ExBudget)
-import PlutusCore.Evaluation.Machine.Exception (_UnliftingErrorE)
-import PlutusLedgerApi.V1.Scripts (Script (Script, unScript))
+import Plutarch.Prelude (PLift, S, Type, (:-->))
+import PlutusLedgerApi.V1.Scripts (Script (Script))
 import UntypedPlutusCore (Program (Program, _progAnn, _progTerm, _progVer))
 import qualified UntypedPlutusCore as UPLC
 import qualified UntypedPlutusCore.Core.Type as UplcType
