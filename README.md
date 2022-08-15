@@ -4,7 +4,7 @@ Public discussion and assistance can be found on [discord](https://discord.gg/yG
 ## What is this?
 
 A helper library to write Plutarch-oriented QuickCheck property tests. 
-Interfaces `plutarch-quickcheck` provide are designed to look and feel
+The interfaces `plutarch-quickcheck` provides are designed to look and feel
 like writting regular `QuickCheck` properties. 
 
 ## What _exactly_ does this do for me?
@@ -14,7 +14,7 @@ of the built-in functionality it provides is not very useful for it.
 For example, `Arbitrary` typeclass that provide random values for 
 properties cannot be used for defining arbitrary Plutarch values.
 
-`plutarch-quikchceck` defines alternative interfaces like
+`plutarch-quickcheck` defines alternative interfaces like
 `PArbitrary`, providing interfaces that feels like using normal
 `QuickCheck`. As demonstrated below, one can easily define a property
 in Plutarch function and use it directly.
@@ -27,7 +27,7 @@ quickCheck $ fromPFun additionCommutative -- Magic!
 -- +++ OK, passed 100 tests.
 ```
 
-The library also provides other utilities such as generation of 
+The library also provides other utilities such as the generation of 
 arbitrary Plutarch functions and defining properties for Plutarch functions 
 verified by the equivalent Haskell definition. Currently, only functions with 
 a single arguement are supported.
@@ -62,10 +62,9 @@ describing good practices for use of this library, as well as QuickCheck and
 QuickCheck hands, as there are a lot of useful, and less-known, bits of
 information there.
 
-To integrate this with your project, use Nix. We work against the `staging`
-branch of [Liqwid Labs' fork of
-Plutarch](https://github.com/Liqwid-Labs/plutarch), so you will have to use it
-also. See the `flake.nix` file for more details.
+To integrate this with your project, use Nix. We work against the `main`
+branch of [Plutarch](https://github.com/Plutonomicon/plutarch-plutus), so you will have to use it
+also. See the [`flake.nix`](./flake.nix) file for more details.
 
 # What can I do with this?
 
