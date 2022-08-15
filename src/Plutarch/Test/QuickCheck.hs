@@ -1,5 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -35,9 +37,29 @@ module Plutarch.Test.QuickCheck (
 
 import Data.Kind (Type)
 import Generics.SOP (All, HPure (hcpure), NP ((:*)), Proxy (Proxy))
-import Plutarch (S, Term, (#), type (:-->))
-import Plutarch.Lift (PLift, PUnsafeLiftDecl (PLifted), plift)
-import Plutarch.Prelude (PBool, PInteger)
+import Plutarch.Lift (DerivePConstantViaNewtype (..), PConstantDecl, PUnsafeLiftDecl (PLifted))
+import Plutarch.Num (PNum)
+import Plutarch.Prelude (
+    DPTStrat,
+    DerivePlutusType,
+    Generic,
+    PBool,
+    PEq,
+    PInteger,
+    PIsData,
+    PLift,
+    POrd,
+    PPartialOrd,
+    PlutusType,
+    PlutusTypeNewtype,
+    S,
+    Term,
+    pcon,
+    plift,
+    pto,
+    (#),
+    type (:-->),
+ )
 import Plutarch.Show (PShow)
 import Plutarch.Test.QuickCheck.Function (
     PFun (..),
@@ -45,6 +67,7 @@ import Plutarch.Test.QuickCheck.Function (
  )
 import Plutarch.Test.QuickCheck.Instances (
     PArbitrary (..),
+    PCoArbitrary (..),
     TestableTerm (..),
     pconstantT,
     pliftT,
@@ -245,27 +268,119 @@ haskEquiv' h p =
             (Proxy @Arbitrary)
             arbitrary
 
+newtype A = A Integer
+
 {- | Placeholder for a polymorphic type. Plutarch equivalence of QuickCheck's
   `A`.
 
  @since 2.0.0
 -}
-type PA :: S -> Type
-type PA = PInteger
+newtype PA (s :: S)
+    = PA (Term s PInteger)
+    deriving stock (Generic)
+    deriving anyclass (PlutusType, PIsData, PEq, PPartialOrd, POrd, PShow, PNum)
+
+-- | @since 2.0.0
+instance DerivePlutusType PA where type DPTStrat _ = PlutusTypeNewtype
+
+-- | @since 2.0.0
+instance PUnsafeLiftDecl PA where type PLifted PA = A
+
+-- | @since 2.0.0
+deriving via
+    (DerivePConstantViaNewtype A PA PInteger)
+    instance
+        PConstantDecl A
+
+-- | @since 2.0.0
+instance PArbitrary PA where
+    parbitrary = do
+        (TestableTerm x) <- parbitrary
+        pure $ TestableTerm $ pcon $ PA x
+
+    pshrink (TestableTerm x) =
+        let f (TestableTerm y) = TestableTerm $ pcon $ PA y
+         in f <$> (shrink $ TestableTerm $ pto x)
+
+-- | @since 2.0.0
+instance PCoArbitrary PA where
+    pcoarbitrary (TestableTerm x) = pcoarbitrary $ TestableTerm $ pto x
+
+-- | @since 2.0.0
+newtype B = B Integer
 
 {- | Same as `PA`.
 
  @since 2.0.0
 -}
-type PB :: S -> Type
-type PB = PInteger
+newtype PB (s :: S)
+    = PB (Term s PInteger)
+    deriving stock (Generic)
+    deriving anyclass (PlutusType, PIsData, PEq, PPartialOrd, POrd, PShow, PNum)
+
+-- | @since 2.0.0
+instance DerivePlutusType PB where type DPTStrat _ = PlutusTypeNewtype
+
+-- | @since 2.0.0
+instance PUnsafeLiftDecl PB where type PLifted PB = B
+
+-- | @since 2.0.0
+deriving via
+    (DerivePConstantViaNewtype B PB PInteger)
+    instance
+        PConstantDecl B
+
+-- | @since 2.0.0
+instance PArbitrary PB where
+    parbitrary = do
+        (TestableTerm x) <- parbitrary
+        pure $ TestableTerm $ pcon $ PB x
+
+    pshrink (TestableTerm x) =
+        let f (TestableTerm y) = TestableTerm $ pcon $ PB y
+         in f <$> (shrink $ TestableTerm $ pto x)
+
+-- | @since 2.0.0
+instance PCoArbitrary PB where
+    pcoarbitrary (TestableTerm x) = pcoarbitrary $ TestableTerm $ pto x
+
+-- | @since 2.0.0
+newtype C = C Integer
 
 {- | Same as `PA`.
 
  @since 2.0.0
 -}
-type PC :: S -> Type
-type PC = PInteger
+newtype PC (s :: S)
+    = PC (Term s PInteger)
+    deriving stock (Generic)
+    deriving anyclass (PlutusType, PIsData, PEq, PPartialOrd, POrd, PShow, PNum)
+
+-- | @since 2.0.0
+instance DerivePlutusType PC where type DPTStrat _ = PlutusTypeNewtype
+
+-- | @since 2.0.0
+instance PUnsafeLiftDecl PC where type PLifted PC = C
+
+-- | @since 2.0.0
+deriving via
+    (DerivePConstantViaNewtype C PC PInteger)
+    instance
+        PConstantDecl C
+
+-- | @since 2.0.0
+instance PArbitrary PC where
+    parbitrary = do
+        (TestableTerm x) <- parbitrary
+        pure $ TestableTerm $ pcon $ PC x
+
+    pshrink (TestableTerm x) =
+        let f (TestableTerm y) = TestableTerm $ pcon $ PC y
+         in f <$> (shrink $ TestableTerm $ pto x)
+
+-- | @since 2.0.0
+instance PCoArbitrary PC where
+    pcoarbitrary (TestableTerm x) = pcoarbitrary $ TestableTerm $ pto x
 
 {- | This shinker 'simplifies' the underlying Plutarch representation. When
      shrinking a list, this shinker is always preferable.

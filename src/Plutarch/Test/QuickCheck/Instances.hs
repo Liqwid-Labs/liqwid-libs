@@ -11,6 +11,7 @@
 module Plutarch.Test.QuickCheck.Instances (
     TestableTerm (..),
     PArbitrary (..),
+    PCoArbitrary (..),
     pconstantT,
     pliftT,
 ) where

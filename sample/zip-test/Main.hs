@@ -44,7 +44,7 @@ import Plutarch.Prelude (
     (#==),
     (:-->),
  )
-import Plutarch.Test.QuickCheck (PA, fromPFun)
+import Plutarch.Test.QuickCheck (PA, fromPFun, parbitrary)
 
 import Test.QuickCheck (
     arbitrary,
@@ -83,7 +83,7 @@ pZip = phoistAcyclic $
                 pure $ pcons # (f # tx # ty) # (self # f # txs' # tys')
 
 zipLengthProperty :: Property
-zipLengthProperty = forAll arbitrary $ fromPFun go
+zipLengthProperty = forAll parbitrary $ fromPFun go
   where
     go :: Term s (PBuiltinList PA :--> PBool)
     go = plam $ \l ->
