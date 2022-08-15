@@ -2,6 +2,20 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.0.1 -- 2022-08-15
+
+### Added
+
+- `PBind` type class, for effect types with meaningful bind semantics. This is a
+  direct equivalent to `Bind` from `semigroupoids`.
+- `pjoin` and `#>>=`, as direct equivalents to `join` and `>>-` from
+  `semigroupoids`, over `Term`s.
+- Instances of `PBind` for `PMaybe`, `PMaybeData`, `PList`, `PBuiltinList`,
+  `PPair s` (for semigroupal `s`), `PEither e`, `PIdentity` and `PState s`.
+- Newtype `PStar` representing Kleisli arrows, as well as some helper functions.
+- Instances of `PProfunctor`, `PSemigroupoid`, `PCategory`, `PFunctor`,
+  `PApply`, `PApplicative`, `PBind` for `PStar` (in various parameterizations).
+
 ## 3.0.0 -- 2022-08-10
 
 This major version bump includes updates to use plutus V2 (post-Vasil) API types. 
@@ -88,6 +102,7 @@ should clarify that these functions are indeed suitable for inclusion in V2 scri
 - Renamed `PType` to `S -> Type`.
 - Renamed `mustBePJust` to `passertPJust`.
 - Renamed `mustBePDJust` to `passertPDJust`.
+>>>>>>> main
 
 ## 1.2.0 -- 2022-07-12
 
