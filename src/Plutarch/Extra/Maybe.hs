@@ -14,43 +14,20 @@ module Plutarch.Extra.Maybe (pmaybe, pfromDJust, pisDJust, pisJust) where
 
 import Plutarch.Api.V2 (PMaybeData (PDJust, PDNothing))
 import Plutarch.Prelude (
-    PAsData,
     PBool,
-    PBuiltinList,
-    PBuiltinPair,
-    PEq,
     PIsData,
-    PIsListLike,
     PMaybe (PJust, PNothing),
-    POrd,
     S,
     Term,
     Type,
-    pcon,
-    pcons,
     pconstant,
-    pdata,
     pfield,
-    pfix,
     pfromData,
-    phead,
     phoistAcyclic,
-    pif,
     plam,
-    plet,
     pmatch,
-    pnil,
-    pnull,
-    precList,
-    psingleton,
-    ptail,
-    pto,
     ptraceError,
-    unTermCont,
     (#),
-    (#$),
-    (#<),
-    (#==),
     (:-->),
  )
 
@@ -66,7 +43,8 @@ pmaybe = phoistAcyclic $
         PJust a' -> a'
         PNothing -> e
 
-{- | Extracts the element out of a 'PDJust' and throws an error if its argument is 'PDNothing'.
+{- | Extracts the element out of a 'PDJust' and throws an error if
+  its argument is 'PDNothing'.
 
  @since 2.0
 -}

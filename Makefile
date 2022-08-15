@@ -77,7 +77,7 @@ format_check:
 
 # Execute CI
 ci: 
-	nix build '.#check.x86_64-linux'	
+	nix build '.#check.x86_64-linux'
 
 NIX_SHELL = nix develop
 HLS_SHELL = $(NIX_SHELL) -c nix-shell -p bashInteractive haskell-language-server

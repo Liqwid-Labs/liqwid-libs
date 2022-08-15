@@ -16,7 +16,6 @@ module Plutarch.Test.QuickCheck.Instances (
 ) where
 
 import Data.ByteString (ByteString)
-import Data.Default (Default (def))
 import qualified Data.Text as T (intercalate, pack, unpack)
 import qualified GHC.Exts as Exts (IsList (fromList, toList))
 import Plutarch (
@@ -69,7 +68,6 @@ import Plutarch.Api.V2 (
     PPubKeyHash (PPubKeyHash),
     PStakingCredential (PStakingHash, PStakingPtr),
  )
-import Plutarch.Builtin (ppairDataBuiltin)
 import Plutarch.Evaluate (evalScript)
 import Plutarch.Extra.Map.Unsorted (psort)
 import Plutarch.Extra.Maybe (
@@ -77,9 +75,7 @@ import Plutarch.Extra.Maybe (
     pisDJust,
     pisJust,
  )
-import Plutarch.Extra.TermCont (pletC)
 import Plutarch.Lift (PUnsafeLiftDecl (PLifted), plift)
-import qualified Plutarch.List
 import Plutarch.Maybe (pfromJust)
 import Plutarch.Positive (PPositive, ptryPositive)
 import Plutarch.Prelude (
@@ -103,7 +99,6 @@ import Plutarch.Prelude (
     PRational (PRational),
     PString,
     PUnit,
-    S,
     Type,
     pconstant,
     pdata,
@@ -111,22 +106,14 @@ import Plutarch.Prelude (
     pdenominator,
     pdnil,
     pfield,
-    pfix,
     pfromData,
-    pfstBuiltin,
-    phoistAcyclic,
     pif,
-    plet,
     pnot,
     pnumerator,
     pshow,
-    psingleton,
-    psndBuiltin,
     ptraceError,
-    (:-->),
  )
 import Plutarch.Show (PShow)
-import Plutarch.TermCont (unTermCont)
 import Test.QuickCheck (
     Arbitrary (arbitrary, shrink),
     CoArbitrary (coarbitrary),
@@ -137,7 +124,6 @@ import Test.QuickCheck (
     elements,
     frequency,
     functionMap,
-    sized,
     variant,
     vectorOf,
  )
@@ -146,33 +132,17 @@ import Test.QuickCheck (
 instance Testable (TestableTerm PBool) where
     property (TestableTerm t) = property (plift t)
 
-{- | TestableTerm is a wrapper for closed Plutarch term. This
-     abstraction allows Plutarch values can be generated via QuickCheck
-     Generator.
+{- | TestableTerm is a wrapper for closed Plutarch terms. This
+     abstraction allows Plutarch values to be generated via QuickCheck
+     generators.
 
-     Hint: Typechecker is picky about how TestableTerm is constructed.
-     Meaning, TestableTerm throw error when it's composed.
+     = Note
+     The typechecker is picky about how @TestableTerm@s are constructed.
+     Meaning, TestableTerm can throw an error when it's composed.
 
  @since 2.0.0
 -}
 data TestableTerm a = TestableTerm {unTestableTerm :: forall s. Term s a}
-
--- | @since 2.0.0
-liftTestable ::
-    forall (a :: S -> Type) (b :: S -> Type).
-    (forall (s :: S). Term s a -> Term s b) ->
-    TestableTerm a ->
-    TestableTerm b
-liftTestable f (TestableTerm x) = TestableTerm $ f x
-
--- | @since 2.0.0
-lift2Testable ::
-    forall (a :: S -> Type) (b :: S -> Type) (c :: S -> Type).
-    (forall (s :: S). Term s a -> Term s b -> Term s c) ->
-    TestableTerm a ->
-    TestableTerm b ->
-    TestableTerm c
-lift2Testable f (TestableTerm x) (TestableTerm y) = TestableTerm $ f x y
 
 -- | @since 2.0.0
 instance (forall (s :: S). Num (Term s a)) => Num (TestableTerm a) where
@@ -187,40 +157,44 @@ instance (forall (s :: S). Num (Term s a)) => Num (TestableTerm a) where
 instance (forall (s :: S). Eq (Term s a)) => Eq (TestableTerm a) where
     (TestableTerm x) == (TestableTerm y) = x == y
 
-{- | For any Plutarch Type that have `PShow` instance, `Show` is
-     available as well. Unfortunately, for those that doesn't have
-     @PShow@, `forAllShow` with custom show function is required to
-     execute property check.
-
-     This only works with those that have PShow instance; it may cause
-     problems when dealing with Plutarch.Api datatypes which does not
-     have PShow instances.
+{- | For any Plutarch Type that have a `PShow` instance, `Show` is
+     available as well. For those that don't have @PShow@ instances,
+     we have to use `forAllShow` with custom display function to
+     execute a property check.
 
  @since 2.0.0
 -}
 instance PShow a => Show (TestableTerm a) where
     show (TestableTerm term) =
-        case compile (Config{tracingMode = DoTracing}) $ ptraceError (pshow term) of
+        case compile (Config{tracingMode = DoTracing}) $
+            ptraceError
+                (pshow term) of
             Left err -> show err
             Right (evalScript -> (_, _, trace)) ->
                 T.unpack . T.intercalate " " $ trace
 
-{- | PArbitrary is Plutarch equivalent of `Arbitrary` typeclass from
-     QuickCheck. It generates randomized closed term, which can be used
-     to test property over Plutarch code without compiling and evaluating.
+{- | PArbitrary is the Plutarch equivalent of the `Arbitrary` typeclass from
+     QuickCheck. It generates pseudo-random closed term, which can be used
+     to test properties over Plutarch code without having to compile and
+     evaluate.
 
-     Default implmentation is given for any Plutarch types that
-     implments @PLift a@ and @Arbitrary (PLifted a)@. This will Generate
-     a haskell value and convert that into Plutarch term using `pconstant`.
+     Default implmentations are given for any Plutarch type that
+     implements @PLift a@ and @Arbitrary (PLifted a)@. This generates
+     a Haskell value and converts it into a Plutarch term using `pconstant`.
 
-     Other more complex Plutarch types, like `PMaybe`, requires mannual
-     implmentation.
+     = Note
+
+     The default implementation for 'pshrink' does no shrinking. If at all
+     possible, please define a shrinker, as this will make your test results
+     much more useful.
 
  @since 2.0.0
 -}
 class PArbitrary (a :: S -> Type) where
     parbitrary :: Gen (TestableTerm a)
-    default parbitrary :: (PLift a, Arbitrary (PLifted a)) => Gen (TestableTerm a)
+    default parbitrary ::
+        (PLift a, Arbitrary (PLifted a)) =>
+        Gen (TestableTerm a)
     parbitrary = pconstantT <$> arbitrary
 
     pshrink :: TestableTerm a -> [TestableTerm a]
@@ -229,9 +203,15 @@ class PArbitrary (a :: S -> Type) where
 class PCoArbitrary (a :: S -> Type) where
     pcoarbitrary :: TestableTerm a -> Gen b -> Gen b
 
-{- | Any Plutarch type that implements `PArbitrary a` automatically gets
-     `Arbitrary` of @TestableTerm a@. This is an interfacing between
-     QuickCheck and Plutarch.
+{- | Any Plutarch type that implements `PArbitrary` automatically has an
+     instance of `Arbitrary` for its @TestableTerm@. This allows interfacing
+     between QuickCheck and Plutarch.
+
+     = Note
+
+     The default implementation for 'pshrink' does no shrinking. If at all
+     possible, please define a shrinker, as this will make your test results
+     much more useful.
 
  @since 2.0.0
 -}
@@ -241,24 +221,6 @@ instance PArbitrary p => Arbitrary (TestableTerm p) where
 
 instance PCoArbitrary p => CoArbitrary (TestableTerm p) where
     coarbitrary = pcoarbitrary
-
-pdataT :: PIsData p => TestableTerm p -> TestableTerm (PAsData p)
-pdataT (TestableTerm x) = TestableTerm $ pdata x
-
-pfromDataT :: PIsData p => TestableTerm (PAsData p) -> TestableTerm p
-pfromDataT (TestableTerm x) = TestableTerm $ pfromData x
-
-pliftT :: (PLift p, PLifted p ~ h) => TestableTerm p -> h
-pliftT (TestableTerm x) = plift x
-
-pconstantT :: (PLift p, PLifted p ~ h) => h -> TestableTerm p
-pconstantT h = TestableTerm $ pconstant h
-
-pconT :: PlutusType p => (forall s. p s) -> TestableTerm p
-pconT p = TestableTerm $ pcon p
-
-pmatchT :: PlutusType p => TestableTerm p -> (forall s. p s -> Term s b) -> TestableTerm b
-pmatchT (TestableTerm p) f = TestableTerm $ pmatch p f
 
 -- | @since 2.0.0
 instance (PArbitrary p, PIsData p) => PArbitrary (PAsData p) where
@@ -293,20 +255,6 @@ instance PArbitrary PUnit where
 
 instance PCoArbitrary PUnit where
     pcoarbitrary (pliftT -> x) = coarbitrary x
-
-genByteStringUpto :: Int -> Gen ByteString
-genByteStringUpto m = sized go
-  where
-    go :: Int -> Gen ByteString
-    go s = chooseInt (0, min m s) >>= genByteString
-
-genByteString :: Int -> Gen ByteString
-genByteString l = Exts.fromList <$> vectorOf l arbitrary
-
-shrinkByteString :: ByteString -> [ByteString]
-shrinkByteString bs = do
-    xs' <- shrink . Exts.toList $ bs
-    pure . Exts.fromList $ xs'
 
 -- | @since 2.0.0
 instance PArbitrary PByteString where
@@ -362,7 +310,14 @@ instance PCoArbitrary PString where
 instance PArbitrary a => PArbitrary (PMaybe a) where
     parbitrary = do
         (TestableTerm x) <- parbitrary
-        frequency [(3, return $ TestableTerm $ pcon $ PJust x), (1, return $ pconT PNothing)]
+        frequency
+            [ (3, return $ TestableTerm $ pcon $ PJust x)
+            ,
+                ( 1
+                , return $
+                    pconT PNothing
+                )
+            ]
     pshrink (TestableTerm x)
         | plift $ pisJust # x =
             TestableTerm (pcon PNothing) :
@@ -373,8 +328,11 @@ instance PArbitrary a => PArbitrary (PMaybe a) where
 
 instance PCoArbitrary a => PCoArbitrary (PMaybe a) where
     pcoarbitrary (TestableTerm x)
-        | plift $ pisJust # x = variant 1 . pcoarbitrary (TestableTerm $ pfromJust # x)
-        | otherwise = variant 0
+        | plift $ pisJust # x =
+            variant (1 :: Integer)
+                . pcoarbitrary
+                    (TestableTerm $ pfromJust # x)
+        | otherwise = variant (0 :: Integer)
 
 -- | @since 2.0.0
 instance (PIsData a, PArbitrary a) => PArbitrary (PMaybeData a) where
@@ -394,18 +352,11 @@ instance (PIsData a, PArbitrary a) => PArbitrary (PMaybeData a) where
 
 instance (PIsData a, PCoArbitrary a) => PCoArbitrary (PMaybeData a) where
     pcoarbitrary (TestableTerm x)
-        | plift $ pisDJust # x = variant 1 . pcoarbitrary (TestableTerm $ pfromDJust # x)
-        | otherwise = variant 0
-
-isRight = flip pmatchT $ \case
-    PRight _ -> pconstant True
-    _ -> pconstant False
-pright = flip pmatchT $ \case
-    PRight a -> a
-    _ -> ptraceError "asked for PRight when it is PLeft"
-pleft = flip pmatchT $ \case
-    PLeft a -> a
-    _ -> ptraceError "asked for PLeft when it is PRight"
+        | plift $ pisDJust # x =
+            variant (1 :: Integer)
+                . pcoarbitrary
+                    (TestableTerm $ pfromDJust # x)
+        | otherwise = variant (0 :: Integer)
 
 -- | @since 2.0.0
 instance (PArbitrary a, PArbitrary b) => PArbitrary (PEither a b) where
@@ -426,8 +377,8 @@ instance (PArbitrary a, PArbitrary b) => PArbitrary (PEither a b) where
 
 instance (PCoArbitrary a, PCoArbitrary b) => PCoArbitrary (PEither a b) where
     pcoarbitrary x
-        | pliftT $ isRight x = variant 0 . pcoarbitrary (pright x)
-        | otherwise = variant 1 . pcoarbitrary (pleft x)
+        | pliftT $ isRight x = variant (0 :: Integer) . pcoarbitrary (pright x)
+        | otherwise = variant (1 :: Integer) . pcoarbitrary (pleft x)
 
 {- | Unfortunately, it is impossible to create @PBuiltinPair@ at the
      Plutarch level without getting into manipulating raw Plutus
@@ -489,11 +440,6 @@ instance
     where
     pcoarbitrary (liftTestable ptupleFromBuiltin . pdataT -> t) = pcoarbitrary t
 
-ppFstT :: TestableTerm (PPair a b) -> TestableTerm a
-ppFstT = flip pmatchT $ \(PPair a _) -> a
-ppSndT :: TestableTerm (PPair a b) -> TestableTerm b
-ppSndT = flip pmatchT $ \(PPair _ a) -> a
-
 -- | @since 2.0.0
 instance
     ( PArbitrary a
@@ -515,13 +461,9 @@ instance
 instance (PCoArbitrary a, PCoArbitrary b) => PCoArbitrary (PPair a b) where
     pcoarbitrary x = pcoarbitrary (ppFstT x) . pcoarbitrary (ppSndT x)
 
-ptFstT :: (PIsData a) => TestableTerm (PTuple a b) -> TestableTerm (PAsData a)
-ptFstT = liftTestable (pfield @"_0" #)
-ptSndT :: (PIsData b) => TestableTerm (PTuple a b) -> TestableTerm (PAsData b)
-ptSndT = liftTestable (pfield @"_1" #)
-
 -- | @since 2.0.0
 instance
+    forall (a :: S -> Type) (b :: S -> Type).
     ( PArbitrary a
     , PArbitrary b
     , PIsData a
@@ -541,6 +483,7 @@ instance
         ]
 
 instance
+    forall (a :: S -> Type) (b :: S -> Type).
     ( PCoArbitrary a
     , PCoArbitrary b
     , PIsData a
@@ -550,49 +493,28 @@ instance
     where
     pcoarbitrary x = pcoarbitrary (ptFstT x) . pcoarbitrary (ptSndT x)
 
-psimplify :: (PLift a) => TestableTerm a -> TestableTerm a
-psimplify (TestableTerm x) = pconstantT $ plift x
-
-constrPList :: (PIsListLike b a) => [TestableTerm a] -> TestableTerm (b a)
-constrPList [] = TestableTerm pnil
-constrPList ((TestableTerm x) : xs) =
-    let (TestableTerm rest) = constrPList xs
-     in TestableTerm $ pcons # x # rest
-
-convToList :: (PIsListLike b a) => TestableTerm (b a) -> [TestableTerm a]
-convToList (TestableTerm x)
-    | not $ plift $ pnull # x =
-        TestableTerm (phead # x) : convToList (TestableTerm $ ptail # x)
-    | otherwise = []
-
-genPListLike :: forall b a. (PArbitrary a, PIsListLike b a) => Gen (TestableTerm (b a))
-genPListLike = constrPList <$> arbitrary
-
-shrinkPListLike ::
-    forall a b.
-    ( PArbitrary a
-    , PIsListLike b a
-    ) =>
-    TestableTerm (b a) ->
-    [TestableTerm (b a)]
-shrinkPListLike xs' = constrPList <$> shrink (convToList xs')
-
-coArbitraryPListLike ::
-    (PCoArbitrary a, PCoArbitrary (b a), PIsListLike b a) => TestableTerm (b a) -> Gen c -> Gen c
-coArbitraryPListLike (TestableTerm x)
-    | plift (pnull # x) = variant 0
-    | otherwise = variant 1 . pcoarbitrary (TestableTerm $ phead # x) . pcoarbitrary (TestableTerm $ ptail # x)
-
 -- | @since 2.0.0
-instance (PArbitrary a, PIsListLike PBuiltinList a) => PArbitrary (PBuiltinList a) where
+instance
+    forall (a :: S -> Type).
+    (PArbitrary a, PIsListLike PBuiltinList a) =>
+    PArbitrary (PBuiltinList a)
+    where
     parbitrary = constrPList <$> arbitrary
     pshrink = shrinkPListLike
 
-instance (PCoArbitrary a, PIsListLike PBuiltinList a) => PCoArbitrary (PBuiltinList a) where
+instance
+    forall (a :: S -> Type).
+    (PCoArbitrary a, PIsListLike PBuiltinList a) =>
+    PCoArbitrary (PBuiltinList a)
+    where
     pcoarbitrary = coArbitraryPListLike
 
 -- | @since 2.0.0
-instance (PArbitrary a, PIsListLike PList a) => PArbitrary (PList a) where
+instance
+    forall (a :: S -> Type).
+    (PArbitrary a, PIsListLike PList a) =>
+    PArbitrary (PList a)
+    where
     parbitrary = genPListLike
     pshrink = shrinkPListLike
 
@@ -601,12 +523,13 @@ instance (PCoArbitrary a, PIsListLike PList a) => PCoArbitrary (PList a) where
 
 -- | @since 2.0.0
 instance
+    forall (a :: S -> Type) (b :: S -> Type).
     ( PArbitrary a
     , PArbitrary b
     , PIsData a
     , PIsData b
     ) =>
-    PArbitrary (PMap Unsorted a b)
+    PArbitrary (PMap 'Unsorted a b)
     where
     parbitrary = do
         (TestableTerm x) <- parbitrary
@@ -619,23 +542,32 @@ instance
 
 -- | @since 2.0.0
 instance
+    forall (a :: S -> Type) (b :: S -> Type).
     ( PArbitrary a
     , PArbitrary b
     , PIsData a
     , PIsData b
     , POrd a
     ) =>
-    PArbitrary (PMap Sorted a b)
+    PArbitrary (PMap 'Sorted a b)
     where
     parbitrary = do
         (TestableTerm x) <- parbitrary
         return $ TestableTerm $ psort # pcon (PMap x)
 
-    pshrink = fmap (\(TestableTerm x) -> TestableTerm $ psort # pcon (PMap x)) . shrink . unMap
+    pshrink =
+        fmap (\(TestableTerm x) -> TestableTerm $ psort # pcon (PMap x))
+            . shrink
+            . unMap
       where
         unMap = flip pmatchT $ \(PMap a) -> a
 
-instance (PCoArbitrary a, PCoArbitrary b, PIsData a, PIsData b) => PCoArbitrary (PMap c a b) where
+-- | @since 2.0.0
+instance
+    forall (a :: S -> Type) (b :: S -> Type) (c :: KeyGuarantees).
+    (PCoArbitrary a, PCoArbitrary b, PIsData a, PIsData b) =>
+    PCoArbitrary (PMap c a b)
+    where
     pcoarbitrary = pcoarbitrary . unMap
       where
         unMap = flip pmatchT $ \(PMap a) -> a
@@ -651,7 +583,11 @@ instance PArbitrary PPOSIXTime where
         unTime = flip pmatchT $ \(PPOSIXTime a) -> a
 
 -- | @since 2.0.0
-instance (PIsData a, PArbitrary a) => PArbitrary (PExtended a) where
+instance
+    forall (a :: S -> Type).
+    (PIsData a, PArbitrary a) =>
+    PArbitrary (PExtended a)
+    where
     parbitrary = do
         (TestableTerm x) <- parbitrary
         elements
@@ -661,7 +597,11 @@ instance (PIsData a, PArbitrary a) => PArbitrary (PExtended a) where
             ]
 
 -- | @since 2.0.0
-instance (PIsData a, PArbitrary a) => PArbitrary (PLowerBound a) where
+instance
+    forall (a :: S -> Type).
+    (PIsData a, PArbitrary a) =>
+    PArbitrary (PLowerBound a)
+    where
     parbitrary = do
         (TestableTerm ex) <- parbitrary
         (TestableTerm cl) <- parbitrary
@@ -671,7 +611,11 @@ instance (PIsData a, PArbitrary a) => PArbitrary (PLowerBound a) where
                     pdcons @"_0" # pdata ex #$ pdcons @"_1" # pdata cl # pdnil
 
 -- | @since 2.0.0
-instance (PIsData a, PArbitrary a) => PArbitrary (PUpperBound a) where
+instance
+    forall (a :: S -> Type).
+    (PIsData a, PArbitrary a) =>
+    PArbitrary (PUpperBound a)
+    where
     parbitrary = do
         (TestableTerm ex) <- parbitrary
         (TestableTerm cl) <- parbitrary
@@ -681,7 +625,11 @@ instance (PIsData a, PArbitrary a) => PArbitrary (PUpperBound a) where
                     pdcons @"_0" # pdata ex #$ pdcons @"_1" # pdata cl # pdnil
 
 -- | @since 2.0.0
-instance (PIsData a, PArbitrary a) => PArbitrary (PInterval a) where
+instance
+    forall (a :: S -> Type).
+    (PIsData a, PArbitrary a) =>
+    PArbitrary (PInterval a)
+    where
     parbitrary = do
         (TestableTerm lo) <- parbitrary
         (TestableTerm up) <- parbitrary
@@ -762,7 +710,7 @@ instance PArbitrary PTokenName where
         return $ pconT $ PTokenName $ pconstant tn
 
 -- | @since 2.0.0
-instance PArbitrary (PValue Unsorted NoGuarantees) where
+instance PArbitrary (PValue 'Unsorted 'NoGuarantees) where
     parbitrary = do
         (TestableTerm val) <- parbitrary
         return $ pconT $ PValue val
@@ -772,37 +720,73 @@ instance PArbitrary (PValue Unsorted NoGuarantees) where
         unValue = flip pmatchT $ \(PValue a) -> a
 
 -- | @since 2.0.0
-instance PArbitrary (PValue Unsorted NonZero) where
+instance PArbitrary (PValue 'Unsorted 'NonZero) where
     parbitrary = do
         (TestableTerm val) <- parbitrary
         return $
             pconT $
                 PValue $
-                    Assoc.pmap # plam (\x -> Assoc.pfilter # plam (\y -> pnot # (y #== 0)) # x) # val
+                    Assoc.pmap
+                        # plam
+                            ( \x ->
+                                Assoc.pfilter
+                                    # plam
+                                        (\y -> pnot # (y #== 0))
+                                    # x
+                            )
+                        # val
 
     pshrink = fmap reValue . shrink . unValue
       where
         unValue = flip pmatchT $ \(PValue a) -> a
         reValue (TestableTerm val) =
-            pconT $ PValue $ Assoc.pmap # plam (\x -> Assoc.pfilter # plam (\y -> pnot # (y #== 0)) # x) # val
+            pconT $
+                PValue $
+                    Assoc.pmap
+                        # plam
+                            ( \x ->
+                                Assoc.pfilter
+                                    # plam
+                                        (\y -> pnot # (y #== 0))
+                                    # x
+                            )
+                        # val
 
 -- | @since 2.0.0
-instance PArbitrary (PValue Unsorted Positive) where
+instance PArbitrary (PValue 'Unsorted 'Positive) where
     parbitrary = do
         (TestableTerm val) <- parbitrary
         return $
             pconT $
                 PValue $
-                    Assoc.pmap # plam (\x -> Assoc.pfilter # plam (\y -> pnot # (0 #< y)) # x) # val
+                    Assoc.pmap
+                        # plam
+                            ( \x ->
+                                Assoc.pfilter
+                                    # plam
+                                        (\y -> pnot # (0 #< y))
+                                    # x
+                            )
+                        # val
 
     pshrink = fmap reValue . shrink . unValue
       where
         unValue = flip pmatchT $ \(PValue a) -> a
         reValue (TestableTerm val) =
-            pconT $ PValue $ Assoc.pmap # plam (\x -> Assoc.pfilter # plam (\y -> pnot # (0 #< y)) # x) # val
+            pconT $
+                PValue $
+                    Assoc.pmap
+                        # plam
+                            ( \x ->
+                                Assoc.pfilter
+                                    # plam
+                                        (\y -> pnot # (0 #< y))
+                                    # x
+                            )
+                        # val
 
 -- | @since 2.0.0
-instance PArbitrary (PValue Sorted NoGuarantees) where
+instance PArbitrary (PValue 'Sorted 'NoGuarantees) where
     parbitrary = do
         (TestableTerm val) <- parbitrary
         return $ pconT $ PValue val
@@ -812,7 +796,7 @@ instance PArbitrary (PValue Sorted NoGuarantees) where
         unValue = flip pmatchT $ \(PValue a) -> a
 
 -- | @since 2.0.0
-instance PArbitrary (PValue Sorted NonZero) where
+instance PArbitrary (PValue 'Sorted 'NonZero) where
     parbitrary = do
         (TestableTerm val) <- parbitrary
         return $
@@ -820,25 +804,236 @@ instance PArbitrary (PValue Sorted NonZero) where
                 Value.pnormalize
                     #$ pcon
                     $ PValue $
-                        Assoc.pmap # plam (\x -> Assoc.pfilter # plam (\y -> pnot # (y #== 0)) # x) # val
+                        Assoc.pmap
+                            # plam
+                                ( \x ->
+                                    Assoc.pfilter
+                                        # plam
+                                            (\y -> pnot # (y #== 0))
+                                        # x
+                                )
+                            # val
 
     pshrink = fmap reValue . shrink . unValue
       where
         unValue = flip pmatchT $ \(PValue a) -> a
         reValue (TestableTerm val) =
-            pconT $ PValue $ Assoc.pmap # plam (\x -> Assoc.pfilter # plam (\y -> pnot # (y #== 0)) # x) # val
+            pconT $
+                PValue $
+                    Assoc.pmap
+                        # plam
+                            ( \x ->
+                                Assoc.pfilter
+                                    # plam
+                                        (\y -> pnot # (y #== 0))
+                                    # x
+                            )
+                        # val
 
 -- | @since 2.0.0
-instance PArbitrary (PValue Sorted Positive) where
+instance PArbitrary (PValue 'Sorted 'Positive) where
     parbitrary = do
-        (TestableTerm val) <- (parbitrary :: Gen (TestableTerm (PValue Sorted NonZero)))
+        (TestableTerm val) <-
+            ( parbitrary ::
+                    Gen (TestableTerm (PValue 'Sorted 'NonZero))
+                )
         return $
             pconT $
                 PValue $
-                    Assoc.pmap # plam (\x -> Assoc.pfilter # plam (0 #<=) # x) # pto val
+                    Assoc.pmap
+                        # plam
+                            ( \x ->
+                                Assoc.pfilter
+                                    # plam (0 #<=)
+                                    # x
+                            )
+                        # pto val
 
     pshrink = fmap reValue . shrink . unValue
       where
         unValue = flip pmatchT $ \(PValue a) -> a
         reValue (TestableTerm val) =
-            pconT $ PValue $ Assoc.pmap # plam (\x -> Assoc.pfilter # plam (\y -> pnot # (0 #< y)) # x) # val
+            pconT $
+                PValue $
+                    Assoc.pmap
+                        # plam
+                            ( \x ->
+                                Assoc.pfilter
+                                    # plam (\y -> pnot # (0 #< y))
+                                    # x
+                            )
+                        # val
+
+------------------------------------------------------------
+-- Helpers
+
+genByteString :: Int -> Gen ByteString
+genByteString l = Exts.fromList <$> vectorOf l arbitrary
+
+shrinkByteString :: ByteString -> [ByteString]
+shrinkByteString bs = do
+    xs' <- shrink . Exts.toList $ bs
+    pure . Exts.fromList $ xs'
+
+isRight ::
+    forall
+        {a :: S -> Type}
+        {b :: S -> Type}.
+    TestableTerm (PEither a b) ->
+    TestableTerm PBool
+isRight = flip pmatchT $ \case
+    PRight _ -> pconstant True
+    _ -> pconstant False
+
+pright ::
+    forall
+        {a :: S -> Type}
+        {b :: S -> Type}.
+    TestableTerm (PEither a b) ->
+    TestableTerm b
+pright = flip pmatchT $ \case
+    PRight a -> a
+    _ -> ptraceError "asked for PRight when it is PLeft"
+
+pleft ::
+    forall
+        {b1 :: S -> Type}
+        {b2 :: S -> Type}.
+    TestableTerm (PEither b1 b2) ->
+    TestableTerm b1
+pleft = flip pmatchT $ \case
+    PLeft a -> a
+    _ -> ptraceError "asked for PLeft when it is PRight"
+
+-- | @since 2.0.0
+liftTestable ::
+    forall (a :: S -> Type) (b :: S -> Type).
+    (forall (s :: S). Term s a -> Term s b) ->
+    TestableTerm a ->
+    TestableTerm b
+liftTestable f (TestableTerm x) = TestableTerm $ f x
+
+-- | @since 2.0.0
+lift2Testable ::
+    forall (a :: S -> Type) (b :: S -> Type) (c :: S -> Type).
+    (forall (s :: S). Term s a -> Term s b -> Term s c) ->
+    TestableTerm a ->
+    TestableTerm b ->
+    TestableTerm c
+lift2Testable f (TestableTerm x) (TestableTerm y) = TestableTerm $ f x y
+
+ppFstT ::
+    forall {a :: S -> Type} {b :: S -> Type}.
+    TestableTerm (PPair a b) ->
+    TestableTerm a
+ppFstT = flip pmatchT $ \(PPair a _) -> a
+
+ppSndT ::
+    forall {a :: S -> Type} {b :: S -> Type}.
+    TestableTerm (PPair a b) ->
+    TestableTerm b
+ppSndT = flip pmatchT $ \(PPair _ a) -> a
+
+pdataT ::
+    forall {p :: S -> Type}.
+    PIsData p =>
+    TestableTerm p ->
+    TestableTerm (PAsData p)
+pdataT (TestableTerm x) = TestableTerm $ pdata x
+
+pfromDataT ::
+    forall {p :: S -> Type}.
+    PIsData p =>
+    TestableTerm (PAsData p) ->
+    TestableTerm p
+pfromDataT (TestableTerm x) = TestableTerm $ pfromData x
+
+pliftT ::
+    forall {p :: S -> Type} {h :: Type}.
+    (PLift p, PLifted p ~ h) =>
+    TestableTerm p ->
+    h
+pliftT (TestableTerm x) = plift x
+
+pconstantT ::
+    forall {p :: S -> Type} {h :: Type}.
+    (PLift p, PLifted p ~ h) =>
+    h ->
+    TestableTerm p
+pconstantT h = TestableTerm $ pconstant h
+
+pconT ::
+    forall {p :: S -> Type}.
+    PlutusType p =>
+    (forall {s :: S}. p s) ->
+    TestableTerm p
+pconT p = TestableTerm $ pcon p
+
+pmatchT ::
+    forall {p :: S -> Type} {b :: S -> Type}.
+    PlutusType p =>
+    TestableTerm p ->
+    (forall {s :: S}. p s -> Term s b) ->
+    TestableTerm b
+pmatchT (TestableTerm p) f = TestableTerm $ pmatch p f
+
+ptFstT ::
+    forall {a :: S -> Type} {b :: S -> Type}.
+    (PIsData a) =>
+    TestableTerm (PTuple a b) ->
+    TestableTerm (PAsData a)
+ptFstT = liftTestable (pfield @"_0" #)
+
+ptSndT ::
+    forall {a :: S -> Type} {b :: S -> Type}.
+    (PIsData b) =>
+    TestableTerm (PTuple a b) ->
+    TestableTerm (PAsData b)
+ptSndT = liftTestable (pfield @"_1" #)
+
+constrPList ::
+    forall {a :: S -> Type} {b :: (S -> Type) -> S -> Type}.
+    (PIsListLike b a) =>
+    [TestableTerm a] ->
+    TestableTerm (b a)
+constrPList [] = TestableTerm pnil
+constrPList ((TestableTerm x) : xs) =
+    let (TestableTerm rest) = constrPList xs
+     in TestableTerm $ pcons # x # rest
+
+convToList ::
+    forall {a :: S -> Type} {b :: (S -> Type) -> S -> Type}.
+    (PIsListLike b a) =>
+    TestableTerm (b a) ->
+    [TestableTerm a]
+convToList (TestableTerm x)
+    | not $ plift $ pnull # x =
+        TestableTerm (phead # x) : convToList (TestableTerm $ ptail # x)
+    | otherwise = []
+
+genPListLike ::
+    forall {a :: S -> Type} {b :: (S -> Type) -> S -> Type}.
+    (PArbitrary a, PIsListLike b a) =>
+    Gen (TestableTerm (b a))
+genPListLike = constrPList <$> arbitrary
+
+shrinkPListLike ::
+    forall {a :: S -> Type} {b :: (S -> Type) -> S -> Type}.
+    ( PArbitrary a
+    , PIsListLike b a
+    ) =>
+    TestableTerm (b a) ->
+    [TestableTerm (b a)]
+shrinkPListLike xs' = constrPList <$> shrink (convToList xs')
+
+coArbitraryPListLike ::
+    forall {a :: S -> Type} {b :: (S -> Type) -> S -> Type} {c :: Type}.
+    (PCoArbitrary a, PCoArbitrary (b a), PIsListLike b a) =>
+    TestableTerm (b a) ->
+    Gen c ->
+    Gen c
+coArbitraryPListLike (TestableTerm x)
+    | plift (pnull # x) = variant (0 :: Integer)
+    | otherwise =
+        variant (1 :: Integer) . pcoarbitrary (TestableTerm $ phead # x)
+            . pcoarbitrary (TestableTerm $ ptail # x)

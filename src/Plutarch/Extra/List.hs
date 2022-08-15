@@ -19,10 +19,8 @@ import Plutarch.Prelude (
     PBool,
     PBuiltinPair,
     PEq,
-    PIsData,
     PIsListLike,
     PMaybe (PJust, PNothing),
-    POrd,
     S,
     Term,
     Type,
@@ -78,9 +76,9 @@ pfind' p =
 
 {- | / O(nlogn) /. Merge sort, bottom-up version, given a custom comparator.
 
-   Assuming the comparator returns true if first value is less than the second one,
-    the list elements will be arranged in ascending order, keeping duplicates in the order
-    they appeared in the input.
+   Assuming the comparator returns true if first value is less than the second
+   one, the list elements will be arranged in ascending order, keeping
+   duplicates in the order they appeared in the input.
 -}
 pmsortBy ::
     forall s a l.
@@ -107,10 +105,12 @@ pmsortBy = phoistAcyclic $
                         pif (pnull # ys) xs $
                             let z = phead # ys
                                 zs = ptail # ys
-                             in pcons # (pmergeBy # comp # y # z) # (self # comp # zs)
+                             in pcons # (pmergeBy # comp # y # z)
+                                    # (self # comp # zs)
 
-{- | / O(n) /. Merge two lists which are assumed to be ordered, given a custom comparator.
-    The comparator should return true if first value is less than the second one.
+{- | / O(n) /. Merge two lists which are assumed to be ordered, given a custom
+  comparator. The comparator should return true if first value is less than the
+  second one.
 -}
 pmergeBy ::
     forall (a :: S -> Type) (s :: S) list.
