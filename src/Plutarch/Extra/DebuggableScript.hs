@@ -4,7 +4,6 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE RankNTypes #-}
 
--- | @since 3.0.2
 module Plutarch.Extra.DebuggableScript (
     DebuggableScript (..),
     checkedCompileD,
@@ -36,11 +35,27 @@ import UntypedPlutusCore.Evaluation.Machine.Cek (
  )
 
 {- | A 'Script' with a debug fallback that has tracing turned on.
+
  @since 3.0.2
 -}
-data DebuggableScript = DebuggableScript {script :: Script, debugScript :: Script}
-    deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData)
+data DebuggableScript = DebuggableScript
+    { script :: Script
+    -- ^ @since 3.0.2
+    , debugScript :: Script
+    -- ^ @since 3.0.2
+    }
+    deriving stock
+        ( -- | @since 3.0.2
+          Eq
+        , -- | @since 3.0.2
+          Show
+        , -- | @since 3.0.2
+          Generic
+        )
+    deriving anyclass
+        ( -- | @since 3.0.2
+          NFData
+        )
 
 {- | For handling compilation errors right away.
 
@@ -65,7 +80,12 @@ mustCompileTracing ::
     Script
 mustCompileTracing term =
     case compile Config{tracingMode = DetTracing} term of
-        Left err -> error $ unwords ["Plutarch compilation error: ", T.unpack err]
+        Left err ->
+            error $
+                unwords
+                    [ "Plutarch compilation error: "
+                    , T.unpack err
+                    ]
         Right script -> script
 
 {- | Compilation errors cause exceptions, but deferred by lazyness.
@@ -111,7 +131,9 @@ mustFinalEvalDebuggableScript s =
 
  @since 3.0.2
 -}
-finalEvalDebuggableScript :: DebuggableScript -> (Either EvalError Script, ExBudget, [Text])
+finalEvalDebuggableScript ::
+    DebuggableScript ->
+    (Either EvalError Script, ExBudget, [Text])
 finalEvalDebuggableScript DebuggableScript{script, debugScript} =
     case res of
         Right _ -> r
@@ -131,7 +153,8 @@ finalEvalDebuggableScript DebuggableScript{script, debugScript} =
             Right _ ->
                 error $
                     unlines
-                        [ "Script failed, but corresponding debug Script succeeded!"
+                        [ "Script failed, but corresponding debug Script "
+                            <> "succeeded!"
                         , "Original error: "
                         , show origEvalErr
                         , "Debug Script traces:"
@@ -147,7 +170,8 @@ finalEvalDebuggableScript DebuggableScript{script, debugScript} =
                                 error $
                                     unlines
                                         [ "Script failed normally, "
-                                            <> "but corresponding debug Script ran out of budget!"
+                                            <> "but corresponding debug Script"
+                                            <> "ran out of budget!"
                                         , "Original error:"
                                         , show origEvalErr
                                         , "Debug Script traces until crash:"
@@ -157,9 +181,9 @@ finalEvalDebuggableScript DebuggableScript{script, debugScript} =
                         error $
                             unlines
                                 [ "Script failed with UserEvaluationError, "
-                                    <> "but corresponding debug Script caused an "
+                                    <> "but corresponding debug Script caused "
                                     <> "internal evaluation error!"
-                                , "Internal evaluation error:"
+                                , "an Internal evaluation error:"
                                 , show e
                                 , "Original error:"
                                 , show origEvalErr
@@ -189,7 +213,8 @@ mustEvalScript s =
   where
     (res, _, traces) = evalScript s
 
-{- | Evaluate a 'DebuggableScript' to a 'DebuggableScript', with errors resulting in exceptions.
+{- | Evaluate a 'DebuggableScript' to a 'DebuggableScript', with errors
+  resulting in exceptions.
 
  This is mostly useful for pre-evaluating arguments to a thing being
  tested/benchmarked.

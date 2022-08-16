@@ -4,8 +4,6 @@
 {- | Pre-compiling Plutarch functions and applying them.
 
  Speeds up benchmarking and testing.
-
- @since 3.0.2
 -}
 module Plutarch.Extra.Precompile (
     applyScript,
@@ -56,6 +54,7 @@ import qualified UntypedPlutusCore as UPLC
 import qualified UntypedPlutusCore.Core.Type as UplcType
 
 {- | Apply a function to an argument on the compiled 'Script' level.
+
  @since 3.0.2
 -}
 applyScript :: Script -> Script -> Script
@@ -73,14 +72,20 @@ applyScript f a =
     (Script Program{_progTerm = fTerm, _progVer = fVer}) = f
     (Script Program{_progTerm = aTerm, _progVer = aVer}) = a
 
-applyDebuggableScript :: DebuggableScript -> DebuggableScript -> DebuggableScript
+applyDebuggableScript ::
+    DebuggableScript ->
+    DebuggableScript ->
+    DebuggableScript
 applyDebuggableScript f a =
     DebuggableScript
         { script = applyScript f.script a.script
         , debugScript = applyScript f.debugScript a.debugScript
         }
 
--- | Type-safe wrapper for compiled Plutarch functions.
+{- | Type-safe wrapper for compiled Plutarch functions.
+
+ @since 3.0.2
+-}
 newtype CompiledTerm (a :: S -> Type) = CompiledTerm DebuggableScript
 
 {- | Compile a closed Plutarch 'Term' to a 'CompiledTerm'.
@@ -98,13 +103,20 @@ compile' ::
 compile' t = CompiledTerm $ mustCompileD t
 
 {- | Convert a 'CompiledTerm' to a 'Script'.
+
  @since 3.0.2
 -}
-toDebuggableScript :: forall (a :: S -> Type). CompiledTerm a -> DebuggableScript
+toDebuggableScript ::
+    forall (a :: S -> Type).
+    CompiledTerm a ->
+    DebuggableScript
 toDebuggableScript (CompiledTerm dscript) = dscript
 
 -- | @since 3.0.2
-toEvaluatedTerm :: CompiledTerm a -> (forall (s :: S). Term s a)
+toEvaluatedTerm ::
+    forall (a :: S -> Type).
+    CompiledTerm a ->
+    (forall (s :: S). Term s a)
 toEvaluatedTerm ct =
     let Script prog = mustFinalEvalDebuggableScript (toDebuggableScript ct)
      in Term $ const $ pure $ TermResult (RCompiled $ UPLC._progTerm prog) []
@@ -174,6 +186,7 @@ applyCompiledTerm2' (CompiledTerm sf) (CompiledTerm sa) =
     CompiledTerm $ applyDebuggableScript sf sa
 
 {- | Alias for 'applyCompiledTerm'.
+
  @since 3.0.2
 -}
 (##) ::
@@ -186,6 +199,7 @@ applyCompiledTerm2' (CompiledTerm sf) (CompiledTerm sa) =
 infixl 8 ##
 
 {- | Alias for 'applyCompiledTerm\''.
+
  @since 3.0.2
 -}
 (##~) ::
@@ -198,6 +212,7 @@ infixl 8 ##
 infixl 8 ##~
 
 {- | Alias for 'applyCompiledTerm2'.
+
  @since 3.0.2
 -}
 (###) ::
@@ -210,6 +225,7 @@ infixl 8 ##~
 infixl 7 ###
 
 {- | Alias for 'applyCompiledTerm2\''.
+
  @since 3.0.2
 -}
 (###~) ::
@@ -228,14 +244,18 @@ infixl 7 ###~
  @since 3.0.2
 -}
 pliftCompiled' ::
-    forall p. PUnsafeLiftDecl p => CompiledTerm p -> Either LiftError (PLifted p)
+    forall (p :: S -> Type).
+    PUnsafeLiftDecl p =>
+    CompiledTerm p ->
+    Either LiftError (PLifted p)
 pliftCompiled' ct = plift' def $ toEvaluatedTerm ct
 
 {- | Like `pliftCompiled'` but throws on failure.
+
  @since 3.0.2
 -}
 pliftCompiled ::
-    forall p.
+    forall (p :: S -> Type).
     (HasCallStack, PLift p) =>
     CompiledTerm p ->
     PLifted p
