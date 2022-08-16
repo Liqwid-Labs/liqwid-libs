@@ -20,6 +20,7 @@ module Plutarch.Context (
     B.withRefTxId,
     B.withDatum,
     B.withInlineDatum,
+    B.withReferenceScript,
     B.withValue,
     B.withRefIndex,
     B.withRef,

@@ -30,6 +30,7 @@ module Plutarch.Context.Base (
     withRefTxId,
     withDatum,
     withInlineDatum,
+    withReferenceScript,
     withValue,
     withRefIndex,
     withRef,
@@ -87,7 +88,7 @@ import PlutusLedgerApi.V2 (
     Value,
     always,
  )
-import qualified PlutusTx.AssocMap as AssocMap (fromList)
+import PlutusTx.AssocMap qualified as AssocMap (fromList)
 
 -- | @since 2.1.0
 data DatumType
@@ -179,6 +180,9 @@ withInlineDatum ::
     b ->
     UTXO
 withInlineDatum dat = mempty{utxoData = Just . InlineDatum . datafy $ dat}
+
+withReferenceScript :: ScriptHash -> UTXO
+withReferenceScript sh = mempty{utxoReferenceScript = Just sh}
 
 withRefTxId :: TxId -> UTXO
 withRefTxId tid = mempty{utxoTxId = Just tid}
