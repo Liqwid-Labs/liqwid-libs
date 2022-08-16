@@ -18,40 +18,12 @@ module Plutarch.Extra.Applicative (
     punless,
 ) where
 
-import Data.Kind (Type)
-import Plutarch (
-    S,
-    Term,
-    pcon,
-    pfix,
-    phoistAcyclic,
-    plam,
-    unTermCont,
-    (#),
-    (#$),
-    type (:-->),
- )
-import Plutarch.Api.V2 (PMaybeData (PDJust, PDNothing))
-import Plutarch.Bool (PBool, pif, (#<=))
-import Plutarch.Builtin (PBuiltinList, pdata, pfromData)
-import Plutarch.DataRepr (pdcons, pdnil, pfield)
-import Plutarch.Either (PEither (PLeft, PRight))
+import Plutarch.Api.V1.Maybe (PMaybeData (PDJust, PDNothing))
 import Plutarch.Extra.Boring (PBoring (pboring))
 import Plutarch.Extra.Function (papply, pconst)
 import Plutarch.Extra.Functor (PFunctor (PSubcategory))
 import Plutarch.Extra.TermCont (pletC, pmatchC)
-import Plutarch.Integer (PInteger)
-import Plutarch.List (
-    PList,
-    PListLike (PElemConstraint),
-    pconcat,
-    pcons,
-    pmap,
-    pnil,
-    puncons,
- )
-import Plutarch.Maybe (PMaybe (PJust, PNothing))
-import Plutarch.Pair (PPair (PPair))
+import Plutarch.List (puncons)
 
 -- | @since 1.0.0
 class (PFunctor f) => PApply (f :: (S -> Type) -> S -> Type) where

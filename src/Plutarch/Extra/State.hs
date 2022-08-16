@@ -14,28 +14,10 @@ module Plutarch.Extra.State (
     pmodify,
 ) where
 
-import Data.Kind (Type)
-import GHC.Generics (Generic)
-import Plutarch (
-    DerivePlutusType (..),
-    PlutusType,
-    PlutusTypeNewtype,
-    S,
-    Term,
-    pcon,
-    phoistAcyclic,
-    plam,
-    pmatch,
-    unTermCont,
-    (#),
-    type (:-->),
- )
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
 import Plutarch.Extra.Bind (PBind ((#>>=)))
 import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap), Plut)
 import Plutarch.Extra.TermCont (pmatchC)
-import Plutarch.Pair (PPair (PPair))
-import Plutarch.Unit (PUnit (PUnit))
 
 -- | @since 1.0.0
 newtype PState (s :: S -> Type) (a :: S -> Type) (s' :: S)

@@ -7,30 +7,11 @@ module Plutarch.Extra.Map.Unsorted (
     punionWith,
 ) where
 
-import Data.Kind (Type)
-import Plutarch (
-    S,
-    Term,
-    pcon,
-    phoistAcyclic,
-    plam,
-    pto,
-    unTermCont,
-    (#),
-    type (:-->),
- )
-import Plutarch.Api.V1.AssocMap (KeyGuarantees (..), PMap (PMap))
-import Plutarch.Bool (PBool (PFalse), PEq ((#==)), POrd, pif, (#<))
-import Plutarch.Builtin (
-    PBuiltinList,
-    PIsData,
-    pfromData,
- )
+import Plutarch.Api.V1.AssocMap (KeyGuarantees (Sorted, Unsorted), PMap (PMap))
 import Plutarch.Extra.List (pmsortBy)
 import Plutarch.Extra.Map (pkeys, pkvPairLt)
 import qualified Plutarch.Extra.Map.Sorted as SortedMap
 import Plutarch.Extra.TermCont (pletC)
-import Plutarch.List (plength, plistEquals)
 
 {- | / O(nlogn) /. Sort a `PMap` by the keys of each key-value pairs, in an ascending order.
 

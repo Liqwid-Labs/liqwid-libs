@@ -76,8 +76,9 @@ format_check:
 	cabal-fmt -c $(CABAL_SOURCES)
 
 # Execute CI
-ci: 
+ci:
 	nix build '.#check.x86_64-linux'
+
 
 NIX_SHELL = nix develop
 HLS_SHELL = $(NIX_SHELL) -c nix-shell -p bashInteractive haskell-language-server

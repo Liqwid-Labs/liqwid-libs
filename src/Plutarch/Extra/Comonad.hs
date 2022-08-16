@@ -3,22 +3,9 @@ module Plutarch.Extra.Comonad (
     PComonad (..),
 ) where
 
-import Data.Kind (Type)
-import Plutarch (
-    S,
-    Term,
-    pcon,
-    phoistAcyclic,
-    plam,
-    unTermCont,
-    (#),
-    type (:-->),
- )
 import Plutarch.Extra.Functor (PFunctor (PSubcategory))
 import Plutarch.Extra.TermCont (pletC, pmatchC)
-import Plutarch.List (PList, pcons, pnil, puncons)
-import Plutarch.Maybe (PMaybe (PJust, PNothing))
-import Plutarch.Pair (PPair (PPair))
+import Plutarch.List (puncons)
 
 -- | @since 1.0.0
 class (PFunctor w) => PExtend (w :: (S -> Type) -> S -> Type) where

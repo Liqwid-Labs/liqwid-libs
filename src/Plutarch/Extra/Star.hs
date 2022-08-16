@@ -11,22 +11,6 @@ module Plutarch.Extra.Star (
     papplyStar,
 ) where
 
-import Data.Kind (Type)
-import GHC.Generics (Generic)
-import Plutarch (
-    DerivePlutusType (DPTStrat),
-    PlutusType,
-    PlutusTypeNewtype,
-    S,
-    Term,
-    pcon,
-    phoistAcyclic,
-    plam,
-    pmatch,
-    unTermCont,
-    (#),
-    type (:-->),
- )
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
 import Plutarch.Extra.Bind (PBind ((#>>=)))
 import Plutarch.Extra.Category (PCategory (pidentity), PSemigroupoid ((#>>>)))

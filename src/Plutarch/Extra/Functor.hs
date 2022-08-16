@@ -15,39 +15,14 @@ module Plutarch.Extra.Functor (
     pvoid,
 ) where
 
-import Data.Kind (Constraint, Type)
-import Plutarch (
-    S,
-    Term,
-    pcon,
-    phoistAcyclic,
-    plam,
-    unTermCont,
-    (#),
-    type (:-->),
- )
+import Data.Kind (Constraint)
 import Plutarch.Api.V1.AssocMap (KeyGuarantees, PMap (PMap))
-import Plutarch.Api.V2 (PMaybeData (PDJust, PDNothing))
-import Plutarch.Builtin (
-    PAsData,
-    PBuiltinList,
-    PBuiltinPair,
-    PIsData,
-    pdata,
-    pfromData,
-    pfstBuiltin,
-    ppairDataBuiltin,
-    psndBuiltin,
- )
-import Plutarch.DataRepr (pdcons, pdnil, pfield)
-import Plutarch.Either (PEither (PLeft, PRight))
+import Plutarch.Api.V1.Maybe (PMaybeData (PDJust, PDNothing))
+import Plutarch.Builtin (ppairDataBuiltin)
 import Plutarch.Extra.Boring (PBoring (pboring))
 import Plutarch.Extra.Function (pconst, pidentity)
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.Lift (PUnsafeLiftDecl)
-import Plutarch.List (PList, pmap)
-import Plutarch.Maybe (PMaybe (PJust, PNothing))
-import Plutarch.Pair (PPair (PPair))
 
 {- | Describes the entire category of Plutarch types, with arrows being Plutarch
  functions. Since the typical name for the category of Haskell types is

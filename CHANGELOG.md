@@ -17,6 +17,18 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 * `since`s added to `Plutarch.Extra.Record` functions.
 * `(.=)` no longer requires an `SListI` constraint.
 
+## 3.0.2 -- 2022-08-09
+
+### Added
+ - A `Plutarch.Extra.DebuggableScript` module, containing utilities for lazy
+   compilation of scripts-with-tracing as a fallback when the script-without-tracing
+   fails. This is useful for testing and benchmarking, since tracing is only turned on
+   when error messages are actually needed.
+ - A `Plutarch.Extra.Precompile` module, containing utilities for compiling
+   scripts and arguments separately and applying them in various ways and from
+   various types. This is useful for benchmarking and testing, since it will lead to
+   performance increases and more accurate measurements of performance.
+
 ## 3.0.1 -- 2022-08-15
 
 ### Added
@@ -33,23 +45,23 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## 3.0.0 -- 2022-08-10
 
-This major version bump includes updates to use plutus V2 (post-Vasil) API types. 
+This major version bump includes updates to use plutus V2 (post-Vasil) API types.
 We have decided that we will _not_ provide backports or updates for V1 API types
 in the future.
 
-Where re-exports from `Plutarch.Api.V1` exist, import from the `Plutarch.Api.V2` 
-modules have be made instead. This will not have any effect on client code, but 
+Where re-exports from `Plutarch.Api.V1` exist, import from the `Plutarch.Api.V2`
+modules have be made instead. This will not have any effect on client code, but
 should clarify that these functions are indeed suitable for inclusion in V2 scripts.
 
 ### Modified
  - Nix flake points at a more recent version of nixpkgs, and temporarily points at a branch of `plutarch-quickcheck`
  - Names of modules referencing specific versions of the API (such as `Plutarch.Api.V1.AssetClass`) have been
-   renamed to remove these references (i.e., becoming `Plutarch.Extra.AssetClass`). We will only support the 
+   renamed to remove these references (i.e., becoming `Plutarch.Extra.AssetClass`). We will only support the
    more current API version in the future.
  - `pfindTxOutDatum` has been updated to work with V2 style datums (i.e., including a case for inline datums.)
-   
+
 ### Removed
- - `plutarch-quickcheck` (aka PQ), which is a dependency of LPE, upgraded to V2 API types as part of a PR that also 
+ - `plutarch-quickcheck` (aka PQ), which is a dependency of LPE, upgraded to V2 API types as part of a PR that also
    made major changes to its internals. See [here](https://github.com/Liqwid-Labs/plutarch-quickcheck/pull/26).
    As a result, some existing tests for LPE have been temporarily removed. [Issue #53](https://github.com/Liqwid-Labs/liqwid-plutarch-extra/issues/53)
    has been opened to port these tests to PQ2.0
@@ -73,7 +85,7 @@ should clarify that these functions are indeed suitable for inclusion in V2 scri
 
 ## 2.0.0 -- 2022-08-02
 
-### Added 
+### Added
  - A `Plutarch.Oprhans` module, holding downcasted instances of semigroup and monoid when the upcasted type has the appropriate instances.
  - `pflip` to `Plutarch.Extra.Function`
  - `Plutarch.Extra.IsData` a `PlutusTypeEnumData` as a deriving strategy for `PlutusType`
@@ -82,7 +94,7 @@ should clarify that these functions are indeed suitable for inclusion in V2 scri
 ### Changed
 
  - Update to [`Liqwid.nix`](https://github.com/liqwid-Labs/liqwid-nix)
- - Update to Plutarch version 1.2. See the [CHANGELOG](https://github.com/Plutonomicon/plutarch-plutus/blob/v1.2.0/CHANGELOG.md) 
+ - Update to Plutarch version 1.2. See the [CHANGELOG](https://github.com/Plutonomicon/plutarch-plutus/blob/v1.2.0/CHANGELOG.md)
    for full details.
    - The flake now points at the `Plutonomicon` repository, instead of the Liqwid Labs fork.
    - Changes to deriving strategies and constraints may cause some API breakage. In particular,
@@ -117,7 +129,6 @@ should clarify that these functions are indeed suitable for inclusion in V2 scri
 - Renamed `PType` to `S -> Type`.
 - Renamed `mustBePJust` to `passertPJust`.
 - Renamed `mustBePDJust` to `passertPDJust`.
->>>>>>> main
 
 ## 1.2.0 -- 2022-07-12
 
@@ -143,7 +154,7 @@ should clarify that these functions are indeed suitable for inclusion in V2 scri
   better folding, for example.
 - `PSemiTraversable` now has a `psemitraverse_` method, with similar benefits to
   `ptraverse_`.
-- `psemifold`, `psemifoldMap` and `psemifoldComonad` gained a `PSubcategory t a` 
+- `psemifold`, `psemifoldMap` and `psemifoldComonad` gained a `PSubcategory t a`
   constraint, as the 'container' is guaranteed non-empty in such a case.
 - Significant performance improvements for `PTraversable` and `PSemiTraversable`
   instances.
@@ -169,7 +180,7 @@ should clarify that these functions are indeed suitable for inclusion in V2 scri
 
 #### AssocMap (`Plutarch.Extra.Map.Unsorted`)
 
-- `psort` 
+- `psort`
 - `pkeysEqual`
 - `pmapUnionWith` -> `punionWith`
 
@@ -209,7 +220,7 @@ should clarify that these functions are indeed suitable for inclusion in V2 scri
 
 #### `TermCont` (`Plutarch.Extra.TermCont`)
 
-- Re-exports from `plutarch-extra` 
+- Re-exports from `plutarch-extra`
 - `tcassert` -> `passertC`
 - `pguardWithC`
 - 'pguardShowC'

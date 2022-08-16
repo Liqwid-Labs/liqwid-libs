@@ -6,7 +6,6 @@
 module Plutarch.Orphans () where
 
 import Control.Composition (on, (.*))
-import Plutarch (PlutusType (PInner), Term)
 import Plutarch.Unsafe (punsafeCoerce, punsafeDowncast)
 
 -- | @since 1.3.0

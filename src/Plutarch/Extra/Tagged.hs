@@ -13,24 +13,7 @@ module Plutarch.Extra.Tagged (
 ) where
 
 import Data.Bifunctor (first)
-import Data.Kind (Type)
 import Data.Tagged (Tagged (Tagged))
-import GHC.Generics (Generic)
-import Plutarch (
-    DPTStrat,
-    DerivePlutusType,
-    PlutusType,
-    PlutusTypeNewtype,
-    S,
-    Term,
-    pcon,
-    phoistAcyclic,
-    plam,
-    unTermCont,
-    (#),
- )
-import Plutarch.Bool (PEq, POrd, PPartialOrd)
-import Plutarch.Builtin (PAsData, PData, PIsData)
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
 import Plutarch.Extra.Boring (PBoring (pboring))
 import Plutarch.Extra.Comonad (
@@ -43,14 +26,12 @@ import Plutarch.Extra.Traversable (
     PSemiTraversable (psemitraverse, psemitraverse_),
     PTraversable (ptraverse, ptraverse_),
  )
-import Plutarch.Integer (PIntegral)
 import Plutarch.Lift (
     PConstantDecl (PConstantRepr, PConstanted, pconstantFromRepr, pconstantToRepr),
     PUnsafeLiftDecl (PLifted),
  )
-import Plutarch.Num (PNum (..))
-import Plutarch.Show (PShow)
-import Plutarch.TryFrom (PSubtype, PTryFrom (PTryFromExcess, ptryFrom'))
+import Plutarch.Num (PNum)
+import Plutarch.TryFrom (PTryFrom (PTryFromExcess, ptryFrom'))
 import Plutarch.Unsafe (punsafeCoerce)
 import qualified PlutusTx
 

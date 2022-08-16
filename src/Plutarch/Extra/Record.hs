@@ -11,10 +11,10 @@ module Plutarch.Extra.Record (
     FieldName,
 ) where
 
-import Control.Category (Category (..))
+import Control.Category (Category (id, (.)))
 import Data.Coerce (coerce)
 import Data.Kind (Type)
-import GHC.OverloadedLabels (IsLabel (..))
+import GHC.OverloadedLabels (IsLabel (fromLabel))
 import GHC.TypeLits (Symbol)
 import Plutarch (PlutusType, S, Term, pcon, (#))
 import Plutarch.Builtin (PAsData)

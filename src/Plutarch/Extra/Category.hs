@@ -1,12 +1,10 @@
 module Plutarch.Extra.Category (
-    PSemigroupoid (..),
-    PCategory (..),
+    PSemigroupoid ((#>>>)),
+    PCategory (pidentity),
     pconst,
     (#<<<),
 ) where
 
-import Data.Kind (Type)
-import Plutarch (S, Term, phoistAcyclic, plam, (#), (:-->))
 import Plutarch.Extra.Profunctor (PProfunctor (PCoSubcategory, PContraSubcategory, prmap))
 
 -- | @since 1.0.0

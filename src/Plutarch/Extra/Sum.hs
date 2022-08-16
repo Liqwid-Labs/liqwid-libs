@@ -8,30 +8,12 @@ module Plutarch.Extra.Sum (
     PSum (..),
 ) where
 
-import Data.Kind (Type)
-import GHC.Generics (Generic)
-import Plutarch (
-    DerivePlutusType (..),
-    PlutusType,
-    PlutusTypeNewtype,
-    S,
-    Term,
-    pcon,
-    phoistAcyclic,
-    plam,
-    unTermCont,
-    (#),
- )
-import Plutarch.Bool (PEq, POrd, PPartialOrd)
-import Plutarch.Builtin (PIsData)
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
 import Plutarch.Extra.Boring (PBoring (pboring))
 import Plutarch.Extra.Comonad (PComonad (pextract), PExtend (pextend))
 import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap), Plut)
 import Plutarch.Extra.TermCont (pmatchC)
-import Plutarch.Integer (PIntegral)
 import Plutarch.Num (PNum)
-import Plutarch.Show (PShow)
 
 {- | A \'numerical\' value which is monoidal over its addition.
 
