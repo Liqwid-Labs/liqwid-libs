@@ -8,7 +8,7 @@ module Plutarch.Extra.Map (
     pmapFromList,
     pkeys,
     pupdate,
-    pmap,
+    Plutarch.Extra.Map.pmap,
     pkvPairKey,
     pkvPairLt,
     pfoldlWithKey,
@@ -16,40 +16,13 @@ module Plutarch.Extra.Map (
 ) where
 
 import Data.Foldable (foldl')
-import Data.Kind (Type)
-import Plutarch (
-    S,
-    Term,
-    pcon,
-    phoistAcyclic,
-    plam,
-    pmatch,
-    pto,
-    unTermCont,
-    (#),
-    type (:-->),
- )
 import Plutarch.Api.V1.AssocMap (KeyGuarantees, PMap (PMap))
-import Plutarch.Bool (PBool, PEq ((#==)), POrd, pif, (#<))
-import Plutarch.Builtin (
-    PAsData,
-    PBuiltinList (PCons, PNil),
-    PBuiltinPair,
-    PIsData,
-    pdata,
-    pfromData,
-    pfstBuiltin,
-    ppairDataBuiltin,
-    psndBuiltin,
- )
+import Plutarch.Builtin (ppairDataBuiltin)
 import Plutarch.Extra.Functor (pfmap)
 import Plutarch.Extra.List (pmapMaybe)
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.Extra.Traversable (pfoldMap)
-import Plutarch.List (pfind, pfoldl)
 import qualified Plutarch.List
-import Plutarch.Maybe (PMaybe (PJust, PNothing))
-import Plutarch.Trace (ptraceError)
 
 -- | @since 1.0.0
 plookup ::

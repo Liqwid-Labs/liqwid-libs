@@ -4,9 +4,8 @@ module Plutarch.Extra.Profunctor (
     PProfunctor (..),
 ) where
 
-import Data.Kind (Constraint, Type)
+import Data.Kind (Constraint)
 import Generics.SOP (Top)
-import Plutarch (S, Term, phoistAcyclic, plam, (#), type (:-->))
 import Plutarch.Extra.Function (pidentity)
 
 -- | @since 1.0.0

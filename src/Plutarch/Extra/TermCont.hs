@@ -16,7 +16,6 @@ import "plutarch-extra" Plutarch.Extra.TermCont as Extra (
     ptraceC,
     ptryFromC,
  )
-import Plutarch.Prelude
 
 {- | 'pguardC' but with type threading for better traces.
 

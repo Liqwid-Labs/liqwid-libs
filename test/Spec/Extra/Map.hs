@@ -24,10 +24,6 @@ import qualified Data.Set as S
 
 --------------------------------------------------------------------------------
 
-import Plutarch (Term, pcon, phoistAcyclic, plam, (#))
-import Plutarch.Integer (PInteger)
-import Plutarch.Lift (pconstant, plift)
-import Plutarch.Maybe (PMaybe (..))
 import qualified PlutusTx.AssocMap as AssocMap
 
 --------------------------------------------------------------------------------

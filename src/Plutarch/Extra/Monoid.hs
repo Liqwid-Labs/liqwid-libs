@@ -12,23 +12,7 @@ module Plutarch.Extra.Monoid (
 
 import Control.Composition ((.*))
 import Data.Function (on)
-import GHC.Generics (Generic)
 import qualified Generics.SOP as SOP
-import Plutarch (
-    DerivePlutusType (DPTStrat),
-    PlutusType,
-    PlutusTypeNewtype,
-    S,
-    Term,
-    pcon,
-    plam,
-    pto,
-    type (:-->),
- )
-import Plutarch.Bool (PBool, PEq, (#&&))
-import Plutarch.Builtin (PIsData)
-import Plutarch.Lift (pconstant)
-import Plutarch.Show (PShow)
 import Plutarch.Unsafe (punsafeCoerce)
 
 -- | @since 1.3.0

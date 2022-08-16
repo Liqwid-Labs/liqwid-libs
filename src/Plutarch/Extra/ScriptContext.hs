@@ -25,20 +25,6 @@ module Plutarch.Extra.ScriptContext (
     pfindTxOutDatum,
 ) where
 
-import Data.Kind (Type)
-import Plutarch (
-    S,
-    Term,
-    pcon,
-    phoistAcyclic,
-    plam,
-    pmatch,
-    pto,
-    unTermCont,
-    (#),
-    (#$),
-    (:-->),
- )
 import Plutarch.Api.V1 (
     AmountGuarantees (NoGuarantees, NonZero, Positive),
     PCredential (PPubKeyCredential, PScriptCredential),
@@ -62,18 +48,10 @@ import Plutarch.Api.V2 (
     PTxOut (PTxOut),
     PTxOutRef,
  )
-import Plutarch.Bool (PBool, PPartialOrd ((#<)), pif, pnot, (#==))
-import Plutarch.Builtin (PAsData, PBuiltinList, PData, pdata, pfromData)
-import Plutarch.DataRepr (pdcons, pdnil, pfield)
 import Plutarch.Extra.AssetClass (PAssetClass, passetClassValueOf)
 import Plutarch.Extra.List (pfirstJust, plookupTuple)
 import Plutarch.Extra.Maybe (pisJust)
 import Plutarch.Extra.TermCont (pletC, pmatchC, ptryFromC)
-import Plutarch.Lift (pconstant)
-import Plutarch.List (pelem, pfilter, pfind, pfoldr)
-import Plutarch.Maybe (PMaybe (PJust, PNothing))
-import Plutarch.Trace (ptraceError)
-import Plutarch.TryFrom (PTryFrom)
 import Plutarch.Unsafe (punsafeCoerce)
 
 pownTxOutRef ::
