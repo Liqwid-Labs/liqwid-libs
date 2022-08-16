@@ -26,7 +26,7 @@ module Plutarch.Test.Unit (
 
 import Data.Tagged (Tagged (Tagged))
 import Data.Text (Text)
-import Plutarch.Api.V1 (PMintingPolicy, PValidator)
+import Plutarch.Api.V2 (PMintingPolicy, PValidator)
 import Plutarch.Builtin (pforgetData)
 import Plutarch.Evaluate (EvalError, evalScript)
 import Plutarch.Extra.Compile (mustCompile)
@@ -40,7 +40,7 @@ import Plutarch.Prelude (
     pconstantData,
     (#),
  )
-import PlutusLedgerApi.V1 (Script, ScriptContext)
+import PlutusLedgerApi.V2 (Script, ScriptContext)
 import PlutusTx.IsData.Class (ToData)
 import Test.Tasty (TestTree)
 import Test.Tasty.Providers (
