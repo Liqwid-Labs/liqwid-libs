@@ -85,9 +85,9 @@ module Plutarch.Context (
     C.flattenValue,
 ) where
 
-import qualified Plutarch.Context.Base as B
-import qualified Plutarch.Context.Check as C
-import qualified Plutarch.Context.Minting as M
-import qualified Plutarch.Context.Spending as S
-import qualified Plutarch.Context.SubBuilder as Sub
-import qualified Plutarch.Context.TxInfo as T
+import Plutarch.Context.Base qualified as B
+import Plutarch.Context.Check qualified as C
+import Plutarch.Context.Minting qualified as M
+import Plutarch.Context.Spending qualified as S
+import Plutarch.Context.SubBuilder qualified as Sub
+import Plutarch.Context.TxInfo qualified as T

@@ -7,7 +7,7 @@ import Plutarch.Context (
     withMinting,
  )
 import PlutusLedgerApi.V2 (singleton)
-import qualified Prettyprinter as P
+import Prettyprinter qualified as P
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
 

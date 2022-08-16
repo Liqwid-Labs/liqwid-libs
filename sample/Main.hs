@@ -8,8 +8,8 @@ import PlutusLedgerApi.V2 (
     singleton,
  )
 
-import qualified MintingBuilder (specs)
-import qualified SpendingBuilder (specs)
+import MintingBuilder qualified (specs)
+import SpendingBuilder qualified (specs)
 
 import Test.Tasty (defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))

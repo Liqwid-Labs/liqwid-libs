@@ -61,9 +61,9 @@ import PlutusLedgerApi.V2 (
     getPubKeyHash,
     getTxId,
  )
-import qualified PlutusTx.AssocMap as AssocMap (mapMaybe, toList)
+import PlutusTx.AssocMap qualified as AssocMap (mapMaybe, toList)
 import PlutusTx.Builtins (lengthOfByteString)
-import qualified Prettyprinter as P
+import Prettyprinter qualified as P
 
 {- | Possible errors from phase-1 checker
 
