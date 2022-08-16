@@ -20,7 +20,6 @@ import Data.Bifunctor (first)
 import Data.Proxy (Proxy (Proxy))
 import GHC.Generics (Generic)
 import GHC.TypeLits (KnownNat, Nat, natVal)
-import qualified Generics.SOP as SOP
 import Plutarch.Api.V1 (PValue)
 import Plutarch.Api.V2 (AmountGuarantees, KeyGuarantees)
 import Plutarch.Bool (PEq, POrd, PPartialOrd)
@@ -68,8 +67,6 @@ newtype PFixedDecimal (unit :: Nat) (s :: S)
         )
     deriving anyclass
         ( -- | @since 1.0.0
-          SOP.Generic
-        , -- | @since 1.0.0
           PlutusType
         , -- | @since 1.0.0
           PIsData

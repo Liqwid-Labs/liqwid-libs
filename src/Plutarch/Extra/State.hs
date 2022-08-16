@@ -16,8 +16,6 @@ module Plutarch.Extra.State (
 
 import Data.Kind (Type)
 import GHC.Generics (Generic)
-import Generics.SOP (Top)
-import qualified Generics.SOP as SOP
 import Plutarch (
     DerivePlutusType (..),
     PlutusType,
@@ -34,7 +32,7 @@ import Plutarch (
  )
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
 import Plutarch.Extra.Bind (PBind ((#>>=)))
-import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap))
+import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap), Plut)
 import Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Pair (PPair (PPair))
 import Plutarch.Unit (PUnit (PUnit))
@@ -47,9 +45,7 @@ newtype PState (s :: S -> Type) (a :: S -> Type) (s' :: S)
           Generic
         )
     deriving anyclass
-        ( -- | @since 1.4.0
-          SOP.Generic
-        , -- | @since 1.0.0
+        ( -- | @since 1.0.0
           PlutusType
         )
 
@@ -57,9 +53,9 @@ newtype PState (s :: S -> Type) (a :: S -> Type) (s' :: S)
 instance DerivePlutusType (PState s a) where
     type DPTStrat _ = PlutusTypeNewtype
 
--- | @since 1.0.0
+-- | @since 3.1.0
 instance PFunctor (PState s) where
-    type PSubcategory (PState s) = Top
+    type PSubcategory (PState s) = Plut
     pfmap = phoistAcyclic $
         plam $ \f state -> unTermCont $ do
             PState g <- pmatchC state

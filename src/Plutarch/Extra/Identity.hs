@@ -9,8 +9,6 @@ module Plutarch.Extra.Identity (
 
 import Data.Kind (Type)
 import GHC.Generics (Generic)
-import Generics.SOP (Top)
-import qualified Generics.SOP as SOP
 import Plutarch (
     DerivePlutusType (..),
     PlutusType,
@@ -33,7 +31,7 @@ import Plutarch.Extra.Comonad (
     PComonad (pextract),
     PExtend (pextend),
  )
-import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap))
+import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap), Plut)
 import Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Integer (PIntegral)
 import Plutarch.Num (PNum)
@@ -51,8 +49,6 @@ newtype PIdentity (a :: S -> Type) (s :: S)
         )
     deriving anyclass
         ( -- | @since 1.0.0
-          SOP.Generic
-        , -- | @since 1.0.0
           PlutusType
         )
 
@@ -81,9 +77,9 @@ deriving anyclass instance (PNum a) => PNum (PIdentity a)
 -- | @since 1.0.0
 deriving anyclass instance (PShow a) => PShow (PIdentity a)
 
--- | @since 1.0.0
+-- | @since 3.1.0
 instance PFunctor PIdentity where
-    type PSubcategory PIdentity = Top
+    type PSubcategory PIdentity = Plut
     pfmap = phoistAcyclic $
         plam $ \f t -> unTermCont $ do
             PIdentity t' <- pmatchC t

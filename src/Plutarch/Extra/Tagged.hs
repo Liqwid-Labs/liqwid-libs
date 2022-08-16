@@ -16,7 +16,6 @@ import Data.Bifunctor (first)
 import Data.Kind (Type)
 import Data.Tagged (Tagged (Tagged))
 import GHC.Generics (Generic)
-import Generics.SOP (Top)
 import Plutarch (
     DPTStrat,
     DerivePlutusType,
@@ -38,7 +37,7 @@ import Plutarch.Extra.Comonad (
     PComonad (pextract),
     PExtend (pextend),
  )
-import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap))
+import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap), Plut)
 import Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Extra.Traversable (
     PSemiTraversable (psemitraverse, psemitraverse_),
@@ -126,9 +125,9 @@ deriving anyclass instance (PNum underlying) => PNum (PTagged tag underlying)
 -- -- | @since 1.0.0
 deriving anyclass instance (PShow underlying) => PShow (PTagged tag underlying)
 
--- | @since 1.0.0
+-- | @since 3.1.0
 instance PFunctor (PTagged tag) where
-    type PSubcategory (PTagged tag) = Top
+    type PSubcategory (PTagged tag) = Plut
     pfmap = phoistAcyclic $
         plam $ \f t -> unTermCont $ do
             PTagged t' <- pmatchC t

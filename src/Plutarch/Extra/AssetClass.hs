@@ -12,8 +12,7 @@ module Plutarch.Extra.AssetClass (
 ) where
 
 import Data.Kind (Type)
-import qualified GHC.Generics as GHC
-import Generics.SOP (Generic)
+import GHC.Generics (Generic)
 import Plutarch (
     DerivePlutusType (..),
     PlutusType,
@@ -72,10 +71,6 @@ newtype PAssetClass (s :: S)
             )
         )
     deriving stock
-        ( -- | @since 0.1.0
-          GHC.Generic
-        )
-    deriving anyclass
         ( -- | @since 0.1.0
           Generic
         )

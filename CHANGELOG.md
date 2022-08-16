@@ -2,6 +2,21 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.1.0 -- 2022-08-17
+
+### Added
+
+* `Plut` as a replacement for `Top`. This is specialized for kind `S -> Type`.
+
+### Removed
+
+* Uses of `generics-sop` in every module except `Plutarch.Extra.IsData`.
+
+### Changed
+
+* `since`s added to `Plutarch.Extra.Record` functions.
+* `(.=)` no longer requires an `SListI` constraint.
+
 ## 3.0.1 -- 2022-08-15
 
 ### Added

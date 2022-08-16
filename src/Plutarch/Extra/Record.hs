@@ -16,13 +16,15 @@ import Data.Coerce (coerce)
 import Data.Kind (Type)
 import GHC.OverloadedLabels (IsLabel (..))
 import GHC.TypeLits (Symbol)
-import Generics.SOP (SListI)
-import Plutarch (PlutusType, S, Term, pcon)
+import Plutarch (PlutusType, S, Term, pcon, (#))
 import Plutarch.Builtin (PAsData)
-import Plutarch.DataRepr (PDataRecord (PDCons), PLabeledType (..), pdnil)
+import Plutarch.DataRepr (PDataRecord, PLabeledType ((:=)), pdcons, pdnil)
 import Prelude (($))
 
--- | Like 'Data.Proxy.Proxy' but local to this module.
+{- | Like 'Data.Proxy.Proxy' but local to this module.
+
+ @since 1.3.0
+-}
 data FieldName (sym :: Symbol) = FieldName
 
 {- | The use of two different 'Symbol's here allows unification to happen,
@@ -30,11 +32,20 @@ data FieldName (sym :: Symbol) = FieldName
 
      For example, @'mkRecord' (#foo .= 'pconstantData' (42 :: 'Integer'))@ gets
      the correct type. Namely, @'Term' s ('PDataRecord' '["foo" ':= 'PInteger'])@.
+
+     @since 1.3.0
 -}
-instance forall (sym :: Symbol) (sym' :: Symbol). sym ~ sym' => IsLabel sym (FieldName sym) where
+instance
+    forall (sym :: Symbol) (sym' :: Symbol).
+    (sym ~ sym') =>
+    IsLabel sym (FieldName sym)
+    where
     fromLabel = FieldName
 
--- | Turn a constant 'RecordMorphism' into a fully built 'PDataRecord'.
+{- | Turn a constant 'RecordMorphism' into a fully built 'PDataRecord'.
+
+ @since 1.3.0
+-}
 mkRecord :: forall (r :: [PLabeledType]) (s :: S). RecordMorphism s '[] r -> Term s (PDataRecord r)
 mkRecord f = f.runRecordMorphism pdnil
 
@@ -55,6 +66,8 @@ Is the same as
 @
 'pconstant' ('ScriptContext' '(Your TxInfo)' '(Your ScriptPurpose)')
 @
+
+@since 1.3.0
 -}
 mkRecordConstr ::
     forall (r :: [PLabeledType]) (s :: S) (pt :: S -> Type).
@@ -68,23 +81,29 @@ mkRecordConstr ::
     Term s pt
 mkRecordConstr ctr = pcon . ctr . mkRecord
 
--- | A morphism from one 'PDataRecord' to another, representing some sort of consing of data.
+{- | A morphism from one 'PDataRecord' to another, representing some sort of consing of data.
+
+ @since 1.3.0
+-}
 newtype RecordMorphism (s :: S) (as :: [PLabeledType]) (bs :: [PLabeledType]) = RecordMorphism
     { runRecordMorphism ::
         Term s (PDataRecord as) ->
         Term s (PDataRecord bs)
     }
 
+-- | @since 1.3.0
 instance Category (RecordMorphism s) where
     id = RecordMorphism id
     f . g = coerce $ f.runRecordMorphism . g.runRecordMorphism
 
 infix 7 .=
 
--- | Cons a labeled type as a 'RecordMorphism'.
+{- | Cons a labeled type as a 'RecordMorphism'.
+
+ @since 3.1.0
+-}
 (.=) ::
     forall (sym :: Symbol) (a :: S -> Type) (as :: [PLabeledType]) (s :: S).
-    (SListI as) =>
     -- | The field name. You can use @-XOverloadedLabels@ to enable the syntax:
     --   @#hello ~ 'FieldName' "hello"@
     FieldName sym ->
@@ -92,11 +111,14 @@ infix 7 .=
     --   type is @'PlutusCore.Data.Constr' 'Integer' ['PlutusCore.Data.Data']@.
     Term s (PAsData a) ->
     RecordMorphism s as ((sym ':= a) ': as)
-_ .= x = RecordMorphism $ pcon . PDCons x
+_ .= x = RecordMorphism $ \rest -> pdcons # x # rest
 
 infixr 6 .&
 
--- | Compose two 'RecordMorphism's.
+{- | Compose two 'RecordMorphism's.
+
+ @since 1.3.0
+-}
 (.&) ::
     forall
         (s :: S)

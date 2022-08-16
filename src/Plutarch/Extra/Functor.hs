@@ -3,6 +3,7 @@
 
 module Plutarch.Extra.Functor (
     -- * Type classes
+    Plut,
     PFunctor (..),
     PBifunctor (..),
 
@@ -15,7 +16,6 @@ module Plutarch.Extra.Functor (
 ) where
 
 import Data.Kind (Constraint, Type)
-import Generics.SOP (Top)
 import Plutarch (
     S,
     Term,
@@ -49,6 +49,19 @@ import Plutarch.List (PList, pmap)
 import Plutarch.Maybe (PMaybe (PJust, PNothing))
 import Plutarch.Pair (PPair (PPair))
 
+{- | Describes the entire category of Plutarch types, with arrows being Plutarch
+ functions. Since the typical name for the category of Haskell types is
+ @Hask@, we follow this trend with naming, choosing 'Plut'.
+
+ Use this for 'PSubcategory' if you want /any/ Plutarch type to be available.
+
+ @since 3.1.0
+-}
+class Plut (a :: S -> Type)
+
+-- | @since 3.1.0
+instance Plut a
+
 {- | Describes a Plutarch-level covariant endofunctor. However, unlike in
  Haskell, the endofunctor is defined over a subcategory of @Plut@, rather than
  all of it.
@@ -67,7 +80,7 @@ import Plutarch.Pair (PPair (PPair))
  * @'pfmap' '#' (f 'Plutarch.Extra.Category.#>>>' g)@ @=@ @('pfmap' '#' f)
  'Plutarch.Extra.Category.#>>>' ('pfmap' '#' g)@
 
- If @'PSubcategory' f@ is 'Top' (that is, @f@ is defined as an endofunctor on
+ If @'PSubcategory' f@ is 'Plut' (that is, @f@ is defined as an endofunctor on
  /all/ of @Plut@), the second law is a free theorem; however, in any other
  case, it may not be.
 
@@ -82,7 +95,7 @@ class PFunctor (f :: (S -> Type) -> S -> Type) where
     --
     -- Common choices for this are:
     --
-    -- * 'Top', which means \'parametric over anything of kind @'S' -> 'Type'@\'
+    -- * 'Plut', which means \'parametric over anything of kind @'S' -> 'Type'@\'
     -- * 'PIsData', which means \'parametric over things which are
     -- @Data@-encodable\'
     -- * 'PUnsafeLiftDecl', which means \'parametric over things that have a
@@ -105,9 +118,9 @@ class PFunctor (f :: (S -> Type) -> S -> Type) where
         Term s (a :--> f b :--> f a)
     pfconst = phoistAcyclic $ plam $ \x ys -> pfmap # (pconst # x) # ys
 
--- | @since 1.0.0
+-- | @since 3.1.0
 instance PFunctor PMaybe where
-    type PSubcategory PMaybe = Top
+    type PSubcategory PMaybe = Plut
     pfmap = phoistAcyclic $
         plam $ \f t -> unTermCont $ do
             t' <- pmatchC t
@@ -128,9 +141,9 @@ instance PFunctor PMaybeData where
                     res <- pletC (f # x)
                     pure . pcon . PDJust $ pdcons # pdata res # pdnil
 
--- | @since 1.0.0
+-- | @since 3.1.0
 instance PFunctor PList where
-    type PSubcategory PList = Top
+    type PSubcategory PList = Plut
     pfmap = phoistAcyclic $ plam $ \f t -> pmap # f # t
 
 -- | @since 1.0.0
@@ -143,14 +156,14 @@ instance forall (s :: KeyGuarantees) (k :: S -> Type). (PIsData k) => PFunctor (
     type PSubcategory (PMap s k) = PIsData
     pfmap = psecond
 
--- | @since 1.0.0
+-- | @since 3.1.0
 instance PFunctor (PPair a) where
-    type PSubcategory (PPair a) = Top
+    type PSubcategory (PPair a) = Plut
     pfmap = psecond
 
--- | @since 1.0.0
+-- | @since 3.1.0
 instance PFunctor (PEither e) where
-    type PSubcategory (PEither e) = Top
+    type PSubcategory (PEither e) = Plut
     pfmap = psecond
 
 {- | Infix, 'Term'-lifted version of 'pfconst'.
@@ -243,7 +256,7 @@ pvoid t = pfconst # pboring # t
 
  Furthermore, @'PSubcategoryLeft f' ~ 'PSubcategoryRight' f@ should hold; this
  may be required in the future. If both @'PSubcategoryLeft' f@ and
- @'PSubcategoryRight' f@ are 'Top', the second law is a free theorem; however,
+ @'PSubcategoryRight' f@ are 'Plut', the second law is a free theorem; however,
  this does not hold in general.
 
  If you define 'pfirst' and 'psecond', the following must also hold:
@@ -311,19 +324,19 @@ class PBifunctor (f :: (S -> Type) -> (S -> Type) -> S -> Type) where
         Term s ((b :--> d) :--> f a b :--> f a d)
     psecond = phoistAcyclic $ plam $ \g t -> pbimap # pidentity # g # t
 
--- | @since 1.0.0
+-- | @since 3.1.0
 instance PBifunctor PPair where
-    type PSubcategoryLeft PPair = Top
-    type PSubcategoryRight PPair = Top
+    type PSubcategoryLeft PPair = Plut
+    type PSubcategoryRight PPair = Plut
     pbimap = phoistAcyclic $
         plam $ \f g t -> unTermCont $ do
             PPair x y <- pmatchC t
             pure . pcon . PPair (f # x) $ g # y
 
--- | @since 1.0.0
+-- | @since 3.1.0
 instance PBifunctor PEither where
-    type PSubcategoryLeft PEither = Top
-    type PSubcategoryRight PEither = Top
+    type PSubcategoryLeft PEither = Plut
+    type PSubcategoryRight PEither = Plut
     pbimap = phoistAcyclic $
         plam $ \f g t -> unTermCont $ do
             t' <- pmatchC t
