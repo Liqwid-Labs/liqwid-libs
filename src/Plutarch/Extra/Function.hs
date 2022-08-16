@@ -5,6 +5,9 @@ module Plutarch.Extra.Function (
     pon,
     pbuiltinUncurry,
     pflip,
+    (#.*),
+    (#.**),
+    (#.***),
 ) where
 
 -- | @since 1.0.0
@@ -64,3 +67,51 @@ pflip ::
         s
         ((a :--> b :--> c) :--> b :--> a :--> c)
 pflip = phoistAcyclic $ plam $ \f y x -> f # x # y
+
+infixr 8 #.*
+
+-- | @since 3.0.3
+(#.*) ::
+    forall
+        (d :: S -> Type)
+        (c :: S -> Type)
+        (b :: S -> Type)
+        (a :: S -> Type)
+        (s :: S).
+    Term s (c :--> d) ->
+    Term s (a :--> b :--> c) ->
+    Term s (a :--> b :--> d)
+(#.*) f g = plam $ \x y -> f #$ g # x # y
+
+infixr 8 #.**
+
+-- | @since 3.0.2
+(#.**) ::
+    forall
+        (e :: S -> Type)
+        (d :: S -> Type)
+        (c :: S -> Type)
+        (b :: S -> Type)
+        (a :: S -> Type)
+        (s :: S).
+    Term s (d :--> e) ->
+    Term s (a :--> b :--> c :--> d) ->
+    Term s (a :--> b :--> c :--> e)
+(#.**) f g = plam $ \x y z -> f #$ g # x # y # z
+
+infixr 8 #.***
+
+-- | @since 3.0.2
+(#.***) ::
+    forall
+        (f :: S -> Type)
+        (e :: S -> Type)
+        (d :: S -> Type)
+        (c :: S -> Type)
+        (b :: S -> Type)
+        (a :: S -> Type)
+        (s :: S).
+    Term s (e :--> f) ->
+    Term s (a :--> b :--> c :--> d :--> e) ->
+    Term s (a :--> b :--> c :--> d :--> f)
+(#.***) f g = plam $ \x y z a -> f #$ g # x # y # z # a
