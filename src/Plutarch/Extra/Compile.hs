@@ -4,7 +4,7 @@ module Plutarch.Extra.Compile (mustCompile) where
 
 import qualified Data.Text as T
 import Plutarch (
-    Config (Config),
+    Config (Config, tracingMode),
     TracingMode (DetTracing),
     compile,
  )

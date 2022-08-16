@@ -1,6 +1,5 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE RankNTypes #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {- | Pre-compiling Plutarch functions and applying them.
 
@@ -45,12 +44,7 @@ import Plutarch.Internal (
     TermResult (TermResult),
  )
 import Plutarch.Lift (
-    LiftError (
-        LiftError_CompilationError,
-        LiftError_EvalError,
-        LiftError_FromRepr,
-        LiftError_KnownTypeError
-    ),
+    LiftError,
     PUnsafeLiftDecl (PLifted),
     plift,
     plift',
