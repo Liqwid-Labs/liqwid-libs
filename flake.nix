@@ -16,7 +16,7 @@
 
     # Plutarch and its friends
     plutarch = {
-      url = "github:Plutonomicon/plutarch-plutus?ref=staging";
+      url = "github:Plutonomicon/plutarch-plutus";
 
       inputs.emanote.follows =
         "plutarch/haskell-nix/nixpkgs-unstable";
@@ -27,7 +27,7 @@
     plutarch-numeric.url =
       "github:Liqwid-Labs/plutarch-numeric?ref=main";
     liqwid-plutarch-extra.url =
-      "github:Liqwid-Labs/liqwid-plutarch-extra?ref=main";
+      "github:Liqwid-Labs/liqwid-plutarch-extra?ref=update-flake";
 
     liqwid-nix.url = "github:Liqwid-Labs/liqwid-nix";
   };
