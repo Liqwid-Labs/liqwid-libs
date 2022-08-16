@@ -61,7 +61,7 @@ ghci: requires_nix_shell
 FORMAT_SOURCES := $(shell find -name '*.hs' -not -path './dist-*/*')
 
 # Extensions we need to tell fourmolu about
-FORMAT_EXTENSIONS := -o -XTemplateHaskell -o -XTypeApplications -o -XPatternSynonyms
+FORMAT_EXTENSIONS := -o -XTemplateHaskell -o -XTypeApplications -o -XPatternSynonyms -o -XImportQualifiedPost
 
 # Run fourmolu formatter
 format: requires_nix_shell
