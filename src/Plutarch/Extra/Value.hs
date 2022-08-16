@@ -15,18 +15,6 @@ module Plutarch.Extra.Value (
     phasOnlyOneTokenOfCurrencySymbol,
 ) where
 
-import Plutarch (
-    S,
-    Term,
-    pcon,
-    phoistAcyclic,
-    plam,
-    pto,
-    unTermCont,
-    (#),
-    (#$),
-    type (:-->),
- )
 import Plutarch.Api.V1 (
     PCurrencySymbol,
     PMap (PMap),
@@ -34,22 +22,16 @@ import Plutarch.Api.V1 (
     PValue (PValue),
  )
 import Plutarch.Api.V2 (
-    AmountGuarantees (..),
+    AmountGuarantees (NoGuarantees, Positive),
     KeyGuarantees,
  )
-import Plutarch.Bool (PBool, (#&&), (#<=), (#==))
-import Plutarch.Builtin (pdata, pfromData, ppairDataBuiltin, psndBuiltin)
-import Plutarch.DataRepr (pfield)
+import Plutarch.Builtin (ppairDataBuiltin)
 import Plutarch.Extra.AssetClass (PAssetClass)
 import qualified Plutarch.Extra.List
 import Plutarch.Extra.Map (plookup)
 import Plutarch.Extra.Maybe (pexpectJustC)
 import Plutarch.Extra.TermCont (pletC, pmatchC)
-import Plutarch.Integer (PInteger)
-import Plutarch.Lift (pconstant)
-import Plutarch.List (pfoldr, plength, psingleton)
-import Plutarch.Maybe (PMaybe (PJust, PNothing))
-import PlutusLedgerApi.V1.Value (AssetClass (..))
+import PlutusLedgerApi.V1.Value (AssetClass (AssetClass))
 
 {- | Create a `PValue` that only contains specific amount tokens of the given symbol and name.
 

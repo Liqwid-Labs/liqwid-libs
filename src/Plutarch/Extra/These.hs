@@ -17,18 +17,7 @@ module Plutarch.Extra.These (
     fromPDThese,
 ) where
 
-import Data.Kind (Type)
-import GHC.Generics (Generic)
 import Generics.SOP (Top)
-import Plutarch.Bool (PBool (PFalse, PTrue), PEq, POrd, PPartialOrd (..))
-import Plutarch.Builtin (PAsData, PIsData, pdata, pfromData)
-import Plutarch.DataRepr (
-    PDataRecord,
-    PLabeledType ((:=)),
-    pdcons,
-    pdnil,
-    pfield,
- )
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
 import Plutarch.Extra.Bool (pcompare)
 import Plutarch.Extra.Boring (pboring)
@@ -38,22 +27,6 @@ import Plutarch.Extra.Functor (
  )
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.Extra.Traversable (PTraversable (ptraverse, ptraverse_))
-import Plutarch.Prelude (
-    DPTStrat,
-    DerivePlutusType,
-    PlutusType,
-    PlutusTypeData,
-    PlutusTypeScott,
-    S,
-    Term,
-    pcon,
-    phoistAcyclic,
-    plam,
-    unTermCont,
-    (#),
-    type (:-->),
- )
-import Plutarch.Show (PShow)
 
 {- | A data type which contains an @a@, a @b@, or both. This uses a
  Scott-encoded representation.

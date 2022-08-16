@@ -8,14 +8,13 @@ import Plutarch (
     TracingMode (DetTracing),
     compile,
  )
-import Plutarch.Prelude
 import PlutusLedgerApi.V2 (Script)
 
 {- | Compile a ClosedTerm, throwing an error if unsuccessful.
 
      @since 2.0.0
 -}
-mustCompile :: ClosedTerm a -> Script
+mustCompile :: forall (a :: S -> Type). ClosedTerm a -> Script
 mustCompile t = case compile conf t of
     Left err -> error $ unwords ["Plutarch compilation error:", T.unpack err]
     Right s -> s

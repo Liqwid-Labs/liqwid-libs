@@ -44,10 +44,8 @@ import Plutarch.Internal (
 import Plutarch.Lift (
     LiftError,
     PUnsafeLiftDecl (PLifted),
-    plift,
     plift',
  )
-import Plutarch.Prelude (PLift, S, Type, (:-->))
 import PlutusLedgerApi.V1.Scripts (Script (Script))
 import UntypedPlutusCore (Program (Program, _progAnn, _progTerm, _progVer))
 import qualified UntypedPlutusCore as UPLC

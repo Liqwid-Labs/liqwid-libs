@@ -6,7 +6,6 @@
 
 module Plutarch.Extra.Field (pletAll, pletAllC) where
 
-import Data.Kind (Type)
 import GHC.TypeLits (Symbol)
 import Plutarch.DataRepr.Internal.Field (
     BindFields,
@@ -15,9 +14,7 @@ import Plutarch.DataRepr.Internal.Field (
     HRec,
     HRecOf,
     PDataFields (PFields),
-    pletFields,
  )
-import Plutarch.Prelude (PLabeledType ((:=)), S, Term, TermCont, tcont)
 
 type family BindAll (ps :: [PLabeledType]) :: [Symbol] where
     BindAll '[] = '[]

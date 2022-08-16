@@ -45,8 +45,11 @@ import qualified Generics.SOP as SOP
 import Plutarch.Builtin (pasInt)
 import Plutarch.Extra.TermCont (pletC)
 import Plutarch.Internal.Generic (PGeneric)
-import Plutarch.Internal.PlutusType (DerivePlutusType (..), PlutusTypeStrat (..))
-import Plutarch.Lift (PConstantDecl (..))
+import Plutarch.Internal.PlutusType (
+    DerivePlutusType (DPTStrat),
+    PlutusTypeStrat (DerivedPInner, PlutusTypeStratConstraint, derivedPCon, derivedPMatch),
+ )
+import Plutarch.Lift (PConstantDecl (PConstantRepr, PConstanted, pconstantFromRepr, pconstantToRepr))
 import Plutarch.Prelude (
     PData,
     PEq ((#==)),
@@ -59,9 +62,37 @@ import Plutarch.Prelude (
     unTermCont,
     (#),
  )
-import PlutusLedgerApi.V1 (BuiltinData (BuiltinData), UnsafeFromData (unsafeFromBuiltinData))
-import PlutusTx (Data (List), FromData (fromBuiltinData), ToData (toBuiltinData), fromData, toData)
-import Prelude
+import PlutusLedgerApi.V1 (
+    BuiltinData (BuiltinData),
+    UnsafeFromData (unsafeFromBuiltinData),
+ )
+import PlutusTx (
+    Data (List),
+    FromData (fromBuiltinData),
+    ToData (toBuiltinData),
+    fromData,
+    toData,
+ )
+import Prelude (
+    Bounded,
+    Enum,
+    Integer,
+    Maybe (Just, Nothing),
+    enumFrom,
+    error,
+    fmap,
+    foldr,
+    fromEnum,
+    fromInteger,
+    maxBound,
+    minBound,
+    pure,
+    toEnum,
+    toInteger,
+    ($),
+    (.),
+    (<$>),
+ )
 
 --------------------------------------------------------------------------------
 -- ProductIsData

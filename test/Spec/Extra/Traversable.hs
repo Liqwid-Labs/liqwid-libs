@@ -1,16 +1,6 @@
 module Spec.Extra.Traversable (tests) where
 
-import Plutarch (Term, pcon, plam, (#), (#$))
 import Plutarch.Extra.Traversable (PTraversable (ptraverse))
-import Plutarch.Prelude (
-    PBool,
-    PBuiltinList,
-    PEq ((#==)),
-    PInteger,
-    PListLike (pcons, pnil),
-    PMaybe (PJust),
-    plift,
- )
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (assertBool, testCase)
 

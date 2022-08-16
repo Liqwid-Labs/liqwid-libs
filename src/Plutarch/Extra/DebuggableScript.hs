@@ -18,7 +18,6 @@ import Control.DeepSeq (NFData)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text as Text
-import GHC.Generics (Generic)
 import Plutarch (
     Config (Config, tracingMode),
     TracingMode (DetTracing, NoTracing),
@@ -26,7 +25,6 @@ import Plutarch (
  )
 import Plutarch.Evaluate (EvalError, evalScript)
 import Plutarch.Extra.Compile (mustCompile)
-import Plutarch.Prelude (S, Term, Type)
 import PlutusLedgerApi.V1 (ExBudget, Script)
 import UntypedPlutusCore.Evaluation.Machine.Cek (
     CekUserError (CekEvaluationFailure, CekOutOfExError),
