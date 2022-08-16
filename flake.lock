@@ -3355,16 +3355,15 @@
         "plutarch-quickcheck": "plutarch-quickcheck"
       },
       "locked": {
-        "lastModified": 1660673733,
+        "lastModified": 1660674410,
         "narHash": "sha256-oUy0HVSBdgQB4ojeV3MXLbJjO7tOlphB7Cy51FMGRzM=",
         "owner": "Liqwid-Labs",
         "repo": "liqwid-plutarch-extra",
-        "rev": "13ae53fd2c2ebc934940c1c334fa79732a21929e",
+        "rev": "e1be2e5f5405dbc113c7e5fa1afb8fce27d128c6",
         "type": "github"
       },
       "original": {
         "owner": "Liqwid-Labs",
-        "ref": "update-flake",
         "repo": "liqwid-plutarch-extra",
         "type": "github"
       }

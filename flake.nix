@@ -27,7 +27,7 @@
     plutarch-numeric.url =
       "github:Liqwid-Labs/plutarch-numeric?ref=main";
     liqwid-plutarch-extra.url =
-      "github:Liqwid-Labs/liqwid-plutarch-extra?ref=update-flake";
+      "github:Liqwid-Labs/liqwid-plutarch-extra";
 
     liqwid-nix.url = "github:Liqwid-Labs/liqwid-nix";
   };
