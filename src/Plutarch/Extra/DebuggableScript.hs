@@ -4,6 +4,7 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE RankNTypes #-}
 
+-- | @since 3.0.2
 module Plutarch.Extra.DebuggableScript (
     DebuggableScript (..),
     checkedCompileD,
@@ -34,7 +35,9 @@ import UntypedPlutusCore.Evaluation.Machine.Cek (
     EvaluationError (InternalEvaluationError, UserEvaluationError),
  )
 
--- | A 'Script' with a debug fallback that has tracing turned on.
+{- | A 'Script' with a debug fallback that has tracing turned on.
+ @since 3.0.2
+-}
 data DebuggableScript = DebuggableScript {script :: Script, debugScript :: Script}
     deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
@@ -43,6 +46,8 @@ data DebuggableScript = DebuggableScript {script :: Script, debugScript :: Scrip
 
  You pay for the compilation of the debug script, even if it's not needed down
  the line. You most likely want 'mustCompileD' instead.
+
+  @since 3.0.2
 -}
 checkedCompileD ::
     forall (a :: S -> Type).
@@ -53,7 +58,7 @@ checkedCompileD term = do
     debugScript <- compile Config{tracingMode = DetTracing} term
     pure $ DebuggableScript{script, debugScript}
 
--- | Like 'mustCompile', but with tracing turned on.
+-- Like 'mustCompile', but with tracing turned on.
 mustCompileTracing ::
     forall (a :: S -> Type).
     (forall (s :: S). Term s a) ->
@@ -66,6 +71,8 @@ mustCompileTracing term =
 {- | Compilation errors cause exceptions, but deferred by lazyness.
 
  You don't pay for compilation of the debug script if it's not needed!
+
+ @since 3.0.2
 -}
 mustCompileD ::
     forall (a :: S -> Type).
@@ -79,6 +86,8 @@ mustCompileD term =
 
 {- | Final evaluation of a 'DebuggableScript' to a 'Script', with errors resulting in
  exceptions.
+
+ @since 3.0.2
 -}
 mustFinalEvalDebuggableScript :: DebuggableScript -> Script
 mustFinalEvalDebuggableScript s =
@@ -99,6 +108,8 @@ mustFinalEvalDebuggableScript s =
  Falls back to the debug script if a 'UserEvaluationError' occurs. Verifies that
  the debug script results in a 'UserEvaluationError' too, throws an exception
  otherwise.
+
+ @since 3.0.2
 -}
 finalEvalDebuggableScript :: DebuggableScript -> (Either EvalError Script, ExBudget, [Text])
 finalEvalDebuggableScript DebuggableScript{script, debugScript} =
@@ -160,6 +171,8 @@ finalEvalDebuggableScript DebuggableScript{script, debugScript} =
 
  This is mostly useful for pre-evaluating arguments to a thing being
  tested/benchmarked.
+
+ @since 3.0.2
 -}
 mustEvalScript :: Script -> Script
 mustEvalScript s =
@@ -182,6 +195,8 @@ mustEvalScript s =
  tested/benchmarked.
  Lazyness defers the evaluation (and exception) until it's needed, so the debug
  script causes no unneccessary work.
+
+ @since 3.0.2
 -}
 mustEvalD :: DebuggableScript -> DebuggableScript
 -- - If something else tries to use 'script' and it fails, we must fall

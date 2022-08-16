@@ -2,11 +2,11 @@
 {-# LANGUAGE RankNTypes #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
-{-# HLINT ignore "Use camelCase" #-}
-
 {- | Pre-compiling Plutarch functions and applying them.
 
  Speeds up benchmarking and testing.
+
+ @since 3.0.2
 -}
 module Plutarch.Extra.Precompile (
     applyScript,
@@ -25,7 +25,6 @@ module Plutarch.Extra.Precompile (
     (##~),
     (###),
     (###~),
-    LiftError (..),
     pliftCompiled',
     pliftCompiled,
 ) where
@@ -40,7 +39,11 @@ import Plutarch.Extra.DebuggableScript (
     mustFinalEvalDebuggableScript,
     script,
  )
-import Plutarch.Internal (RawTerm (RCompiled), Term (..), TermResult (TermResult))
+import Plutarch.Internal (
+    RawTerm (RCompiled),
+    Term (Term),
+    TermResult (TermResult),
+ )
 import Plutarch.Lift (
     LiftError (
         LiftError_CompilationError,
@@ -58,7 +61,9 @@ import UntypedPlutusCore (Program (Program, _progAnn, _progTerm, _progVer))
 import qualified UntypedPlutusCore as UPLC
 import qualified UntypedPlutusCore.Core.Type as UplcType
 
--- | Apply a function to an argument on the compiled 'Script' level.
+{- | Apply a function to an argument on the compiled 'Script' level.
+ @since 3.0.2
+-}
 applyScript :: Script -> Script -> Script
 applyScript f a =
     if fVer /= aVer
@@ -89,6 +94,8 @@ newtype CompiledTerm (a :: S -> Type) = CompiledTerm DebuggableScript
  Beware, the Script inside contains everything it needs. You can end up with
  multiple copies of the same helper function through compiled terms (including
  RHS terms compiled by '##' and '##~').
+
+ @since 3.0.2
 -}
 compile' ::
     forall (a :: S -> Type).
@@ -96,10 +103,13 @@ compile' ::
     CompiledTerm a
 compile' t = CompiledTerm $ mustCompileD t
 
--- | Convert a 'CompiledTerm' to a 'Script'.
+{- | Convert a 'CompiledTerm' to a 'Script'.
+ @since 3.0.2
+-}
 toDebuggableScript :: forall (a :: S -> Type). CompiledTerm a -> DebuggableScript
 toDebuggableScript (CompiledTerm dscript) = dscript
 
+-- | @since 3.0.2
 toEvaluatedTerm :: CompiledTerm a -> (forall (s :: S). Term s a)
 toEvaluatedTerm ct =
     let Script prog = mustFinalEvalDebuggableScript (toDebuggableScript ct)
@@ -110,6 +120,8 @@ toEvaluatedTerm ct =
  Evaluates the argument before applying. You want this for benchmarking the
  compiled function. Helps to avoid tainting the measurement by input
  conversions.
+
+ @since 3.0.2
 -}
 applyCompiledTerm ::
     forall (a :: S -> Type) (b :: S -> Type).
@@ -124,6 +136,8 @@ applyCompiledTerm (CompiledTerm sf) a =
  Does NOT evaluate the argument before applying. Using this seems to save very
  little overhead, not worth it for efficiency. Only use it to make argument
  evaluation count for benchmarking.
+
+ @since 3.0.2
 -}
 applyCompiledTerm' ::
     forall (a :: S -> Type) (b :: S -> Type).
@@ -138,6 +152,8 @@ applyCompiledTerm' (CompiledTerm sf) a =
  Evaluates the argument before applying. You want this for benchmarking the
  compiled function. Helps to avoid tainting the measurement by input
  conversions.
+
+ @since 3.0.2
 -}
 applyCompiledTerm2 ::
     forall (a :: S -> Type) (b :: S -> Type).
@@ -152,6 +168,8 @@ applyCompiledTerm2 (CompiledTerm sf) (CompiledTerm sa) =
  Does NOT evaluate the argument before applying. Using this seems to save very
  little overhead, not worth it for efficiency. Only use it to make argument
  evaluation count for benchmarking.
+
+ @since 3.0.2
 -}
 applyCompiledTerm2' ::
     forall (a :: S -> Type) (b :: S -> Type).
@@ -161,7 +179,9 @@ applyCompiledTerm2' ::
 applyCompiledTerm2' (CompiledTerm sf) (CompiledTerm sa) =
     CompiledTerm $ applyDebuggableScript sf sa
 
--- | Alias for 'applyCompiledTerm'.
+{- | Alias for 'applyCompiledTerm'.
+ @since 3.0.2
+-}
 (##) ::
     forall (a :: S -> Type) (b :: S -> Type).
     CompiledTerm (a :--> b) ->
@@ -171,7 +191,9 @@ applyCompiledTerm2' (CompiledTerm sf) (CompiledTerm sa) =
 
 infixl 8 ##
 
--- | Alias for 'applyCompiledTerm\''.
+{- | Alias for 'applyCompiledTerm\''.
+ @since 3.0.2
+-}
 (##~) ::
     forall (a :: S -> Type) (b :: S -> Type).
     CompiledTerm (a :--> b) ->
@@ -181,7 +203,9 @@ infixl 8 ##
 
 infixl 8 ##~
 
--- | Alias for 'applyCompiledTerm2'.
+{- | Alias for 'applyCompiledTerm2'.
+ @since 3.0.2
+-}
 (###) ::
     forall (a :: S -> Type) (b :: S -> Type).
     CompiledTerm (a :--> b) ->
@@ -191,7 +215,9 @@ infixl 8 ##~
 
 infixl 7 ###
 
--- | Alias for 'applyCompiledTerm2\''.
+{- | Alias for 'applyCompiledTerm2\''.
+ @since 3.0.2
+-}
 (###~) ::
     forall (a :: S -> Type) (b :: S -> Type).
     CompiledTerm (a :--> b) ->
@@ -204,12 +230,16 @@ infixl 7 ###~
 {- | Convert a 'CompiledTerm' to the associated Haskell value. Fail otherwise.
 
  This will fully evaluate the compiled term, and convert the resulting value.
+
+ @since 3.0.2
 -}
 pliftCompiled' ::
     forall p. PUnsafeLiftDecl p => CompiledTerm p -> Either LiftError (PLifted p)
 pliftCompiled' ct = plift' def $ toEvaluatedTerm ct
 
--- | Like `pliftCompiled'` but throws on failure.
+{- | Like `pliftCompiled'` but throws on failure.
+ @since 3.0.2
+-}
 pliftCompiled ::
     forall p.
     (HasCallStack, PLift p) =>
