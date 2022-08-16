@@ -28,7 +28,6 @@ import qualified Plutarch.Numeric.Additive as A (
     AdditiveMonoid (zero),
     AdditiveSemigroup ((+)),
  )
-import Plutarch.Show (PShow)
 import Plutarch.TryFrom (PTryFrom (PTryFromExcess, ptryFrom'))
 import Plutarch.Unsafe (punsafeCoerce)
 

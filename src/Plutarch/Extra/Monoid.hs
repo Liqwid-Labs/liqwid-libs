@@ -13,7 +13,6 @@ module Plutarch.Extra.Monoid (
 import Control.Composition ((.*))
 import Data.Function (on)
 import qualified Generics.SOP as SOP
-import Plutarch.Show (PShow)
 import Plutarch.Unsafe (punsafeCoerce)
 
 -- | @since 1.3.0

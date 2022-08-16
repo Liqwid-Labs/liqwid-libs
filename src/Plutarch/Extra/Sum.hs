@@ -16,7 +16,6 @@ import Plutarch.Extra.Comonad (PComonad (pextract), PExtend (pextend))
 import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap))
 import Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Num (PNum)
-import Plutarch.Show (PShow)
 
 {- | A \'numerical\' value which is monoidal over its addition.
 

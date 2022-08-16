@@ -27,7 +27,6 @@ import Plutarch.Extra.Functor (
  )
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.Extra.Traversable (PTraversable (ptraverse, ptraverse_))
-import Plutarch.Show (PShow)
 
 {- | A data type which contains an @a@, a @b@, or both. This uses a
  Scott-encoded representation.

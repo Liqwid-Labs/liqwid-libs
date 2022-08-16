@@ -23,7 +23,6 @@ import Plutarch.Extra.Functor (
  )
 import Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Num (PNum)
-import Plutarch.Show (PShow)
 import Plutarch.Unsafe (punsafeCoerce)
 
 {- | A value of type @a@ pretending to a be a value of type @b@.

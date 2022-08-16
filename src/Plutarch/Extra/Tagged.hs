@@ -32,7 +32,6 @@ import Plutarch.Lift (
     PUnsafeLiftDecl (PLifted),
  )
 import Plutarch.Num (PNum)
-import Plutarch.Show (PShow)
 import Plutarch.TryFrom (PTryFrom (PTryFromExcess, ptryFrom'))
 import Plutarch.Unsafe (punsafeCoerce)
 import qualified PlutusTx

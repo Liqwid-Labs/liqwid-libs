@@ -19,7 +19,6 @@ import Plutarch.Extra.Comonad (
 import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap))
 import Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Num (PNum)
-import Plutarch.Show (PShow)
 
 {- | Just a value of type @a@.
 
