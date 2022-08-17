@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               liqwid-plutarch-extra
-version:            3.0.1
+version:            3.1.0
 synopsis:           A collection of Plutarch extras from Liqwid Labs
 description:        Several useful data types and functions for Plutarch.
 homepage:           https://github.com/Liqwid-Labs/liqwid-plutarch-extra
@@ -46,6 +46,8 @@ common common-lang
     BinaryLiterals
     ConstraintKinds
     DataKinds
+    DeriveAnyClass
+    DeriveGeneric
     DeriveTraversable
     DerivingVia
     EmptyCase
@@ -59,10 +61,10 @@ common common-lang
     MultiParamTypeClasses
     NumericUnderscores
     OverloadedStrings
-    PackageImports
     ScopedTypeVariables
     StandaloneDeriving
     TupleSections
+    TypeFamilies
     TypeOperators
 
   default-language:   Haskell2010

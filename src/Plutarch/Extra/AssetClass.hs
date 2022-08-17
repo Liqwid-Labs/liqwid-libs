@@ -1,7 +1,4 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Plutarch.Extra.AssetClass (
@@ -11,8 +8,6 @@ module Plutarch.Extra.AssetClass (
     pvalueOf,
 ) where
 
-import qualified GHC.Generics as GHC (Generic)
-import qualified Generics.SOP as SOP (Generic)
 import Plutarch.Api.V1 (
     PCurrencySymbol,
     PTokenName,
@@ -39,11 +34,7 @@ newtype PAssetClass (s :: S)
         )
     deriving stock
         ( -- | @since 0.1.0
-          GHC.Generic
-        )
-    deriving anyclass
-        ( -- | @since 0.1.0
-          SOP.Generic
+          Generic
         )
     deriving anyclass
         ( -- | @since 0.1.0
@@ -52,14 +43,13 @@ newtype PAssetClass (s :: S)
           PIsData
         , -- | @since 0.1.0
           PDataFields
+        , -- | @since 1.0.0
+          PEq
         )
 
 -- | @since 1.4.0
 instance DerivePlutusType PAssetClass where
     type DPTStrat _ = PlutusTypeData
-
--- | @since 1.0.0
-deriving anyclass instance (PEq PAssetClass)
 
 -- | @since 1.0.0
 passetClass ::

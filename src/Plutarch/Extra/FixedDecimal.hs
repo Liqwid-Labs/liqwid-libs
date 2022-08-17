@@ -1,8 +1,5 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -19,8 +16,8 @@ import Control.Composition (on, (.*))
 import Data.Bifunctor (first)
 import Data.Proxy (Proxy (Proxy))
 import GHC.TypeLits (KnownNat, Nat, natVal)
-import qualified Generics.SOP as SOP
-import Plutarch.Api.V1 (AmountGuarantees, KeyGuarantees, PValue)
+import Plutarch.Api.V1 (PValue)
+import Plutarch.Api.V2 (AmountGuarantees, KeyGuarantees)
 import Plutarch.Extra.Function (pflip)
 import Plutarch.Extra.Value (psingletonValue)
 import Plutarch.Num (PNum (pfromInteger, (#*)))
@@ -44,8 +41,6 @@ newtype PFixedDecimal (unit :: Nat) (s :: S)
         )
     deriving anyclass
         ( -- | @since 1.0.0
-          SOP.Generic
-        , -- | @since 1.0.0
           PlutusType
         , -- | @since 1.0.0
           PIsData

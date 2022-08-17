@@ -1,19 +1,14 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Plutarch.Extra.Sum (
     PSum (..),
 ) where
 
-import Generics.SOP (Top)
-import qualified Generics.SOP as SOP
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
 import Plutarch.Extra.Boring (PBoring (pboring))
 import Plutarch.Extra.Comonad (PComonad (pextract), PExtend (pextend))
-import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap))
+import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap), Plut)
 import Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Num (PNum)
 
@@ -29,8 +24,6 @@ newtype PSum (a :: S -> Type) (s :: S)
         )
     deriving anyclass
         ( -- | @since 1.0.0
-          SOP.Generic
-        , -- | @since 1.0.0
           PlutusType
         )
 
@@ -76,9 +69,9 @@ instance
 -- | @since 1.0.0
 deriving anyclass instance (PShow a) => PShow (PSum a)
 
--- | @since 1.0.0
+-- | @since 3.1.0
 instance PFunctor PSum where
-    type PSubcategory PSum = Top
+    type PSubcategory PSum = Plut
     pfmap = phoistAcyclic $
         plam $ \f t -> unTermCont $ do
             PSum t' <- pmatchC t
