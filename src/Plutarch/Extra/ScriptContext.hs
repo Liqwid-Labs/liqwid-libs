@@ -22,15 +22,22 @@ module Plutarch.Extra.ScriptContext (
     pisScriptAddress,
     pisPubKey,
     pfindOutputsToAddress,
-    pfindTxOutDatum,
+    pfromPDatum,
+    presolveOutputDatum,
+    ptryFromOutputDatum,
+    pfromOutputDatum,
+    pfromDatumHash,
+    pfromInlineDatum,
 ) where
 
 import Plutarch.Api.V1 (
     AmountGuarantees (NoGuarantees, NonZero, Positive),
     PCredential (PPubKeyCredential, PScriptCredential),
+    PMap,
     PValidatorHash,
     PValue,
  )
+import qualified Plutarch.Api.V1.AssocMap as AssocMap
 import Plutarch.Api.V2 (
     KeyGuarantees (Sorted, Unsorted),
     PAddress (PAddress),
@@ -42,16 +49,17 @@ import Plutarch.Api.V2 (
     PScriptContext,
     PScriptPurpose (PSpending),
     PStakingCredential,
-    PTuple,
     PTxInInfo (PTxInInfo),
     PTxInfo,
     PTxOut (PTxOut),
     PTxOutRef,
  )
 import Plutarch.Extra.AssetClass (PAssetClass, passetClassValueOf)
-import Plutarch.Extra.List (pfirstJust, plookupTuple)
-import Plutarch.Extra.Maybe (pisJust)
-import Plutarch.Extra.TermCont (pletC, pmatchC, ptryFromC)
+import Plutarch.Extra.Function ((#.*))
+import Plutarch.Extra.Functor (PFunctor (pfmap))
+import Plutarch.Extra.List (pfirstJust)
+import Plutarch.Extra.Maybe (pfromJust, pisJust, pjust, pnothing)
+import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.Unsafe (punsafeCoerce)
 
 pownTxOutRef ::
@@ -185,9 +193,25 @@ ptxSignedBy = phoistAcyclic $
 
     @since 1.1.0
 -}
-pfindDatum :: forall (s :: S). Term s (PDatumHash :--> PBuiltinList (PAsData (PTuple PDatumHash PDatum)) :--> PMaybe PDatum)
-pfindDatum = phoistAcyclic $
-    plam $ \datumHash datums -> plookupTuple # datumHash # datums
+pfindDatum ::
+    forall (s :: S).
+    Term
+        s
+        ( PDatumHash
+            :--> PMap 'Unsorted PDatumHash PDatum
+            :--> PMaybe PDatum
+        )
+pfindDatum = AssocMap.plookup
+
+{- | Convert a 'PDatum' to the give type @a@.
+
+ @since 3.0.3
+-}
+pfromPDatum ::
+    forall (a :: S -> Type) (s :: S).
+    PTryFrom PData a =>
+    Term s (PDatum :--> a)
+pfromPDatum = phoistAcyclic $ plam $ flip ptryFrom fst . pto
 
 {- | Find a datum with the given hash, and `ptryFrom` it.
 
@@ -196,14 +220,97 @@ pfindDatum = phoistAcyclic $
 ptryFindDatum ::
     forall (a :: S -> Type) (s :: S).
     PTryFrom PData a =>
-    Term s (PDatumHash :--> PBuiltinList (PAsData (PTuple PDatumHash PDatum)) :--> PMaybe a)
-ptryFindDatum = phoistAcyclic $
-    plam $ \datumHash inputs ->
-        pmatch (pfindDatum # datumHash # inputs) $ \case
-            PNothing -> pcon PNothing
-            PJust datum -> unTermCont $ do
-                (datum', _) <- ptryFromC (pto datum)
-                pure $ pcon (PJust datum')
+    Term
+        s
+        ( PDatumHash
+            :--> PMap 'Unsorted PDatumHash PDatum
+            :--> PMaybe a
+        )
+ptryFindDatum =
+    phoistAcyclic $
+        (pfmap # pfromPDatum)
+            #.* AssocMap.plookup
+
+{- | Extract the datum from a 'POutputDatum'.
+
+     @since 3.0.3
+-}
+presolveOutputDatum ::
+    forall (s :: S).
+    Term
+        s
+        ( POutputDatum
+            :--> PMap 'Unsorted PDatumHash PDatum
+            :--> PMaybe PDatum
+        )
+presolveOutputDatum = phoistAcyclic $
+    plam $ \od m -> pmatch od $ \case
+        PNoOutputDatum _ ->
+            ptrace "no datum" pnothing
+        POutputDatum ((pfield @"outputDatum" #) -> datum) ->
+            ptrace "inline datum" pjust # datum
+        POutputDatumHash ((pfield @"datumHash" #) -> hash) ->
+            ptrace "datum hash" $ AssocMap.plookup # hash # m
+
+{- | Extract the datum from a 'POutputDatum' and convert it to the given type.
+
+     @since 3.0.3
+-}
+ptryFromOutputDatum ::
+    forall (a :: S -> Type) (s :: S).
+    PTryFrom PData a =>
+    Term
+        s
+        ( POutputDatum
+            :--> PMap 'Unsorted PDatumHash PDatum
+            :--> PMaybe a
+        )
+ptryFromOutputDatum =
+    phoistAcyclic $
+        (pfmap # pfromPDatum)
+            #.* presolveOutputDatum
+
+{- | Extract the datum from a 'POutputDatum' and convert it to the given type.
+     This function will throw an error if for some reason it's not able to find
+      the datum or convert it.
+
+     @since 3.0.3
+-}
+pfromOutputDatum ::
+    forall (a :: S -> Type) (s :: S).
+    PTryFrom PData a =>
+    Term
+        s
+        ( POutputDatum
+            :--> PMap 'Unsorted PDatumHash PDatum
+            :--> a
+        )
+pfromOutputDatum =
+    phoistAcyclic $ pfromJust #.* ptryFromOutputDatum
+
+{- | Extract the datum hash from a 'POutputDatum', throw an error if the given
+     'POuptutDatum' doesn't contain a datum hash.
+
+     @since 3.0.3
+-}
+pfromDatumHash :: forall (s :: S). Term s (POutputDatum :--> PDatumHash)
+pfromDatumHash = phoistAcyclic $
+    plam $
+        flip pmatch $ \case
+            POutputDatumHash ((pfield @"datumHash" #) -> hash) -> hash
+            _ -> ptraceError "not a datum hash"
+
+{- | Extract the inline datum from a 'POutputDatum', throw an error if the given
+     'POuptutDatum' is not an inline datum.
+
+     @since 3.0.3
+-}
+pfromInlineDatum :: forall (s :: S). Term s (POutputDatum :--> PDatum)
+pfromInlineDatum = phoistAcyclic $
+    plam $
+        flip pmatch $ \case
+            POutputDatum ((pfield @"outputDatum" #) -> datum) -> datum
+            _ -> ptraceError "not an inline datum"
 
 {- | Find a validatorhash from a given address.
 
@@ -290,22 +397,3 @@ pfindOutputsToAddress = phoistAcyclic $
         pure $
             pfilter # plam (\txOut -> pfield @"address" # txOut #== address)
                 # outputs
-
-{- | Find the data corresponding to a TxOut, if there is one
-     @since 1.3.0
--}
-pfindTxOutDatum ::
-    forall (s :: S).
-    Term
-        s
-        ( PBuiltinList (PAsData (PTuple PDatumHash PDatum))
-            :--> PTxOut
-            :--> PMaybe PDatum
-        )
-pfindTxOutDatum = phoistAcyclic $
-    plam $ \datums out -> unTermCont $ do
-        datumType <- pmatchC $ pfromData $ pfield @"datum" # out
-        pure $ case datumType of
-            POutputDatumHash ((pfield @"datumHash" #) -> datumHash) -> pfindDatum # datumHash # datums
-            POutputDatum ((pfield @"outputDatum" #) -> datum) -> pcon $ PJust datum
-            PNoOutputDatum _ -> pcon PNothing
