@@ -73,7 +73,7 @@ import PlutusLedgerApi.V2 (
     Value,
     fromList,
  )
-import qualified Prettyprinter as P (Pretty (pretty))
+import Prettyprinter qualified as P (Pretty (pretty))
 
 {- | A context builder for Minting. Corresponds to
  'Plutus.V1.Ledger.Contexts.Minting' specifically.

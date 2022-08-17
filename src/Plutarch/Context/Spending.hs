@@ -65,7 +65,7 @@ import PlutusLedgerApi.V2 (
     TxOutRef (..),
     fromList,
  )
-import qualified Prettyprinter as P
+import Prettyprinter qualified as P
 
 data ValidatorInputIdentifier
     = ValidatorUTXO UTXO
