@@ -61,10 +61,10 @@ common common-lang
     MultiParamTypeClasses
     NumericUnderscores
     OverloadedStrings
-    PackageImports
     ScopedTypeVariables
     StandaloneDeriving
     TupleSections
+    TypeFamilies
     TypeOperators
 
   default-language:   Haskell2010

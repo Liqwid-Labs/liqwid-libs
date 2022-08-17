@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeFamilies #-}
-
 module Plutarch.Extra.Profunctor (
     PProfunctor (..),
 ) where

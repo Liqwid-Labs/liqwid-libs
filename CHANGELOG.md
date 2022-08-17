@@ -16,6 +16,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 * `since`s added to `Plutarch.Extra.Record` functions.
 * `(.=)` no longer requires an `SListI` constraint.
+* `DeriveGeneric`, `DeriveAnyClass` and `TypeFamilies` are on by default.
 
 ## 3.0.2 -- 2022-08-09
 
