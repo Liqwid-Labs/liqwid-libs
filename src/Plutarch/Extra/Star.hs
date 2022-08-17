@@ -1,6 +1,3 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Plutarch.Extra.Star (
@@ -11,11 +8,10 @@ module Plutarch.Extra.Star (
     papplyStar,
 ) where
 
-import Generics.SOP (Top)
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
 import Plutarch.Extra.Bind (PBind ((#>>=)))
 import Plutarch.Extra.Category (PCategory (pidentity), PSemigroupoid ((#>>>)))
-import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap))
+import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap), Plut)
 import Plutarch.Extra.Profunctor (PProfunctor (PCoSubcategory, PContraSubcategory, pdimap))
 import Plutarch.Extra.TermCont (pmatchC)
 
@@ -50,10 +46,10 @@ instance DerivePlutusType (PStar f a b) where
 {- | If @f@ is at least a 'PFunctor', we can pre-process and post-process work
  done in @PStar f@ using pure functions.
 
- @since 3.0.1
+ @since 3.1.0
 -}
 instance (PFunctor f) => PProfunctor (PStar f) where
-    type PContraSubcategory (PStar f) = Top
+    type PContraSubcategory (PStar f) = Plut
     type PCoSubcategory (PStar f) = PSubcategory f
     pdimap = phoistAcyclic $
         plam $ \into outOf xs -> unTermCont $ do

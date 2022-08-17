@@ -1,6 +1,3 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Plutarch.Extra.Monoid (
@@ -12,7 +9,6 @@ module Plutarch.Extra.Monoid (
 
 import Control.Composition ((.*))
 import Data.Function (on)
-import qualified Generics.SOP as SOP
 import Plutarch.Unsafe (punsafeCoerce)
 
 -- | @since 1.3.0
@@ -22,9 +18,7 @@ newtype PAll (s :: S) = PAll (Term s PBool)
           Generic
         )
     deriving anyclass
-        ( -- | @since 1.4.0
-          SOP.Generic
-        , -- | @since 1.3.0
+        ( -- | @since 1.3.0
           PlutusType
         , -- | @since 1.3.0
           PIsData
@@ -54,9 +48,7 @@ newtype PAny (s :: S) = PAny (Term s PBool)
           Generic
         )
     deriving anyclass
-        ( -- | @since 1.4.0
-          SOP.Generic
-        , -- | @since 1.3.0
+        ( -- | @since 1.3.0
           PlutusType
         , -- | @since 1.3.0
           PIsData

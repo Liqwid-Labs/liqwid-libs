@@ -1,9 +1,6 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {- |
@@ -20,8 +17,7 @@ module Plutarch.Extra.MultiSig (
     MultiSig (..),
 ) where
 
-import qualified GHC.Generics as GHC (Generic)
-import Generics.SOP (Generic)
+import GHC.Generics (Generic)
 import Plutarch.Api.V2 (PPubKeyHash, PTxInfo)
 import Plutarch.DataRepr (
     DerivePConstantViaData (DerivePConstantViaData),
@@ -72,15 +68,11 @@ data MultiSig = MultiSig
     }
     deriving stock
         ( -- | @since 0.1.0
-          GHC.Generic
+          Generic
         , -- | @since 0.1.0
           Eq
         , -- | @since 0.1.0
           Show
-        )
-    deriving anyclass
-        ( -- | @since 0.1.0
-          Generic
         )
 
 PlutusTx.makeLift ''MultiSig
@@ -101,10 +93,6 @@ newtype PMultiSig (s :: S) = PMultiSig
             )
     }
     deriving stock
-        ( -- | @since 0.1.0
-          GHC.Generic
-        )
-    deriving anyclass
         ( -- | @since 0.1.0
           Generic
         )

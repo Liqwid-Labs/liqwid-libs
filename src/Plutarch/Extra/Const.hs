@@ -1,7 +1,4 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -13,13 +10,12 @@ module Plutarch.Extra.Const (
     preconst,
 ) where
 
-import Generics.SOP (Top)
-import qualified Generics.SOP as SOP
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
 import Plutarch.Extra.Boring (PBoring (pboring))
 import Plutarch.Extra.Functor (
     PBifunctor (PSubcategoryLeft, PSubcategoryRight, pbimap, psecond),
     PFunctor (PSubcategory, pfmap),
+    Plut,
  )
 import Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Num (PNum)
@@ -37,8 +33,6 @@ newtype PConst (a :: S -> Type) (b :: S -> Type) (s :: S)
         )
     deriving anyclass
         ( -- | @since 1.0.0
-          SOP.Generic
-        , -- | @since 1.0.0
           PlutusType
         )
 
@@ -67,15 +61,15 @@ deriving anyclass instance (PNum a) => PNum (PConst a b)
 -- | @since 1.0.0
 deriving anyclass instance (PShow a) => PShow (PConst a b)
 
--- | @since 1.0.0
+-- | @since 3.1.0
 instance PFunctor (PConst a) where
-    type PSubcategory (PConst a) = Top
+    type PSubcategory (PConst a) = Plut
     pfmap = psecond
 
--- | @since 1.0.0
+-- | @since 3.1.0
 instance PBifunctor PConst where
-    type PSubcategoryLeft PConst = Top
-    type PSubcategoryRight PConst = Top
+    type PSubcategoryLeft PConst = Plut
+    type PSubcategoryRight PConst = Plut
     pbimap = phoistAcyclic $
         plam $ \f _ t -> unTermCont $ do
             PConst tx <- pmatchC t
