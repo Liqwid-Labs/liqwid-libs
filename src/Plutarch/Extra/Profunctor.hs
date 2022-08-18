@@ -1,12 +1,10 @@
-{-# LANGUAGE TypeFamilies #-}
-
 module Plutarch.Extra.Profunctor (
     PProfunctor (..),
 ) where
 
 import Data.Kind (Constraint)
-import Generics.SOP (Top)
 import Plutarch.Extra.Function (pidentity)
+import Plutarch.Extra.Functor (Plut)
 
 -- | @since 1.0.0
 class PProfunctor (p :: (S -> Type) -> (S -> Type) -> S -> Type) where
@@ -39,8 +37,8 @@ class PProfunctor (p :: (S -> Type) -> (S -> Type) -> S -> Type) where
         Term s ((c :--> d) :--> p a c :--> p a d)
     prmap = phoistAcyclic $ plam $ \g p -> pdimap # pidentity # g # p
 
--- | @since 1.0.0
+-- | @since 3.1.0
 instance PProfunctor (:-->) where
-    type PContraSubcategory (:-->) = Top
-    type PCoSubcategory (:-->) = Top
+    type PContraSubcategory (:-->) = Plut
+    type PCoSubcategory (:-->) = Plut
     pdimap = phoistAcyclic $ plam $ \ab cd bc -> plam $ \x -> cd # (bc # (ab # x))

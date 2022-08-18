@@ -1,14 +1,9 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Plutarch.Extra.Identity (
     PIdentity (..),
 ) where
 
-import Generics.SOP (Top)
-import qualified Generics.SOP as SOP
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
 import Plutarch.Extra.Bind (PBind ((#>>=)))
 import Plutarch.Extra.Boring (PBoring (pboring))
@@ -16,7 +11,7 @@ import Plutarch.Extra.Comonad (
     PComonad (pextract),
     PExtend (pextend),
  )
-import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap))
+import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap), Plut)
 import Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Num (PNum)
 
@@ -32,8 +27,6 @@ newtype PIdentity (a :: S -> Type) (s :: S)
         )
     deriving anyclass
         ( -- | @since 1.0.0
-          SOP.Generic
-        , -- | @since 1.0.0
           PlutusType
         )
 
@@ -62,9 +55,9 @@ deriving anyclass instance (PNum a) => PNum (PIdentity a)
 -- | @since 1.0.0
 deriving anyclass instance (PShow a) => PShow (PIdentity a)
 
--- | @since 1.0.0
+-- | @since 3.1.0
 instance PFunctor PIdentity where
-    type PSubcategory PIdentity = Top
+    type PSubcategory PIdentity = Plut
     pfmap = phoistAcyclic $
         plam $ \f t -> unTermCont $ do
             PIdentity t' <- pmatchC t

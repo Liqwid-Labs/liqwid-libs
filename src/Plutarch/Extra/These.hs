@@ -1,8 +1,5 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Plutarch.Extra.These (
@@ -17,13 +14,13 @@ module Plutarch.Extra.These (
     fromPDThese,
 ) where
 
-import Generics.SOP (Top)
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
 import Plutarch.Extra.Bool (pcompare)
 import Plutarch.Extra.Boring (pboring)
 import Plutarch.Extra.Functor (
     PBifunctor (PSubcategoryLeft, PSubcategoryRight, pbimap, psecond),
     PFunctor (PSubcategory, pfmap),
+    Plut,
  )
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.Extra.Traversable (PTraversable (ptraverse, ptraverse_))
@@ -74,15 +71,15 @@ instance (POrd a, POrd b) => PPartialOrd (PThese a b) where
 -- | @since 1.0.0
 deriving anyclass instance (PShow a, PShow b) => PShow (PThese a b)
 
--- | @since 1.0.0
+-- | @since 3.1.0
 instance PFunctor (PThese a) where
-    type PSubcategory (PThese a) = Top
+    type PSubcategory (PThese a) = Plut
     pfmap = psecond
 
--- | @since 1.0.0
+-- | @since 3.1.0
 instance PBifunctor PThese where
-    type PSubcategoryLeft PThese = Top
-    type PSubcategoryRight PThese = Top
+    type PSubcategoryLeft PThese = Plut
+    type PSubcategoryRight PThese = Plut
     pbimap = phoistAcyclic $
         plam $ \f g t -> unTermCont $ do
             t' <- pmatchC t

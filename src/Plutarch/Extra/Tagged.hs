@@ -1,8 +1,5 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 -- Needed for Tagged instances for PlutusTx stuff
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -14,14 +11,13 @@ module Plutarch.Extra.Tagged (
 
 import Data.Bifunctor (first)
 import Data.Tagged (Tagged (Tagged))
-import Generics.SOP (Top)
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
 import Plutarch.Extra.Boring (PBoring (pboring))
 import Plutarch.Extra.Comonad (
     PComonad (pextract),
     PExtend (pextend),
  )
-import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap))
+import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap), Plut)
 import Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Extra.Traversable (
     PSemiTraversable (psemitraverse, psemitraverse_),
@@ -107,9 +103,9 @@ deriving anyclass instance (PNum underlying) => PNum (PTagged tag underlying)
 -- -- | @since 1.0.0
 deriving anyclass instance (PShow underlying) => PShow (PTagged tag underlying)
 
--- | @since 1.0.0
+-- | @since 3.1.0
 instance PFunctor (PTagged tag) where
-    type PSubcategory (PTagged tag) = Top
+    type PSubcategory (PTagged tag) = Plut
     pfmap = phoistAcyclic $
         plam $ \f t -> unTermCont $ do
             PTagged t' <- pmatchC t

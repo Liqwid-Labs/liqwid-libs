@@ -2,6 +2,42 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.1.0 -- 2022-08-17
+
+### Added
+
+* `Plut` as a replacement for `Top`. This is specialized for kind `S -> Type`.
+
+### Removed
+
+* Uses of `generics-sop` in every module except `Plutarch.Extra.IsData`.
+
+### Changed
+
+* `since`s added to `Plutarch.Extra.Record` functions.
+* `(.=)` no longer requires an `SListI` constraint.
+* `DeriveGeneric`, `DeriveAnyClass` and `TypeFamilies` are on by default.
+
+## 3.0.3 -- 2022-08-16
+
+### Added
+
+- `#.*`, `#.**`, `#.***` for plutarch function composition. They have similar 
+  semantics as their counter parts in `Control.Composition`.
+- `pfstTuple` and `psndTuple` for `PTuple`.
+- Some orphan instances, including
+  
+  - `PIsData (PAsData a)`
+  - `PTryFrom PData (PAsData PDatumHash)`
+  - `PTryFrom PData (PAsData ScriptHash)`
+  - `PTryFrom PData (PAsData PUnit)`
+
+- Some useful functions to work with `POutputDatum`.
+
+### Removed
+
+- `pfindTxOutDatum`, please use `presolveOutputDatum` instead.
+
 ## 3.0.2 -- 2022-08-09
 
 ### Added

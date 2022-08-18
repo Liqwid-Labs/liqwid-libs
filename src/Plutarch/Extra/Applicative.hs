@@ -1,6 +1,5 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Plutarch.Extra.Applicative (

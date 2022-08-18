@@ -448,6 +448,8 @@ Cabal file, in the `default-extensions` section):
 * ``BinaryLiterals``
 * ``ConstraintKinds``
 * ``DataKinds``
+* ``DeriveAnyClass``
+* ``DeriveGeneric``
 * ``DeriveTraversable``
 * ``DerivingVia``
 * ``EmptyCase``
@@ -464,6 +466,7 @@ Cabal file, in the `default-extensions` section):
 * ``ScopedTypeVariables``
 * ``StandaloneDeriving``
 * ``TupleSections``
+* ``TypeFamilies``
 * ``TypeOperators``
 
 All other `LANGUAGE` pragmata MUST be enabled per-file. All `LANGUAGE` pragmata
@@ -522,6 +525,11 @@ standard, which makes enabling this a requirement. There is no harm in enabling
 this globally: other 'rich kinds' such as `Symbol` or `Nat` don't require any
 extensions for their use, and whether you enable this extension or not changes
 no behaviour (`Constraint` exists whether you enable this extension or not).
+
+`DeriveAnyClass` and `DeriveGeneric` are both necessary to derive multiple
+Plutarch type classes. Furthermore, to make much use of the capabilities of GHC
+generics, `DeriveAnyClass` needs to be on. While GHC generics are not without
+their problems, our hand is forced upstream.
 
 `DerivingVia` provides two benefits. Firstly, it implies
 `DerivingStrategies`, which is good practice to use (and in fact, is required by
@@ -628,7 +636,8 @@ foo (Baz x y) = -- the Baz case here
 `LambdaCase` is shorter than both of these, and avoids us having to bind a
 variable only to pattern match it away immediately. It is convenient, clear from
 context (especially with our requirement for explicit type signatures), and
-doesn't cause any bad interactions.
+doesn't cause any bad interactions. Furthermore, it makes use of Plutarch's
+`pmatch` a lot more concise, as we avoid having to bind variables in many cases.
 
 `MultiParamTypeClasses` are required for a large number of common Haskell
 libraries, including `mtl` and `vector`, and in many situations. Almost any
@@ -709,7 +718,7 @@ Furthermore, with the availability of `TypeApplications`, as well as possible
 ambiguities stemming from multi-parameter type classes (which Plutarch has some
 of), we need to know the order of type variable application. While there _is_ a
 default, having to remember it, especially in the presence of type class
-methods, is tedious and error-prone. This becomes even worse when dealing with
+constraints, is tedious and error-prone. This becomes even worse when dealing with
 skolems, which Plutarch often requires us to do, since GHC cannot in general
 properly infer them. Explicit ordering of type variables for this purpose can
 _only_ be done with `ScopedTypeVariables` enabled. 
@@ -743,6 +752,12 @@ We accept it as natural that we can partially-apply `Pair` by writing `Pair
 cases are annoying to keep track of, and this particular special case serves no
 purpose, it makes sense to enable `TupleSections` by default. This also smooths
 out an inconsistency that doesn't apply to anything else.
+
+`TypeFamilies` are needed in many places where Plutarch is used, as many of its
+type classes make use of associated types. Furthermore, many of our own type
+classes (such as `PFunctor`) also do this. While there is some debate to be had
+about whether enabling this by default is a good idea, for the use that we
+mostly intend (associated types), it is both clear and self-signposting.
 
 `TypeOperators` is practically a necessity when doing any kind of type-level
 work in Haskell. Firstly, much in the same way infix data constructors are
@@ -914,7 +929,7 @@ pfoo = phoistAcyclic $ plam $ \ell -> go $# puncons # ell
     go self t = ...
 ```
 
-In this situation, `go` has a skolemized type argument, but GHC will fair to
+In this situation, `go` has a skolemized type argument, but GHC will fail to
 infer it. Moreover, the error you will get reads like complete gibberish
 _unless_ you know exactly what to look for and what it means.
 
@@ -1218,52 +1233,3 @@ that the singleton for `TypeRep a` is needed here, but not anywhere else.
 Since `Type.Reflection` can do everything `Data.Typeable` can, has a more modern
 API, and is also lower-cost, there is no reason to use `Data.Typeable` anymore
 except for legacy compatibility reasons.
-
-### Avoid GHC `Generic`
-
-`GHC.Generics` SHOULD NOT be used as a means of deriving type class instances. It
-MUST NOT be used for any other purpose.
-
-#### Justification
-
-`GHC.Generics` is an API that promises a lot, but delivers it only with many
-problems. While it is arguably convenient for defining 'boilerplate' instances,
-it is mostly convenient for whoever defines the _type class_, not the instances.
-Furthermore, use of `GHC.Generics` has considerable costs:
-
-* `Rep` has size quadratic in the size of the type being represented. This can
-  cause enormous compile-time RAM costs: for example, records with 10+ fields
-  can easily consume gigabytes of RAM at compile time, and generate huge
-  binaries.
-* The runtime performance of `GHC.Generics` defined methods can often be
-  extremely bad, as `Rep`s often can't be inlined away due to the instances
-  being driven by a type class defined in another library.
-* Dealing with either of these problems requires egregious amounts of
-  `INLINE`ing. This causes significant code blowup due to monomorphization,
-  which leads to large compile times and larger binaries.
-* Even with such amounts of `INLINE`ing, there are many cases where the inlining
-  fails: for example, any method which 'traps' a higher-order constraint like
-  `Functor`. These place you into two equally-awkward camps: either every
-  instance ends up playing 'mother-may-I' with every 'trapped' type class
-  method, leading to awful overheads; or you have to manually defunctionalize
-  each type class using a free structure, by replacing `Functor` with `Yoneda`,
-  for example. Both of these are obscure, difficult to detect, and _very_ hard
-  to understand.
-* The only way to use `GHC.Generics` to drive a derivation is to define a
-  'private' type class, which is then instantiated for various `GHC.Generics`
-  constructors. Then, the 'public' type class methods are implemented using
-  `default` atop of the 'private' type class. This indirection is slow, inhibits
-  cross-module optimizations, and leads to _very_ confusing error messages and
-  documentation, except for users who are familiar with these specific caveats.
-* Because of the above, you cannot combine `GHC.Generics`-driven defaults with
-  default definitions at all.
-* It is almost impossible to understand precisely what code gets run for an
-  instance defined via defaulting to `GHC.Generics` unless you can read Core.
-
-These problems are significant enough that GHC has recently had to [introduce a
-new
-flag](https://downloads.haskell.org/ghc/9.2.1/docs/html/users_guide/9.2.1-notes.html#compiler)
-in an attempt to help optimize uses of `GHC.Generics` better. Therefore, any
-convenience supposedly gained is offset by massive costs, which are hard to
-diagnose, or even do much about. Thus, overall, we consider `GHC.Generics` to
-not be worth their cost in general.
