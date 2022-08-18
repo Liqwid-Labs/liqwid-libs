@@ -99,7 +99,10 @@ applyDebuggableScript f a =
 -}
 newtype CompiledTerm (a :: S -> Type) = CompiledTerm {debuggableScript :: DebuggableScript}
 
--- | Like 'CompiledTerm', but with the internal 'Script's re-packaged into 'Term's.
+{- | Like 'CompiledTerm', but with the internal 'Script's re-packaged into 'Term's.
+
+ @since 3.0.2
+-}
 data CompiledTerm' (a :: S -> Type) = CompiledTerm'
     { term :: forall (s :: S). Term s a
     , debugTerm :: forall (s :: S). Term s a
@@ -274,7 +277,7 @@ liftErrorMsg = \case
  @since 3.0.2
 -}
 pliftCompiled' ::
-    forall p.
+    forall (p :: S -> Type).
     PUnsafeLiftDecl p =>
     CompiledTerm p ->
     Either (LiftError, [Text]) (PLifted p)
