@@ -1,5 +1,7 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeApplications #-}
 
 {- | Pre-compiling Plutarch functions and applying them.
 
@@ -11,9 +13,9 @@ module Plutarch.Extra.Precompile (
     -- deserialize compiled terms.  If someone wants to subvert type safety using
     -- Scripts, they can do that regardless of this export.
     CompiledTerm (..),
+    CompiledTerm' (..),
     compile',
     toDebuggableScript,
-    toEvaluatedTerm,
     applyCompiledTerm,
     applyCompiledTerm',
     applyCompiledTerm2,
@@ -26,26 +28,37 @@ module Plutarch.Extra.Precompile (
     pliftCompiled,
 ) where
 
-import Data.Default (def)
+import Data.Text (Text)
+import qualified Data.Text as Text
 import GHC.Stack (HasCallStack)
+import Plutarch.Evaluate (evalScript)
 import Plutarch.Extra.DebuggableScript (
     DebuggableScript (DebuggableScript),
     debugScript,
+    finalEvalDebuggableScript,
     mustCompileD,
     mustEvalD,
-    mustFinalEvalDebuggableScript,
     script,
  )
 import Plutarch.Internal (
+    Config (Config),
     RawTerm (RCompiled),
     Term (Term),
     TermResult (TermResult),
+    TracingMode (DetTracing),
+    tracingMode,
  )
 import Plutarch.Lift (
-    LiftError,
+    LiftError (
+        LiftError_CompilationError,
+        LiftError_EvalError,
+        LiftError_FromRepr,
+        LiftError_KnownTypeError
+    ),
     PUnsafeLiftDecl (PLifted),
     plift',
  )
+import PlutusCore.Builtin (KnownTypeError (KnownTypeEvaluationFailure, KnownTypeUnliftingError))
 import PlutusLedgerApi.V1.Scripts (Script (Script))
 import UntypedPlutusCore (Program (Program, _progAnn, _progTerm, _progVer))
 import qualified UntypedPlutusCore as UPLC
@@ -84,7 +97,16 @@ applyDebuggableScript f a =
 
  @since 3.0.2
 -}
-newtype CompiledTerm (a :: S -> Type) = CompiledTerm DebuggableScript
+newtype CompiledTerm (a :: S -> Type) = CompiledTerm {debuggableScript :: DebuggableScript}
+
+{- | Like 'CompiledTerm', but with the internal 'Script's re-packaged into 'Term's.
+
+ @since 3.0.2
+-}
+data CompiledTerm' (a :: S -> Type) = CompiledTerm'
+    { term :: forall (s :: S). Term s a
+    , debugTerm :: forall (s :: S). Term s a
+    }
 
 {- | Compile a closed Plutarch 'Term' to a 'CompiledTerm'.
 
@@ -109,15 +131,6 @@ toDebuggableScript ::
     CompiledTerm a ->
     DebuggableScript
 toDebuggableScript (CompiledTerm dscript) = dscript
-
--- | @since 3.0.2
-toEvaluatedTerm ::
-    forall (a :: S -> Type).
-    CompiledTerm a ->
-    (forall (s :: S). Term s a)
-toEvaluatedTerm ct =
-    let Script prog = mustFinalEvalDebuggableScript (toDebuggableScript ct)
-     in Term $ const $ pure $ TermResult (RCompiled $ UPLC._progTerm prog) []
 
 {- | Apply a 'CompiledTerm' to a closed Plutarch 'Term'.
 
@@ -235,6 +248,28 @@ infixl 7 ###
 
 infixl 7 ###~
 
+scriptToTerm :: forall (a :: S -> Type) (s :: S). Script -> Term s a
+scriptToTerm (Script prog) =
+    Term $ const $ pure $ TermResult (RCompiled $ UPLC._progTerm prog) []
+
+-- | Make a human-readable message from a 'LiftError'.
+liftErrorMsg :: LiftError -> String
+-- There is no Show instance for LiftError:
+-- We would need to get Show for 'KnownTypeError' into 'PlutusCore.Builtin',
+-- then Show for 'LiftError' into Plutarch.
+-- Though seeing the data constructors only would not be very informative
+-- anyway.
+liftErrorMsg = \case
+    LiftError_FromRepr -> "pconstantFromRepr returned 'Nothing'"
+    LiftError_KnownTypeError e ->
+        case e of
+            KnownTypeUnliftingError unliftErr ->
+                "incorrect type: " <> show unliftErr
+            KnownTypeEvaluationFailure ->
+                "absurd evaluation failure"
+    LiftError_EvalError e -> "erring term: " <> show e
+    LiftError_CompilationError msg -> "compilation failed: " <> Text.unpack msg
+
 {- | Convert a 'CompiledTerm' to the associated Haskell value. Fail otherwise.
 
  This will fully evaluate the compiled term, and convert the resulting value.
@@ -245,8 +280,68 @@ pliftCompiled' ::
     forall (p :: S -> Type).
     PUnsafeLiftDecl p =>
     CompiledTerm p ->
-    Either LiftError (PLifted p)
-pliftCompiled' ct = plift' def $ toEvaluatedTerm ct
+    Either (LiftError, [Text]) (PLifted p)
+pliftCompiled' ct =
+    case res of
+        Left evalError -> Left (LiftError_EvalError evalError, traces)
+        Right evaluatedScript ->
+            case plift'
+                (Config{tracingMode = DetTracing})
+                (scriptToTerm @p evaluatedScript) of
+                Right lifted -> Right lifted
+                Left (LiftError_EvalError evalError) ->
+                    error . unlines $
+                        [ "Lifting EVALUATED compiled term resulted in "
+                            <> "LiftError_EvalError!"
+                        , show evalError
+                        ]
+                Left (LiftError_CompilationError compilationMsg) ->
+                    error . unlines $
+                        [ "Lifting evaluated COMPILED term resulted in "
+                            <> "LiftError_CompilationError!"
+                        , Text.unpack compilationMsg
+                        ]
+                Left liftError -> handleOtherLiftError liftError
+  where
+    (res, _, traces) = finalEvalDebuggableScript ct.debuggableScript
+    (res', _, traces') = evalScript ct.debuggableScript.debugScript
+    handleOtherLiftError liftError =
+        case res' of
+            Left evalError ->
+                error . unlines $
+                    [ "Script succeeded, but corresponding debug Script failed!"
+                    , show evalError
+                    , "Debug Script traces:"
+                    , Text.unpack (Text.unlines traces')
+                    , "The debug Script was tried because of a LiftError."
+                    , "The original LiftError of the succeeded Script:"
+                    , liftErrorMsg liftError
+                    ]
+            Right evaluatedDebugScript ->
+                case plift'
+                    (Config{tracingMode = DetTracing})
+                    (scriptToTerm @p evaluatedDebugScript) of
+                    Right _ ->
+                        error . unlines $
+                            [ "Lifting evaluated compiled term resulted in a "
+                                <> "LiftError, but lifting the debug version "
+                                <> "succeeded!"
+                            , "The LiftError:"
+                            , liftErrorMsg liftError
+                            ]
+                    Left liftError' ->
+                        if liftError' == liftError
+                            then Left (liftError, traces')
+                            else
+                                error . unlines $
+                                    [ "Lifting Script and corresponding debug "
+                                        <> "Script resulted in different "
+                                        <> "LiftErrors!"
+                                    , "Original LiftError:"
+                                    , liftErrorMsg liftError
+                                    , "Debug Script LiftError:"
+                                    , liftErrorMsg liftError'
+                                    ]
 
 {- | Like `pliftCompiled'` but throws on failure.
 
@@ -257,4 +352,14 @@ pliftCompiled ::
     (HasCallStack, PLift p) =>
     CompiledTerm p ->
     PLifted p
-pliftCompiled ct = plift $ toEvaluatedTerm ct
+pliftCompiled ct =
+    case pliftCompiled' ct of
+        Left (liftError, traces) ->
+            error $
+                unlines
+                    [ "Lifting compiled term failed:"
+                    , liftErrorMsg liftError
+                    , "Traces:"
+                    , Text.unpack (Text.unlines traces)
+                    ]
+        Right x -> x
