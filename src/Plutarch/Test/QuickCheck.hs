@@ -6,7 +6,6 @@
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -300,7 +299,7 @@ instance PArbitrary PA where
 
     pshrink (TestableTerm x) =
         let f (TestableTerm y) = TestableTerm $ pcon $ PA y
-         in f <$> (shrink $ TestableTerm $ pto x)
+         in f <$> shrink (TestableTerm $ pto x)
 
 -- | @since 2.0.0
 instance PCoArbitrary PA where
@@ -338,7 +337,7 @@ instance PArbitrary PB where
 
     pshrink (TestableTerm x) =
         let f (TestableTerm y) = TestableTerm $ pcon $ PB y
-         in f <$> (shrink $ TestableTerm $ pto x)
+         in f <$> shrink (TestableTerm $ pto x)
 
 -- | @since 2.0.0
 instance PCoArbitrary PB where
@@ -376,7 +375,7 @@ instance PArbitrary PC where
 
     pshrink (TestableTerm x) =
         let f (TestableTerm y) = TestableTerm $ pcon $ PC y
-         in f <$> (shrink $ TestableTerm $ pto x)
+         in f <$> shrink (TestableTerm $ pto x)
 
 -- | @since 2.0.0
 instance PCoArbitrary PC where

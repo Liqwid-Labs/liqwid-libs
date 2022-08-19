@@ -69,7 +69,7 @@ import Plutarch.Api.V2 (
     PPubKeyHash (PPubKeyHash),
     PStakingCredential (PStakingHash, PStakingPtr),
  )
-import Plutarch.Evaluate (evalScript)
+import Plutarch.Evaluate (evalScript, evalTerm)
 import Plutarch.Extra.Map.Unsorted (psort)
 import Plutarch.Extra.Maybe (
     pfromDJust,
@@ -152,11 +152,11 @@ data TestableTerm a = TestableTerm
 
 -- | @since 2.0.0
 instance (forall (s :: S). Num (Term s a)) => Num (TestableTerm a) where
-    (+) = lift2Testable (+)
-    (*) = lift2Testable (*)
-    abs = liftTestable abs
-    negate = liftTestable negate
-    signum = liftTestable signum
+    (+) = liftT2 (+)
+    (*) = liftT2 (*)
+    abs = liftT abs
+    negate = liftT negate
+    signum = liftT signum
     fromInteger i = TestableTerm (fromInteger i :: Term s a)
 
 -- | @since 2.0.0
@@ -223,16 +223,21 @@ class PCoArbitrary (a :: S -> Type) where
 -}
 instance PArbitrary p => Arbitrary (TestableTerm p) where
     arbitrary = parbitrary
-    shrink = pshrink
+    shrink = pshrink . loudEval
+      where
+        loudEval :: TestableTerm p -> TestableTerm p
+        loudEval (TestableTerm x) =
+            case evalTerm (Config{tracingMode = DoTracing}) x of
+                Right (Right t, _, _) -> TestableTerm t
+                Right (Left err, _, trace) -> error $ show err <> show trace -- TODO pretty this output
+                Left err -> error $ show err
 
 instance PCoArbitrary p => CoArbitrary (TestableTerm p) where
     coarbitrary = pcoarbitrary
 
 -- | @since 2.0.0
 instance (PArbitrary p, PIsData p) => PArbitrary (PAsData p) where
-    parbitrary = do
-        (TestableTerm x) <- parbitrary
-        return $ TestableTerm $ pdata x
+    parbitrary = pdataT <$> parbitrary
     pshrink = fmap pdataT . shrink . pfromDataT
 
 instance (PCoArbitrary p, PIsData p) => PCoArbitrary (PAsData p) where
@@ -267,7 +272,7 @@ instance PArbitrary PByteString where
     parbitrary = sized $ \r -> do
         len <- chooseInt (0, r)
         bs <- genByteString len
-        return $ TestableTerm $ pconstant bs
+        return $ pconstantT bs
 
     pshrink = fmap pconstantT . shrinkByteString . pliftT
 
@@ -277,20 +282,20 @@ instance PCoArbitrary PByteString where
 
 -- | @since 2.0.0
 instance PArbitrary PPositive where
-    parbitrary = do
-        (TestableTerm x) <- parbitrary
-        return $ TestableTerm $ ptryPositive #$ pif (0 #< x) x (negate (x + 1))
+    parbitrary = (liftT go) <$> parbitrary
+      where
+        go x = ptryPositive #$ pif (0 #< x) x (negate (x + 1))
 
 -- | @since 2.0.0
 instance PCoArbitrary PPositive where
-    pcoarbitrary = pcoarbitrary . liftTestable pto
+    pcoarbitrary = pcoarbitrary . liftT pto
 
 -- | @since 2.0.0
 instance PArbitrary PRational where
     parbitrary = do
         (TestableTerm x) <- parbitrary
         (TestableTerm y) <- parbitrary
-        return $ TestableTerm $ pcon $ PRational x y
+        return $ pconT $ PRational x y
 
     pshrink (TestableTerm x) =
         [ TestableTerm $ pcon $ PRational a (pdenominator # x)
@@ -431,8 +436,8 @@ instance
 
     pshrink = fmap fromTuple . shrink . toTuple
       where
-        toTuple = liftTestable (pfromData . ptupleFromBuiltin . pdata)
-        fromTuple = liftTestable (pfromData . pbuiltinPairFromTuple . pdata)
+        toTuple = liftT (pfromData . ptupleFromBuiltin . pdata)
+        fromTuple = liftT (pfromData . pbuiltinPairFromTuple . pdata)
 
 instance
     {-# OVERLAPPING #-}
@@ -443,7 +448,7 @@ instance
     ) =>
     PCoArbitrary (PBuiltinPair (PAsData a) (PAsData b))
     where
-    pcoarbitrary (liftTestable ptupleFromBuiltin . pdataT -> t) = pcoarbitrary t
+    pcoarbitrary (liftT ptupleFromBuiltin . pdataT -> t) = pcoarbitrary t
 
 -- | @since 2.0.0
 instance
@@ -911,21 +916,21 @@ pleft = flip pmatchT $ \case
     _ -> ptraceError "asked for PLeft when it is PRight"
 
 -- | @since 2.0.0
-liftTestable ::
+liftT ::
     forall (a :: S -> Type) (b :: S -> Type).
     (forall (s :: S). Term s a -> Term s b) ->
     TestableTerm a ->
     TestableTerm b
-liftTestable f (TestableTerm x) = TestableTerm $ f x
+liftT f (TestableTerm x) = TestableTerm $ f x
 
 -- | @since 2.0.0
-lift2Testable ::
+liftT2 ::
     forall (a :: S -> Type) (b :: S -> Type) (c :: S -> Type).
     (forall (s :: S). Term s a -> Term s b -> Term s c) ->
     TestableTerm a ->
     TestableTerm b ->
     TestableTerm c
-lift2Testable f (TestableTerm x) (TestableTerm y) = TestableTerm $ f x y
+liftT2 f (TestableTerm x) (TestableTerm y) = TestableTerm $ f x y
 
 ppFstT ::
     forall {a :: S -> Type} {b :: S -> Type}.
@@ -987,14 +992,14 @@ ptFstT ::
     (PIsData a) =>
     TestableTerm (PTuple a b) ->
     TestableTerm (PAsData a)
-ptFstT = liftTestable (pfield @"_0" #)
+ptFstT = liftT (pfield @"_0" #)
 
 ptSndT ::
     forall {a :: S -> Type} {b :: S -> Type}.
     (PIsData b) =>
     TestableTerm (PTuple a b) ->
     TestableTerm (PAsData b)
-ptSndT = liftTestable (pfield @"_1" #)
+ptSndT = liftT (pfield @"_1" #)
 
 constrPList ::
     forall {a :: S -> Type} {b :: (S -> Type) -> S -> Type}.
