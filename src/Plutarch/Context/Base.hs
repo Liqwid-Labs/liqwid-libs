@@ -24,9 +24,11 @@ module Plutarch.Context.Base (
     output,
     input,
     referenceInput,
+    address,
     credential,
     pubKey,
     script,
+    withStakingCredential,
     withRefTxId,
     withDatum,
     withInlineDatum,
@@ -66,22 +68,37 @@ import Optics (Lens', lens, over, view)
 import Plutarch (S)
 import Plutarch.Api.V2 (datumHash)
 import Plutarch.Builtin (PIsData, pdata, pforgetData)
-import Plutarch.Lift (PUnsafeLiftDecl (..), pconstant, plift)
+import Plutarch.Lift (PUnsafeLiftDecl (PLifted), pconstant, plift)
 import PlutusLedgerApi.V2 (
-    Address (Address),
+    Address (Address, addressCredential, addressStakingCredential),
     BuiltinData (BuiltinData),
-    Credential (..),
+    Credential (PubKeyCredential, ScriptCredential),
     Data,
     Datum (Datum),
     DatumHash,
     Interval,
-    OutputDatum (..),
+    OutputDatum (NoOutputDatum, OutputDatum, OutputDatumHash),
     POSIXTime,
     PubKeyHash (PubKeyHash),
     ScriptHash,
+    StakingCredential,
     TxId (TxId),
     TxInInfo (TxInInfo),
-    TxInfo (..),
+    TxInfo (
+        TxInfo,
+        txInfoDCert,
+        txInfoData,
+        txInfoFee,
+        txInfoId,
+        txInfoInputs,
+        txInfoMint,
+        txInfoOutputs,
+        txInfoRedeemers,
+        txInfoReferenceInputs,
+        txInfoSignatories,
+        txInfoValidRange,
+        txInfoWdrl
+    ),
     TxOut (TxOut),
     TxOutRef (TxOutRef),
     ValidatorHash,
@@ -110,6 +127,7 @@ This is different from `TxOut`, in that we store the 'Data' fully instead of the
 -}
 data UTXO = UTXO
     { utxoCredential :: Maybe Credential
+    , utxoStakingCredential :: Maybe StakingCredential
     , utxoValue :: Value
     , utxoData :: Maybe DatumType
     , utxoReferenceScript :: Maybe ScriptHash
@@ -120,24 +138,24 @@ data UTXO = UTXO
 
 -- | @since 2.0.0
 instance Semigroup UTXO where
-    (UTXO c v d rs t tidx) <> (UTXO c' v' d' rs' t' tidx') =
-        UTXO (choose c c') (v <> v') (choose d d') (choose rs rs') (choose t t') (choose tidx tidx')
+    (UTXO c stc v d rs t tidx) <> (UTXO c' stc' v' d' rs' t' tidx') =
+        UTXO (choose c c') (choose stc stc') (v <> v') (choose d d') (choose rs rs') (choose t t') (choose tidx tidx')
       where
         choose _ (Just b) = Just b
         choose a Nothing = a
 
 -- | @since 2.0.0
 instance Monoid UTXO where
-    mempty = UTXO Nothing mempty Nothing Nothing Nothing Nothing
+    mempty = UTXO Nothing Nothing mempty Nothing Nothing Nothing Nothing
 
 {- | Pulls address output of given UTXO'
 
  @since 1.1.0
 -}
 utxoAddress :: UTXO -> Address
-utxoAddress UTXO{..} = case utxoCredential of
-    Just cred -> Address cred Nothing
-    Nothing -> Address (PubKeyCredential $ PubKeyHash "") Nothing
+utxoAddress UTXO{..} =
+    let cred = fromMaybe (PubKeyCredential $ PubKeyHash "") utxoCredential
+     in Address cred utxoStakingCredential
 
 datumWithHash :: Data -> (DatumHash, Datum)
 datumWithHash d = (datumHash dt, dt)
@@ -195,6 +213,16 @@ withRef (TxOutRef tid idx) = withRefTxId tid <> withRefIndex idx
 
 withValue :: Value -> UTXO
 withValue val = mempty{utxoValue = val}
+
+withStakingCredential :: StakingCredential -> UTXO
+withStakingCredential stak = mempty{utxoStakingCredential = Just stak}
+
+address :: Address -> UTXO
+address Address{..} =
+    mempty
+        { utxoCredential = Just addressCredential
+        , utxoStakingCredential = addressStakingCredential
+        }
 
 credential :: Credential -> UTXO
 credential cred = mempty{utxoCredential = Just cred}
@@ -449,10 +477,10 @@ mkOutRefIndices = over _bb go
     grantIndex (toList -> xs) = fromList $ grantIndex' 1 [] xs
 
     grantIndex' :: Integer -> [Integer] -> [UTXO] -> [UTXO]
-    grantIndex' top used (x@(UTXO _ _ _ _ _ Nothing) : xs)
+    grantIndex' top used (x@(UTXO _ _ _ _ _ _ Nothing) : xs)
         | top `elem` used = grantIndex' (top + 1) used (x : xs)
         | otherwise = x{utxoTxIdx = Just top} : grantIndex' (top + 1) (top : used) xs
-    grantIndex' top used (x@(UTXO _ _ _ _ _ (Just i)) : xs)
+    grantIndex' top used (x@(UTXO _ _ _ _ _ _ (Just i)) : xs)
         | i `elem` used = grantIndex' top used (x{utxoTxIdx = Nothing} : xs)
         | otherwise = x : grantIndex' top (i : used) xs
     grantIndex' _ _ [] = []
