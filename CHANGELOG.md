@@ -2,6 +2,14 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 2.2.0 -- 2020-08-22
+
+### Added
+
+* `address` is similar to `credential`, `script`, and `pubKey` but takes `Address` instead. 
+  It will take `StakingCredential` if the address is provided with one.
+* `withStakeCredential` is for adding `StakingCredential` to an UTXO.
+
 ## 2.1.0 -- 2020-08-09
 
 ### Added 

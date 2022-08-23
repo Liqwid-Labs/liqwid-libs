@@ -3,7 +3,11 @@ module Main (main) where
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
 import Plutarch.Context
 import PlutusLedgerApi.V2 (
+    Address (Address),
+    Credential (PubKeyCredential),
+    PubKeyHash (PubKeyHash),
     ScriptContext (scriptContextTxInfo),
+    StakingCredential (StakingPtr),
     TxInfo (txInfoOutputs),
     singleton,
  )
@@ -34,7 +38,10 @@ main = do
             mempty
             ( generalSample
                 <> withSpendingUTXO
-                    (pubKey "aabb" <> withValue (singleton "cc" "hello" 123))
+                    ( pubKey "aabb"
+                        <> withValue (singleton "cc" "hello" 123)
+                        <> withStakingCredential (StakingPtr 0 0 0)
+                    )
             )
     c = buildTxInfo generalSample
     d = buildTxOuts generalSample
@@ -46,8 +53,9 @@ generalSample =
             pubKey "aabb"
                 <> withValue (singleton "cc" "hello" 123)
                 <> withRefIndex 5
+                <> withStakingCredential (StakingPtr 0 0 0)
         , input $
-            pubKey "eeee"
+            address (Address (PubKeyCredential $ PubKeyHash "aa") (Just $ StakingPtr 1 2 3))
                 <> withValue (singleton "cc" "hello" 123)
                 <> withDatum (123 :: Integer)
                 <> withRefTxId "eeff"

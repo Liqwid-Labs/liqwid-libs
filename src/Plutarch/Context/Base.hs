@@ -24,9 +24,11 @@ module Plutarch.Context.Base (
     output,
     input,
     referenceInput,
+    address,
     credential,
     pubKey,
     script,
+    withStakingCredential,
     withRefTxId,
     withDatum,
     withInlineDatum,
@@ -66,22 +68,37 @@ import Optics (Lens', lens, over, view)
 import Plutarch (S)
 import Plutarch.Api.V2 (datumHash)
 import Plutarch.Builtin (PIsData, pdata, pforgetData)
-import Plutarch.Lift (PUnsafeLiftDecl (..), pconstant, plift)
+import Plutarch.Lift (PUnsafeLiftDecl (PLifted), pconstant, plift)
 import PlutusLedgerApi.V2 (
-    Address (Address),
+    Address (Address, addressCredential, addressStakingCredential),
     BuiltinData (BuiltinData),
-    Credential (..),
+    Credential (PubKeyCredential, ScriptCredential),
     Data,
     Datum (Datum),
     DatumHash,
     Interval,
-    OutputDatum (..),
+    OutputDatum (NoOutputDatum, OutputDatum, OutputDatumHash),
     POSIXTime,
     PubKeyHash (PubKeyHash),
     ScriptHash,
+    StakingCredential,
     TxId (TxId),
     TxInInfo (TxInInfo),
-    TxInfo (..),
+    TxInfo (
+        TxInfo,
+        txInfoDCert,
+        txInfoData,
+        txInfoFee,
+        txInfoId,
+        txInfoInputs,
+        txInfoMint,
+        txInfoOutputs,
+        txInfoRedeemers,
+        txInfoReferenceInputs,
+        txInfoSignatories,
+        txInfoValidRange,
+        txInfoWdrl
+    ),
     TxOut (TxOut),
     TxOutRef (TxOutRef),
     ValidatorHash,
@@ -110,6 +127,7 @@ This is different from `TxOut`, in that we store the 'Data' fully instead of the
 -}
 data UTXO = UTXO
     { utxoCredential :: Maybe Credential
+    , utxoStakingCredential :: Maybe StakingCredential
     , utxoValue :: Value
     , utxoData :: Maybe DatumType
     , utxoReferenceScript :: Maybe ScriptHash
@@ -120,24 +138,24 @@ data UTXO = UTXO
 
 -- | @since 2.0.0
 instance Semigroup UTXO where
-    (UTXO c v d rs t tidx) <> (UTXO c' v' d' rs' t' tidx') =
-        UTXO (choose c c') (v <> v') (choose d d') (choose rs rs') (choose t t') (choose tidx tidx')
+    (UTXO c stc v d rs t tidx) <> (UTXO c' stc' v' d' rs' t' tidx') =
+        UTXO (choose c c') (choose stc stc') (v <> v') (choose d d') (choose rs rs') (choose t t') (choose tidx tidx')
       where
         choose _ (Just b) = Just b
         choose a Nothing = a
 
 -- | @since 2.0.0
 instance Monoid UTXO where
-    mempty = UTXO Nothing mempty Nothing Nothing Nothing Nothing
+    mempty = UTXO Nothing Nothing mempty Nothing Nothing Nothing Nothing
 
 {- | Pulls address output of given UTXO'
 
  @since 1.1.0
 -}
 utxoAddress :: UTXO -> Address
-utxoAddress UTXO{..} = case utxoCredential of
-    Just cred -> Address cred Nothing
-    Nothing -> Address (PubKeyCredential $ PubKeyHash "") Nothing
+utxoAddress UTXO{..} =
+    let cred = fromMaybe (PubKeyCredential $ PubKeyHash "") utxoCredential
+     in Address cred utxoStakingCredential
 
 datumWithHash :: Data -> (DatumHash, Datum)
 datumWithHash d = (datumHash dt, dt)
@@ -167,6 +185,10 @@ utxoToTxOut ::
 utxoToTxOut utxo@(UTXO{..}) =
     TxOut (utxoAddress utxo) utxoValue (utxoOutputDatum utxo) utxoReferenceScript
 
+{- | Specify datum of a UTXO.
+
+ @since 2.0.0
+-}
 withDatum ::
     forall (b :: Type) (p :: S -> Type).
     (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
@@ -174,6 +196,10 @@ withDatum ::
     UTXO
 withDatum dat = mempty{utxoData = Just . ContextDatum . datafy $ dat}
 
+{- | Specify in-line datum of a UTXO.
+
+ @since 2.0.0
+-}
 withInlineDatum ::
     forall (b :: Type) (p :: S -> Type).
     (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
@@ -181,27 +207,78 @@ withInlineDatum ::
     UTXO
 withInlineDatum dat = mempty{utxoData = Just . InlineDatum . datafy $ dat}
 
+{- | Specify reference script of a UTXO.
+
+ @since 2.0.0
+-}
 withReferenceScript :: ScriptHash -> UTXO
 withReferenceScript sh = mempty{utxoReferenceScript = Just sh}
 
+{- | Specify reference `TxId` of a UTXO.
+
+ @since 2.0.0
+-}
 withRefTxId :: TxId -> UTXO
 withRefTxId tid = mempty{utxoTxId = Just tid}
 
+{- | Specify reference index of a UTXO.
+
+ @since 2.0.0
+-}
 withRefIndex :: Integer -> UTXO
 withRefIndex tidx = mempty{utxoTxIdx = Just tidx}
 
+{- | Specify `TxOutRef` of a UTXO.
+
+ @since 2.0.0
+-}
 withRef :: TxOutRef -> UTXO
 withRef (TxOutRef tid idx) = withRefTxId tid <> withRefIndex idx
 
+{- | Specify the `Value` of a UTXO. This will be monoidally merged `Value`s
+ when given mutiple times.
+
+ @since 2.0.0
+-}
 withValue :: Value -> UTXO
 withValue val = mempty{utxoValue = val}
 
+{- | Specify `StakingCredential` to a UTXO.
+
+ @since 2.2.0
+-}
+withStakingCredential :: StakingCredential -> UTXO
+withStakingCredential stak = mempty{utxoStakingCredential = Just stak}
+
+{- | Specify `Address` of a UTXO.
+
+ @since 2.2.0
+-}
+address :: Address -> UTXO
+address Address{..} =
+    mempty
+        { utxoCredential = Just addressCredential
+        , utxoStakingCredential = addressStakingCredential
+        }
+
+{- | Specify `Credential` of a UTXO.
+
+ @since 2.0.0
+-}
 credential :: Credential -> UTXO
 credential cred = mempty{utxoCredential = Just cred}
 
+{- | Specify `PubKeyHash` of a UTXO.
+
+ @since 2.0.0
+-}
 pubKey :: PubKeyHash -> UTXO
 pubKey (PubKeyCredential -> cred) = mempty{utxoCredential = Just cred}
 
+{- | Specify `ValidatorHash` of a UTXO.
+
+ @since 2.0.0
+-}
 script :: ValidatorHash -> UTXO
 script (ScriptCredential -> cred) = mempty{utxoCredential = Just cred}
 
@@ -278,7 +355,7 @@ datafy x = plift (pforgetData (pdata (pconstant x)))
 
 {- | Adds signer to builder.
 
- @since 1.1.0
+ @since 2.0.0
 -}
 signedWith ::
     forall (a :: Type).
@@ -289,7 +366,7 @@ signedWith pkh = pack $ mempty{bbSignatures = pure pkh}
 
 {- | Mint given value.
 
- @since 1.1.0
+ @since 2.0.0
 -}
 mint ::
     forall (a :: Type).
@@ -300,7 +377,7 @@ mint val = pack $ mempty{bbMints = pure val}
 
 {- | Append extra datum to @ScriptContex@.
 
- @since 1.1.0
+ @since 2.0.0
 -}
 extraData ::
     forall (a :: Type) (d :: Type) (p :: S -> Type).
@@ -309,6 +386,10 @@ extraData ::
     a
 extraData x = pack $ mempty{bbDatums = pure . datafy $ x}
 
+{- | Specify `TxId` of a script context.
+
+ @since 2.0.0
+-}
 txId ::
     forall (a :: Type).
     (Builder a) =>
@@ -316,6 +397,10 @@ txId ::
     a
 txId tid = pack $ mempty{bbTxId = tid}
 
+{- | Specify transaction fee of a script context.
+
+ @since 2.0.0
+-}
 fee ::
     forall (a :: Type).
     (Builder a) =>
@@ -323,6 +408,10 @@ fee ::
     a
 fee val = pack $ mempty{bbFee = val}
 
+{- | Specify time range of a script context.
+
+ @since 2.0.0
+-}
 timeRange ::
     forall (a :: Type).
     (Builder a) =>
@@ -330,6 +419,10 @@ timeRange ::
     a
 timeRange r = pack $ mempty{bbTimeRange = r}
 
+{- | Specify an output of a script context. 
+
+ @since 2.0.0
+-}
 output ::
     forall (a :: Type).
     (Builder a) =>
@@ -337,6 +430,10 @@ output ::
     a
 output x = pack mempty{bbOutputs = pure x}
 
+{- | Specify an input of a script context. 
+
+ @since 2.0.0
+-}
 input ::
     forall (a :: Type).
     (Builder a) =>
@@ -344,6 +441,10 @@ input ::
     a
 input x = pack mempty{bbInputs = pure x}
 
+{- | Specify a reference input of a script context. 
+
+ @since 2.0.0
+-}
 referenceInput ::
     forall (a :: Type).
     (Builder a) =>
@@ -449,10 +550,10 @@ mkOutRefIndices = over _bb go
     grantIndex (toList -> xs) = fromList $ grantIndex' 1 [] xs
 
     grantIndex' :: Integer -> [Integer] -> [UTXO] -> [UTXO]
-    grantIndex' top used (x@(UTXO _ _ _ _ _ Nothing) : xs)
+    grantIndex' top used (x@(UTXO _ _ _ _ _ _ Nothing) : xs)
         | top `elem` used = grantIndex' (top + 1) used (x : xs)
         | otherwise = x{utxoTxIdx = Just top} : grantIndex' (top + 1) (top : used) xs
-    grantIndex' top used (x@(UTXO _ _ _ _ _ (Just i)) : xs)
+    grantIndex' top used (x@(UTXO _ _ _ _ _ _ (Just i)) : xs)
         | i `elem` used = grantIndex' top used (x{utxoTxIdx = Nothing} : xs)
         | otherwise = x : grantIndex' top (i : used) xs
     grantIndex' _ _ [] = []
