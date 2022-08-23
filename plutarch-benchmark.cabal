@@ -11,8 +11,8 @@ homepage:           https://github.com/Liqwid-Labs/plutarch-benchmark
 bug-reports:        https://github.com/Liqwid-Labs/plutarch-benchmark
 license:            Apache-2.0
 license-file:       LICENSE
-author:             TODO
-maintainer:         TODO
+author:             johannes@mlabs.city
+maintainer:         koz@mlabs.city
 copyright:          (C) 2022 Liqwid Labs
 category:           Benchmark
 build-type:         Simple

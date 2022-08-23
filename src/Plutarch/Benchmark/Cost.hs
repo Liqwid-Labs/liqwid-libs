@@ -121,8 +121,10 @@ newtype BudgetExceeded (axis :: Type) = BudgetExceeded {exceededAxis :: axis}
   deriving stock (Show, Eq, Generic)
   deriving anyclass (NFData)
 
--- | Unboxed Vector of Double, for use with statistics libraries.
--- | @since 1.0.0
+{- | Unboxed Vector of Double, for use with statistics libraries.
+
+ @since 1.0.0
+-}
 newtype CostVector = CostVector (Vector Double)
 
 -- | @since 1.0.0
@@ -250,8 +252,10 @@ costSampleToVectors toVecs ssample@SSample {sampleSize, sample = eCosts} =
   let eCostVecs = toVecs sampleSize <$> sequence eCosts
    in ssample {sample = eCostVecs}
 
--- | Postprocesses 'benchSizes..' output into per-axis statistics.
--- | @since 1.0.0
+{- | Postprocesses 'benchSizes..' output into per-axis statistics.
+
+ @since 1.0.0
+-}
 samplesToPerAxisStats ::
   forall (axis :: Type) (sampleElem :: Type) (stats :: Type).
   (CostAxis axis, Eq axis) =>
@@ -269,8 +273,10 @@ samplesToPerAxisStats vecsFun statsFun ssamples =
     scvs = fmap (costSampleToVectors vecsFun) ssamples
     sAllStats = (fmap . fmap . fmap . fmap) statsFun scvs
 
--- | Rank multiple implementations by some statistic.
--- | @since 1.0.0
+{- | Rank multiple implementations by some statistic.
+
+ @since 1.0.0
+-}
 rankOnPerAxisStat ::
   forall (axis :: Type) (stats :: Type) (s :: Type).
   (CostAxis axis, Eq axis, Ord s) =>
@@ -347,8 +353,10 @@ rankOnPerAxisStat
       cmp (Left _) (Left _) = EQ
       cmp (Right a) (Right b) = compare a b
 
--- | Write per-axis titled data to CSV files.
--- | @since 1.0.0
+{- | Write per-axis titled data to CSV files.
+
+ @since 1.0.0
+-}
 writePerAxisCSVs ::
   forall (a :: Type) (d :: Type).
   ( CostAxis a

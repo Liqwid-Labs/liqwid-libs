@@ -70,6 +70,7 @@ import UntypedPlutusCore.Evaluation.Machine.Cek (
 
 -- TODO add script hash, maybe also git commit hash, mtime
 -- TODO actually make use of this and write to some file
+
 -- | @since 1.0.0
 data ImplMetaData = ImplMetaData
   { name :: Text
@@ -107,8 +108,10 @@ data PlutusCostAxis = CPU | Mem
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic)
   deriving anyclass (CostAxis, NFData)
 
--- | Based on Int, since the Plutus budget types are Int internally as well
--- | @since 1.0.0
+{- | Based on Int, since the Plutus budget types are Int internally as well
+
+ @since 1.0.0
+-}
 newtype Cost (a :: PlutusCostAxis) = Cost {value :: Int}
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData)
@@ -130,8 +133,10 @@ newtype ScriptFailure = ScriptFailure {traces :: [Text]}
 
 makeFieldLabelsNoPrefix ''ScriptFailure
 
--- | Sample Script execution, crash on evaluation failure.
--- | @since 1.0.0
+{- | Sample Script execution, crash on evaluation failure.
+
+ @since 1.0.0
+-}
 sampleScript :: Script -> Either (BudgetExceeded PlutusCostAxis) Costs
 sampleScript script =
   case sampleScript' script of
@@ -144,8 +149,10 @@ sampleScript script =
               <> Text.unpack (Text.unlines traces)
         Right budgetExceeded -> Left budgetExceeded
 
--- | Sample Script execution, try debug variant of Script on evaluation failure.
--- | @since 1.0.0
+{- | Sample Script execution, try debug variant of Script on evaluation failure.
+
+ @since 1.0.0
+-}
 sampleDebuggableScript ::
   DebuggableScript ->
   Either
@@ -205,8 +212,10 @@ plutusCostsToVecs sampleSize costs =
     costsToPair (Costs (Cost cpu) (Cost mem)) =
       (fromIntegral cpu, fromIntegral mem)
 
--- | Postprocesses 'benchSizes..' output into per-axis statistics.
--- | @since 1.0.0
+{- | Postprocesses 'benchSizes..' output into per-axis statistics.
+
+  @since 1.0.0
+-}
 statsByAxis' ::
   [SSample [Either (BudgetExceeded PlutusCostAxis) Costs]] ->
   AxisMap
@@ -215,8 +224,10 @@ statsByAxis' ::
 statsByAxis' =
   samplesToPerAxisStats plutusCostsToVecs vecSimpleStats
 
--- | Postprocesses 'benchSizes..' output into per-axis statistics.
--- | @since 1.0.0
+{- | Postprocesses 'benchSizes..' output into per-axis statistics.
+
+ @since 1.0.0
+-}
 statsByAxis ::
   ImplData [SSample [Either (BudgetExceeded PlutusCostAxis) Costs]] ->
   ImplData

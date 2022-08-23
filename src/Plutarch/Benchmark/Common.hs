@@ -16,8 +16,8 @@ module Plutarch.Benchmark.Common (
 ) where
 
 import Data.Csv (ToField (toField))
-import Data.Text (Text)
 import Data.Kind (Type)
+import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
 import GHC.Generics (Generic)
 import Optics.TH (makeFieldLabelsNoPrefix)
@@ -53,8 +53,10 @@ instance
   toField implData =
     encodeUtf8 (toTitle implData) <> " (" <> toField implData.val <> ")"
 
--- | A value associated with multiple implementations.
--- | @since 1.0.0
+{- | A value associated with multiple implementations.
+
+ @since 1.0.0
+-}
 data MultiImplData (a :: Type) = MultiImplData
   { name :: Text
   -- ^ the name of the group of implementations
@@ -76,8 +78,10 @@ multiImplData name list =
 instance forall (a :: Type). ToTitle (MultiImplData a) where
   toTitle a = a.name <> " implementations"
 
--- | A value associated with multiple implementations.
--- | @since 1.0.0
+{- | A value associated with multiple implementations.
+
+ @since 1.0.0
+-}
 data MultiImplComparisonData (a :: Type) = MultiImplComparisonData
   { name :: Text
   -- ^ the name of the group of implementations

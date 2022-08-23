@@ -42,8 +42,10 @@ exhGenBags num choice = map toList $ go num choice
       (fromReverseList (replicate reps x) <>) <$> go (num - reps) xs
     go _ [] = error "no choice"
 
--- | Exhaustively generate lists (subsets) of a given size.
--- @since 1.0.0
+{- | Exhaustively generate lists (subsets) of a given size.
+
+ @since 1.0.0
+-}
 exhGenSets ::
   forall (a :: Type).
   -- | number of elems to be generated

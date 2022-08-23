@@ -57,8 +57,10 @@ sampleTerm term = sampleDebuggableScript $ mustCompileD term
 sampleTerm' :: CompiledTerm a -> Either (BudgetExceeded PlutusCostAxis) Costs
 sampleTerm' = sampleDebuggableScript . toDebuggableScript
 
--- | See 'benchAllSizesUniform'.
--- | @since 1.0.0
+{- | See 'benchAllSizesUniform'.
+
+  @since 1.0.0
+-}
 pbenchAllSizesUniform ::
   forall
     (a :: Type)
@@ -102,8 +104,10 @@ pbenchAllSizesUniform
     where
       pfun' = compile' pfun
 
--- | See 'benchNonTinySizesRandomUniform'.
--- | @since 1.0.0
+{- | See 'benchNonTinySizesRandomUniform'.
+
+  @since 1.0.0
+-}
 pbenchNonTinySizesRandomUniform ::
   forall
     (a :: Type)
@@ -143,8 +147,10 @@ pbenchNonTinySizesRandomUniform
     where
       pfun' = compile' pfun
 
--- | See 'benchSizesRandomCached'.
--- | @since 1.0.0
+{- | See 'benchSizesRandomCached'.
+
+  @since 1.0.0
+-}
 pbenchSizesRandomCached ::
   forall
     (a :: Type)
@@ -184,8 +190,10 @@ pbenchSizesRandomCached
     where
       pfun' = compile' pfun
 
--- | See 'benchSizesRandomCached'.
--- | @since 1.0.0
+{- | See 'benchSizesRandomCached'.
+
+  @since 1.0.0
+-}
 pbenchSizesRandom ::
   forall
     (a :: Type)

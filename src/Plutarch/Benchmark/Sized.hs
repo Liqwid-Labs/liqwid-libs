@@ -85,8 +85,10 @@ import System.Random.Stateful (
  )
 import Text.Printf (printf)
 
--- | Holds sample and metadata for a certain input size
--- | @since 1.0.0
+{- | Holds sample and metadata for a certain input size
+
+  @since 1.0.0
+-}
 data SSample (s :: Type) = SSample
   { inputSize :: Int
   , coverage :: Maybe Float
