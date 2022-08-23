@@ -16,15 +16,136 @@ unclear in many places; this leads to significant wasted time and confusion.
 
 `plutarch-context-builder` aims to make this as easy as possible. We do this
 through a combination of higher-level operations to describe what the script
-should do, along with a `Semigroup`-based API to put things together with. If
+should do, along with a `Monoid`-based API to put things together with. If
 you use this library, you don't have to deal with the particulars of how
 `ScriptContext`s are defined if you don't want to, but you _can_ still generate
-them reliably and with minimal pain.
+them reliably and with minimal pain. More, the monoidal API allows overrides on
+specific fields; for example, overriding Transaction ID. It allows users to
+create a _slightly_ different script contexts without laborious record 
+overriding or reconstructing contexts from scratch.
 
 # How do I use this?
 
-Use either the `Spending` or `Minting` module's API to construct a builder; you
-can combine builders with `<>`. Then, produce the required `ScriptContext` by
-providing a `ContextConfig` from the `Config` module.
+Everything is done monoidally in `plutarch-context-builder` from setting 
+`UTXO` to adding values. User can use `<>` to combine each interface 
+functions into larger script contexts.
 
-# What can I do with this?
+There are two main types to consider: `UTXO` and `Builder a`. Former 
+constructs single UTXO in transactions.
+```hs
+data UTXO = UTXO
+    { utxoCredential :: Maybe Credential
+    , utxoStakingCredential :: Maybe StakingCredential
+    , utxoValue :: Value
+    , utxoData :: Maybe DatumType
+    , utxoReferenceScript :: Maybe ScriptHash
+    , utxoTxId :: Maybe TxId
+    , utxoTxIdx :: Maybe Integer
+    }
+```
+
+Few things to note. First, `UTXO` represents both input and output. 
+It allows same `UTXO` to be shared in different contexts as both input
+or output. Only `TxOutRef` related fields get ignored when it is being 
+used as an output. Second, besides `Value`, the binary operator(`<>`) 
+will replace previous value. It allows user to reuse pre-defined 
+`UTXO` with an update information. Note, binary operator will always
+update the last given data.
+
+```hs
+let utxo = address "aabbcc" <> withStakingCredential (StakingPtr 1 2 3)
+in utxo <> withStakingCredential (StakingPtr 7 8 9)
+-- utxo is "updated" and how have 'StakingPtr 7 8 9'
+```
+
+`Builder a` mostly appends instead of replacing. With will collect 
+multiple inputs, reference inputs, outputs, signatures, et cetra 
+and build the context out of it. User can expect it combine similarly 
+to regular lists. `Builder a` will only replace `TxId` and time range.
+
+`Builder a` is a typeclass, containing "common" script-building 
+interfaces. Using this, `plutarch-context-builder` defines specific 
+builders: like `SpendingBuilder`, `MintingBuilder`, and `TxInfoBuilder`.
+These specific builder are specialized on handling `ScriptPurpose`; 
+they will require having some special interfaces--still Monoidal-- to
+build context properly.
+
+# Sample
+
+Sample source can be found in `sample` directory.
+
+```hs
+-- What can be shared between contexts
+commonContext :: (Monoid a, Builder a) => a
+commonContext =
+	mkOutRefIndices $ -- automatically assigns OutRefIdx
+    mconcat
+        [ input $
+            pubKey "aabb"
+                <> withValue (singleton "cc" "hello" 123)
+                <> withRefIndex 5
+                <> withStakingCredential (StakingPtr 0 0 0)
+        , input $
+            address (Address (PubKeyCredential $ PubKeyHash "aa") (Just $ StakingPtr 1 2 3))
+                <> withValue (singleton "cc" "hello" 123)
+                <> withDatum (123 :: Integer)
+                <> withRefTxId "eeff"
+        , output $
+            script "cccc"
+                <> withValue (singleton "dd" "world" 123)
+        , mint $ singleton "aaaa" "hello" 333
+        ]
+		
+spendingContext :: SpendingBuilder
+spendingContext = commonContext <> withSpendingOutRefIdx 5
+
+spendingContext2 :: SpendingBuilder
+spendingContext2 = commonContext <> withSpendingOutRefId "eeff"
+
+mintingContext :: Mintingbuilder
+mintingContext = generalSample <> withMinting "aaaa"
+
+-- Build contexts
+buildMinting mempty mintingContext
+buildSpending mempty spendingContext
+
+-- Builders that will return a product type instead of throwing error.
+tryBuildMinting mempty mintingContext
+tryBuildSpending mempty spendingContext
+```		
+
+## Checkers
+
+`plutarch-context-builder` provides various checkers and some combinators
+to construct custom ones. It comes with quasi-phase-1 validation that
+will ensure all bytestrings are in correct length, inflow and outflow 
+of context is equal, at least one signature is provided, et cetra. 
+
+User can also construct a custom checker with a common contravariant
+interface: 
+```hs
+data MyError = MoreThanOneInput
+
+ensureOnlyOneInput :: Builder a => Checker MyError a
+ensureOnlyOneInput = 
+	checkAt AtInput $
+	mconcat $
+	[ contramap ((== 1) . length . bbInputs . unpack) (checkBool $ OtherError MoreThanOneInput)
+	, ... -- Multiple checkers can be combined as well.
+	, ...
+	]
+	
+-- Will return `Acc` list of errors
+-- Empty list when no error is found
+runChecker ensureOnlyOneInput context
+
+-- User can run phase-1 validation with
+buildSpending checkPhase1 context
+
+```
+
+If more sophisticated validation is required, `plutus-simple-model` 
+should be used as it runs entire cardano ledger. 
+`plutarch-context-builder` aims to test simpler functionalities very
+quickly and intuitively, while `plutus-simple-model` almost simulates
+entire contract flow.
