@@ -15,7 +15,7 @@ good example case. However, doing this directly is tedious,
 error-prone, and extremely unclear in many places; this leads to
 significant wasted time and confusion.
 
-plutarch-context-builder aims to make this as easy as possible. We do
+`plutarch-context-builder` aims to make this as easy as possible. We do
 this through a combination of higher-level operations to describe what
 the script should do, along with a `Monoid`-based API to put things
 together. If you use this library, you don't have to deal with the
