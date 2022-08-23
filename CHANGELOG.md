@@ -2,6 +2,41 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.2.0 -- 2022-08-23
+
+All additions, removals and changes refer to `Plutarch.Extra.Map` unless stated
+otherwise.
+
+### Added
+
+* `pmapFromFoldableUnsorted` for constructing unsorted `PMap`s from any
+  `Foldable` full of key-value pairs.
+* `pmapFromFoldableSorted` for constructing sorted `PMap`s from any `Foldable`
+  full of key-value pairs.
+* `pkvPairValue` as a value counterpart for `pkvPairKey`.
+
+### Removed
+
+* `plookup` and `pmap`, as they are now provided by Plutarch itself.
+* `pmapFromList`, as it is leaky and unsafe.
+* `Plutarch.Extra.Map.Sorted` module, as one of its functions got moved, and the
+  other is already provided upstream by Plutarch.
+* `Plutarch.Extra.Map.Unsorted` module, as its functionality is either
+  suspicious or outright broken throughout.
+* `Plutarch.Extra.Value.Unsorted` module, as its functionality is incorrect.
+
+### Changed
+
+* `plookup'` renamed to `plookupPartial`, uses `plookup` internally.
+* `pkeys` now produces any `PListLike`, and more clearly specifies its
+  guarantees.
+* `pupdate`, `pfoldlWithKey` and `pfoldMapWithKey` now only work with 
+  `Sorted` `PMap`s.
+* `pkvPairLt` now only needs a `PPartialOrd` constraint.
+* `pkeysEqual` now requires `PIsData k` and `PEq k`, but avoids two intermediate
+  lists.
+* `pkeysEqual` now exported from `Plutarch.Extra.Map`.
+
 ## 3.1.0 -- 2022-08-17
 
 ### Added

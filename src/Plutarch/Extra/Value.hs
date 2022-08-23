@@ -20,6 +20,7 @@ import Plutarch.Api.V1 (
     PTokenName,
     PValue (PValue),
  )
+import Plutarch.Api.V1.AssocMap (plookup)
 import Plutarch.Api.V2 (
     AmountGuarantees (NoGuarantees, Positive),
     KeyGuarantees,
@@ -27,7 +28,6 @@ import Plutarch.Api.V2 (
 import Plutarch.Builtin (ppairDataBuiltin)
 import Plutarch.Extra.AssetClass (PAssetClass)
 import qualified Plutarch.Extra.List
-import Plutarch.Extra.Map (plookup)
 import Plutarch.Extra.Maybe (pexpectJustC)
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import PlutusLedgerApi.V1.Value (AssetClass (AssetClass))

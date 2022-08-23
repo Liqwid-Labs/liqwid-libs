@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               liqwid-plutarch-extra
-version:            3.1.0
+version:            3.2.0
 synopsis:           A collection of Plutarch extras from Liqwid Labs
 description:        Several useful data types and functions for Plutarch.
 homepage:           https://github.com/Liqwid-Labs/liqwid-plutarch-extra
@@ -100,8 +100,6 @@ library
     Plutarch.Extra.IsData
     Plutarch.Extra.List
     Plutarch.Extra.Map
-    Plutarch.Extra.Map.Sorted
-    Plutarch.Extra.Map.Unsorted
     Plutarch.Extra.Maybe
     Plutarch.Extra.Monoid
     Plutarch.Extra.MultiSig
@@ -119,7 +117,6 @@ library
     Plutarch.Extra.Traversable
     Plutarch.Extra.Tuple
     Plutarch.Extra.Value
-    Plutarch.Extra.Value.Unsorted
     Plutarch.Orphans
 
   build-depends:
