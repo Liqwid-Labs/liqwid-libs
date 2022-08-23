@@ -235,7 +235,7 @@ withRefIndex tidx = mempty{utxoTxIdx = Just tidx}
 withRef :: TxOutRef -> UTXO
 withRef (TxOutRef tid idx) = withRefTxId tid <> withRefIndex idx
 
-{- | Specify value of a UTXO. This will me monoidally merged values
+{- | Specify the `Value` of a UTXO. This will be monoidally merged `Value`s
  when given mutiple times.
 
  @since 2.0.0
