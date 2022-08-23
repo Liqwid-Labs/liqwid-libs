@@ -40,6 +40,13 @@ otherwise.
 * `pkeysEqual` now only works for sorted `PMap`s.
 * `pkeysEqual` now exported from `Plutarch.Extra.Map`.
 
+## 3.3.0 -- 2022-08-23
+
+### Added
+
+* A new `Plutarch.Extra.Time` module, containing utilities for working with bounded
+  time range.
+
 ## 3.2.0 -- 2022-08-22
 
 ### Changed
