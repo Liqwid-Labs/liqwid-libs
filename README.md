@@ -62,7 +62,7 @@ describing good practices for use of this library, as well as QuickCheck and
 QuickCheck hands, as there are a lot of useful, and less-known, bits of
 information there.
 
-To integrate this with your project, use Nix. We work against the `main`
+To integrate this with your project, use Nix. We work against the `master`
 branch of [Plutarch](https://github.com/Plutonomicon/plutarch-plutus), so you will have to use it
 also. See the [`flake.nix`](./flake.nix) file for more details.
 
