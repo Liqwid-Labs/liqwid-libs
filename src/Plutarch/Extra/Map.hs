@@ -26,8 +26,8 @@ module Plutarch.Extra.Map (
     pfoldlWithKey,
 
     -- * Conversion
-    pmapFromFoldableUnsorted,
-    pmapFromFoldableSorted,
+    punsortedMapFromFoldable,
+    psortedMapFromFoldable,
     pkeys,
 
     -- * Key-value pair manipulation
@@ -46,6 +46,7 @@ import Plutarch.Api.V1.AssocMap (
     plookup,
  )
 import Plutarch.Builtin (ppairDataBuiltin)
+import Plutarch.Extra.Maybe (passertPJust)
 import Plutarch.List (puncons)
 
 {- | Gives 'PTrue' if both argument 'PMap's contain mappings for exactly the
@@ -60,9 +61,9 @@ pkeysEqual ::
     Term s (PMap 'Sorted k a :--> PMap 'Sorted k b :--> PBool)
 pkeysEqual = phoistAcyclic $
     plam $ \kvs kvs' ->
-        pmatch kvs $ \case
-            PMap ell -> pmatch kvs' $ \case
-                PMap ell' -> go # ell # ell'
+        pmatch kvs $ \(PMap ell) ->
+            pmatch kvs' $ \(PMap ell') ->
+                go # ell # ell'
   where
     go ::
         forall (s' :: S).
@@ -80,13 +81,12 @@ pkeysEqual = phoistAcyclic $
                     PJust _ -> pcon PFalse -- one argument too long
                 PJust kv -> pmatch (puncons # ell') $ \case
                     PNothing -> pcon PFalse -- one argument too long
-                    PJust kv' -> pmatch kv $ \case
-                        PPair h t -> pmatch kv' $ \case
-                            PPair h' t' ->
-                                pif
-                                    ((pkvPairKey # h) #== (pkvPairKey # h'))
-                                    (self # t # t') -- continue
-                                    (pcon PFalse) -- key mismatch
+                    PJust kv' -> pmatch kv $ \(PPair h t) ->
+                        pmatch kv' $ \(PPair h' t') ->
+                            pif
+                                ((pkvPairKey # h) #== (pkvPairKey # h'))
+                                (self # t # t') -- continue
+                                (pcon PFalse) -- key mismatch
 
 {- | Get the key of a key-value pair.
 
@@ -136,9 +136,8 @@ ptryLookup ::
     Term s (k :--> PMap keys k v :--> v)
 ptryLookup = phoistAcyclic $
     plam $ \k kvs ->
-        pmatch (plookup # k # kvs) $ \case
-            PNothing -> ptraceError "plookupPartial: No value found for key."
-            PJust v -> v
+        passertPJust # "plookupPartial: No value found for key."
+            # (plookup # k # kvs)
 
 {- | Given a 'Foldable' of key-value pairs, construct an unsorted 'PMap'.
  Performs linearly with respect to its argument.
@@ -150,12 +149,12 @@ ptryLookup = phoistAcyclic $
 
  @since 3.2.0
 -}
-pmapFromFoldableUnsorted ::
+punsortedMapFromFoldable ::
     forall (k :: S -> Type) (v :: S -> Type) (f :: Type -> Type) (s :: S).
     (Foldable f, PIsData k, PIsData v) =>
     f (Term s k, Term s v) ->
     Term s (PMap 'Unsorted k v)
-pmapFromFoldableUnsorted = pcon . PMap . foldl' go (pcon PNil)
+punsortedMapFromFoldable = pcon . PMap . foldl' go (pcon PNil)
   where
     go ::
         forall (s' :: S).
@@ -169,14 +168,19 @@ pmapFromFoldableUnsorted = pcon . PMap . foldl' go (pcon PNil)
  'PMap' which is guaranteed sorted. Performs a linear number of ordered
  insertions with respect to the length of its argument.
 
+ = Note
+
+ If there are duplicate keys, only the /last/ key-value pair will remain in
+ the result.
+
  @since 3.2.0
 -}
-pmapFromFoldableSorted ::
+psortedMapFromFoldable ::
     forall (k :: S -> Type) (v :: S -> Type) (f :: Type -> Type) (s :: S).
     (Foldable f, POrd k, PIsData k, PIsData v) =>
     f (Term s k, Term s v) ->
     Term s (PMap 'Sorted k v)
-pmapFromFoldableSorted = foldl' go pempty
+psortedMapFromFoldable = foldl' go pempty
   where
     go ::
         forall (s' :: S).
@@ -207,8 +211,8 @@ pkeys ::
     (PListLike ell, PElemConstraint ell (PAsData k)) =>
     Term s (PMap keys k v :--> ell (PAsData k))
 pkeys = phoistAcyclic $
-    plam $ \kvs -> pmatch kvs $ \case
-        PMap kvs' -> precList go (const pnil) # kvs'
+    plam $ \kvs -> pmatch kvs $ \(PMap kvs') ->
+        precList go (const pnil) # kvs'
   where
     go ::
         forall (s' :: S).
