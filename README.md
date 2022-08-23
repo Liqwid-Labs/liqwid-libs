@@ -54,7 +54,7 @@ the `writePerAxisCSVs` function from `Plutarch.Benchmark.Cost`, and the same
 module exposes the `writeComparisonPerAxisCSVs` to group multiple benchmarks 
 into a single CSV and rank them according to performance.
 
-To integrate this with your project, use Nix. We work against the `main`
+To integrate this with your project, use Nix. We work against the `master`
 branch of [Plutarch](https://github.com/Plutonomicon/plutarch-plutus), so you 
 will have to use it also. See the [`flake.nix`](./flake.nix) file for more details.
 
