@@ -17,6 +17,7 @@ module Plutarch.Extra.Map (
 
     -- * Comparisons
     pkeysEqual,
+    pkeysEqualUnsorted,
 
     -- * Modification
     pupdate,
@@ -48,6 +49,64 @@ import Plutarch.Api.V1.AssocMap (
 import Plutarch.Builtin (ppairDataBuiltin)
 import Plutarch.Extra.Maybe (passertPJust)
 import Plutarch.List (puncons)
+
+{- | As 'pkeysEqual', but requires only 'PEq' constraints for the keys, and
+ works for 'Unsorted' 'PMap's. This requires a number of equality comparisons
+ between keys proportional to the product of the lengths of both arguments:
+ that is, this function is quadratic.
+
+ @since 3.2.0
+-}
+pkeysEqualUnsorted ::
+    forall (k :: S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S).
+    (PIsData k, PIsData a, PIsData b) =>
+    Term s (PMap 'Unsorted k a :--> PMap 'Unsorted k b :--> PBool)
+pkeysEqualUnsorted = phoistAcyclic $
+    plam $ \kvs kvs' ->
+        pmatch kvs $ \(PMap ell) ->
+            pmatch kvs' $ \(PMap ell') ->
+                go # kvs # kvs' # ell # ell'
+  where
+    go ::
+        forall (s' :: S).
+        Term
+            s'
+            ( PMap 'Unsorted k a
+                :--> PMap 'Unsorted k b
+                :--> PBuiltinList (PBuiltinPair (PAsData k) (PAsData a))
+                :--> PBuiltinList (PBuiltinPair (PAsData k) (PAsData b))
+                :--> PBool
+            )
+    go = phoistAcyclic $
+        pfix #$ plam $ \self kvs kvs' ell ell' ->
+            pmatch (puncons # ell) $ \case
+                PNothing -> pmatch (puncons # ell') $ \case
+                    -- We reached the end, so we match
+                    PNothing -> pcon PTrue
+                    PJust ht' -> pmatch ht' $ \(PPair h' t') ->
+                        pmatch (plookup # (pkvPairKey # h') # kvs) $ \case
+                            -- We mismatch, so fail
+                            PNothing -> pcon PFalse
+                            -- We match, so continue
+                            PJust _ -> self # kvs # kvs' # ell # t'
+                PJust ht -> pmatch ht $ \(PPair h t) ->
+                    pmatch (puncons # ell') $ \case
+                        PNothing -> pmatch (plookup # (pkvPairKey # h) # kvs') $ \case
+                            -- We mismatch, so fail
+                            PNothing -> pcon PFalse
+                            -- We match, so continue
+                            PJust _ -> self # kvs # kvs' # t # ell'
+                        -- To save some effort, we try both matches in one shot
+                        PJust ht' -> pmatch ht' $ \(PPair h' t') ->
+                            pmatch (plookup # (pkvPairKey # h) # kvs') $ \case
+                                -- We mismatch, so fail
+                                PNothing -> pcon PFalse
+                                -- Try the other direction
+                                PJust _ -> pmatch (plookup # (pkvPairKey # h') # kvs) $ \case
+                                    -- We mismatch, so fail
+                                    PNothing -> pcon PFalse
+                                    -- Both succeeded, so continue on tails
+                                    PJust _ -> self # kvs # kvs' # t # t'
 
 {- | Gives 'PTrue' if both argument 'PMap's contain mappings for exactly the
  same set of keys. Requires a number of equality comparisons between keys

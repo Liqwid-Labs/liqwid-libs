@@ -14,6 +14,7 @@ otherwise.
 * `pmapFromFoldableSorted` for constructing sorted `PMap`s from any `Foldable`
   full of key-value pairs.
 * `pkvPairValue` as a value counterpart for `pkvPairKey`.
+* `pkeysEqualUnsorted` for doing key set comparisons between unordered `PMap`s.
 
 ### Removed
 
@@ -35,6 +36,7 @@ otherwise.
 * `pkvPairLt` now only needs a `PPartialOrd` constraint.
 * `pkeysEqual` now requires `PIsData k` and `PEq k`, but avoids two intermediate
   lists.
+* `pkeysEqual` now only works for sorted `PMap`s.
 * `pkeysEqual` now exported from `Plutarch.Extra.Map`.
 
 ## 3.1.0 -- 2022-08-17
