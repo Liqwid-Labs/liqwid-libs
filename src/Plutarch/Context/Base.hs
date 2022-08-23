@@ -185,6 +185,10 @@ utxoToTxOut ::
 utxoToTxOut utxo@(UTXO{..}) =
     TxOut (utxoAddress utxo) utxoValue (utxoOutputDatum utxo) utxoReferenceScript
 
+{- | Specify datum of a UTXO.
+
+ @since 2.0.0
+-}
 withDatum ::
     forall (b :: Type) (p :: S -> Type).
     (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
@@ -192,6 +196,10 @@ withDatum ::
     UTXO
 withDatum dat = mempty{utxoData = Just . ContextDatum . datafy $ dat}
 
+{- | Specify in-line datum of a UTXO.
+
+ @since 2.0.0
+-}
 withInlineDatum ::
     forall (b :: Type) (p :: S -> Type).
     (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
@@ -199,24 +207,53 @@ withInlineDatum ::
     UTXO
 withInlineDatum dat = mempty{utxoData = Just . InlineDatum . datafy $ dat}
 
+{- | Specify reference script of a UTXO.
+
+ @since 2.0.0
+-}
 withReferenceScript :: ScriptHash -> UTXO
 withReferenceScript sh = mempty{utxoReferenceScript = Just sh}
 
+{- | Specify reference `TxId` of a UTXO.
+
+ @since 2.0.0
+-}
 withRefTxId :: TxId -> UTXO
 withRefTxId tid = mempty{utxoTxId = Just tid}
 
+{- | Specify reference index of a UTXO.
+
+ @since 2.0.0
+-}
 withRefIndex :: Integer -> UTXO
 withRefIndex tidx = mempty{utxoTxIdx = Just tidx}
 
+{- | Specify `TxOutRef` of a UTXO.
+
+ @since 2.0.0
+-}
 withRef :: TxOutRef -> UTXO
 withRef (TxOutRef tid idx) = withRefTxId tid <> withRefIndex idx
 
+{- | Specify value of a UTXO. This will me monoidally merged values
+ when given mutiple times.
+
+ @since 2.0.0
+-}
 withValue :: Value -> UTXO
 withValue val = mempty{utxoValue = val}
 
+{- | Specify `StakingCredential` to a UTXO.
+
+ @since 2.2.0
+-}
 withStakingCredential :: StakingCredential -> UTXO
 withStakingCredential stak = mempty{utxoStakingCredential = Just stak}
 
+{- | Specify `Address` of a UTXO.
+
+ @since 2.2.0
+-}
 address :: Address -> UTXO
 address Address{..} =
     mempty
@@ -224,12 +261,24 @@ address Address{..} =
         , utxoStakingCredential = addressStakingCredential
         }
 
+{- | Specify `Credential` of a UTXO.
+
+ @since 2.0.0
+-}
 credential :: Credential -> UTXO
 credential cred = mempty{utxoCredential = Just cred}
 
+{- | Specify `PubKeyHash` of a UTXO.
+
+ @since 2.0.0
+-}
 pubKey :: PubKeyHash -> UTXO
 pubKey (PubKeyCredential -> cred) = mempty{utxoCredential = Just cred}
 
+{- | Specify `ValidatorHash` of a UTXO.
+
+ @since 2.0.0
+-}
 script :: ValidatorHash -> UTXO
 script (ScriptCredential -> cred) = mempty{utxoCredential = Just cred}
 
@@ -306,7 +355,7 @@ datafy x = plift (pforgetData (pdata (pconstant x)))
 
 {- | Adds signer to builder.
 
- @since 1.1.0
+ @since 2.0.0
 -}
 signedWith ::
     forall (a :: Type).
@@ -317,7 +366,7 @@ signedWith pkh = pack $ mempty{bbSignatures = pure pkh}
 
 {- | Mint given value.
 
- @since 1.1.0
+ @since 2.0.0
 -}
 mint ::
     forall (a :: Type).
@@ -328,7 +377,7 @@ mint val = pack $ mempty{bbMints = pure val}
 
 {- | Append extra datum to @ScriptContex@.
 
- @since 1.1.0
+ @since 2.0.0
 -}
 extraData ::
     forall (a :: Type) (d :: Type) (p :: S -> Type).
@@ -337,6 +386,10 @@ extraData ::
     a
 extraData x = pack $ mempty{bbDatums = pure . datafy $ x}
 
+{- | Specify `TxId` of a script context.
+
+ @since 2.0.0
+-}
 txId ::
     forall (a :: Type).
     (Builder a) =>
@@ -344,6 +397,10 @@ txId ::
     a
 txId tid = pack $ mempty{bbTxId = tid}
 
+{- | Specify transaction fee of a script context.
+
+ @since 2.0.0
+-}
 fee ::
     forall (a :: Type).
     (Builder a) =>
@@ -351,6 +408,10 @@ fee ::
     a
 fee val = pack $ mempty{bbFee = val}
 
+{- | Specify time range of a script context.
+
+ @since 2.0.0
+-}
 timeRange ::
     forall (a :: Type).
     (Builder a) =>
@@ -358,6 +419,10 @@ timeRange ::
     a
 timeRange r = pack $ mempty{bbTimeRange = r}
 
+{- | Specify an output of a script context. 
+
+ @since 2.0.0
+-}
 output ::
     forall (a :: Type).
     (Builder a) =>
@@ -365,6 +430,10 @@ output ::
     a
 output x = pack mempty{bbOutputs = pure x}
 
+{- | Specify an input of a script context. 
+
+ @since 2.0.0
+-}
 input ::
     forall (a :: Type).
     (Builder a) =>
@@ -372,6 +441,10 @@ input ::
     a
 input x = pack mempty{bbInputs = pure x}
 
+{- | Specify a reference input of a script context. 
+
+ @since 2.0.0
+-}
 referenceInput ::
     forall (a :: Type).
     (Builder a) =>
