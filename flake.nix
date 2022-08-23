@@ -1,5 +1,5 @@
 {
-  description = "liqwid-plutarch-extra";
+  description = "plutarch-unit";
 
   inputs = {
     nixpkgs.follows = "plutarch/nixpkgs";
