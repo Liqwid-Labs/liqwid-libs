@@ -13,7 +13,7 @@
 -}
 module Plutarch.Extra.Map (
     -- * Lookup
-    plookupPartial,
+    ptryLookup,
 
     -- * Comparisons
     pkeysEqual,
@@ -130,11 +130,11 @@ pkvPairLt = phoistAcyclic $
 
  @since 3.2.0
 -}
-plookupPartial ::
+ptryLookup ::
     forall (k :: S -> Type) (v :: S -> Type) (keys :: KeyGuarantees) (s :: S).
     (PIsData k, PIsData v) =>
     Term s (k :--> PMap keys k v :--> v)
-plookupPartial = phoistAcyclic $
+ptryLookup = phoistAcyclic $
     plam $ \k kvs ->
         pmatch (plookup # k # kvs) $ \case
             PNothing -> ptraceError "plookupPartial: No value found for key."

@@ -27,7 +27,7 @@ otherwise.
 
 ### Changed
 
-* `plookup'` renamed to `plookupPartial`, uses `plookup` internally.
+* `plookup'` renamed to `ptryLookup`, uses `plookup` internally.
 * `pkeys` now produces any `PListLike`, and more clearly specifies its
   guarantees.
 * `pupdate`, `pfoldlWithKey` and `pfoldMapWithKey` now only work with 
