@@ -7,9 +7,9 @@ A helper library to compare algorithm implementations of Plutarch code.
 
 Some of the benchmarking techniques are multi-threaded.
 
-This library helps users to write benchmarks on memory units, CPU units,
-and script size, and ranks those implementations in terms of best, worst,
-or average cases, across multiple sizes of inputs.
+This library helps users to write benchmarks on memory units
+and CPU units, and ranks those implementations in terms of best, 
+worst, or average cases, across multiple sizes of inputs.
 
 ## What _exactly_ does this do for me?
 
@@ -38,11 +38,11 @@ The `Plutarch.Benchmark.Sized` module exposes a types and functions
 to assist with generating test data. The key types are:
 
 - `SSample` (for "Sized Sample), which holds sample data along with
-  metadata about the size of the input it was generated from, 
+  metadata about the size of the inputs it was generated from, 
   the size of the sample itself, coverage, and the sample itself
 - `SUniversalGen` (for "Sized Universal Generator"), which holds
-  a pair of generators: exhaustive generators for small samples sizes,
-  as well as random generators for large sample sizes.
+  a pair of generators: exhaustive generators for small input sizes,
+  as well as random generators for large input sizes.
   
 Using these types and the `bench*` functions exposed in the module (as well as 
 those exposed in `Plutarch.Bench.Plutarch`), users can generate benchmarks in 
