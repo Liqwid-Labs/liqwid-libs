@@ -2,7 +2,7 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-## 3.2.0 -- 2022-08-23
+## 3.3.0 -- 2022-08-25
 
 All additions, removals and changes refer to `Plutarch.Extra.Map` unless stated
 otherwise.
@@ -38,6 +38,12 @@ otherwise.
   lists.
 * `pkeysEqual` now only works for sorted `PMap`s.
 * `pkeysEqual` now exported from `Plutarch.Extra.Map`.
+
+## 3.2.0 -- 2022-08-22
+
+### Changed
+
+* Checks `MultiSig` without the need of passing the whole `PTxInfo`.
 
 ## 3.1.0 -- 2022-08-17
 
