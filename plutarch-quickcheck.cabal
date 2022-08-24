@@ -110,9 +110,6 @@ library
   import:          common-lang
   exposed-modules: Plutarch.Test.QuickCheck
   other-modules:
-    Plutarch.Extra.List
-    Plutarch.Extra.Map
-    Plutarch.Extra.Map.Unsorted
     Plutarch.Extra.Maybe
     Plutarch.Test.QuickCheck.Function
     Plutarch.Test.QuickCheck.Instances
