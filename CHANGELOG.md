@@ -44,8 +44,16 @@ otherwise.
 
 ### Added
 
-* A new `Plutarch.Extra.Time` module, containing utilities for working with bounded
-  time range.
+* A `Plutarch.Extra.Time` module, containing utilities for working with time and 
+   time ranges.
+* Some utilities for working with closed bounded time ranges, including
+
+  - `PCurrentTime`
+  - `pcurrentTime`
+  - `currentTime`
+  - `passertCurrentTime`
+  - `pisWithinCurrentTime`
+  - `pisCurrentTimeWithin`
 
 ## 3.2.0 -- 2022-08-22
 

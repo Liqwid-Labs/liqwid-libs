@@ -34,10 +34,12 @@ import Plutarch.Extra.TermCont (pmatchC)
 
      @since 3.3.0
 -}
-data PCurrentTime (s :: S) = PCurrentTime
-    { lowerBound :: Term s PPOSIXTime
-    , upperBound :: Term s PPOSIXTime
-    }
+data PCurrentTime (s :: S)
+    = PCurrentTime
+        (Term s PPOSIXTime)
+        -- ^ The lower bound.
+        (Term s PPOSIXTime)
+        -- ^ The upper bound.
     deriving stock
         ( -- | @since 3.3.0
           Generic
@@ -141,6 +143,9 @@ pisWithinCurrentTime = phoistAcyclic $
             lb #<= time #&& time #<= ub
 
 {- | Return true if current time is within the given time range.
+
+    Note that the first argument is the lower bound of the said time range, and
+      the second is the upper bound.
 
      @since 3.3.0
 -}
