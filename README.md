@@ -18,7 +18,7 @@ The code in LPE can broadly be categorized as follows:
 - (Co)category typeclasses (`PFunctor` and friends),
 - Missing functionality from existing Plutarch modules like `Plutarch.List`, `Plutarch.Maybe`, and so forth
 - Genuine extras, like those found in `Precompile`, `Tagged`, `MultiSig`,
-  and `FixedDecimal`` 
+  and `FixedDecimal`
 
 ### Caveat Emptor
 
