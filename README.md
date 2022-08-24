@@ -5,7 +5,7 @@ Public discussion and assistance can be found on [discord](https://discord.gg/yG
 ## What is this?
 
 LPE is a repository for holding Plutarch types, typeclasses, helpers, and utilities 
-shared between [Liqwid Labs](github.com/Liqwid-Labs) projects.
+shared between [Liqwid Labs](https://github.com/Liqwid-Labs) projects.
 
 ## What _exactly_ does this do for me?
 
@@ -43,7 +43,7 @@ Users are welcome to inquire about the status of particular snippets on the [dis
 
 To integrate this with your project, use Nix. We work against the main branch of Plutarch, so you will have to use it also. See the `flake.nix` file for more details.
 
-Liqwid uses [`liqwid-nix`](github.com/Liqwid-Labs/liqwid-nix) to set up its projects. 
+Liqwid uses [`liqwid-nix`](https://github.com/Liqwid-Labs/liqwid-nix) to set up its projects. 
 You are not required to use `liqwid-nix` to use this library, but you are welcome to check
 check it out.
 
