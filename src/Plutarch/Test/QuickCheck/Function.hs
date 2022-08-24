@@ -25,20 +25,20 @@ import Plutarch.Extra.Maybe (pmaybe)
 import Plutarch.Lift (PLift, PUnsafeLiftDecl (PLifted), pconstant)
 import Plutarch.Maybe (pfromJust)
 import Plutarch.Prelude (
-    PIsListLike,
     PBool,
-    PMaybe(PJust, PNothing),
-    precList,
-    pif,
-    pcon,
-    phoistAcyclic,
-    pmatch,
-    pfstBuiltin,
-    psndBuiltin,
-    (#==),
     PBuiltinList,
     PBuiltinPair,
     PEq,
+    PIsListLike,
+    PMaybe (PJust, PNothing),
+    pcon,
+    pfstBuiltin,
+    phoistAcyclic,
+    pif,
+    pmatch,
+    precList,
+    psndBuiltin,
+    (#==),
  )
 import Plutarch.Test.QuickCheck.Instances (
     TestableTerm (
@@ -179,7 +179,7 @@ pfind' ::
 pfind' p =
     precList
         (\self x xs -> pif (p x) (pcon (PJust x)) (self # xs))
-        (const $ pcon PNothing)    
+        (const $ pcon PNothing)
 
 plookup ::
     forall (a :: S -> Type) (b :: S -> Type) (s :: S) list.

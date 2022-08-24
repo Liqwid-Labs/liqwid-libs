@@ -32,10 +32,13 @@ module Plutarch.Test.QuickCheck (
     PArbitrary (..),
     pconstantT,
     pliftT,
+    uplcEq,
 ) where
 
 import Data.Kind (Type)
 import Generics.SOP (All, HPure (hcpure), NP ((:*)), Proxy (Proxy))
+import Plutarch (Config (Config), TracingMode (NoTracing), compile, tracingMode)
+import Plutarch.Evaluate (evalScript)
 import Plutarch.Lift (DerivePConstantViaNewtype (..), PConstantDecl, PUnsafeLiftDecl (PLifted))
 import Plutarch.Num (PNum)
 import Plutarch.Prelude (
@@ -266,6 +269,21 @@ haskEquiv' h p =
         hcpure
             (Proxy @Arbitrary)
             arbitrary
+
+{- | Compares evaluated UPLC
+
+ @since 2.0.1
+-}
+uplcEq :: TestableTerm a -> TestableTerm b -> Property
+uplcEq x y = property $ eval x == eval y
+  where
+    eval (TestableTerm t) =
+        case compile (Config{tracingMode = NoTracing}) t of
+            Left err -> error $ show err
+            Right s' ->
+                case evalScript s' of
+                    (Right s, _, _) -> s
+                    (Left err, _, _) -> error $ show err
 
 newtype A = A Integer
 

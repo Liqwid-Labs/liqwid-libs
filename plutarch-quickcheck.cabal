@@ -112,6 +112,7 @@ library
   other-modules:
     Plutarch.Extra.Maybe
     Plutarch.Test.QuickCheck.Function
+    Plutarch.Test.QuickCheck.Helpers
     Plutarch.Test.QuickCheck.Instances
 
   build-depends:

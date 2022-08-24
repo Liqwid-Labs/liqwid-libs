@@ -60,7 +60,7 @@ import Plutarch.Api.V2 (
     PPubKeyHash (PPubKeyHash),
     PStakingCredential (PStakingHash, PStakingPtr),
  )
-import Plutarch.Evaluate (evalScript, evalTerm)
+import Plutarch.Evaluate (evalScript)
 import Plutarch.Extra.Maybe (
     pfromDJust,
     pisDJust,
@@ -102,6 +102,7 @@ import Plutarch.Prelude (
     ptraceError,
  )
 import Plutarch.Show (PShow)
+import Plutarch.Test.QuickCheck.Helpers (loudEval)
 import Test.QuickCheck (
     Arbitrary (arbitrary, shrink),
     CoArbitrary (coarbitrary),
@@ -145,10 +146,6 @@ instance (forall (s :: S). Num (Term s a)) => Num (TestableTerm a) where
     negate = liftT negate
     signum = liftT signum
     fromInteger i = TestableTerm (fromInteger i :: Term s a)
-
--- | @since 2.0.0
-instance (forall (s :: S). Eq (Term s a)) => Eq (TestableTerm a) where
-    (TestableTerm x) == (TestableTerm y) = x == y
 
 {- | For any Plutarch Type that have a `PShow` instance, `Show` is
      available as well. For those that don't have @PShow@ instances,
@@ -210,14 +207,7 @@ class PCoArbitrary (a :: S -> Type) where
 -}
 instance PArbitrary p => Arbitrary (TestableTerm p) where
     arbitrary = parbitrary
-    shrink = pshrink . loudEval
-      where
-        loudEval :: TestableTerm p -> TestableTerm p
-        loudEval (TestableTerm x) =
-            case evalTerm (Config{tracingMode = DoTracing}) x of
-                Right (Right t, _, _) -> TestableTerm t
-                Right (Left err, _, trace) -> error $ show err <> show trace -- TODO pretty this output
-                Left err -> error $ show err
+    shrink = pshrink . (\(TestableTerm x) -> TestableTerm $ loudEval x)
 
 instance PCoArbitrary p => CoArbitrary (TestableTerm p) where
     coarbitrary = pcoarbitrary
