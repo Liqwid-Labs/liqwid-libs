@@ -33,10 +33,11 @@ module Plutarch.Test.QuickCheck (
     pconstantT,
     pliftT,
     uplcEq,
+    Equality(..),
 ) where
 
 import Data.Kind (Type)
-import Generics.SOP (All, HPure (hcpure), NP ((:*)), Proxy (Proxy))
+import Generics.SOP (All, HPure (hcpure), NP ((:*), Nil), Proxy (Proxy))
 import Plutarch (Config (Config), TracingMode (NoTracing), compile, tracingMode)
 import Plutarch.Evaluate (evalScript)
 import Plutarch.Lift (DerivePConstantViaNewtype (..), PConstantDecl, PUnsafeLiftDecl (PLifted))
@@ -80,6 +81,7 @@ import Test.QuickCheck (
     Property,
     Testable (property),
     forAll,
+    (.&&.),
  )
 
 -- | @since 2.0.0
@@ -194,6 +196,22 @@ fromPFun ::
     TestableFun c (a :--> b)
 fromPFun = fromPFun' (Proxy @(PTT (a :--> b)))
 
+{- | Ways an Plutarch terms can be compared.
+     @OnPEq@ uses Plutarch `PEq` instance to compare give terms. This
+     means two terms with different UPLC representations can be
+     considered equal when `PEq` instance defines so.
+     @OnUPLC@ uses compiled and evaluated raw UPLC to compare two
+     terms. It is useful comparing Terms that forgot their types--
+     `POpqaue`.
+
+ @since 2.1.0
+-}
+data Equality
+    = OnPEq
+    | OnUPLC
+    | OnBoth
+    deriving stock (Eq, Show)
+
 {- | Extracts all @TestableTerm@s from give Plutarch function.
 
  @since 2.0.0
@@ -215,6 +233,7 @@ type family PLamArgs (p :: S -> Type) :: [Type] where
 class
     (PLamArgs p ~ args) =>
     HaskEquiv
+        (e :: Equality)
         (h :: Type)
         (p :: S -> Type)
         (args :: [Type])
@@ -223,32 +242,50 @@ class
 
 -- TODO: Shrinking support
 
--- | @since 2.0.0
+-- | @since 2.1.0
 instance
     forall
+        (e :: Equality)    
         (ha :: Type)
         (hb :: Type)
         (pa :: S -> Type)
         (pb :: S -> Type)
         (hbArgs :: [Type]).
     ( PLamArgs pb ~ hbArgs
-    , HaskEquiv hb pb hbArgs
+    , HaskEquiv e hb pb hbArgs
     , PLifted pa ~ ha
     , PLift pa
     , PShow pa
     ) =>
-    HaskEquiv (ha -> hb) (pa :--> pb) (TestableTerm pa ': hbArgs)
+    HaskEquiv e (ha -> hb) (pa :--> pb) (TestableTerm pa ': hbArgs)
     where
     haskEquiv h (TestableTerm p) (g :* gs) =
-        forAll g $ \(TestableTerm x) -> haskEquiv (h $ plift x) (TestableTerm $ p # x) gs
+        forAll g $ \(TestableTerm x) -> haskEquiv @e (h $ plift x) (TestableTerm $ p # x) gs
 
--- | @since 2.0.0
+-- | @since 2.1.0
 instance
     forall (p :: S -> Type) (h :: Type).
     (PLamArgs p ~ '[], PLift p, PLifted p ~ h, Eq h) =>
-    HaskEquiv h p '[]
+    HaskEquiv 'OnPEq h p '[]
     where
     haskEquiv h (TestableTerm p) _ = property $ plift p == h
+
+-- | @since 2.1.0
+instance
+    forall (p :: S -> Type) (h :: Type).
+    (PLamArgs p ~ '[], PLift p, PLifted p ~ h, Eq h) =>
+    HaskEquiv 'OnUPLC h p '[]
+    where
+    haskEquiv h (TestableTerm p) _ = error "asdf" -- property $ plift p == h
+
+-- | @since 2.1.0
+instance
+    forall (p :: S -> Type) (h :: Type).
+    (PLamArgs p ~ '[], PLift p, PLifted p ~ h, Eq h) =>
+    HaskEquiv 'OnBoth h p '[]
+    where
+    haskEquiv h p _ =
+        (haskEquiv @'OnPEq h p Nil) -- .&&. (haskEquiv @'OnUPLC h p Nil)
 
 {- | Simplified version of `haskEquiv`. It will use arbitrary instead of
      asking custom generators.
@@ -258,14 +295,14 @@ instance
 haskEquiv' ::
     forall (h :: Type) (p :: S -> Type) (args :: [Type]).
     ( PLamArgs p ~ args
-    , HaskEquiv h p args
+    , HaskEquiv 'OnBoth h p args
     , All Arbitrary args
     ) =>
     h ->
     (forall s. Term s p) ->
     Property
 haskEquiv' h p =
-    haskEquiv h (TestableTerm p) $
+    haskEquiv @'OnBoth h (TestableTerm p) $
         hcpure
             (Proxy @Arbitrary)
             arbitrary

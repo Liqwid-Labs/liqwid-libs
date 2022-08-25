@@ -31,6 +31,7 @@ import Plutarch.Prelude (
 
 import Plutarch.Test.QuickCheck (
     TestableTerm (TestableTerm),
+    Equality(OnBoth),
     haskEquiv,
     haskEquiv',
     pconstantT,
@@ -84,7 +85,7 @@ propWrong = haskEquiv' hreverse (preverseWrong @PBuiltinList @PInteger)
 -- from `Generics.SOP`. (hint: it's using `NP`)
 propCustom :: Property
 propCustom =
-    haskEquiv hreverse (TestableTerm preverseCorrect) (genList :* Nil)
+    haskEquiv @'OnBoth hreverse (TestableTerm preverseCorrect) (genList :* Nil)
   where
     genList :: Gen (TestableTerm (PBuiltinList PInteger))
     genList = do
