@@ -34,15 +34,19 @@ module Plutarch.Test.QuickCheck (
     pliftT,
     uplcEq,
     Equality(..),
+    Partiality(..),
 ) where
 
 import Data.Kind (Type)
 import Generics.SOP (All, HPure (hcpure), NP ((:*), Nil), Proxy (Proxy))
-import Plutarch (Config (Config), TracingMode (NoTracing), compile, tracingMode)
-import Plutarch.Evaluate (evalScript)
+import Plutarch (Config (Config), TracingMode (NoTracing, DoTracing), compile, tracingMode)
+import Plutarch.Evaluate (evalScript, evalTerm)
 import Plutarch.Lift (DerivePConstantViaNewtype (..), PConstantDecl, PUnsafeLiftDecl (PLifted))
 import Plutarch.Num (PNum)
 import Plutarch.Prelude (
+    pdata,
+    (#==),
+    pconstant,
     DPTStrat,
     DerivePlutusType,
     Generic,
@@ -81,6 +85,7 @@ import Test.QuickCheck (
     Property,
     Testable (property),
     forAll,
+    counterexample,
     (.&&.),
  )
 
@@ -208,9 +213,18 @@ fromPFun = fromPFun' (Proxy @(PTT (a :--> b)))
 -}
 data Equality
     = OnPEq
-    | OnUPLC
+    | OnPData
     | OnBoth
     deriving stock (Eq, Show)
+
+{- | Partiality of the comparison. @ByPartial@ will have some
+     performance disadventages.
+
+ @since 2.1.0
+-}
+data Partiality
+    = ByComplete
+    | ByPartial
 
 {- | Extracts all @TestableTerm@s from give Plutarch function.
 
@@ -234,58 +248,82 @@ class
     (PLamArgs p ~ args) =>
     HaskEquiv
         (e :: Equality)
+        (par :: Partiality)
         (h :: Type)
         (p :: S -> Type)
         (args :: [Type])
     where
     haskEquiv :: h -> TestableTerm p -> NP Gen args -> Property
 
--- TODO: Shrinking support
-
 -- | @since 2.1.0
 instance
     forall
-        (e :: Equality)    
+        (e :: Equality)
+        (par :: Partiality)        
         (ha :: Type)
         (hb :: Type)
         (pa :: S -> Type)
         (pb :: S -> Type)
         (hbArgs :: [Type]).
     ( PLamArgs pb ~ hbArgs
-    , HaskEquiv e hb pb hbArgs
+    , HaskEquiv e par hb pb hbArgs
     , PLifted pa ~ ha
     , PLift pa
     , PShow pa
     ) =>
-    HaskEquiv e (ha -> hb) (pa :--> pb) (TestableTerm pa ': hbArgs)
+    HaskEquiv e par (ha -> hb) (pa :--> pb) (TestableTerm pa ': hbArgs)
     where
     haskEquiv h (TestableTerm p) (g :* gs) =
-        forAll g $ \(TestableTerm x) -> haskEquiv @e (h $ plift x) (TestableTerm $ p # x) gs
+        forAll g $ \(TestableTerm x) -> haskEquiv @e @par (h $ plift x) (TestableTerm $ p # x) gs
 
--- | @since 2.1.0
 instance
-    forall (p :: S -> Type) (h :: Type).
-    (PLamArgs p ~ '[], PLift p, PLifted p ~ h, Eq h) =>
-    HaskEquiv 'OnPEq h p '[]
+    forall (e :: Equality) (p :: S -> Type) (h :: Type).
+    (HaskEquiv e 'ByComplete h p '[]) =>
+    HaskEquiv e 'ByPartial (Maybe h) p '[]
     where
-    haskEquiv h (TestableTerm p) _ = property $ plift p == h
+    haskEquiv h (TestableTerm p) _  =
+        case evalTerm (Config {tracingMode = DoTracing}) p of
+            Left err ->
+                case h of
+                    Just _ -> failWith $ "Haskell expected success, but Plutarch compilation failed.\n" <> show err
+                    Nothing -> property True                
+            Right (Left err, _, t) ->
+                case h of
+                    Just _ -> failWith $ "Haskell expected success, but Plutarch evaluation failed.\n" <> show err <> "\n" <> show t
+                    Nothing -> property True
+            Right (Right p', _, t) ->
+                case h of
+                    Just h' -> haskEquiv @e @'ByComplete h' (TestableTerm p') Nil
+                    Nothing -> failWith $ "Haskell expected failure, but Plutarch succeed.\n" <> show t
 
 -- | @since 2.1.0
 instance
     forall (p :: S -> Type) (h :: Type).
-    (PLamArgs p ~ '[], PLift p, PLifted p ~ h, Eq h) =>
-    HaskEquiv 'OnUPLC h p '[]
+    (PLamArgs p ~ '[], PLift p, PLifted p ~ h, PEq p) =>
+    HaskEquiv 'OnPEq 'ByComplete h p '[]
     where
-    haskEquiv h (TestableTerm p) _ = error "asdf" -- property $ plift p == h
+    haskEquiv h (TestableTerm p) _ =
+        counterexample "Comparison by PEq Failed" $
+          property $ plift $ p #== (pconstant h)        
 
 -- | @since 2.1.0
 instance
     forall (p :: S -> Type) (h :: Type).
-    (PLamArgs p ~ '[], PLift p, PLifted p ~ h, Eq h) =>
-    HaskEquiv 'OnBoth h p '[]
+    (PLamArgs p ~ '[], PLift p, PLifted p ~ h, PIsData p) =>
+    HaskEquiv 'OnPData 'ByComplete h p '[]
+    where
+    haskEquiv h (TestableTerm p) _ = 
+        counterexample "Comparison by PData Failed" $        
+        property $ plift (pdata p #== pdata (pconstant h))
+
+-- | @since 2.1.0
+instance
+    forall (p :: S -> Type) (h :: Type).
+    (PLamArgs p ~ '[], PLift p, PLifted p ~ h, PIsData p, PEq p) =>
+    HaskEquiv 'OnBoth 'ByComplete h p '[]
     where
     haskEquiv h p _ =
-        (haskEquiv @'OnPEq h p Nil) -- .&&. (haskEquiv @'OnUPLC h p Nil)
+        (haskEquiv @'OnPEq @'ByComplete h p Nil) .&&. (haskEquiv @'OnPData @'ByComplete h p Nil)
 
 {- | Simplified version of `haskEquiv`. It will use arbitrary instead of
      asking custom generators.
@@ -293,34 +331,36 @@ instance
  @since 2.0.0
 -}
 haskEquiv' ::
-    forall (h :: Type) (p :: S -> Type) (args :: [Type]).
+    forall (e :: Equality) (par :: Partiality) (h :: Type) (p :: S -> Type) (args :: [Type]).
     ( PLamArgs p ~ args
-    , HaskEquiv 'OnBoth h p args
+    , HaskEquiv e par h p args
     , All Arbitrary args
     ) =>
     h ->
     (forall s. Term s p) ->
     Property
 haskEquiv' h p =
-    haskEquiv @'OnBoth h (TestableTerm p) $
-        hcpure
-            (Proxy @Arbitrary)
-            arbitrary
+    haskEquiv @e @par h (TestableTerm p) $
+        hcpure (Proxy @Arbitrary) arbitrary
 
 {- | Compares evaluated UPLC
 
  @since 2.0.1
 -}
 uplcEq :: TestableTerm a -> TestableTerm b -> Property
-uplcEq x y = property $ eval x == eval y
+uplcEq x y = either failWith property go
   where
+    go = do
+        x' <- eval x
+        y' <- eval y
+        return $ x' == y'
     eval (TestableTerm t) =
         case compile (Config{tracingMode = NoTracing}) t of
-            Left err -> error $ show err
+            Left err -> Left $ "Term compilation failed:\n" <> show err
             Right s' ->
                 case evalScript s' of
-                    (Right s, _, _) -> s
-                    (Left err, _, _) -> error $ show err
+                    (Right s, _, _) -> Right s
+                    (Left err, _, _) -> Left $ "Term evaluation failed:\n" <> show err
 
 newtype A = A Integer
 
@@ -462,3 +502,8 @@ arbitraryPLift ::
     ) =>
     Gen (TestableTerm a)
 arbitraryPLift = pconstantT <$> arbitrary
+
+
+-- Utilities
+failWith :: String -> Property
+failWith err = counterexample err $ property False

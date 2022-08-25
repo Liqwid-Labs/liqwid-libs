@@ -31,7 +31,8 @@ import Plutarch.Prelude (
 
 import Plutarch.Test.QuickCheck (
     TestableTerm (TestableTerm),
-    Equality(OnBoth),
+    Equality(OnPEq),
+    Partiality(ByComplete),
     haskEquiv,
     haskEquiv',
     pconstantT,
@@ -74,10 +75,10 @@ hreverse [] = []
 -- Constructing property for 'preverseCorrect'.
 -- `haskEquiv'` will construct a property using `Arbitrary` instance.
 propCorrect :: Property
-propCorrect = haskEquiv' hreverse (preverseCorrect @PBuiltinList @PInteger)
+propCorrect = haskEquiv' @'OnPEq @'ByComplete hreverse (preverseCorrect @PBuiltinList @PInteger)
 
 propWrong :: Property
-propWrong = haskEquiv' hreverse (preverseWrong @PBuiltinList @PInteger)
+propWrong = haskEquiv' @'OnPEq @'ByComplete hreverse (preverseWrong @PBuiltinList @PInteger)
 
 -- There is also `haskEquiv` which allows user to mannually specify
 -- any generator they want. Generators should be provided in order of
@@ -85,7 +86,7 @@ propWrong = haskEquiv' hreverse (preverseWrong @PBuiltinList @PInteger)
 -- from `Generics.SOP`. (hint: it's using `NP`)
 propCustom :: Property
 propCustom =
-    haskEquiv @'OnBoth hreverse (TestableTerm preverseCorrect) (genList :* Nil)
+    haskEquiv @'OnPEq @'ByComplete hreverse (TestableTerm preverseCorrect) (genList :* Nil)
   where
     genList :: Gen (TestableTerm (PBuiltinList PInteger))
     genList = do
