@@ -208,6 +208,7 @@ pexpectJustC escape ma = tcont $ \f ->
 
 {- | Extract the value stored in a PMaybe container.
      If there's no value, throw an error with the given message.
+
      @since 1.3.0
 -}
 passertPJust :: forall (a :: S -> Type) (s :: S). Term s (PString :--> PMaybe a :--> a)
@@ -218,6 +219,7 @@ passertPJust = phoistAcyclic $
 
 {- | Extract the value stored in a PMaybeData container.
      If there's no value, throw an error with the given message.
+
      @since 1.3.0
 -}
 passertPDJust :: forall (a :: S -> Type) (s :: S). (PIsData a) => Term s (PString :--> PMaybeData a :--> a)
