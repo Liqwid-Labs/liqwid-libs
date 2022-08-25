@@ -29,8 +29,8 @@ import Plutarch.Extra.TermCont (pmatchC)
 {- | Represent a fully bounded time range.
 
      Note: 'PCurrentTime' doesn't need a Haskell-level equivalent because it
-     is only used in scripts, and does not go in datums. It is also scott-encoded
-     which is more efficient in usage.
+     is only used in scripts, and does not go in datums. It is also
+     Scott-encoded.
 
      @since 3.3.0
 -}
@@ -57,8 +57,8 @@ instance DerivePlutusType PCurrentTime where
 
 {- | Get the current time, given a 'PPOSIXTimeRange'.
 
-     If it's impossible to get a fully-bounded time, (e.g. either end of the 'PPOSIXTimeRange' is
-     an infinity) then we return nothing.
+     If it's impossible to get a full-bounded time (for example, either end of
+     the 'PPOSIXTimeRange' is an infinity), then we return 'PNothing'.
 
      @since 3.3.0
 -}
@@ -96,8 +96,8 @@ pcurrentTime = phoistAcyclic $
             mkTime = phoistAcyclic $ plam $ pcon .* PCurrentTime
         pure $ pliftA2 # mkTime # lb' # ub'
 
-{- | Calculate current time providing the @validaRange@ field, which typically
-      comes from 'PTxInfo'.
+{- | Calculate the current time by providing the @validRange@ field,
+     which typically comes from 'PTxInfo'.
 
      @since 3.3.0
 -}
@@ -108,8 +108,8 @@ currentTime ::
     Term s (PMaybe PCurrentTime)
 currentTime x = pcurrentTime # x.validRange
 
-{- | Calculate current time, and error out with the given message if we can't
-      get one.
+{- | Calculate the current time, and error out with the given message if we can't
+     get it.
 
      @since 3.3.0
 -}
@@ -125,7 +125,7 @@ passertCurrentTime = phoistAcyclic $
     plam $
         \msg iv -> passertPJust # msg #$ pcurrentTime # iv
 
-{- | Retutn true if a `PPOSIXTime` is in the current time range.
+{- | Retutn 'PTrue' if a `PPOSIXTime` is in the current time range.
 
      @since 3.3.0
 -}
@@ -142,10 +142,10 @@ pisWithinCurrentTime = phoistAcyclic $
         pmatch ctr $ \(PCurrentTime lb ub) ->
             lb #<= time #&& time #<= ub
 
-{- | Return true if current time is within the given time range.
+{- | Return 'PTrue' if current time is within the given time range.
 
-    Note that the first argument is the lower bound of the said time range, and
-      the second is the upper bound.
+     Note that the first argument is the lower bound of said time range, and
+     the second is the upper bound.
 
      @since 3.3.0
 -}
