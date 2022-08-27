@@ -89,12 +89,105 @@ import Test.QuickCheck (
     (.&&.),
  )
 
+-- Get the type of Haskell TestableTerm function and change Plutarch
+-- lambda to PFun if there is one:
+-- :k! PLamWrapped (TestableTerm PInteger -> TestableTerm (PInteger :--> PBool) -> TestableTerm PUnit)
+-- = TestableTerm PInteger -> PFun PInteger PBool -> TestableTerm PUnit
+type family PLamWrapped (h :: Type) :: Type where
+    PLamWrapped (TestableTerm (a :--> b) -> c) = PFun a b -> (PLamWrapped c)
+    PLamWrapped (a -> b) = a -> (PLamWrapped b)
+    PLamWrapped a = a
+
+-- Check if given type of TestableTerm is a lambda.
+type family IsLam (h :: Type) :: Bool where
+    IsLam (TestableTerm (a :--> b) -> c) = 'True
+    IsLam _ = 'False
+
+-- Check if given type of Haskell is function or not.
+type family IsLast (h :: Type) :: Bool where
+    IsLast (_ -> _) = 'False
+    IsLast _ = 'True
+
+-- Helper for type error.
+-- Empty constraint when all arguments/return are TestableTerm
+-- Type error when there exists some non TestableTerm type.
+type family OnlyTestableTerm (h :: Type) :: Constraint where
+    OnlyTestableTerm (TestableTerm _ -> a) = OnlyTestableTerm a
+    OnlyTestableTerm (TestableTerm _) = ()
+    OnlyTestableTerm h =
+        TypeError ('Text "\""
+                      ':<>: 'ShowType h
+                      ':<>: 'Text "\" is not in terms of \"TestableTerm\""
+                      ':$$: 'Text "\tFunction should be only in terms of TestableTerms")
+
+{- | Wraps TestableTerm lambda to `PFun` for function generation and shrinking.
+
+ @since 2.1.0
+-}
+class PWrapLam' (h :: Type) (lam :: Bool) (last :: Bool) where
+    pwrapLam' :: h -> PLamWrapped h
+
+instance
+    forall (a :: Type) (b :: Type) (pa :: S -> Type) (pb :: S -> Type).
+    ( TestableTerm (pa :--> pb) ~ a
+    , PWrapLam' b (IsLam b) (IsLast b)
+    , PLamWrapped (a -> b) ~ (PFun pa pb -> PLamWrapped b)
+    , PLift pa
+    , PLift pb
+    ) =>
+    PWrapLam' (a -> b) 'True 'False where
+    pwrapLam' f (PFn pf) = pwrapLam' @b @(IsLam b) @(IsLast b) $ f (TestableTerm pf)
+
+instance
+    forall (a :: Type) (b :: Type).    
+    ( PWrapLam' b (IsLam b) (IsLast b)
+    , PLamWrapped (a -> b) ~ (a -> PLamWrapped b)
+    ) =>
+    PWrapLam' (a -> b) 'False 'False where
+    pwrapLam' f x = pwrapLam' @b @(IsLam b) @(IsLast b) $ f x
+
+instance
+    forall (a :: Type).
+    (PLamWrapped a ~ a) =>
+    PWrapLam' a 'False 'True where
+    pwrapLam' = id
+
+{- | Constraint for `PWrapLam'` that will give a better type error message.
+
+ @since 2.1.0
+-}
+type PWrapLam (h :: Type) = (PWrapLam' h (IsLam h) (IsLast h), OnlyTestableTerm h)
+
+{- | Replace any TestableTerm that is a lambda with `PFun` for generation and
+     shrinking. It will ignore lambda on the return as it should not be
+     generated.
+
+= Note
+"TestableTerm that is lambda" means @TestableTerm (a :--> b)@.
+
+ @since 2.1.0
+-}
+pwrapLam ::
+    forall (h :: Type).
+    PWrapLam h =>
+    h ->
+    PLamWrapped h
+pwrapLam = pwrapLam' @h @(IsLam h) @(IsLast h)
+
+-- Get the type of Haskell Testable function from given Plutarch Function.
+-- It requires the final return type and the actual function type, both in PType.
+--
+-- This typeclass is not exhaustive: it will not reduce when provided final return
+-- type is not an actual return type of Plutarch function.
 type family PUnLamHask (fin :: S -> Type) (p :: S -> Type) :: Type where
     PUnLamHask a a = TestableTerm a
     PUnLamHask fin ((a :--> b) :--> c) =
         TestableTerm (a :--> b) -> PUnLamHask fin c
     PUnLamHask fin (a :--> b) = TestableTerm a -> PUnLamHask fin b
 
+-- Helper for type error.
+-- This will give a type error when final return type given does not match
+-- that of the actual function.
 type family CheckReturn (fin :: S -> Type) (p :: S -> Type) :: Constraint where
     CheckReturn a a = ()
     CheckReturn fin ((a :--> b) :--> c) = CheckReturn fin c
@@ -115,6 +208,11 @@ type family IsFinal (fin :: S -> Type) (p :: S -> Type) :: Bool where
     IsFinal a a = 'True
     IsFinal _ _ = 'False
 
+{- | Brings Plutarch function into Haskell given the final return type.
+     It will wrap each arguments and the return type with `TestableTerm`.
+
+ @since 2.1.0
+-}
 class PUnLam' (fin :: S -> Type) (p :: S -> Type) (end :: Bool) where
     pUnLam' :: (forall s. Term s p) -> PUnLamHask fin p
 
@@ -130,8 +228,16 @@ instance
 instance PUnLam' fin fin 'True where
     pUnLam' x = TestableTerm x
 
+{- | Constraint for `PUnLam'` that will give a better type error message.
+
+ @since 2.1.0
+-}
 type PUnLam fin p = (PUnLam' fin p (IsFinal fin p), CheckReturn fin p)
 
+{- | Wrapper for @pUnLam'@. Only required the final return type.
+
+ @since 2.1.0
+-}
 punlam' ::
     forall (fin :: S -> Type) (p :: S -> Type).
     PUnLam fin p =>
@@ -139,6 +245,12 @@ punlam' ::
     PUnLamHask fin p
 punlam' = pUnLam' @fin @p @(IsFinal fin p)
 
+{- | Wrapper for @pUnLam'@. Same as @punlam'@ but evaluates the given
+     Plutarch function before the conversion. It will throw an error
+     if evaluation failes. 
+
+ @since 2.1.0
+-}
 punlam :: 
     forall (fin :: S -> Type) (p :: S -> Type).
     PUnLam fin p =>
@@ -146,17 +258,22 @@ punlam ::
     PUnLamHask fin p
 punlam pf = punlam' @fin (loudEval pf)
 
-{- | Converts Plutarch Functions into `Testable` Haskell function of
-  TestableTerms.
+{- | Converts Plutarch Functions into Haskell function of
+     TestableTerms. Then, wrap any instance of TestableTerm that is
+     lambda into `PFun`. Result of this function will be
+     "QuickCheck-compatible" given that all Plutarch type used have
+     `PArbitrary` instance.
 
  @since 2.0.0
 -}
 fromPFun ::
     forall (p :: S -> Type).
-    (PUnLam PBool p) =>
+    ( PUnLam PBool p
+    , PWrapLam (PUnLamHask PBool p)
+    ) =>
     ClosedTerm p ->
-    PUnLamHask PBool p
-fromPFun pf = punlam @PBool pf
+    PLamWrapped (PUnLamHask PBool p)
+fromPFun pf = pwrapLam $ punlam @PBool pf
 
 {- | Ways an Plutarch terms can be compared.
      @OnPEq@ uses Plutarch `PEq` instance to compare give terms. This
