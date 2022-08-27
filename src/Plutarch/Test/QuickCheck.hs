@@ -115,10 +115,12 @@ type family OnlyTestableTerm (h :: Type) :: Constraint where
     OnlyTestableTerm (TestableTerm _ -> a) = OnlyTestableTerm a
     OnlyTestableTerm (TestableTerm _) = ()
     OnlyTestableTerm h =
-        TypeError ('Text "\""
-                      ':<>: 'ShowType h
-                      ':<>: 'Text "\" is not in terms of \"TestableTerm\""
-                      ':$$: 'Text "\tFunction should be only in terms of TestableTerms")
+        TypeError
+            ( 'Text "\""
+                ':<>: 'ShowType h
+                ':<>: 'Text "\" is not in terms of \"TestableTerm\""
+                ':$$: 'Text "\tFunction should be only in terms of TestableTerms"
+            )
 
 {- | Wraps TestableTerm lambda to `PFun` for function generation and shrinking.
 
@@ -135,21 +137,24 @@ instance
     , PLift pa
     , PLift pb
     ) =>
-    PWrapLam' (a -> b) 'True 'False where
+    PWrapLam' (a -> b) 'True 'False
+    where
     pwrapLam' f (PFn pf) = pwrapLam' @b @(IsLam b) @(IsLast b) $ f (TestableTerm pf)
 
 instance
-    forall (a :: Type) (b :: Type).    
+    forall (a :: Type) (b :: Type).
     ( PWrapLam' b (IsLam b) (IsLast b)
     , PLamWrapped (a -> b) ~ (a -> PLamWrapped b)
     ) =>
-    PWrapLam' (a -> b) 'False 'False where
+    PWrapLam' (a -> b) 'False 'False
+    where
     pwrapLam' f x = pwrapLam' @b @(IsLam b) @(IsLast b) $ f x
 
 instance
     forall (a :: Type).
     (PLamWrapped a ~ a) =>
-    PWrapLam' a 'False 'True where
+    PWrapLam' a 'False 'True
+    where
     pwrapLam' = id
 
 {- | Constraint for `PWrapLam'` that will give a better type error message.
@@ -247,11 +252,11 @@ punlam' = pUnLam' @fin @p @(IsFinal fin p)
 
 {- | Wrapper for @pUnLam'@. Same as @punlam'@ but evaluates the given
      Plutarch function before the conversion. It will throw an error
-     if evaluation failes. 
+     if evaluation failes.
 
  @since 2.1.0
 -}
-punlam :: 
+punlam ::
     forall (fin :: S -> Type) (p :: S -> Type).
     PUnLam fin p =>
     (forall s. Term s p) ->
