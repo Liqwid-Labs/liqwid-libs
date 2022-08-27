@@ -12,15 +12,12 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Plutarch.Test.QuickCheck (
-    type IsPLam,
-    type IsLast,
-    type PTT,
-    type TestableFun,
     type PLamArgs,
     type PA,
     type PB,
     type PC,
-    FromPFunN (..),
+    punlam',
+    punlam,
     fromPFun,
     haskEquiv',
     haskEquiv,
@@ -33,20 +30,19 @@ module Plutarch.Test.QuickCheck (
     pconstantT,
     pliftT,
     uplcEq,
-    Equality(..),
-    Partiality(..),
+    Equality (..),
+    Partiality (..),
 ) where
 
-import Data.Kind (Type)
-import Generics.SOP (All, HPure (hcpure), NP ((:*), Nil), Proxy (Proxy))
-import Plutarch (Config (Config), TracingMode (NoTracing, DoTracing), compile, tracingMode)
+import Data.Kind (Constraint, Type)
+import GHC.TypeLits
+import Generics.SOP (All, HPure (hcpure), NP (Nil, (:*)), Proxy (Proxy))
+import Plutarch (Config (Config), TracingMode (DoTracing, NoTracing), compile, tracingMode)
 import Plutarch.Evaluate (evalScript, evalTerm)
 import Plutarch.Lift (DerivePConstantViaNewtype (..), PConstantDecl, PUnsafeLiftDecl (PLifted))
 import Plutarch.Num (PNum)
 import Plutarch.Prelude (
-    pdata,
-    (#==),
-    pconstant,
+    ClosedTerm,
     DPTStrat,
     DerivePlutusType,
     Generic,
@@ -62,9 +58,12 @@ import Plutarch.Prelude (
     S,
     Term,
     pcon,
+    pconstant,
+    pdata,
     plift,
     pto,
     (#),
+    (#==),
     type (:-->),
  )
 import Plutarch.Show (PShow)
@@ -72,6 +71,7 @@ import Plutarch.Test.QuickCheck.Function (
     PFun (..),
     pattern PFn,
  )
+import Plutarch.Test.QuickCheck.Helpers (loudEval)
 import Plutarch.Test.QuickCheck.Instances (
     PArbitrary (..),
     PCoArbitrary (..),
@@ -84,108 +84,67 @@ import Test.QuickCheck (
     Gen,
     Property,
     Testable (property),
-    forAll,
     counterexample,
+    forAll,
     (.&&.),
  )
 
--- | @since 2.0.0
-data PTermType
-    = LastPFunction
-    | LastPTerm
-    | PFunction
-    | PTerm
+type family PUnLamHask (fin :: S -> Type) (p :: S -> Type) :: Type where
+    PUnLamHask a a = TestableTerm a
+    PUnLamHask fin ((a :--> b) :--> c) =
+        TestableTerm (a :--> b) -> PUnLamHask fin c
+    PUnLamHask fin (a :--> b) = TestableTerm a -> PUnLamHask fin b
 
--- | @since 2.0.0
-type family PTT' (isplam :: Bool) (end :: Bool) :: PTermType where
-    PTT' 'True 'True = 'LastPFunction
-    PTT' 'False 'True = 'LastPTerm
-    PTT' 'True 'False = 'PFunction
-    PTT' 'False 'False = 'PTerm
+type family CheckReturn (fin :: S -> Type) (p :: S -> Type) :: Constraint where
+    CheckReturn a a = ()
+    CheckReturn fin ((a :--> b) :--> c) = CheckReturn fin c
+    CheckReturn fin (a :--> b) = CheckReturn fin b
+    CheckReturn a b =
+        ( a ~ b
+        , TypeError
+            ( 'Text "Return type does not match:"
+                ':$$: 'Text "\tExpected \""
+                ':<>: 'ShowType a
+                ':<>: 'Text "\" but given function returns \""
+                ':<>: 'ShowType b
+                ':<>: 'Text "\""
+            )
+        )
 
--- | @since 2.0.0
-type PTT (p :: S -> Type) = PTT' (IsPLam p) (IsLast p)
+type family IsFinal (fin :: S -> Type) (p :: S -> Type) :: Bool where
+    IsFinal a a = 'True
+    IsFinal _ _ = 'False
 
--- | @since 2.0.0
-type family IsPLam (p :: S -> Type) :: Bool where
-    IsPLam ((a :--> b) :--> c) = 'True
-    IsPLam _ = 'False
+class PUnLam' (fin :: S -> Type) (p :: S -> Type) (end :: Bool) where
+    pUnLam' :: (forall s. Term s p) -> PUnLamHask fin p
 
--- | @since 2.0.0
-type family IsLast (p :: S -> Type) :: Bool where
-    IsLast (a :--> PBool) = 'True
-    IsLast _ = 'False
-
-{- | Finds Haskell level TestableTerm equivlance of Plutarch
-     functions. This TypeFamily expects the input Plutarch functions to
-     be returning @PBool@ at the end.
-
-     This is used to find type signatures for @quickCheck@able
-     functions from Plutarch terms like @Term s (a :--> b :--> PBool)@.
-
- @since 2.0.0
--}
-type family TestableFun (b :: PTermType) (p :: S -> Type) where
-    TestableFun _ PBool = TestableTerm PBool
-    TestableFun 'PTerm (a :--> b) = TestableTerm a -> TestableFun (PTT b) b
-    TestableFun 'LastPTerm (a :--> b) = TestableTerm a -> TestableFun (PTT b) b
-    TestableFun 'PFunction ((a :--> b) :--> c) =
-        PFun a b -> TestableFun (PTT c) c
-    TestableFun 'LastPFunction ((a :--> b) :--> c) =
-        PFun a b -> TestableFun (PTT c) c
-
-{- | Convert Plutarch function into testable Haskell function that takes
-     `TestableTerm`. It also converts plutarch function into `PFun`.
-
- @since 2.0.0
--}
-class FromPFunN (a :: S -> Type) (b :: S -> Type) (c :: PTermType) where
-    fromPFun' ::
-        Proxy c ->
-        (forall s. Term s (a :--> b)) ->
-        TestableFun c (a :--> b)
-
--- | @since 2.0.0
 instance
-    forall (a :: S -> Type) (b :: S -> Type).
-    ( PLift a
-    , PLift b
+    forall (fin :: S -> Type) (pa :: S -> Type) (pb :: S -> Type).
+    ( PUnLam' fin pb (IsFinal fin pb)
+    , PUnLamHask fin (pa :--> pb) ~ (TestableTerm pa -> PUnLamHask fin pb)
     ) =>
-    FromPFunN (a :--> b) PBool 'LastPFunction
+    PUnLam' fin (pa :--> pb) 'False
     where
-    fromPFun' _ f (PFun _ _ (unTestableTerm -> x)) = TestableTerm $ f # x
+    pUnLam' f = \(TestableTerm y) -> pUnLam' @fin @pb @(IsFinal fin pb) (f # y)
 
--- | @since 2.0.0
-instance FromPFunN a PBool 'LastPTerm where
-    fromPFun' _ f (TestableTerm x) = TestableTerm $ f # x
+instance PUnLam' fin fin 'True where
+    pUnLam' x = TestableTerm x
 
--- | @since 2.0.0
-instance
-    forall
-        (a :: S -> Type)
-        (b :: S -> Type)
-        (c :: S -> Type)
-        (d :: S -> Type)
-        (e :: S -> Type).
-    ( c ~ (d :--> e)
-    , PLift a
-    , PLift b
-    , FromPFunN d e (PTT c)
-    ) =>
-    FromPFunN (a :--> b) c 'PFunction
-    where
-    fromPFun' _ f (PFun _ _ (unTestableTerm -> x)) =
-        fromPFun' (Proxy @(PTT c)) $ f # x
+type PUnLam fin p = (PUnLam' fin p (IsFinal fin p), CheckReturn fin p)
 
--- | @since 2.0.0
-instance
-    forall (a :: S -> Type) (b :: S -> Type) (c :: S -> Type) (d :: S -> Type).
-    ( b ~ (c :--> d)
-    , FromPFunN c d (PTT b)
-    ) =>
-    FromPFunN a b 'PTerm
-    where
-    fromPFun' _ f (TestableTerm x) = fromPFun' (Proxy @(PTT b)) $ f # x
+punlam' ::
+    forall (fin :: S -> Type) (p :: S -> Type).
+    PUnLam fin p =>
+    (forall s. Term s p) ->
+    PUnLamHask fin p
+punlam' = pUnLam' @fin @p @(IsFinal fin p)
+
+punlam :: 
+    forall (fin :: S -> Type) (p :: S -> Type).
+    PUnLam fin p =>
+    (forall s. Term s p) ->
+    PUnLamHask fin p
+punlam pf = punlam' @fin (loudEval pf)
 
 {- | Converts Plutarch Functions into `Testable` Haskell function of
   TestableTerms.
@@ -193,13 +152,11 @@ instance
  @since 2.0.0
 -}
 fromPFun ::
-    forall (a :: S -> Type) (b :: S -> Type) (c :: PTermType).
-    ( c ~ PTT (a :--> b)
-    , FromPFunN a b c
-    ) =>
-    (forall s. Term s (a :--> b)) ->
-    TestableFun c (a :--> b)
-fromPFun = fromPFun' (Proxy @(PTT (a :--> b)))
+    forall (p :: S -> Type).
+    (PUnLam PBool p) =>
+    ClosedTerm p ->
+    PUnLamHask PBool p
+fromPFun pf = punlam @PBool pf
 
 {- | Ways an Plutarch terms can be compared.
      @OnPEq@ uses Plutarch `PEq` instance to compare give terms. This
@@ -259,7 +216,7 @@ class
 instance
     forall
         (e :: Equality)
-        (par :: Partiality)        
+        (par :: Partiality)
         (ha :: Type)
         (hb :: Type)
         (pa :: S -> Type)
@@ -281,19 +238,19 @@ instance
     (HaskEquiv e 'ByComplete h p '[]) =>
     HaskEquiv e 'ByPartial (Maybe h) p '[]
     where
-    haskEquiv h (TestableTerm p) _  =
-        case evalTerm (Config {tracingMode = DoTracing}) p of
+    haskEquiv h (TestableTerm p) _ =
+        case evalTerm (Config{tracingMode = DoTracing}) p of
             Left err ->
                 case h of
                     Just _ -> failWith $ "Haskell expected success, but Plutarch compilation failed.\n" <> show err
-                    Nothing -> property True                
+                    Nothing -> property True
             Right (Left err, _, t) ->
                 case h of
                     Just _ -> failWith $ "Haskell expected success, but Plutarch evaluation failed.\n" <> show err <> "\n" <> show t
                     Nothing -> property True
             Right (Right p', _, t) ->
                 case h of
-                    Just h' -> haskEquiv @e @'ByComplete h' (TestableTerm p') Nil
+                    Just h' -> haskEquiv @e @( 'ByComplete) h' (TestableTerm p') Nil
                     Nothing -> failWith $ "Haskell expected failure, but Plutarch succeed.\n" <> show t
 
 -- | @since 2.1.0
@@ -304,7 +261,7 @@ instance
     where
     haskEquiv h (TestableTerm p) _ =
         counterexample "Comparison by PEq Failed" $
-          property $ plift $ p #== (pconstant h)        
+            property $ plift $ p #== (pconstant h)
 
 -- | @since 2.1.0
 instance
@@ -312,9 +269,9 @@ instance
     (PLamArgs p ~ '[], PLift p, PLifted p ~ h, PIsData p) =>
     HaskEquiv 'OnPData 'ByComplete h p '[]
     where
-    haskEquiv h (TestableTerm p) _ = 
-        counterexample "Comparison by PData Failed" $        
-        property $ plift (pdata p #== pdata (pconstant h))
+    haskEquiv h (TestableTerm p) _ =
+        counterexample "Comparison by PData Failed" $
+            property $ plift (pdata p #== pdata (pconstant h))
 
 -- | @since 2.1.0
 instance
@@ -323,7 +280,7 @@ instance
     HaskEquiv 'OnBoth 'ByComplete h p '[]
     where
     haskEquiv h p _ =
-        (haskEquiv @'OnPEq @'ByComplete h p Nil) .&&. (haskEquiv @'OnPData @'ByComplete h p Nil)
+        (haskEquiv @( 'OnPEq) @( 'ByComplete) h p Nil) .&&. (haskEquiv @( 'OnPData) @( 'ByComplete) h p Nil)
 
 {- | Simplified version of `haskEquiv`. It will use arbitrary instead of
      asking custom generators.
@@ -502,7 +459,6 @@ arbitraryPLift ::
     ) =>
     Gen (TestableTerm a)
 arbitraryPLift = pconstantT <$> arbitrary
-
 
 -- Utilities
 failWith :: String -> Property
