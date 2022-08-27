@@ -25,7 +25,6 @@ import Plutarch.Extra.Maybe (pmaybe)
 import Plutarch.Lift (PLift, PUnsafeLiftDecl (PLifted), pconstant)
 import Plutarch.Maybe (pfromJust)
 import Plutarch.Prelude (
-    PBool,
     PBuiltinList,
     PBuiltinPair,
     PEq,
@@ -34,11 +33,10 @@ import Plutarch.Prelude (
     pcon,
     pfstBuiltin,
     phoistAcyclic,
-    pif,
     pmatch,
-    precList,
     psndBuiltin,
     (#==),
+    pfind,
  )
 import Plutarch.Test.QuickCheck.Instances (
     TestableTerm (
@@ -170,17 +168,7 @@ plamFinite f = plam $ \x -> pfromJust #$ plookup # x # table
   where
     table :: Term s (PBuiltinList (PBuiltinPair a b))
     table = pconstant $ (id &&& f) <$> universeF
-
-pfind' ::
-    forall (a :: S -> Type) (s :: S) list.
-    PIsListLike list a =>
-    (Term s a -> Term s PBool) ->
-    Term s (list a :--> PMaybe a)
-pfind' p =
-    precList
-        (\self x xs -> pif (p x) (pcon (PJust x)) (self # xs))
-        (const $ pcon PNothing)
-
+    
 plookup ::
     forall (a :: S -> Type) (b :: S -> Type) (s :: S) list.
     (PEq a, PIsListLike list (PBuiltinPair a b)) =>
@@ -188,6 +176,6 @@ plookup ::
 plookup =
     phoistAcyclic $
         plam $ \k xs ->
-            pmatch (pfind' (\p -> pfstBuiltin # p #== k) # xs) $ \case
+            pmatch (pfind # (plam $ \p -> pfstBuiltin # p #== k) # xs) $ \case
                 PNothing -> pcon PNothing
                 PJust p -> pcon (PJust (psndBuiltin # p))
