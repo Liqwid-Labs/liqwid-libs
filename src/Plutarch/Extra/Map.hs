@@ -21,6 +21,8 @@ module Plutarch.Extra.Map (
 
     -- * Modification
     pupdate,
+    padjust,
+    padjustUnsorted,
 
     -- * Folds
     pfoldMapWithKey,
@@ -48,7 +50,55 @@ import Plutarch.Api.V1.AssocMap (
  )
 import Plutarch.Builtin (ppairDataBuiltin)
 import Plutarch.Extra.Maybe (passertPJust)
-import Plutarch.List (puncons)
+import qualified Plutarch.List as PList
+
+{- | If a value exists at the specified key, apply the function argument to it;
+ otherwise, do nothing. This has performance proportional to a lookup, plus
+ possibly a delete, a function call, and an insert.
+
+ @since 3.3.0
+-}
+padjust ::
+    forall (k :: S -> Type) (v :: S -> Type) (s :: S).
+    (POrd k, PIsData k, PIsData v) =>
+    Term s ((v :--> v) :--> k :--> PMap 'Sorted k v :--> PMap 'Sorted k v)
+padjust = phoistAcyclic $
+    plam $ \f key kvs ->
+        pmatch (plookup # key # kvs) $ \case
+            PNothing -> kvs
+            PJust val -> pinsert # key # (f # val) # (pdelete # key # kvs)
+
+{- | As 'padjust', but works for unsorted maps. This is necessarily linear in
+ the size of the map performance-wise, as there may be multiple values
+ associated with the same key, and we have to \'dig\' through the entire map
+ to find them all.
+
+ @since 3.3.0
+-}
+padjustUnsorted ::
+    forall (k :: S -> Type) (v :: S -> Type) (s :: S).
+    (PIsData k, PEq k, PIsData v) =>
+    Term s ((v :--> v) :--> k :--> PMap 'Unsorted k v :--> PMap 'Unsorted k v)
+padjustUnsorted = phoistAcyclic $
+    plam $ \f key kvs ->
+        pmatch kvs $ \(PMap kvs') ->
+            pcon . PMap $ PList.pmap # (go # f # key) # kvs'
+  where
+    go ::
+        forall (s' :: S).
+        Term
+            s'
+            ( (v :--> v)
+                :--> k
+                :--> PBuiltinPair (PAsData k) (PAsData v)
+                :--> PBuiltinPair (PAsData k) (PAsData v)
+            )
+    go = phoistAcyclic $
+        plam $ \f target kv ->
+            pif
+                ((pkvPairKey # kv) #== target)
+                (ppairDataBuiltin # (pfstBuiltin # kv) # pdata (f #$ pkvPairValue # kv))
+                kv
 
 {- | As 'pkeysEqual', but requires only 'PEq' constraints for the keys, and
  works for 'Unsorted' 'PMap's. This requires a number of equality comparisons
@@ -79,8 +129,8 @@ pkeysEqualUnsorted = phoistAcyclic $
             )
     go = phoistAcyclic $
         pfix #$ plam $ \self kvs kvs' ell ell' ->
-            pmatch (puncons # ell) $ \case
-                PNothing -> pmatch (puncons # ell') $ \case
+            pmatch (PList.puncons # ell) $ \case
+                PNothing -> pmatch (PList.puncons # ell') $ \case
                     -- We reached the end, so we match
                     PNothing -> pcon PTrue
                     PJust ht' -> pmatch ht' $ \(PPair h' t') ->
@@ -90,7 +140,7 @@ pkeysEqualUnsorted = phoistAcyclic $
                             -- We match, so continue
                             PJust _ -> self # kvs # kvs' # ell # t'
                 PJust ht -> pmatch ht $ \(PPair h t) ->
-                    pmatch (puncons # ell') $ \case
+                    pmatch (PList.puncons # ell') $ \case
                         PNothing -> pmatch (plookup # (pkvPairKey # h) # kvs') $ \case
                             -- We mismatch, so fail
                             PNothing -> pcon PFalse
@@ -134,11 +184,11 @@ pkeysEqual = phoistAcyclic $
             )
     go = phoistAcyclic $
         pfix #$ plam $ \self ell ell' ->
-            pmatch (puncons # ell) $ \case
-                PNothing -> pmatch (puncons # ell') $ \case
+            pmatch (PList.puncons # ell) $ \case
+                PNothing -> pmatch (PList.puncons # ell') $ \case
                     PNothing -> pcon PTrue -- no mismatches found
                     PJust _ -> pcon PFalse -- one argument too long
-                PJust kv -> pmatch (puncons # ell') $ \case
+                PJust kv -> pmatch (PList.puncons # ell') $ \case
                     PNothing -> pcon PFalse -- one argument too long
                     PJust kv' -> pmatch kv $ \(PPair h t) ->
                         pmatch kv' $ \(PPair h' t') ->
