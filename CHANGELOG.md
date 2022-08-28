@@ -2,6 +2,35 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.4.0 -- 2022-08-29
+
+All additions, removals and changes refer to `Plutarch.Extra.List` unless stated
+otherwise.
+
+### Added
+
+* `plookupAssoc`, designed as a very general treatment of list-like structures
+  as assoc lists.
+
+### Removed
+
+* `pmergeBy` and `pisSortedBy`, as they are fragile.
+* `pmsort` and `pmsortBy`, due to efficiency concerns.
+* `pnubSortBy`, `pnubSort`, `pisUniqBy`, `pisUniq`, `pisUniq'`, `pisUniqBy'` 
+  due to removal of sorting functions or fragility.
+* `plookup` and `plookupTuple`, replaced by the more general `plookupAssoc`.
+* `pisSorted`, as it is provided by `plutarch-extra` as `pcheckSorted`.
+
+### Changed
+
+* `pcheckSorted` and `preverse` are no longer re-exported.
+* `pnotNull` and `pfind'` type arguments are now: content type, list-like 
+  structure type, `s` tag.
+* `pfirstJust` renamed `pfindJust`.
+* `pmapMaybe` and `pfindJust` type arguments are now: 'target' element type, 
+  list-like structure type, 'source' element type, `s` tag.
+* `preplicate` now specifies the order of its type arguments.
+
 ## 3.3.0 -- 2022-08-25
 
 All additions, removals and changes refer to `Plutarch.Extra.Map` unless stated
