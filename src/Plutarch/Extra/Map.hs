@@ -22,7 +22,6 @@ module Plutarch.Extra.Map (
     -- * Modification
     pupdate,
     padjust,
-    padjustUnsorted,
 
     -- * Folds
     pfoldMapWithKey,
@@ -53,33 +52,18 @@ import Plutarch.Extra.Maybe (passertPJust)
 import qualified Plutarch.List as PList
 
 {- | If a value exists at the specified key, apply the function argument to it;
- otherwise, do nothing. This has performance proportional to a lookup, plus
- possibly a delete, a function call, and an insert.
+ otherwise, do nothing.
+
+ This is necessarily linear in the size of the map performance-wise, as we
+ have to scan the entire map to find the key in the worst case.
 
  @since 3.3.0
 -}
 padjust ::
     forall (k :: S -> Type) (v :: S -> Type) (s :: S).
-    (POrd k, PIsData k, PIsData v) =>
-    Term s ((v :--> v) :--> k :--> PMap 'Sorted k v :--> PMap 'Sorted k v)
-padjust = phoistAcyclic $
-    plam $ \f key kvs ->
-        pmatch (plookup # key # kvs) $ \case
-            PNothing -> kvs
-            PJust val -> pinsert # key # (f # val) # (pdelete # key # kvs)
-
-{- | As 'padjust', but works for unsorted maps. This is necessarily linear in
- the size of the map performance-wise, as there may be multiple values
- associated with the same key, and we have to \'dig\' through the entire map
- to find them all.
-
- @since 3.3.0
--}
-padjustUnsorted ::
-    forall (k :: S -> Type) (v :: S -> Type) (s :: S).
     (PIsData k, PEq k, PIsData v) =>
     Term s ((v :--> v) :--> k :--> PMap 'Unsorted k v :--> PMap 'Unsorted k v)
-padjustUnsorted = phoistAcyclic $
+padjust = phoistAcyclic $
     plam $ \f key kvs ->
         pmatch kvs $ \(PMap kvs') ->
             pcon . PMap $ PList.pmap # (go # f # key) # kvs'

@@ -15,8 +15,7 @@ otherwise.
   full of key-value pairs.
 * `pkvPairValue` as a value counterpart for `pkvPairKey`.
 * `pkeysEqualUnsorted` for doing key set comparisons between unordered `PMap`s.
-* `padjust` and `padjustUnsorted`, allowing applying a function to modify
-  values at a particular key.
+* `padjust` for applying a function to modify values at a particular key.
 
 ### Removed
 
