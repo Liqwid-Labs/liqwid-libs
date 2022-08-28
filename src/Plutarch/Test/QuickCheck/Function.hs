@@ -31,12 +31,12 @@ import Plutarch.Prelude (
     PIsListLike,
     PMaybe (PJust, PNothing),
     pcon,
+    pfind,
     pfstBuiltin,
     phoistAcyclic,
     pmatch,
     psndBuiltin,
     (#==),
-    pfind,
  )
 import Plutarch.Test.QuickCheck.Instances (
     TestableTerm (
@@ -168,7 +168,7 @@ plamFinite f = plam $ \x -> pfromJust #$ plookup # x # table
   where
     table :: Term s (PBuiltinList (PBuiltinPair a b))
     table = pconstant $ (id &&& f) <$> universeF
-    
+
 plookup ::
     forall (a :: S -> Type) (b :: S -> Type) (s :: S) list.
     (PEq a, PIsListLike list (PBuiltinPair a b)) =>
