@@ -26,7 +26,7 @@ module Plutarch.Extra.List (
  corresponding element is removed, while for elements where the function
  argument returns `PJust`, the value is used in the result.
 
- @since 3.4.0
+ @since 3.5.0
 -}
 pmapMaybe ::
     forall (ell :: (S -> Type) -> S -> Type) (b :: S -> Type) (a :: S -> Type) (s :: S).
@@ -50,7 +50,7 @@ pmapMaybe = phoistAcyclic $ plam $ \f -> precList (go f) (const pnil)
  structure that produces a 'PJust' argument, returning it if found; otherwise,
  produces 'PNothing'.
 
- @since 3.4.0
+ @since 3.5.0
 -}
 pfindJust ::
     forall (b :: S -> Type) (ell :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
@@ -80,7 +80,7 @@ pfindJust = phoistAcyclic $ plam $ \f -> precList (go f) (const $ pcon PNothing)
  the /first/ match is returned. In general, this requires time proportional to
  the length of the list-like structure, as we may have to check every entry.
 
- @since 3.4.0
+ @since 3.5.0
 -}
 plookupAssoc ::
     forall (k :: S -> Type) (v :: S -> Type) (kv :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
@@ -111,7 +111,7 @@ plookupAssoc = phoistAcyclic $
  arguments for this function are optimized for use with `TypeApplications` to
  do exactly this task.
 
- @since 3.4.0
+ @since 3.5.0
 -}
 preplicate ::
     forall (ell :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).

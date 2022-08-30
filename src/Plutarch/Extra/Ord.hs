@@ -71,7 +71,7 @@ import qualified Plutarch.List as PList
  This means that it requires a linearithmic ($n \log(n)$) number of
  comparisons, as with all comparison sorts.
 
- @since 3.4.0
+ @since 3.5.0
 -}
 psort ::
     forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
@@ -81,7 +81,7 @@ psort = phoistAcyclic $ plam $ \xs -> psortBy # pfromOrd @a # xs
 
 {- | As 'psort', but using a custom 'PComparator'.
 
- @since 3.4.0
+ @since 3.5.0
 -}
 psortBy ::
     forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
@@ -95,7 +95,7 @@ psortBy = phoistAcyclic $
  instances, attempt to merge them, preserving their order. If one of the
  structures is found not to be ordered, error out instead.
 
- @since 3.4.0
+ @since 3.5.0
 -}
 ptryMerge ::
     forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
@@ -105,7 +105,7 @@ ptryMerge = phoistAcyclic $ plam $ \xs -> ptryMergeBy # pfromOrd @a # xs
 
 {- | As 'pmerge', but specifying the ordering by a custom 'PComparator'.
 
- @since 3.4.0
+ @since 3.5.0
 -}
 ptryMergeBy ::
     forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
@@ -155,7 +155,7 @@ ptryMergeBy = phoistAcyclic $
  @'PJust' 'PFalse'@ if a duplicate exists, and 'PNothing' if the input isn't
  ordered.
 
- @since 3.4.0
+ @since 3.5.0
 -}
 pAllUnique ::
     forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
@@ -166,7 +166,7 @@ pAllUnique = phoistAcyclic $ plam $ \xs -> pAllUniqueBy # pfromOrd @a # xs
 {- | As 'pAllUnique', but relies on a custom 'PComparator' for both equality and
  ordering (instead of a 'PEq' and 'POrd' instance respectively).
 
- @since 3.4.0
+ @since 3.5.0
 -}
 pAllUniqueBy ::
     forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
@@ -201,7 +201,7 @@ pAllUniqueBy = phoistAcyclic $
 {- | A representation of a comparison at the Plutarch level. Equivalent to
  'Ordering' in Haskell.
 
- @since 3.4.0
+ @since 3.5.0
 -}
 data POrdering (s :: S)
     = -- | Indicates a less-than relationship.
@@ -221,11 +221,11 @@ data POrdering (s :: S)
           Show
         )
 
--- | @since 3.4.0
+-- | @since 3.5.0
 instance PUnsafeLiftDecl POrdering where
     type PLifted POrdering = Ordering
 
--- | @since 3.4.0
+-- | @since 3.5.0
 instance PConstantDecl Ordering where
     type PConstantRepr Ordering = Integer
     type PConstanted Ordering = POrdering
@@ -239,7 +239,7 @@ instance PConstantDecl Ordering where
         2 -> pure GT
         _ -> Nothing
 
--- | @since 3.4.0
+-- | @since 3.5.0
 instance PlutusType POrdering where
     type PInner POrdering = PInteger
     pcon' = \case
@@ -256,7 +256,7 @@ instance PlutusType POrdering where
                 (f PGT)
             )
 
--- | @since 3.4.0
+-- | @since 3.5.0
 instance PEq POrdering where
     x #== y = pmatch x $ \case
         PLT -> pmatch y $ \case
@@ -269,7 +269,7 @@ instance PEq POrdering where
             PGT -> pcon PTrue
             _ -> pcon PFalse
 
--- | @since 3.4.0
+-- | @since 3.5.0
 instance Semigroup (Term s POrdering) where
     x <> y = pmatch x $ \case
         PLT -> pcon PLT
@@ -277,32 +277,32 @@ instance Semigroup (Term s POrdering) where
         PGT -> pcon PGT
     stimes = stimesIdempotentMonoid
 
--- | @since 3.4.0
+-- | @since 3.5.0
 instance Monoid (Term s POrdering) where
     mempty = pcon PEQ
 
 -- TODO: PShow, PPartialOrd, POrd
 
--- | @since 3.4.0
+-- | @since 3.5.0
 newtype PComparator (a :: S -> Type) (s :: S)
     = PComparator (Term s (a :--> a :--> POrdering))
     deriving stock
-        ( -- | @since 3.4.0
+        ( -- | @since 3.5.0
           Generic
         )
     deriving anyclass
-        ( -- | @since 3.4.0
+        ( -- | @since 3.5.0
           PlutusType
         )
 
--- | @since 3.4.0
+-- | @since 3.5.0
 instance DerivePlutusType (PComparator a) where
     type DPTStrat _ = PlutusTypeNewtype
 
 {- | Given a type with a 'POrd' instance, construct a 'PComparator' from that
  instance.
 
- @since 3.4.0
+ @since 3.5.0
 -}
 pfromOrd ::
     forall (a :: S -> Type) (s :: S).
@@ -316,7 +316,7 @@ pfromOrd = pcon . PComparator $
 {- | As 'pfromOrd', but instead uses a projection function into the 'POrd'
  instance to construct the 'PComparator'. Allows other \'-by\' behaviours.
 
- @since 3.4.0
+ @since 3.5.0
 -}
 pfromOrdBy ::
     forall (a :: S -> Type) (b :: S -> Type) (s :: S).
@@ -346,7 +346,7 @@ pfromOrdBy = phoistAcyclic $
  a tuple of @a@ and @b@ in some sense, and that it should be ordered
  lexicographically on that basis.
 
- @since 3.4.0
+ @since 3.5.0
 -}
 pproductComparator ::
     forall (a :: S -> Type) (b :: S -> Type) (c :: S -> Type) (s :: S).
@@ -365,7 +365,7 @@ pproductComparator = phoistAcyclic $
  This assumes that \'@c@s that are @a@s\' should be ordered before \'@c@s that
  are @b@s\'.
 
- @since 3.4.0
+ @since 3.5.0
 -}
 psumComparator ::
     forall (a :: S -> Type) (b :: S -> Type) (c :: S -> Type) (s :: S).
@@ -383,7 +383,7 @@ psumComparator = phoistAcyclic $
 {- | Given a projection from a type to another type which we have a
  'PComparator' for, construct a new 'PComparator'.
 
- @since 3.4.0
+ @since 3.5.0
 -}
 pmapComparator ::
     forall (a :: S -> Type) (b :: S -> Type) (s :: S).
@@ -394,7 +394,7 @@ pmapComparator = phoistAcyclic $
 
 {- | Reverses the ordering described by a 'PComparator'.
 
- @since 3.4.0
+ @since 3.5.0
 -}
 preverseComparator ::
     forall (a :: S -> Type) (s :: S).
@@ -408,7 +408,7 @@ preverseComparator = phoistAcyclic $
 
 {- | \'Runs\' a 'PComparator'.
 
- @since 3.4.0
+ @since 3.5.0
 -}
 pcompareBy ::
     forall (a :: S -> Type) (s :: S).
@@ -418,7 +418,7 @@ pcompareBy = phoistAcyclic $
 
 {- | Uses a 'PComparator' for an equality check.
 
- @since 3.4.0
+ @since 3.5.0
 -}
 pequateBy ::
     forall (a :: S -> Type) (s :: S).
