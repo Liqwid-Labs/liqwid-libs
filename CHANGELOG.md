@@ -81,6 +81,21 @@ otherwise.
 * `pkeysEqual` now only works for sorted `PMap`s.
 * `pkeysEqual` now exported from `Plutarch.Extra.Map`.
 
+## 3.3.0 -- 2022-08-23
+
+### Added
+
+* A `Plutarch.Extra.Time` module, containing utilities for working with time and 
+   time ranges.
+* Some utilities for working with closed bounded time ranges, including
+
+  - `PCurrentTime`
+  - `pcurrentTime`
+  - `currentTime`
+  - `passertCurrentTime`
+  - `pisWithinCurrentTime`
+  - `pisCurrentTimeWithin`
+
 ## 3.2.0 -- 2022-08-22
 
 ### Changed
