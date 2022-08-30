@@ -15,9 +15,7 @@ otherwise.
   to the Haskell `Ordering`, as well as `PComparator`, representing a
   \'materialized ordering\'.
 * `psort` and `psortBy` in `Plutarch.Extra.Ord`, using sorting networks for 
-  extra speed.
-* Unhoisted list-related helpers `pmatchList`, `plist` and
-  `psingletonUnhoisted`.
+  extra speed, and `PComparator`s.
 
 ### Removed
 
@@ -27,11 +25,12 @@ otherwise.
   due to removal of sorting functions or fragility.
 * `plookup` and `plookupTuple`, replaced by the more general `plookupAssoc`.
 * `pisSorted`, as it is provided by `plutarch-extra` as `pcheckSorted`.
+* `pnotNull` and `pfind'`, as they are a bit redundant.
 
 ### Changed
 
 * `pcheckSorted` and `preverse` are no longer re-exported.
-* `pnotNull` and `pfind'` type arguments are now: content type, list-like 
+* `pfind'` type arguments are now: content type, list-like 
   structure type, `s` tag.
 * `pfirstJust` renamed `pfindJust`.
 * `pmapMaybe` and `pfindJust` type arguments are now: 'target' element type, 

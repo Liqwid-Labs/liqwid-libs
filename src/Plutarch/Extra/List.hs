@@ -13,74 +13,13 @@ module Plutarch.Extra.List (
     -- * Construction
     preplicate,
 
-    -- * Predicates
-    pnotNull,
-
     -- * Transformation
     pmapMaybe,
 
     -- * Search
-    pfind',
     pfindJust,
     plookupAssoc,
-
-    -- * Unhoisted helpers
-    psingletonUnhoisted,
-    plist,
-    pmatchList,
 ) where
-
-import qualified Plutarch.List as PList
-
-{- | As 'psingleton', but unhoisted.
-
- @since 3.4.0
--}
-psingletonUnhoisted ::
-    forall (ell :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
-    (PElemConstraint ell a, PListLike ell) =>
-    Term s a ->
-    Term s (ell a)
-psingletonUnhoisted x = plist [x]
-
-{- | Make a list-like structure from any 'Foldable' of 'Term's. This is
- unhoisted.
-
- @since 3.4.0
--}
-plist ::
-    forall (ell :: (S -> Type) -> S -> Type) (f :: Type -> Type) (a :: S -> Type) (s :: S).
-    (Foldable f, PListLike ell, PElemConstraint ell a) =>
-    f (Term s a) ->
-    Term s (ell a)
-plist = foldr (\x xs -> pcons # x # xs) pnil
-
-{- | An \'uncons\' operation, designed for CPS chaining, for arbitrary list-like
- structures.
-
- @since 3.4.0
--}
-pmatchList ::
-    forall (r :: S -> Type) (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
-    (PElemConstraint ell a, PListLike ell) =>
-    -- | Continuation for \'nil\'.
-    Term s r ->
-    -- | Continuation for \'cons\'.
-    (Term s a -> Term s (ell a) -> Term s r) ->
-    -- | The list-like to match on.
-    Term s (ell a) ->
-    Term s r
-pmatchList = flip pelimList
-
-{- | Returns 'PTrue' if the list-like structure contains at least one element.
-
- @since 3.4.0
--}
-pnotNull ::
-    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
-    (PIsListLike ell a) =>
-    Term s (ell a :--> PBool)
-pnotNull = phoistAcyclic $ plam $ \xs -> pnot #$ pnull # xs
 
 {- | Similar to 'pmap', but allows elements to be thrown out. More precisely,
  for elements where the function argument returns 'PNothing', the
@@ -93,28 +32,18 @@ pmapMaybe ::
     forall (b :: S -> Type) (ell :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
     (PElemConstraint ell a, PElemConstraint ell b, PListLike ell) =>
     Term s ((a :--> PMaybe b) :--> ell a :--> ell b)
-pmapMaybe = phoistAcyclic $
-    pfix #$ plam $ \self f xs ->
-        pmatch (PList.puncons # xs) $ \case
-            PNothing -> pnil
-            PJust xs' -> pmatch xs' $ \(PPair h t) ->
-                pmatch (f # h) $ \case
-                    PNothing -> self # f # t
-                    PJust h' -> pcons # h' # (self # f # t)
-
-{- | As 'pfind', but with a Haskell-level function on 'Term's for the predicate.
-
- @since 3.4.0
--}
-pfind' ::
-    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
-    (PElemConstraint ell a, PListLike ell) =>
-    (Term s a -> Term s PBool) ->
-    Term s (ell a :--> PMaybe a)
-pfind' p =
-    precList
-        (\self x xs -> pif (p x) (pcon $ PJust x) (self # xs))
-        (const $ pcon PNothing)
+pmapMaybe = phoistAcyclic $ plam $ \f -> precList (go f) (const pnil)
+  where
+    go ::
+        forall (s' :: S).
+        Term s' (a :--> PMaybe b) ->
+        Term s' (ell a :--> ell b) ->
+        Term s' a ->
+        Term s' (ell a) ->
+        Term s' (ell b)
+    go f self x xs = pmatch (f # x) $ \case
+        PNothing -> self # xs
+        PJust y -> pcons # y #$ self # xs
 
 {- | A combination of 'pmap' and 'pfind', but without needing an intermediate
  structure. More precisely, searched for the first element in a list-like
@@ -138,7 +67,7 @@ pfindJust = phoistAcyclic $ plam $ \f -> precList (go f) (const $ pcon PNothing)
         Term s' (PMaybe b)
     go f self x xs = pmatch (f # x) $ \case
         PNothing -> self # xs
-        PJust v -> pcon . PJust $ v
+        PJust v -> pcon $ PJust v
 
 {- | Treats a list-like structure as an assoc list. More precisely, given a
  list-like structure of key-value pairs, a method of extracting the key and

@@ -39,7 +39,7 @@ module Plutarch.Extra.Ord (
 ) where
 
 import Data.Semigroup (Semigroup (stimes), stimesIdempotentMonoid)
-import Plutarch.Extra.List (plist, pmatchList, psingletonUnhoisted)
+import Plutarch.Extra.TermCont (pletC)
 import Plutarch.Internal.PlutusType (PlutusType (pcon', pmatch'))
 import Plutarch.Lift (
     PConstantDecl (
@@ -204,11 +204,19 @@ pfromOrdBy ::
     (POrd a) =>
     Term s ((b :--> a) :--> PComparator b)
 pfromOrdBy = phoistAcyclic $
-    plam $ \f -> pcon . PComparator $
-        plam $ \x y ->
-            plet (f # x) $ \fx ->
-                plet (f # y) $ \fy ->
-                    pif (fx #== fy) (pcon PEQ) (pif (fx #< fy) (pcon PLT) (pcon PGT))
+    plam $ \f -> pcon . PComparator . plam $ \x y ->
+        unTermCont $ do
+            fx <- pletC (f # x)
+            fy <- pletC (f # y)
+            pure $
+                pif
+                    (fx #== fy)
+                    (pcon PEQ)
+                    ( pif
+                        (fx #< fy)
+                        (pcon PLT)
+                        (pcon PGT)
+                    )
 
 {- | Given a way of \'separating\' a @c@ into an @a@ and a @b@, as well as
  'PComparator's for @a@ and @b@, make a 'PComparator' for @c@.
@@ -225,13 +233,10 @@ pproductComparator ::
     forall (a :: S -> Type) (b :: S -> Type) (c :: S -> Type) (s :: S).
     Term s ((c :--> PPair a b) :--> PComparator a :--> PComparator b :--> PComparator c)
 pproductComparator = phoistAcyclic $
-    plam $ \split cmpA cmpB ->
-        pmatch cmpA $ \(PComparator fA) ->
-            pmatch cmpB $ \(PComparator fB) ->
-                pcon . PComparator . plam $ \x y ->
-                    pmatch (split # x) $ \(PPair xA xB) ->
-                        pmatch (split # y) $ \(PPair yA yB) ->
-                            (fA # xA # yA) <> (fB # xB # yB)
+    plam $ \split cmpA cmpB -> pcon . PComparator . plam $ \x y ->
+        pmatch (split # x) $ \(PPair xA xB) ->
+            pmatch (split # y) $ \(PPair yA yB) ->
+                (pcompareBy # cmpA # xA # yA) <> (pcompareBy # cmpB # xB # yB)
 
 {- | Given a way of \'discriminating\' a @c@ into either an @a@ or a @b@, as
  well as 'PComparator's for @a@ and @b@, make a 'PComparator' for @c@.
@@ -247,17 +252,14 @@ psumComparator ::
     forall (a :: S -> Type) (b :: S -> Type) (c :: S -> Type) (s :: S).
     Term s ((c :--> PEither a b) :--> PComparator a :--> PComparator b :--> PComparator c)
 psumComparator = phoistAcyclic $
-    plam $ \discriminate cmpA cmpB ->
-        pmatch cmpA $ \(PComparator fA) ->
-            pmatch cmpB $ \(PComparator fB) ->
-                pcon . PComparator . plam $ \x y ->
-                    pmatch (discriminate # x) $ \case
-                        PLeft xA -> pmatch (discriminate # y) $ \case
-                            PLeft yA -> fA # xA # yA
-                            PRight _ -> pcon PLT
-                        PRight xB -> pmatch (discriminate # y) $ \case
-                            PLeft _ -> pcon PGT
-                            PRight yB -> fB # xB # yB
+    plam $ \discriminate cmpA cmpB -> pcon . PComparator . plam $ \x y ->
+        pmatch (discriminate # x) $ \case
+            PLeft xA -> pmatch (discriminate # y) $ \case
+                PLeft yA -> pcompareBy # cmpA # xA # yA
+                PRight _ -> pcon PLT
+            PRight xB -> pmatch (discriminate # y) $ \case
+                PRight yB -> pcompareBy # cmpB # xB # yB
+                PLeft _ -> pcon PGT
 
 {- | Given a projection from a type to another type which we have a
  'PComparator' for, construct a new 'PComparator'.
@@ -268,10 +270,8 @@ pmapComparator ::
     forall (a :: S -> Type) (b :: S -> Type) (s :: S).
     Term s ((b :--> a) :--> PComparator a :--> PComparator b)
 pmapComparator = phoistAcyclic $
-    plam $ \f cmp ->
-        pmatch cmp $ \(PComparator g) ->
-            pcon . PComparator . plam $ \x y ->
-                g # (f # x) # (f # y)
+    plam $ \f cmp -> pcon . PComparator . plam $ \x y ->
+        pcompareBy # cmp # (f # x) # (f # y)
 
 {- | Reverses the ordering described by a 'PComparator'.
 
@@ -281,13 +281,11 @@ preverseComparator ::
     forall (a :: S -> Type) (s :: S).
     Term s (PComparator a :--> PComparator a)
 preverseComparator = phoistAcyclic $
-    plam $ \cmp ->
-        pmatch cmp $ \(PComparator f) ->
-            pcon . PComparator . plam $ \x y ->
-                pmatch (f # x # y) $ \case
-                    PEQ -> pcon PEQ
-                    PLT -> pcon PGT
-                    PGT -> pcon PLT
+    plam $ \cmp -> pcon . PComparator . plam $ \x y ->
+        pmatch (pcompareBy # cmp # x # y) $ \case
+            PEQ -> pcon PEQ
+            PLT -> pcon PGT
+            PGT -> pcon PLT
 
 {- | \'Runs\' a 'PComparator'.
 
@@ -297,8 +295,7 @@ pcompareBy ::
     forall (a :: S -> Type) (s :: S).
     Term s (PComparator a :--> a :--> a :--> POrdering)
 pcompareBy = phoistAcyclic $
-    plam $ \cmp x y ->
-        pmatch cmp $ \(PComparator f) -> f # x # y
+    plam $ \cmp x y -> pto cmp # x # y
 
 {- | Uses a 'PComparator' for an equality check.
 
@@ -307,9 +304,7 @@ pcompareBy = phoistAcyclic $
 pequateBy ::
     forall (a :: S -> Type) (s :: S).
     Term s (PComparator a :--> a :--> a :--> PBool)
-pequateBy = phoistAcyclic $
-    plam $ \cmp x y ->
-        pmatch cmp $ \(PComparator f) -> pcon PEQ #== (f # x # y)
+pequateBy = phoistAcyclic $ plam $ \cmp x y -> pcon PEQ #== (pto cmp # x # y)
 
 -- Helpers
 
@@ -414,3 +409,32 @@ pmergeStart_2_3 = phoistAcyclic $
     pswap cmp x y cont = pmatch (pcompareBy # cmp # x # y) $ \case
         PGT -> cont y x
         _ -> cont x y
+
+-- Unhoisted psingleton
+psingletonUnhoisted ::
+    forall (ell :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
+    (PElemConstraint ell a, PListLike ell) =>
+    Term s a ->
+    Term s (ell a)
+psingletonUnhoisted x = plist [x]
+
+-- Turns any Foldable into a list-like, unhoisted
+plist ::
+    forall (ell :: (S -> Type) -> S -> Type) (f :: Type -> Type) (a :: S -> Type) (s :: S).
+    (Foldable f, PListLike ell, PElemConstraint ell a) =>
+    f (Term s a) ->
+    Term s (ell a)
+plist = foldr (\x xs -> pcons # x # xs) pnil
+
+-- CPS-chaining-friendly uncons.
+pmatchList ::
+    forall (r :: S -> Type) (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+    (PElemConstraint ell a, PListLike ell) =>
+    -- Continuation for \'nil\'.
+    Term s r ->
+    -- Continuation for \'cons\'.
+    (Term s a -> Term s (ell a) -> Term s r) ->
+    -- The list-like to match on.
+    Term s (ell a) ->
+    Term s r
+pmatchList = flip pelimList
