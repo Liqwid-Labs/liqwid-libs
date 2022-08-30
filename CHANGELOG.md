@@ -33,8 +33,10 @@ otherwise.
 * `pfind'` type arguments are now: content type, list-like 
   structure type, `s` tag.
 * `pfirstJust` renamed `pfindJust`.
-* `pmapMaybe` and `pfindJust` type arguments are now: 'target' element type, 
-  list-like structure type, 'source' element type, `s` tag.
+* `pmapMaybe` type arguments are now: list-like structure 
+  type, 'target' element type, 'source' element type, `s` tag.
+* `pfindJust` type arguments are now: 'target' element type, list-like 
+  structure type, 'source' element type, `s` tag.
 * `preplicate` now specifies the order of its type arguments.
 
 ## 3.3.0 -- 2022-08-25

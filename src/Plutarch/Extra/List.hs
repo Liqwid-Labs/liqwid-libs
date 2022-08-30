@@ -29,7 +29,7 @@ module Plutarch.Extra.List (
  @since 3.4.0
 -}
 pmapMaybe ::
-    forall (b :: S -> Type) (ell :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
+    forall (ell :: (S -> Type) -> S -> Type) (b :: S -> Type) (a :: S -> Type) (s :: S).
     (PElemConstraint ell a, PElemConstraint ell b, PListLike ell) =>
     Term s ((a :--> PMaybe b) :--> ell a :--> ell b)
 pmapMaybe = phoistAcyclic $ plam $ \f -> precList (go f) (const pnil)
