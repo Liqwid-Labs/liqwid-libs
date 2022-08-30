@@ -48,6 +48,10 @@ module Plutarch.Extra.Ord (
     -- *** Uniqueness checking
     pAllUnique,
     pAllUniqueBy,
+
+    -- *** Nubbing
+    pnubSort,
+    pnubSortBy,
 ) where
 
 import Data.Semigroup (Semigroup (stimes), stimesIdempotentMonoid)
@@ -63,6 +67,30 @@ import Plutarch.Lift (
     PUnsafeLiftDecl (PLifted),
  )
 import qualified Plutarch.List as PList
+
+{- | Sorts a list-like structure full of a 'POrd' instance, while also removing
+ all duplicates. This uses the same approach as 'psort', with the same
+ caveats.
+
+ @since 3.5.0
+-}
+pnubSort ::
+    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+    (POrd a, PElemConstraint ell a, PElemConstraint ell (ell a), PListLike ell) =>
+    Term s (ell a :--> ell a)
+pnubSort = phoistAcyclic $ plam $ \xs -> pnubSortBy # pfromOrd @a # xs
+
+{- | As 'pnubSort', but using a custom 'PComparator'.
+
+ @since 3.5.0
+-}
+pnubSortBy ::
+    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+    (PElemConstraint ell a, PElemConstraint ell (ell a), PListLike ell) =>
+    Term s (PComparator a :--> ell a :--> ell a)
+pnubSortBy = phoistAcyclic $
+    plam $ \cmp xs ->
+        pnubUnsafe # cmp #$ psortBy # cmp # xs
 
 {- | Sorts a list-like structure full of a 'POrd' instance.
 
@@ -206,19 +234,29 @@ pAllUniqueBy = phoistAcyclic $
 data POrdering (s :: S)
     = -- | Indicates a less-than relationship.
       --
-      -- @since 3.4.0
+      -- @since 3.5.0
       PLT
     | -- | Indicates equality.
       --
-      -- @since 3.4.0
+      -- @since 3.5.0
       PEQ
     | -- | Indicates a greater-than relationship.
       --
-      -- @since 3.4.0
+      -- @since 3.5.0
       PGT
     deriving stock
-        ( -- | @since 3.4.0
+        ( -- | @since 3.5.0
           Show
+        , -- | @since 3.5.0
+          Generic
+        )
+    deriving anyclass
+        ( -- | @since 3.5.0
+          PShow
+        , -- | @since 3.5.0
+          PPartialOrd
+        , -- | @since 3.5.0
+          POrd
         )
 
 -- | @since 3.5.0
@@ -280,8 +318,6 @@ instance Semigroup (Term s POrdering) where
 -- | @since 3.5.0
 instance Monoid (Term s POrdering) where
     mempty = pcon PEQ
-
--- TODO: PShow, PPartialOrd, POrd
 
 -- | @since 3.5.0
 newtype PComparator (a :: S -> Type) (s :: S)
@@ -427,6 +463,30 @@ pequateBy = phoistAcyclic $ plam $ \cmp x y -> pcon PEQ #== (pto cmp # x # y)
 
 -- Helpers
 
+-- This assumes the list-like is ordered by the argument comparator: be careful
+-- how you call this!
+pnubUnsafe ::
+    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+    (PElemConstraint ell a, PListLike ell) =>
+    Term s (PComparator a :--> ell a :--> ell a)
+pnubUnsafe = phoistAcyclic $ plam $ \cmp -> pelimList (go cmp) pnil
+  where
+    go ::
+        forall (s' :: S).
+        Term s' (PComparator a) ->
+        Term s' a ->
+        Term s' (ell a) ->
+        Term s' (ell a)
+    go cmp x xs = pmatch (PList.puncons # xs) $ \case
+        -- Singletons are always unique
+        PNothing -> pcons # x # pnil
+        PJust xs' -> pmatch xs' $ \(PPair h _) ->
+            pmatch (pcompareBy # cmp # x # h) $ \case
+                -- Throw out duplicate.
+                PEQ -> xs
+                -- Keep.
+                _ -> pcons # x # xs
+
 pmergeAll ::
     forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
     (PElemConstraint ell a, PElemConstraint ell (ell a), PListLike ell) =>
@@ -453,6 +513,8 @@ pmergeAll = phoistAcyclic $
                         PJust xss'' -> pmatch xss'' $ \(PPair h' t') ->
                             pcons # (pmergeUnsafe # cmp # h # h') # (self # cmp # t')
 
+-- This assumes both argument list-likes are sorted by the argument comparator:
+-- be careful how you call this!
 pmergeUnsafe ::
     forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
     (PElemConstraint ell a, PListLike ell) =>

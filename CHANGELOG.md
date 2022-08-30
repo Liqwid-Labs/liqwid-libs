@@ -20,6 +20,7 @@ otherwise.
   sorted by a given `PComparator`.
 * `pAllUnique` and `pAllUniqueBy` in `Plutarch.Extra.Ord`, for verifying the
   uniqueness of the composition of a list-like.
+* `pnubSort` and `pNubSortBy`, for eliminating duplicates as well as sorting.
 
 ### Removed
 
