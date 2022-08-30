@@ -9,7 +9,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableInstances #-}
-
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Plutarch.Test.QuickCheck (
@@ -387,7 +386,7 @@ instance
                     Nothing -> property True
             Right (Right p', _, t) ->
                 case h of
-                    Just h' -> haskEquiv @e @'ByComplete h' (TestableTerm p') Nil
+                    Just h' -> haskEquiv @e @( 'ByComplete) h' (TestableTerm p') Nil
                     Nothing -> failWith $ "Haskell expected failure, but Plutarch succeed.\n" <> show t
 
 -- | @since 2.1.0
