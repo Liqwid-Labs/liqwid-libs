@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeApplications #-}
 -- Needed to 'link' Ordering and POrdering
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -33,9 +34,12 @@ module Plutarch.Extra.Ord (
     -- ** Using comparators
     pcompareBy,
     pequateBy,
+    psort,
+    psortBy,
 ) where
 
 import Data.Semigroup (Semigroup (stimes), stimesIdempotentMonoid)
+import Plutarch.Extra.Boost (plist, pmatchList, psing)
 import Plutarch.Internal.PlutusType (PlutusType (pcon', pmatch'))
 import Plutarch.Lift (
     PConstantDecl (
@@ -46,6 +50,34 @@ import Plutarch.Lift (
     ),
     PUnsafeLiftDecl (PLifted),
  )
+import qualified Plutarch.List as PList
+
+{- | Sorts a list-like structure full of a 'POrd' instance.
+
+ This uses [merge sort](https://en.wikipedia.org/wiki/Merge_sort), which is
+ also [stable](https://en.wikipedia.org/wiki/Sorting_algorithm#Stability).
+ This means that it requires a linearithmic ($n \log(n)$) number of
+ comparisons, as with all comparison sorts.
+
+ @since 3.4.0
+-}
+psort ::
+    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+    (POrd a, PElemConstraint ell a, PElemConstraint ell (ell a), PListLike ell) =>
+    Term s (ell a :--> ell a)
+psort = phoistAcyclic $ plam $ \xs -> psortBy # pfromOrd @a # xs
+
+{- | As 'psort', but using a custom 'PComparator'.
+
+ @since 3.4.0
+-}
+psortBy ::
+    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+    (PElemConstraint ell a, PElemConstraint ell (ell a), PListLike ell) =>
+    Term s (PComparator a :--> ell a :--> ell a)
+psortBy = phoistAcyclic $
+    plam $ \cmp xs ->
+        pmergeAll # cmp #$ pmergeStart_2_3 # cmp # xs
 
 {- | A representation of a comparison at the Plutarch level. Equivalent to
  'Ordering' in Haskell.
@@ -278,3 +310,107 @@ pequateBy ::
 pequateBy = phoistAcyclic $
     plam $ \cmp x y ->
         pmatch cmp $ \(PComparator f) -> pcon PEQ #== (f # x # y)
+
+-- Helpers
+
+pmergeAll ::
+    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+    (PElemConstraint ell a, PElemConstraint ell (ell a), PListLike ell) =>
+    Term s (PComparator a :--> ell (ell a) :--> ell a)
+pmergeAll = phoistAcyclic $
+    pfix #$ plam $ \self cmp xss ->
+        pmatch (PList.puncons # xss) $ \case
+            PNothing -> pnil
+            PJust xss' -> pmatch xss' $ \(PPair h t) ->
+                pmatch (PList.puncons # t) $ \case
+                    PNothing -> h
+                    PJust _ -> self # cmp #$ go # cmp # t
+  where
+    go ::
+        forall (s' :: S).
+        Term s' (PComparator a :--> ell (ell a) :--> ell (ell a))
+    go = phoistAcyclic $
+        pfix #$ plam $ \self cmp xss ->
+            pmatch (PList.puncons # xss) $ \case
+                PNothing -> pnil
+                PJust xss' -> pmatch xss' $ \(PPair h t) ->
+                    pmatch (PList.puncons # t) $ \case
+                        PNothing -> xss
+                        PJust xss'' -> pmatch xss'' $ \(PPair h' t') ->
+                            pcons # (pmerge # cmp # h # h') # (self # cmp # t')
+
+pmerge ::
+    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+    (PElemConstraint ell a, PListLike ell) =>
+    Term s (PComparator a :--> ell a :--> ell a :--> ell a)
+pmerge = phoistAcyclic $
+    pfix #$ plam $ \self cmp xs ys ->
+        pmatch (PList.puncons # xs) $ \case
+            -- Exhausted xs, yield ys as-is.
+            PNothing -> ys
+            PJust xs' -> pmatch (PList.puncons # ys) $ \case
+                -- Exhausted ys, yield xs as-is.
+                PNothing -> xs
+                PJust ys' -> pmatch xs' $ \(PPair leftH leftT) ->
+                    pmatch ys' $ \(PPair rightH rightT) ->
+                        pmatch (pcompareBy # cmp # leftH # rightH) $ \case
+                            -- Right before left.
+                            PGT -> pcons # rightH #$ pcons # leftH # (self # cmp # leftT # rightT)
+                            -- Left before right.
+                            _ -> pcons # leftH #$ pcons # rightH # (self # cmp # leftT # rightT)
+
+pmergeStart_2_3 ::
+    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+    (PElemConstraint ell a, PListLike ell, PElemConstraint ell (ell a)) =>
+    Term s (PComparator a :--> ell a :--> ell (ell a))
+pmergeStart_2_3 = phoistAcyclic $
+    pfix #$ plam $ \self cmp ->
+        pmatchList pnil $ \_0 ->
+            pmatchList (plist [psing _0]) $ \_1 ->
+                pmatchList (plist [psort2 cmp _0 _1]) $ \_2 ->
+                    pmatchList (plist [psort3 cmp _0 _1 _2]) $ \_3 rest ->
+                        pcons # psort4 cmp _0 _1 _2 _3 #$ self # cmp # rest
+  where
+    psort2 ::
+        forall (s' :: S).
+        Term s' (PComparator a) ->
+        Term s' a ->
+        Term s' a ->
+        Term s' (ell a)
+    psort2 cmp _0 _1 = pswap cmp _0 _1 $
+        \_0 _1 -> plist [_0, _1]
+    psort3 ::
+        forall (s' :: S).
+        Term s' (PComparator a) ->
+        Term s' a ->
+        Term s' a ->
+        Term s' a ->
+        Term s' (ell a)
+    psort3 cmp _0 _1 _2 = pswap cmp _0 _2 $
+        \_0 _2 -> pswap cmp _0 _1 $
+            \_0 _1 -> pswap cmp _1 _2 $
+                \_1 _2 -> plist [_0, _1, _2]
+    psort4 ::
+        forall (s' :: S).
+        Term s' (PComparator a) ->
+        Term s' a ->
+        Term s' a ->
+        Term s' a ->
+        Term s' a ->
+        Term s' (ell a)
+    psort4 cmp _0 _1 _2 _3 = pswap cmp _0 _2 $
+        \_0 _2 -> pswap cmp _1 _3 $
+            \_1 _3 -> pswap cmp _0 _1 $
+                \_0 _1 -> pswap cmp _2 _3 $
+                    \_2 _3 -> pswap cmp _1 _2 $
+                        \_1 _2 -> plist [_0, _1, _2, _3]
+    pswap ::
+        forall (r :: S -> Type) (s' :: S).
+        Term s' (PComparator a) ->
+        Term s' a ->
+        Term s' a ->
+        (Term s' a -> Term s' a -> Term s' r) ->
+        Term s' r
+    pswap cmp x y cont = pmatch (pcompareBy # cmp # x # y) $ \case
+        PGT -> cont y x
+        _ -> cont x y

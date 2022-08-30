@@ -86,6 +86,7 @@ library
     Plutarch.Extra.AssetClass
     Plutarch.Extra.Bind
     Plutarch.Extra.Bool
+    Plutarch.Extra.Boost
     Plutarch.Extra.Boring
     Plutarch.Extra.Category
     Plutarch.Extra.Comonad

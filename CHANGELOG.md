@@ -11,6 +11,7 @@ otherwise.
 
 * `plookupAssoc`, designed as a very general treatment of list-like structures
   as assoc lists.
+* `psort` and `psortBy`, using sorting networks for extra speed.
 * `Plutarch.Extra.Ord` module, containing a new type `POrdering` corresponding
   to the Haskell `Ordering`, as well as `PComparator`, representing a
   \'materialized ordering\'.
