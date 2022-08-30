@@ -39,7 +39,7 @@ module Plutarch.Extra.Ord (
 ) where
 
 import Data.Semigroup (Semigroup (stimes), stimesIdempotentMonoid)
-import Plutarch.Extra.Boost (plist, pmatchList, psing)
+import Plutarch.Extra.List (plist, pmatchList, psingletonUnhoisted)
 import Plutarch.Internal.PlutusType (PlutusType (pcon', pmatch'))
 import Plutarch.Lift (
     PConstantDecl (
@@ -366,7 +366,7 @@ pmergeStart_2_3 ::
 pmergeStart_2_3 = phoistAcyclic $
     pfix #$ plam $ \self cmp ->
         pmatchList pnil $ \_0 ->
-            pmatchList (plist [psing _0]) $ \_1 ->
+            pmatchList (plist [psingletonUnhoisted _0]) $ \_1 ->
                 pmatchList (plist [psort2 cmp _0 _1]) $ \_2 ->
                     pmatchList (plist [psort3 cmp _0 _1 _2]) $ \_3 rest ->
                         pcons # psort4 cmp _0 _1 _2 _3 #$ self # cmp # rest
