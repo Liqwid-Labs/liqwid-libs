@@ -176,6 +176,6 @@ plookup ::
 plookup =
     phoistAcyclic $
         plam $ \k xs ->
-            pmatch (pfind # (plam $ \p -> pfstBuiltin # p #== k) # xs) $ \case
+            pmatch (pfind # plam (\p -> pfstBuiltin # p #== k) # xs) $ \case
                 PNothing -> pcon PNothing
                 PJust p -> pcon (PJust (psndBuiltin # p))

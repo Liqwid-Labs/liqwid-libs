@@ -9,7 +9,8 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ViewPatterns #-}
+
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Plutarch.Test.QuickCheck (
     type PLamArgs,
@@ -88,14 +89,15 @@ import Test.QuickCheck (
     forAll,
     (.&&.),
  )
+import Test.QuickCheck.Poly (A (A), B (B), C (C))
 
 -- Get the type of Haskell TestableTerm function and change Plutarch
 -- lambda to PFun if there is one:
 -- :k! PLamWrapped (TestableTerm PInteger -> TestableTerm (PInteger :--> PBool) -> TestableTerm PUnit)
 -- = TestableTerm PInteger -> PFun PInteger PBool -> TestableTerm PUnit
 type family PLamWrapped (h :: Type) :: Type where
-    PLamWrapped (TestableTerm (a :--> b) -> c) = PFun a b -> (PLamWrapped c)
-    PLamWrapped (a -> b) = a -> (PLamWrapped b)
+    PLamWrapped (TestableTerm (a :--> b) -> c) = PFun a b -> PLamWrapped c
+    PLamWrapped (a -> b) = a -> PLamWrapped b
     PLamWrapped a = a
 
 -- Check if given type of TestableTerm is a lambda.
@@ -168,7 +170,7 @@ type PWrapLam (h :: Type) = (PWrapLam' h (IsLam h) (IsLast h), OnlyTestableTerm 
      generated.
 
 = Note
-"TestableTerm that is lambda" means @TestableTerm (a :--> b)@.
+`TestableTerm`s that are Plutarc function means @TestableTerm (a :--> b)@.
 
  @since 2.1.0
 -}
@@ -228,18 +230,19 @@ instance
     ) =>
     PUnLam' fin (pa :--> pb) 'False
     where
-    pUnLam' f = \(TestableTerm y) -> pUnLam' @fin @pb @(IsFinal fin pb) (f # y)
+    pUnLam' f (TestableTerm y) = pUnLam' @fin @pb @(IsFinal fin pb) (f # y)
 
 instance PUnLam' fin fin 'True where
-    pUnLam' x = TestableTerm x
+    pUnLam' = TestableTerm
 
-{- | Constraint for `PUnLam'` that will give a better type error message.
+{- | Constraint for `punlam`-related functions.
 
  @since 2.1.0
 -}
 type PUnLam fin p = (PUnLam' fin p (IsFinal fin p), CheckReturn fin p)
 
-{- | Wrapper for @pUnLam'@. Only required the final return type.
+{- | Bring Plutarch function into the Haskell level with each Plutarch
+     types wrapped in the `TestableTerm`.
 
  @since 2.1.0
 -}
@@ -250,9 +253,8 @@ punlam' ::
     PUnLamHask fin p
 punlam' = pUnLam' @fin @p @(IsFinal fin p)
 
-{- | Wrapper for @pUnLam'@. Same as @punlam'@ but evaluates the given
-     Plutarch function before the conversion. It will throw an error
-     if evaluation failes.
+{- | Same as @punlam'@ but evaluates the given Plutarch function before
+     the conversion. It will throw an error if evaluation fails.
 
  @since 2.1.0
 -}
@@ -263,11 +265,10 @@ punlam ::
     PUnLamHask fin p
 punlam pf = punlam' @fin (loudEval pf)
 
-{- | Converts Plutarch Functions into Haskell function of
-     TestableTerms. Then, wrap any instance of TestableTerm that is
-     lambda into `PFun`. Result of this function will be
-     "QuickCheck-compatible" given that all Plutarch type used have
-     `PArbitrary` instance.
+{- | "Converts a Plutarch function into a Haskell function on
+     'TestableTerm's, then wraps functions into 'PFun' as
+     necessary. The result will be 'Quickcheck-compatible' if all
+     Plutarch types used have 'PArbitrary' instances."
 
  @since 2.0.0
 -}
@@ -321,6 +322,23 @@ type family PLamArgs (p :: S -> Type) :: [Type] where
      haskell function. Once all arguments are applied, It will check
      the equality of results.
 
+     There are few options provided by @HaskEquiv@. It allows users to
+     use specific comparison methods: @OnPEq@, @OnPData@, @OnBoth@.
+     @OnPEq@ uses Plutarch typeclass @PEq@ to compare two resulting
+     outcomes(one from Plutarch function, other from Haskell function).
+     @OnPData@ compares the raw `Data`s from two functions. @OnBoth@
+     conjoins @OnPEq@ and @OnPData@.
+
+     Users can also specify partiality of provided function:
+     @ByComplete@ and @ByPartial@. @ByPartial@ will allow Haskell
+     functions to expect a failure in Plutarch functions. Maybe return
+     is expected from the Haskell function; @Nothing@ will represent
+     the case where Plutarch function fails. @ByComplete@ expects
+     Plutarch function to not fail. It will consider failure on
+     evaluation as a failure. @ByPartial@ will be slightly less
+     performant than @ByComplete@, so it is recommended to use
+     @ByComplete@ when possible.
+
  @since 2.0.0
 -}
 class
@@ -362,17 +380,14 @@ instance
     where
     haskEquiv h (TestableTerm p) _ =
         case evalTerm (Config{tracingMode = DoTracing}) p of
-            Left err ->
-                case h of
-                    Just _ -> failWith $ "Haskell expected success, but Plutarch compilation failed.\n" <> show err
-                    Nothing -> property True
+            Left err -> failWith $ "Plutarch compilation failed.\n" <> show err
             Right (Left err, _, t) ->
                 case h of
                     Just _ -> failWith $ "Haskell expected success, but Plutarch evaluation failed.\n" <> show err <> "\n" <> show t
                     Nothing -> property True
             Right (Right p', _, t) ->
                 case h of
-                    Just h' -> haskEquiv @e @( 'ByComplete) h' (TestableTerm p') Nil
+                    Just h' -> haskEquiv @e @'ByComplete h' (TestableTerm p') Nil
                     Nothing -> failWith $ "Haskell expected failure, but Plutarch succeed.\n" <> show t
 
 -- | @since 2.1.0
@@ -383,7 +398,7 @@ instance
     where
     haskEquiv h (TestableTerm p) _ =
         counterexample "Comparison by PEq Failed" $
-            property $ plift $ p #== (pconstant h)
+            property $ plift $ p #== pconstant h
 
 -- | @since 2.1.0
 instance
@@ -402,7 +417,7 @@ instance
     HaskEquiv 'OnBoth 'ByComplete h p '[]
     where
     haskEquiv h p _ =
-        (haskEquiv @( 'OnPEq) @( 'ByComplete) h p Nil) .&&. (haskEquiv @( 'OnPData) @( 'ByComplete) h p Nil)
+        haskEquiv @( 'OnPEq) @( 'ByComplete) h p Nil .&&. haskEquiv @( 'OnPData) @( 'ByComplete) h p Nil
 
 {- | Simplified version of `haskEquiv`. It will use arbitrary instead of
      asking custom generators.
@@ -426,7 +441,11 @@ haskEquiv' h p =
 
  @since 2.0.1
 -}
-uplcEq :: TestableTerm a -> TestableTerm b -> Property
+uplcEq ::
+    forall (a :: S -> Type) (b :: S -> Type).
+    TestableTerm a ->
+    TestableTerm b ->
+    Property
 uplcEq x y = either failWith property go
   where
     go = do
@@ -440,8 +459,6 @@ uplcEq x y = either failWith property go
                 case evalScript s' of
                     (Right s, _, _) -> Right s
                     (Left err, _, _) -> Left $ "Term evaluation failed:\n" <> show err
-
-newtype A = A Integer
 
 {- | Placeholder for a polymorphic type. Plutarch equivalence of QuickCheck's
   `A`.
@@ -479,9 +496,6 @@ instance PArbitrary PA where
 instance PCoArbitrary PA where
     pcoarbitrary (TestableTerm x) = pcoarbitrary $ TestableTerm $ pto x
 
--- | @since 2.0.0
-newtype B = B Integer
-
 {- | Same as `PA`.
 
  @since 2.0.0
@@ -516,9 +530,6 @@ instance PArbitrary PB where
 -- | @since 2.0.0
 instance PCoArbitrary PB where
     pcoarbitrary (TestableTerm x) = pcoarbitrary $ TestableTerm $ pto x
-
--- | @since 2.0.0
-newtype C = C Integer
 
 {- | Same as `PA`.
 
