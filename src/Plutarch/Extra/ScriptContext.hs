@@ -58,7 +58,7 @@ import Plutarch.Extra.AssetClass (PAssetClass, passetClassValueOf)
 import Plutarch.Extra.Function ((#.*))
 import Plutarch.Extra.Functor (PFunctor (pfmap))
 import Plutarch.Extra.List (pfirstJust)
-import Plutarch.Extra.Maybe (pfromJust, pisJust, pjust, pnothing)
+import Plutarch.Extra.Maybe (pfromJust, pisJust, pjust, pnothing, ptraceIfNothing)
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.Unsafe (punsafeCoerce)
 
@@ -189,19 +189,25 @@ ptxSignedBy :: forall (s :: S). Term s (PBuiltinList (PAsData PPubKeyHash) :--> 
 ptxSignedBy = phoistAcyclic $
     plam $ \sigs sig -> pelem # sig # sigs
 
-{- | Find a datum with the given hash.
+{- | Yield the 'PDatum' inside a 'POutputDatum', or 'PNothing' if it's not
+ there.
 
-    @since 1.1.0
+ @since 3.5.0
 -}
-pfindDatum ::
-    forall (s :: S).
-    Term
-        s
-        ( PDatumHash
-            :--> PMap 'Unsorted PDatumHash PDatum
-            :--> PMaybe PDatum
-        )
-pfindDatum = AssocMap.plookup
+pfindDatum :: forall (s :: S). Term s (POutputDatum :--> PMaybe PDatum)
+pfindDatum = phoistAcyclic $
+    plam $ \x -> pmatch x $ \case
+        POutputDatum x' -> pcon . PJust $ pfield @"outputDatum" # x'
+        _ -> pcon PNothing
+
+{- | As 'pfindDatum', but error if there's no 'PDatum' to be had.
+
+ @since 3.5.0
+-}
+ptryFindDatum :: forall (s :: S). Term s (POutputDatum :--> PDatum)
+ptryFindDatum = phoistAcyclic $
+    plam $ \x ->
+        ptraceIfNothing "ptryFindDatum: no Datum found" $ pfindDatum # x
 
 {- | Convert a 'PDatum' to the give type @a@.
 
@@ -212,24 +218,6 @@ pfromPDatum ::
     PTryFrom PData a =>
     Term s (PDatum :--> a)
 pfromPDatum = phoistAcyclic $ plam $ flip ptryFrom fst . pto
-
-{- | Find a datum with the given hash, and `ptryFrom` it.
-
-    @since 1.1.0
--}
-ptryFindDatum ::
-    forall (a :: S -> Type) (s :: S).
-    PTryFrom PData a =>
-    Term
-        s
-        ( PDatumHash
-            :--> PMap 'Unsorted PDatumHash PDatum
-            :--> PMaybe a
-        )
-ptryFindDatum =
-    phoistAcyclic $
-        (pfmap # pfromPDatum)
-            #.* AssocMap.plookup
 
 {- | Extract the datum from a 'POutputDatum'.
 

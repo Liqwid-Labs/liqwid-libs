@@ -114,6 +114,7 @@ library
     Plutarch.Extra.Tagged
     Plutarch.Extra.TermCont
     Plutarch.Extra.These
+    Plutarch.Extra.Time
     Plutarch.Extra.Traversable
     Plutarch.Extra.Tuple
     Plutarch.Extra.Value
