@@ -16,6 +16,10 @@ otherwise.
   \'materialized ordering\'.
 * `psort` and `psortBy` in `Plutarch.Extra.Ord`, using sorting networks for 
   extra speed, and `PComparator`s.
+* `ptryMerge` and `ptryMergeBy` in `Plutarch.Extra.Ord`, for merging list-likes
+  sorted by a given `PComparator`.
+* `pAllUnique` and `pAllUniqueBy` in `Plutarch.Extra.Ord`, for verifying the
+  uniqueness of the composition of a list-like.
 
 ### Removed
 

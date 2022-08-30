@@ -32,10 +32,22 @@ module Plutarch.Extra.Ord (
     preverseComparator,
 
     -- ** Using comparators
+
+    -- *** Basic
     pcompareBy,
     pequateBy,
+
+    -- *** Sorting
     psort,
     psortBy,
+
+    -- *** Merging
+    ptryMerge,
+    ptryMergeBy,
+
+    -- *** Uniqueness checking
+    pAllUnique,
+    pAllUniqueBy,
 ) where
 
 import Data.Semigroup (Semigroup (stimes), stimesIdempotentMonoid)
@@ -78,6 +90,113 @@ psortBy ::
 psortBy = phoistAcyclic $
     plam $ \cmp xs ->
         pmergeAll # cmp #$ pmergeStart_2_3 # cmp # xs
+
+{- | Given two list-like structures which are already sorted by their 'POrd'
+ instances, attempt to merge them, preserving their order. If one of the
+ structures is found not to be ordered, error out instead.
+
+ @since 3.4.0
+-}
+ptryMerge ::
+    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+    (PElemConstraint ell a, PListLike ell, POrd a) =>
+    Term s (ell a :--> ell a :--> ell a)
+ptryMerge = phoistAcyclic $ plam $ \xs -> ptryMergeBy # pfromOrd @a # xs
+
+{- | As 'pmerge', but specifying the ordering by a custom 'PComparator'.
+
+ @since 3.4.0
+-}
+ptryMergeBy ::
+    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+    (PElemConstraint ell a, PListLike ell) =>
+    Term s (PComparator a :--> ell a :--> ell a :--> ell a)
+ptryMergeBy = phoistAcyclic $
+    pfix #$ plam $ \self cmp xs ys ->
+        pmatch (PList.puncons # xs) $ \case
+            -- Exhausted left, check ordering and go if it works
+            PNothing -> passertOrderBy # cmp # ys
+            PJust xs' -> pmatch (PList.puncons # ys) $ \case
+                -- Exhausted right, check ordering and go if it works
+                PNothing -> passertOrderBy # cmp # xs
+                PJust ys' -> pmatch xs' $ \(PPair xsHead xsTail) ->
+                    pmatch ys' $ \(PPair ysHead ysTail) ->
+                        pmatch (PList.puncons # xsTail) $ \case
+                            -- Singletons are always ordered
+                            PNothing -> pmatch (pcompareBy # cmp # xsHead # ysHead) $ \case
+                                PGT -> pcons # ysHead #$ self # cmp # xs # ysTail
+                                _ -> pcons # xsHead #$ passertOrderBy # cmp # ys
+                            PJust xs'' -> pmatch (PList.puncons # ysTail) $ \case
+                                -- Singletons are always ordered
+                                PNothing -> pmatch (pcompareBy # cmp # xsHead # ysHead) $ \case
+                                    PGT -> pcons # ysHead #$ passertOrderBy # cmp # xs
+                                    _ -> pcons # xsHead #$ self # cmp # xsTail # ys
+                                -- Need to look further to ensure we're not mis-ordered
+                                PJust ys'' -> pmatch xs'' $ \(PPair xsPeek _) ->
+                                    -- Verify by look-ahead that xsHead and xsPeek are ordered
+                                    pmatch (pcompareBy # cmp # xsHead # xsPeek) $ \case
+                                        -- We are out of order, vomit.
+                                        PGT -> ptraceError "ptryMergeBy: argument list-like out of order"
+                                        _ -> pmatch ys'' $ \(PPair ysPeek _) ->
+                                            -- Verify by look-ahead that ysHead and ysPeek are ordered
+                                            pmatch (pcompareBy # cmp # ysHead # ysPeek) $ \case
+                                                -- We are out of order, vomit.
+                                                PGT -> ptraceError "ptryMergeBy: argument list-like out of order"
+                                                -- Actually perform the merge.
+                                                _ -> pmatch (pcompareBy # cmp # xsHead # ysHead) $ \case
+                                                    PGT -> pcons # ysHead #$ self # cmp # xs # ysTail
+                                                    _ -> pcons # xsHead #$ self # cmp # xsTail # ys
+
+{- | Verifies if every element of the input list-like is unique according to its
+ 'PEq' instance. Relies on a 'POrd' instance for speed, but only works if the
+ input is sorted according to that instance.
+
+ Returns @'PJust' 'PTrue'@ if every element is unique as specified above,
+ @'PJust' 'PFalse'@ if a duplicate exists, and 'PNothing' if the input isn't
+ ordered.
+
+ @since 3.4.0
+-}
+pAllUnique ::
+    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+    (PElemConstraint ell a, PListLike ell, POrd a) =>
+    Term s (ell a :--> PMaybe PBool)
+pAllUnique = phoistAcyclic $ plam $ \xs -> pAllUniqueBy # pfromOrd @a # xs
+
+{- | As 'pAllUnique', but relies on a custom 'PComparator' for both equality and
+ ordering (instead of a 'PEq' and 'POrd' instance respectively).
+
+ @since 3.4.0
+-}
+pAllUniqueBy ::
+    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+    (PElemConstraint ell a, PListLike ell) =>
+    Term s (PComparator a :--> ell a :--> PMaybe PBool)
+pAllUniqueBy = phoistAcyclic $
+    plam $ \cmp ->
+        precList (go cmp) (const (pcon . PJust . pconstant $ True))
+  where
+    go ::
+        forall (s' :: S).
+        Term s' (PComparator a) ->
+        Term s' (ell a :--> PMaybe PBool) ->
+        Term s' a ->
+        Term s' (ell a) ->
+        Term s' (PMaybe PBool)
+    go cmp self x xs = pmatch (PList.puncons # xs) $ \case
+        -- Singletons are always unique no matter their ordering.
+        PNothing -> pcon . PJust . pconstant $ True
+        PJust xs' -> pmatch xs' $ \(PPair h _) ->
+            pmatch (pcompareBy # cmp # x # h) $ \case
+                -- Order holds, so defer to the outcome of self.
+                PLT -> self # xs
+                -- Duplicate.
+                PEQ -> pmatch (self # xs) $ \case
+                    -- If we're out-of-order, duplicates aren't relevant.
+                    PNothing -> pcon PNothing
+                    PJust _ -> pcon . PJust . pconstant $ False
+                -- Out of order.
+                PGT -> pcon PNothing
 
 {- | A representation of a comparison at the Plutarch level. Equivalent to
  'Ordering' in Haskell.
@@ -332,13 +451,13 @@ pmergeAll = phoistAcyclic $
                     pmatch (PList.puncons # t) $ \case
                         PNothing -> xss
                         PJust xss'' -> pmatch xss'' $ \(PPair h' t') ->
-                            pcons # (pmerge # cmp # h # h') # (self # cmp # t')
+                            pcons # (pmergeUnsafe # cmp # h # h') # (self # cmp # t')
 
-pmerge ::
+pmergeUnsafe ::
     forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
     (PElemConstraint ell a, PListLike ell) =>
     Term s (PComparator a :--> ell a :--> ell a :--> ell a)
-pmerge = phoistAcyclic $
+pmergeUnsafe = phoistAcyclic $
     pfix #$ plam $ \self cmp xs ys ->
         pmatch (PList.puncons # xs) $ \case
             -- Exhausted xs, yield ys as-is.
@@ -438,3 +557,23 @@ pmatchList ::
     Term s (ell a) ->
     Term s r
 pmatchList = flip pelimList
+
+passertOrderBy ::
+    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+    (PElemConstraint ell a, PListLike ell) =>
+    Term s (PComparator a :--> ell a :--> ell a)
+passertOrderBy = phoistAcyclic $ plam $ \cmp -> pelimList (go cmp) pnil
+  where
+    go ::
+        forall (s' :: S).
+        Term s' (PComparator a) ->
+        Term s' a ->
+        Term s' (ell a) ->
+        Term s' (ell a)
+    go cmp x xs = pmatch (PList.puncons # xs) $ \case
+        PNothing -> pcons # x # pnil
+        PJust xs' -> pmatch xs' $ \(PPair h _) ->
+            pmatch (pcompareBy # cmp # x # h) $ \case
+                -- We are out of order, vomit.
+                PGT -> ptraceError "ptryMergeBy: argument list-like out of order"
+                _ -> pcons # x # xs
