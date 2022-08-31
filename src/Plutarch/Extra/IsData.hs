@@ -70,7 +70,7 @@ import PlutusTx (
 
      It is recommended to use `PlutusTypeDataList` when deriving
      `PlutusType` as it provides some basic safety by ensuring
-     Plutarch types to have internal of `PDataRecord`.
+     Plutarch types have an `Inner` type of `PDataRecord`.
 
      Uses 'gProductToBuiltinData', 'gproductFromBuiltinData'.
 
