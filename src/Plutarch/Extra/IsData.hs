@@ -74,6 +74,31 @@ import PlutusTx (
 
      Uses 'gProductToBuiltinData', 'gproductFromBuiltinData'.
 
+ = Example
+@
+data Foo =
+  Foo Integer Integer
+  deriving stock (GHC.Generic)
+  deriving anyclass (SOP.Generic)
+  deriving (FromData, ToData) via (ProductIsData Foo)
+  deriving (PConstantDecl) via (PConstantViaDataList Foo PFoo)
+
+newtype PFoo s
+    = PFoo
+      ( Term s
+          ( PDataRecord
+              '[ "abc" ':= PInteger
+               , "efg" ':= PInteger
+               ]
+          )
+      )
+  deriving stock (GHC.Generic)
+  deriving anyclass (PlutusType, PIsData, PDataFields)
+
+instance DerivePlutusType PFoo where
+   DPTStrat _ = PlutusTypeDataList
+@
+
   @since 1.1.0
 -}
 newtype ProductIsData (a :: Type) = ProductIsData {unProductIsData :: a}
