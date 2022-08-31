@@ -44,6 +44,12 @@ To integrate this with your project, use Nix. We work against the `master`
 branch of [Plutarch](https://github.com/Plutonomicon/plutarch-plutus), so you will have to use it
 also. See the [`flake.nix`](./flake.nix) file for more details.
 
+# Standards
+
+The `plutarch-unit` code base follows strict standards to increase consistency, to minimize
+the impact of legacy, to properly use automated tools, and more. The standards document
+can be found [here](https://liqwid.notion.site/Coding-Standards-cd3c430e6e444fa292ecc3c57b7d95eb).
+
 # What can I do with this?
 
 `plutarch-unit` is licensed under the Apache 2.0 license (SPDX code
