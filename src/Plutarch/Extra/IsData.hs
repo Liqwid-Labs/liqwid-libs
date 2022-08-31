@@ -88,6 +88,7 @@ type family GetPRecord (a :: S -> Type) :: S -> Type where
 class (PGeneric p, PCode p ~ '[ '[GetPRecord p]]) => IsPlutusTypeDataList (p :: S -> Type)
 instance (PGeneric p, PCode p ~ '[ '[GetPRecord p]]) => IsPlutusTypeDataList p
 
+-- | @since 3.5.0
 data PlutusTypeDataList
 
 instance PlutusTypeStrat PlutusTypeDataList where
