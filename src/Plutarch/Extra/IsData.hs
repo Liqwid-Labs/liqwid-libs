@@ -3,7 +3,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Plutarch.Extra.IsData (
     -- * PlutusTx ToData/FromData derive-wrappers
@@ -16,6 +15,7 @@ module Plutarch.Extra.IsData (
 
     -- * Plutarch deriving strategy
     PlutusTypeEnumData,
+    PlutusTypeDataList,
 
     -- * Functions for PEnumData types
     pmatchEnum,
@@ -43,24 +43,11 @@ import Generics.SOP (
 import qualified Generics.SOP as SOP
 import Plutarch.Builtin (pasInt)
 import Plutarch.Extra.TermCont (pletC)
-import Plutarch.Internal.Generic (PGeneric)
+import Plutarch.Internal.Generic (PCode, PGeneric, gpfrom, gpto)
 import Plutarch.Internal.PlutusType (
-    DerivePlutusType (DPTStrat),
     PlutusTypeStrat (DerivedPInner, PlutusTypeStratConstraint, derivedPCon, derivedPMatch),
  )
 import Plutarch.Lift (PConstantDecl (PConstantRepr, PConstanted, pconstantFromRepr, pconstantToRepr))
-import Plutarch.Prelude (
-    PData,
-    PEq ((#==)),
-    PInteger,
-    PLift,
-    S,
-    Term,
-    Type,
-    pif,
-    unTermCont,
-    (#),
- )
 import PlutusLedgerApi.V1 (
     BuiltinData (BuiltinData),
     UnsafeFromData (unsafeFromBuiltinData),
@@ -72,34 +59,18 @@ import PlutusTx (
     fromData,
     toData,
  )
-import Prelude (
-    Bounded,
-    Enum,
-    Integer,
-    Maybe (Just, Nothing),
-    enumFrom,
-    error,
-    fmap,
-    foldr,
-    fromEnum,
-    fromInteger,
-    maxBound,
-    minBound,
-    pure,
-    toEnum,
-    toInteger,
-    ($),
-    (.),
-    (<$>),
- )
 
 --------------------------------------------------------------------------------
 -- ProductIsData
 
-{- |
-  Wrapper for deriving 'ToData', 'FromData' using the 'List' constructor of Data to represent a Product type.
+{- | Wrapper for deriving 'ToData', 'FromData' using the 'List'
+     constructor of Data to represent a Product type.
 
-  Uses 'gProductToBuiltinData', 'gproductFromBuiltinData'.
+     It is recommended to use `PlutusTypeDataList` when deriving
+     `PlutusType` as it provides some basic safety by ensuring
+     Plutarch types to have internal of `PDataRecord`. 
+
+     Uses 'gProductToBuiltinData', 'gproductFromBuiltinData'.
 
   @since 1.1.0
 -}
@@ -107,6 +78,25 @@ newtype ProductIsData (a :: Type) = ProductIsData {unProductIsData :: a}
 
 -- | Variant of 'PConstantViaData' using the List repr from 'ProductIsData'
 newtype DerivePConstantViaDataList (h :: Type) (p :: S -> Type) = DerivePConstantViaDataList h
+
+type family GetPRecord' (a :: [[S -> Type]]) :: S -> Type where
+    GetPRecord' '[ '[PDataRecord a]] = PDataRecord a
+
+type family GetPRecord (a :: S -> Type) :: S -> Type where
+    GetPRecord a = GetPRecord' (PCode a)
+
+class (PGeneric p, PCode p ~ '[ '[GetPRecord p]]) => IsPlutusTypeDataList (p :: S -> Type)
+instance (PGeneric p, PCode p ~ '[ '[GetPRecord p]]) => IsPlutusTypeDataList p
+
+data PlutusTypeDataList
+
+instance PlutusTypeStrat PlutusTypeDataList where
+    type PlutusTypeStratConstraint PlutusTypeDataList = IsPlutusTypeDataList
+    type DerivedPInner PlutusTypeDataList a = GetPRecord a
+    derivedPCon x = case gpfrom x of
+        SOP.SOP (SOP.Z (x' SOP.:* SOP.Nil)) -> x'
+        SOP.SOP (SOP.S x') -> case x' of {}
+    derivedPMatch x f = f (gpto $ SOP.SOP $ SOP.Z $ x SOP.:* SOP.Nil)
 
 {- |
   Generically convert a Product-Type to 'BuiltinData' with the 'List' repr.
