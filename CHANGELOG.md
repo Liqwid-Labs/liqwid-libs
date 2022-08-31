@@ -2,6 +2,17 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.5.0 -- 2022-08-31
+
+### Added
+
+* `ptryResolveOutputDatum`, an 'erroring' counterpart for `presolveOutputDatum`.
+
+### Removed
+
+* `pfindDatum` and `ptryFindDatum`, as they're superceded by
+  `presolveOutputDatum` and `ptryResolveOutputDatum`.
+
 ## 3.3.0 -- 2022-08-25
 
 All additions, removals and changes refer to `Plutarch.Extra.Map` unless stated
