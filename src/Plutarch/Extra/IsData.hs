@@ -99,7 +99,7 @@ newtype PFoo s
   deriving anyclass (PlutusType, PIsData)
 
 instance DerivePlutusType PFoo where
-   type DPTStrat _ = PlutusTypeDataList  
+   type DPTStrat _ = PlutusTypeDataList
 @
 
   @since 1.1.0
@@ -116,7 +116,7 @@ type family GetPRecord (a :: S -> Type) :: S -> Type where
     GetPRecord a = PDataRecord (GetPRecord' (PCode a))
 
 type family GetRecordTypes (n :: [[Type]]) :: [S -> Type] where
-    GetRecordTypes '[x ': xs ] = PConstanted x ': GetRecordTypes '[xs]
+    GetRecordTypes '[x ': xs] = PConstanted x ': GetRecordTypes '[xs]
     GetRecordTypes '[ '[]] = '[]
 
 type family PUnlabel (n :: [PLabeledType]) :: [S -> Type] where
@@ -138,10 +138,10 @@ type family MatchTypesError (n :: [[Type]]) (m :: [S -> Type]) (a :: Bool) :: Co
             ( 'Text "Error when deriving 'PlutusTypeDataList':"
                 ':$$: 'Text "\tMismatch between constituent Haskell and Plutarch types"
                 ':$$: 'Text "Constituent Haskell Types: "
-                ':$$: 'Text "\t"                
+                ':$$: 'Text "\t"
                 ':<>: 'ShowType (GetRecordTypes n)
                 ':$$: 'Text "Constituent Plutarch Types: "
-                ':$$: 'Text "\t"                                
+                ':$$: 'Text "\t"
                 ':<>: 'ShowType m
             )
         )
