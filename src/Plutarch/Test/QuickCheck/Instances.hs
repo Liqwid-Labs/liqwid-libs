@@ -279,7 +279,7 @@ instance PCoArbitrary PByteString where
 instance PArbitrary PPositive where
     parbitrary = do
         (TestableTerm x) <- parbitrary
-        return $ TestableTerm $ ptryPositive #$ pif (0 #< x) x (negate (x + 1))
+        return $ TestableTerm $ ptryPositive #$ pif (0 #< x) x (negate x + 1)
 
 -- | @since 2.0.0
 instance PCoArbitrary PPositive where
