@@ -173,3 +173,9 @@ and thus is more true-to-life than `plutarch-context-builder`.
 `plutarch-context-builder` aims to test simpler functionalities very
 quickly and intuitively, while `plutus-simple-model` almost simulates
 an entire contract flow.
+
+# Standards
+
+LPE code base follows a strict standards to increase consistency, to minimize
+legacy impacts, to use proper automated means, and more. The standard document 
+can be discovered in [here](https://liqwid.notion.site/Coding-Standards-cd3c430e6e444fa292ecc3c57b7d95eb).
