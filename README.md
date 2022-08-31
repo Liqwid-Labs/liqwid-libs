@@ -173,3 +173,9 @@ and thus is more true-to-life than `plutarch-context-builder`.
 `plutarch-context-builder` aims to test simpler functionalities very
 quickly and intuitively, while `plutus-simple-model` almost simulates
 an entire contract flow.
+
+# Standards
+
+The `plutarch-context-builder` code base follows strict standards to increase consistency, to minimize
+the impact of legacy, to properly use automated tools, and more. The standards document
+can be found [here](https://liqwid.notion.site/Coding-Standards-cd3c430e6e444fa292ecc3c57b7d95eb).
