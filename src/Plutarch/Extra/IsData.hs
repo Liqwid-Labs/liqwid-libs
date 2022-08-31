@@ -29,7 +29,7 @@ import Data.Functor.Identity (Identity (Identity, runIdentity))
 import Data.Kind (Constraint)
 import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (Proxy))
-import GHC.TypeLits (ErrorMessage (ShowType, Text, (:$$:)), TypeError)
+import GHC.TypeLits (ErrorMessage (ShowType, Text, (:$$:), (:<>:)), TypeError)
 import Generics.SOP (
     All,
     IsProductType,
@@ -77,26 +77,29 @@ import PlutusTx (
  = Example
 @
 data Foo =
-  Foo Integer Integer
-  deriving stock (GHC.Generic)
+  Foo Integer [Integer]
+  deriving stock (Generic)
   deriving anyclass (SOP.Generic)
   deriving (FromData, ToData) via (ProductIsData Foo)
-  deriving (PConstantDecl) via (PConstantViaDataList Foo PFoo)
+  deriving (PConstantDecl) via (DerivePConstantViaDataList Foo PFoo)
+
+instance PUnsafeLiftDecl PFoo where type PLifted PFoo = Foo
 
 newtype PFoo s
     = PFoo
       ( Term s
           ( PDataRecord
               '[ "abc" ':= PInteger
-               , "efg" ':= PInteger
+               , "def" ':= PBuiltinList PInteger
                ]
           )
       )
-  deriving stock (GHC.Generic)
-  deriving anyclass (PlutusType, PIsData, PDataFields)
+  deriving stock (Generic)
+  deriving anyclass (SOP.Generic)
+  deriving anyclass (PlutusType, PIsData)
 
 instance DerivePlutusType PFoo where
-   DPTStrat _ = PlutusTypeDataList
+   type DPTStrat _ = PlutusTypeDataList  
 @
 
   @since 1.1.0
@@ -132,9 +135,14 @@ type family MatchTypesError (n :: [[Type]]) (m :: [S -> Type]) (a :: Bool) :: Co
     MatchTypesError n m 'False =
         ( 'True ~ 'False
         , TypeError
-            ( 'Text "More/Less types are given to the Plutarch type"
-                ':$$: 'ShowType (GetRecordTypes n)
-                ':$$: 'ShowType m
+            ( 'Text "Error when deriving 'PlutusTypeDataList':"
+                ':$$: 'Text "\tMismatch between constituent Haskell and Plutarch types"
+                ':$$: 'Text "Constituent Haskell Types: "
+                ':$$: 'Text "\t"                
+                ':<>: 'ShowType (GetRecordTypes n)
+                ':$$: 'Text "Constituent Plutarch Types: "
+                ':$$: 'Text "\t"                                
+                ':<>: 'ShowType m
             )
         )
 
