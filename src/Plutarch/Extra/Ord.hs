@@ -574,12 +574,17 @@ pmergeStart_2_3 = phoistAcyclic $
         Term s' a ->
         Term s' a ->
         Term s' (ell a)
-    psort4 cmp _0 _1 _2 _3 = pswap cmp _0 _2 $
-        \_0 _2 -> pswap cmp _1 _3 $
-            \_1 _3 -> pswap cmp _0 _1 $
-                \_0 _1 -> pswap cmp _2 _3 $
-                    \_2 _3 -> pswap cmp _1 _2 $
-                        \_1 _2 -> plist [_0, _1, _2, _3]
+    psort4 cmp _0 _1 _2 _3 =
+        pswap cmp _0 _2 $ \_0 _2 ->
+            pswap cmp _1 _3 $ \_1 _3 ->
+                (\f -> f # cmp # _0 # _1 # _2 # _3) $
+                    phoistAcyclic $
+                        plam $
+                            \cmp' _0 _1 _2 _3 ->
+                                pswap cmp' _0 _1 $ \_0 _1 ->
+                                    pswap cmp' _2 _3 $ \_2 _3 ->
+                                        pswap cmp' _1 _2 $ \_1 _2 ->
+                                            plist [_0, _1, _2, _3]
     pswap ::
         forall (r :: S -> Type) (s' :: S).
         Term s' (PComparator a) ->
