@@ -65,17 +65,19 @@ import PlutusTx (
 --------------------------------------------------------------------------------
 -- ProductIsData
 
-{- | Wrapper for deriving 'ToData', 'FromData' using the 'List'
+{- | Wrapper for deriving 'ToData', 'FromData' using the List
      constructor of Data to represent a Product type.
 
-     It is recommended to use `PlutusTypeDataList` when deriving
-     `PlutusType` as it provides some basic safety by ensuring
-     Plutarch types have an `Inner` type of `PDataRecord`.
+     It is recommended to use 'PlutusTypeDataList' when deriving
+     'PlutusType' as it provides some basic safety by ensuring
+     Plutarch types have an Inner type of 'PDataRecord'.
 
      Uses 'gProductToBuiltinData', 'gproductFromBuiltinData'.
 
  = Example
 @
+import qualified Generics.SOP as SOP
+
 data Foo =
   Foo Integer [Integer]
   deriving stock (Generic)
