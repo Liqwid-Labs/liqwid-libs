@@ -469,23 +469,23 @@ pnubUnsafe ::
     forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
     (PElemConstraint ell a, PListLike ell) =>
     Term s (PComparator a :--> ell a :--> ell a)
-pnubUnsafe = phoistAcyclic $ plam $ \cmp -> pelimList (go cmp) pnil
+pnubUnsafe = phoistAcyclic $
+    plam $ \cmp ->
+        precList (\self x -> pelimList (go cmp self x) (pcons # x # pnil)) (const pnil)
   where
     go ::
         forall (s' :: S).
         Term s' (PComparator a) ->
+        Term s' (ell a :--> ell a) ->
+        Term s' a ->
         Term s' a ->
         Term s' (ell a) ->
         Term s' (ell a)
-    go cmp x xs = pmatch (PList.puncons # xs) $ \case
-        -- Singletons are always unique
-        PNothing -> pcons # x # pnil
-        PJust xs' -> pmatch xs' $ \(PPair h _) ->
-            pmatch (pcompareBy # cmp # x # h) $ \case
-                -- Throw out duplicate.
-                PEQ -> xs
-                -- Keep.
-                _ -> pcons # x # xs
+    go cmp self h peeked t = pmatch (pcompareBy # cmp # h # peeked) $ \case
+        -- Throw out duplicate
+        PEQ -> self #$ pcons # peeked # t
+        -- Keep.
+        _ -> pcons # h #$ self #$ pcons # peeked # t
 
 pmergeAll ::
     forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
@@ -629,18 +629,19 @@ passertOrderBy ::
     forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
     (PElemConstraint ell a, PListLike ell) =>
     Term s (PComparator a :--> ell a :--> ell a)
-passertOrderBy = phoistAcyclic $ plam $ \cmp -> pelimList (go cmp) pnil
+passertOrderBy = phoistAcyclic $
+    plam $ \cmp ->
+        precList (\self x -> pelimList (go cmp self x) (psingleton # x)) (const pnil)
   where
     go ::
         forall (s' :: S).
         Term s' (PComparator a) ->
+        Term s' (ell a :--> ell a) ->
+        Term s' a ->
         Term s' a ->
         Term s' (ell a) ->
         Term s' (ell a)
-    go cmp x xs = pmatch (PList.puncons # xs) $ \case
-        PNothing -> pcons # x # pnil
-        PJust xs' -> pmatch xs' $ \(PPair h _) ->
-            pmatch (pcompareBy # cmp # x # h) $ \case
-                -- We are out of order, vomit.
-                PGT -> ptraceError "ptryMergeBy: argument list-like out of order"
-                _ -> pcons # x # xs
+    go cmp self h peeked t = pmatch (pcompareBy # cmp # h # peeked) $ \case
+        -- We are out of order, vomit.
+        PGT -> ptraceError "ptryMergeBy: argument list-like out of order"
+        _ -> pcons # h #$ self #$ pcons # peeked # t
