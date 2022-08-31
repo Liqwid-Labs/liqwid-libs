@@ -7,8 +7,8 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 ### Added
 
 * `PlutusTypeDataList` is a new deriving strategy for `ProductIsData`. It will
-  only accept Plutarch types that have `PDataRecord` inner. Otherwise, it behaves
-  identically to `PlutusTypeNewtype`.
+  only accept Plutarch types that have `PDataRecord` as an `Inner` type. 
+  Otherwise, it behaves identically to `PlutusTypeNewtype`.
 
 ## 3.3.0 -- 2022-08-25
 
