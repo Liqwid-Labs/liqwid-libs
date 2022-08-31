@@ -66,6 +66,12 @@ To integrate this with your project, use Nix. We work against the `master`
 branch of [Plutarch](https://github.com/Plutonomicon/plutarch-plutus), so you will have to use it
 also. See the [`flake.nix`](./flake.nix) file for more details.
 
+# Standards
+
+LPE code base follows a strict standards to increase consistency, to minimize
+legacy impacts, to use proper automated means, and more. The standard document 
+can be discovered in [here](https://liqwid.notion.site/Coding-Standards-cd3c430e6e444fa292ecc3c57b7d95eb).
+
 # What can I do with this?
 
 `plutarch-quickcheck` is licensed under the Apache 2.0 license (SPDX code
