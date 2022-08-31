@@ -26,8 +26,10 @@ module Plutarch.Extra.IsData (
 
 import Data.Coerce (coerce)
 import Data.Functor.Identity (Identity (Identity, runIdentity))
+import Data.Kind (Constraint)
 import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (Proxy))
+import GHC.TypeLits (ErrorMessage (ShowType, Text, (:$$:)), TypeError)
 import Generics.SOP (
     All,
     IsProductType,
@@ -47,7 +49,7 @@ import Plutarch.Internal.Generic (PCode, PGeneric, gpfrom, gpto)
 import Plutarch.Internal.PlutusType (
     PlutusTypeStrat (DerivedPInner, PlutusTypeStratConstraint, derivedPCon, derivedPMatch),
  )
-import Plutarch.Lift (PConstantDecl (PConstantRepr, PConstanted, pconstantFromRepr, pconstantToRepr))
+import Plutarch.Lift (PConstantDecl (PConstantRepr, PConstanted, pconstantFromRepr, pconstantToRepr), PLifted)
 import PlutusLedgerApi.V1 (
     BuiltinData (BuiltinData),
     UnsafeFromData (unsafeFromBuiltinData),
@@ -68,7 +70,7 @@ import PlutusTx (
 
      It is recommended to use `PlutusTypeDataList` when deriving
      `PlutusType` as it provides some basic safety by ensuring
-     Plutarch types to have internal of `PDataRecord`. 
+     Plutarch types to have internal of `PDataRecord`.
 
      Uses 'gProductToBuiltinData', 'gproductFromBuiltinData'.
 
@@ -79,14 +81,53 @@ newtype ProductIsData (a :: Type) = ProductIsData {unProductIsData :: a}
 -- | Variant of 'PConstantViaData' using the List repr from 'ProductIsData'
 newtype DerivePConstantViaDataList (h :: Type) (p :: S -> Type) = DerivePConstantViaDataList h
 
-type family GetPRecord' (a :: [[S -> Type]]) :: S -> Type where
-    GetPRecord' '[ '[PDataRecord a]] = PDataRecord a
+type family GetPRecord' (a :: [[S -> Type]]) :: [PLabeledType] where
+    GetPRecord' '[ '[PDataRecord a]] = a
 
 type family GetPRecord (a :: S -> Type) :: S -> Type where
-    GetPRecord a = GetPRecord' (PCode a)
+    GetPRecord a = PDataRecord (GetPRecord' (PCode a))
 
-class (PGeneric p, PCode p ~ '[ '[GetPRecord p]]) => IsPlutusTypeDataList (p :: S -> Type)
-instance (PGeneric p, PCode p ~ '[ '[GetPRecord p]]) => IsPlutusTypeDataList p
+type family GetRecordTypes (n :: [[Type]]) :: [S -> Type] where
+    GetRecordTypes '[x ': xs ] = PConstanted x ': GetRecordTypes '[xs]
+    GetRecordTypes '[ '[]] = '[]
+
+type family PUnlabel (n :: [PLabeledType]) :: [S -> Type] where
+    PUnlabel ((_ ':= p) ': xs) = p ': PUnlabel xs
+    PUnlabel '[] = '[]
+
+type family MatchTypes' (n :: [S -> Type]) (m :: [S -> Type]) :: Bool where
+    MatchTypes' '[] '[] = 'True
+    MatchTypes' (x ': xs) (x ': ys) = MatchTypes' xs ys
+    MatchTypes' (x ': xs) (y ': ys) = 'False
+    MatchTypes' '[] ys = 'False
+    MatchTypes' xs '[] = 'False
+
+type family MatchTypesError (n :: [[Type]]) (m :: [S -> Type]) (a :: Bool) :: Constraint where
+    MatchTypesError _ _ 'True = ()
+    MatchTypesError n m 'False =
+        ( 'True ~ 'False
+        , TypeError
+            ( 'Text "More/Less types are given to the Plutarch type"
+                ':$$: 'ShowType (GetRecordTypes n)
+                ':$$: 'ShowType m
+            )
+        )
+
+type MatchTypes (n :: [[Type]]) (m :: [S -> Type]) =
+    (MatchTypesError n m (MatchTypes' (GetRecordTypes n) m))
+
+class
+    ( PGeneric p
+    , PCode p ~ '[ '[GetPRecord p]]
+    ) =>
+    IsPlutusTypeDataList (p :: S -> Type)
+instance
+    forall (p :: S -> Type).
+    ( PGeneric p
+    , PCode p ~ '[ '[GetPRecord p]]
+    , MatchTypes (SOP.Code (PLifted p)) (PUnlabel (GetPRecord' (PCode p)))
+    ) =>
+    IsPlutusTypeDataList p
 
 -- | @since 3.5.0
 data PlutusTypeDataList
