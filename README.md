@@ -43,9 +43,15 @@ Users are welcome to inquire about the status of particular snippets on the [dis
 
 To integrate this with your project, use Nix. We work against the main branch of Plutarch, so you will have to use it also. See the `flake.nix` file for more details.
 
-Liqwid uses [`liqwid-nix`](https://github.com/Liqwid-Labs/liqwid-nix) to set up its projects. 
-You are not required to use `liqwid-nix` to use this library, but you are welcome to check
-check it out.
+Liqwid uses [`liqwid-nix`](https://github.com/Liqwid-Labs/liqwid-nix) to set up
+its projects.  You are not required to use `liqwid-nix` to use this library, but
+you are welcome to check check it out.
+
+# Standards
+
+LPE code base follows a strict standards to increase consistency, to minimize
+legacy impacts, to use proper automated means, and more. The standard document 
+can be discovered in [here](https://liqwid.notion.site/Coding-Standards-cd3c430e6e444fa292ecc3c57b7d95eb).
 
 # What can I do with this?
 
