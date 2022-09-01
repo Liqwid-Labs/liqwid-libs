@@ -259,9 +259,9 @@ instance PCoArbitrary PByteString where
 
 -- | @since 2.0.0
 instance PArbitrary PPositive where
-    parbitrary = liftT go <$> parbitrary
-      where
-        go x = ptryPositive #$ pif (0 #< x) x (negate (x + 1))
+    parbitrary = do
+        (TestableTerm x) <- parbitrary
+        return $ TestableTerm $ ptryPositive #$ pif (0 #< x) x (negate x + 1)
 
 -- | @since 2.0.0
 instance PCoArbitrary PPositive where
