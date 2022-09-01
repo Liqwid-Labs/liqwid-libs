@@ -121,8 +121,17 @@ type family GetRecordTypes (n :: [[Type]]) :: [S -> Type] where
     GetRecordTypes '[x ': xs] = PConstanted x ': GetRecordTypes '[xs]
     GetRecordTypes '[ '[]] = '[]
 
+type family UD (p :: S -> Type) :: S -> Type where
+    UD (PAsData p) = p
+    UD (p x1 x2 x3 x4 x5) = p (UD x1) (UD x2) (UD x3) (UD x4) (UD x5)
+    UD (p x1 x2 x3 x4) = p (UD x1) (UD x2) (UD x3) (UD x4)
+    UD (p x1 x2 x3) = p (UD x1) (UD x2) (UD x3)
+    UD (p x1 x2) = p (UD x1) (UD x2)
+    UD (p x1) = p (UD x1)
+    UD p = p
+
 type family PUnlabel (n :: [PLabeledType]) :: [S -> Type] where
-    PUnlabel ((_ ':= p) ': xs) = p ': PUnlabel xs
+    PUnlabel ((_ ':= p) ': xs) = UD p ': PUnlabel xs
     PUnlabel '[] = '[]
 
 type family MatchTypes' (n :: [S -> Type]) (m :: [S -> Type]) :: Bool where
