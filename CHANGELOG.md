@@ -2,6 +2,23 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 2.1.0 -- 2022-09-01
+
+### Added
+
+* `pwrapLam` wraps any Plutarch functions into `PFun` for function generation.
+* `punlam'` brings Plutarch level functions into Haskell level functions where 
+  each term is wrapped in `TestableTerm`. It will require type of the final term.
+* `punlam` is identical to `punlam'` but it will evaluate the given Plutarch function
+  for better performance.
+* `Eqaulity` and `Partiality` option is provided with `haskEquiv` function. 
+  
+### Changed
+
+* In `Arbitrary` instance of `PArbitrary`, everytime it shrinks, it also gets evaluated. 
+  This solves the issue with terms getting extremely large when there are multiple shrinks.
+* `fromPFun` is now implmented with `pwrapLam` and `punlam`.
+
 ## 2.0.0
 
 ### Added

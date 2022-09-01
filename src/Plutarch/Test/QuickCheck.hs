@@ -123,10 +123,7 @@ type family OnlyTestableTerm (h :: Type) :: Constraint where
                 ':$$: 'Text "\tFunction should be only in terms of TestableTerms"
             )
 
-{- | Wraps TestableTerm lambda to `PFun` for function generation and shrinking.
-
- @since 2.1.0
--}
+-- | Wraps TestableTerm lambda to `PFun` for function generation and shrinking.
 class PWrapLam' (h :: Type) (lam :: Bool) (last :: Bool) where
     pwrapLam' :: h -> PLamWrapped h
 
