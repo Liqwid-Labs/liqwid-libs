@@ -2,7 +2,7 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-## 3.5.0 -- 2022-08-29
+## 3.6.0 -- 2022-09-02
 
 All additions, removals and changes refer to `Plutarch.Extra.List` unless stated
 otherwise.
@@ -43,6 +43,14 @@ otherwise.
 * `pfindJust` type arguments are now: 'target' element type, list-like 
   structure type, 'source' element type, `s` tag.
 * `preplicate` now specifies the order of its type arguments.
+
+## 3.5.0 -- 2022-08-30
+
+### Added
+
+* `PlutusTypeDataList` is a new deriving strategy for `ProductIsData`. It will
+  only accept Plutarch types that have `PDataRecord` as an `Inner` type. 
+  Otherwise, it behaves identically to `PlutusTypeNewtype`.
 
 ## 3.4.0 -- 2022-08-25
 
