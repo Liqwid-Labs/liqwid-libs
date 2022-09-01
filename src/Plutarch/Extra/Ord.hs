@@ -37,24 +37,31 @@ module Plutarch.Extra.Ord (
     pcompareBy,
     pequateBy,
 
+    -- *** Sortedness checking
+    pisSortedBy,
+
+    -- *** Uniqueness checking
+    pallUnique,
+    pallUniqueBy,
+    ptryAllUnique,
+    ptryAllUniqueBy,
+
+    -- *** Sorted merging
+    ptryMerge,
+    ptryMergeBy,
+    {-
     -- *** Sorting
     psort,
     psortBy,
 
-    -- *** Merging
-    ptryMerge,
-    ptryMergeBy,
-
-    -- *** Uniqueness checking
-    pAllUnique,
-    pAllUniqueBy,
-
     -- *** Nubbing
     pnubSort,
     pnubSortBy,
+    -}
 ) where
 
 import Data.Semigroup (Semigroup (stimes), stimesIdempotentMonoid)
+import Plutarch.Extra.Maybe (ptraceIfNothing)
 import Plutarch.Extra.TermCont (pletC)
 import Plutarch.Internal.PlutusType (PlutusType (pcon', pmatch'))
 import Plutarch.Lift (
@@ -66,165 +73,6 @@ import Plutarch.Lift (
     ),
     PUnsafeLiftDecl (PLifted),
  )
-import qualified Plutarch.List as PList
-
-{- | Sorts a list-like structure full of a 'POrd' instance, while also removing
- all duplicates. This uses the same approach as 'psort', with the same
- caveats.
-
- @since 3.5.0
--}
-pnubSort ::
-    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
-    (POrd a, PElemConstraint ell a, PElemConstraint ell (ell a), PListLike ell) =>
-    Term s (ell a :--> ell a)
-pnubSort = phoistAcyclic $ plam $ \xs -> pnubSortBy # pfromOrd @a # xs
-
-{- | As 'pnubSort', but using a custom 'PComparator'.
-
- @since 3.5.0
--}
-pnubSortBy ::
-    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
-    (PElemConstraint ell a, PElemConstraint ell (ell a), PListLike ell) =>
-    Term s (PComparator a :--> ell a :--> ell a)
-pnubSortBy = phoistAcyclic $
-    plam $ \cmp xs ->
-        pnubUnsafe # cmp #$ psortBy # cmp # xs
-
-{- | Sorts a list-like structure full of a 'POrd' instance.
-
- This uses [merge sort](https://en.wikipedia.org/wiki/Merge_sort), which is
- also [stable](https://en.wikipedia.org/wiki/Sorting_algorithm#Stability).
- This means that it requires a linearithmic ($n \log(n)$) number of
- comparisons, as with all comparison sorts.
-
- @since 3.5.0
--}
-psort ::
-    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
-    (POrd a, PElemConstraint ell a, PElemConstraint ell (ell a), PListLike ell) =>
-    Term s (ell a :--> ell a)
-psort = phoistAcyclic $ plam $ \xs -> psortBy # pfromOrd @a # xs
-
-{- | As 'psort', but using a custom 'PComparator'.
-
- @since 3.5.0
--}
-psortBy ::
-    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
-    (PElemConstraint ell a, PElemConstraint ell (ell a), PListLike ell) =>
-    Term s (PComparator a :--> ell a :--> ell a)
-psortBy = phoistAcyclic $
-    plam $ \cmp xs ->
-        pmergeAll # cmp #$ pmergeStart_2_3 # cmp # xs
-
-{- | Given two list-like structures which are already sorted by their 'POrd'
- instances, attempt to merge them, preserving their order. If one of the
- structures is found not to be ordered, error out instead.
-
- @since 3.5.0
--}
-ptryMerge ::
-    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
-    (PElemConstraint ell a, PListLike ell, POrd a) =>
-    Term s (ell a :--> ell a :--> ell a)
-ptryMerge = phoistAcyclic $ plam $ \xs -> ptryMergeBy # pfromOrd @a # xs
-
-{- | As 'pmerge', but specifying the ordering by a custom 'PComparator'.
-
- @since 3.5.0
--}
-ptryMergeBy ::
-    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
-    (PElemConstraint ell a, PListLike ell) =>
-    Term s (PComparator a :--> ell a :--> ell a :--> ell a)
-ptryMergeBy = phoistAcyclic $
-    pfix #$ plam $ \self cmp xs ys ->
-        pmatch (PList.puncons # xs) $ \case
-            -- Exhausted left, check ordering and go if it works
-            PNothing -> passertOrderBy # cmp # ys
-            PJust xs' -> pmatch (PList.puncons # ys) $ \case
-                -- Exhausted right, check ordering and go if it works
-                PNothing -> passertOrderBy # cmp # xs
-                PJust ys' -> pmatch xs' $ \(PPair xsHead xsTail) ->
-                    pmatch ys' $ \(PPair ysHead ysTail) ->
-                        pmatch (PList.puncons # xsTail) $ \case
-                            -- Singletons are always ordered
-                            PNothing -> pmatch (pcompareBy # cmp # xsHead # ysHead) $ \case
-                                PGT -> pcons # ysHead #$ self # cmp # xs # ysTail
-                                _ -> pcons # xsHead #$ passertOrderBy # cmp # ys
-                            PJust xs'' -> pmatch (PList.puncons # ysTail) $ \case
-                                -- Singletons are always ordered
-                                PNothing -> pmatch (pcompareBy # cmp # xsHead # ysHead) $ \case
-                                    PGT -> pcons # ysHead #$ passertOrderBy # cmp # xs
-                                    _ -> pcons # xsHead #$ self # cmp # xsTail # ys
-                                -- Need to look further to ensure we're not mis-ordered
-                                PJust ys'' -> pmatch xs'' $ \(PPair xsPeek _) ->
-                                    -- Verify by look-ahead that xsHead and xsPeek are ordered
-                                    pmatch (pcompareBy # cmp # xsHead # xsPeek) $ \case
-                                        -- We are out of order, vomit.
-                                        PGT -> ptraceError "ptryMergeBy: argument list-like out of order"
-                                        _ -> pmatch ys'' $ \(PPair ysPeek _) ->
-                                            -- Verify by look-ahead that ysHead and ysPeek are ordered
-                                            pmatch (pcompareBy # cmp # ysHead # ysPeek) $ \case
-                                                -- We are out of order, vomit.
-                                                PGT -> ptraceError "ptryMergeBy: argument list-like out of order"
-                                                -- Actually perform the merge.
-                                                _ -> pmatch (pcompareBy # cmp # xsHead # ysHead) $ \case
-                                                    PGT -> pcons # ysHead #$ self # cmp # xs # ysTail
-                                                    _ -> pcons # xsHead #$ self # cmp # xsTail # ys
-
-{- | Verifies if every element of the input list-like is unique according to its
- 'PEq' instance. Relies on a 'POrd' instance for speed, but only works if the
- input is sorted according to that instance.
-
- Returns @'PJust' 'PTrue'@ if every element is unique as specified above,
- @'PJust' 'PFalse'@ if a duplicate exists, and 'PNothing' if the input isn't
- ordered.
-
- @since 3.5.0
--}
-pAllUnique ::
-    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
-    (PElemConstraint ell a, PListLike ell, POrd a) =>
-    Term s (ell a :--> PMaybe PBool)
-pAllUnique = phoistAcyclic $ plam $ \xs -> pAllUniqueBy # pfromOrd @a # xs
-
-{- | As 'pAllUnique', but relies on a custom 'PComparator' for both equality and
- ordering (instead of a 'PEq' and 'POrd' instance respectively).
-
- @since 3.5.0
--}
-pAllUniqueBy ::
-    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
-    (PElemConstraint ell a, PListLike ell) =>
-    Term s (PComparator a :--> ell a :--> PMaybe PBool)
-pAllUniqueBy = phoistAcyclic $
-    plam $ \cmp ->
-        precList (go cmp) (const (pcon . PJust . pconstant $ True))
-  where
-    go ::
-        forall (s' :: S).
-        Term s' (PComparator a) ->
-        Term s' (ell a :--> PMaybe PBool) ->
-        Term s' a ->
-        Term s' (ell a) ->
-        Term s' (PMaybe PBool)
-    go cmp self x xs = pmatch (PList.puncons # xs) $ \case
-        -- Singletons are always unique no matter their ordering.
-        PNothing -> pcon . PJust . pconstant $ True
-        PJust xs' -> pmatch xs' $ \(PPair h _) ->
-            pmatch (pcompareBy # cmp # x # h) $ \case
-                -- Order holds, so defer to the outcome of self.
-                PLT -> self # xs
-                -- Duplicate.
-                PEQ -> pmatch (self # xs) $ \case
-                    -- If we're out-of-order, duplicates aren't relevant.
-                    PNothing -> pcon PNothing
-                    PJust _ -> pcon . PJust . pconstant $ False
-                -- Out of order.
-                PGT -> pcon PNothing
 
 {- | A representation of a comparison at the Plutarch level. Equivalent to
  'Ordering' in Haskell.
@@ -461,187 +309,201 @@ pequateBy ::
     Term s (PComparator a :--> a :--> a :--> PBool)
 pequateBy = phoistAcyclic $ plam $ \cmp x y -> pcon PEQ #== (pto cmp # x # y)
 
--- Helpers
+{- | Verifies that a list-like structure is ordered according to the
+ 'PComparator' argument.
 
--- This assumes the list-like is ordered by the argument comparator: be careful
--- how you call this!
-pnubUnsafe ::
+ @since 3.5.0
+-}
+pisSortedBy ::
     forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
     (PElemConstraint ell a, PListLike ell) =>
-    Term s (PComparator a :--> ell a :--> ell a)
-pnubUnsafe = phoistAcyclic $
+    Term s (PComparator a :--> ell a :--> PBool)
+pisSortedBy = phoistAcyclic $
     plam $ \cmp ->
-        precList (\self x -> pelimList (go cmp self x) (pcons # x # pnil)) (const pnil)
+        precList (\self x -> pelimList (go cmp self x) (pconstant True)) (const (pconstant True))
   where
     go ::
         forall (s' :: S).
         Term s' (PComparator a) ->
-        Term s' (ell a :--> ell a) ->
+        Term s' (ell a :--> PBool) ->
         Term s' a ->
         Term s' a ->
         Term s' (ell a) ->
-        Term s' (ell a)
-    go cmp self h peeked t = pmatch (pcompareBy # cmp # h # peeked) $ \case
-        -- Throw out duplicate
-        PEQ -> self #$ pcons # peeked # t
-        -- Keep.
-        _ -> pcons # h #$ self #$ pcons # peeked # t
+        Term s' PBool
+    go cmp self h peek t = pmatch (pcompareBy # cmp # h # peek) $ \case
+        PGT -> pconstant False
+        _ ->
+            let result = self # t
+             in pelimList
+                    ( \peek2 _ -> pmatch (pcompareBy # cmp # peek # peek2) $ \case
+                        PGT -> pconstant False
+                        _ -> result
+                    )
+                    result
+                    t
 
-pmergeAll ::
+{- | Verifies that a list-like structure is both ordered (by the 'POrd' instance
+ it's full of) and has no duplicates (by the 'PEq' instance it's full of).
+ This can give any of the following results:
+
+ * 'PNothing' if the structure is found to be unsorted;
+ * 'PJust' 'PFalse' if the structure contains a duplicate; or
+ * 'PJust' 'PTrue' if it is both sorted and contains no duplicates.
+
+ @since 3.5.0
+-}
+pallUnique ::
     forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
-    (PElemConstraint ell a, PElemConstraint ell (ell a), PListLike ell) =>
-    Term s (PComparator a :--> ell (ell a) :--> ell a)
-pmergeAll = phoistAcyclic $
-    pfix #$ plam $ \self cmp xss ->
-        pmatch (PList.puncons # xss) $ \case
-            PNothing -> pnil
-            PJust xss' -> pmatch xss' $ \(PPair h t) ->
-                pmatch (PList.puncons # t) $ \case
-                    PNothing -> h
-                    PJust _ -> self # cmp #$ go # cmp # t
+    (POrd a, PElemConstraint ell a, PListLike ell) =>
+    Term s (ell a :--> PMaybe PBool)
+pallUnique = phoistAcyclic $ plam (pallUniqueBy # pfromOrd @a #)
+
+{- | As 'pallUnique', but using a custom 'PComparator' to verify order and
+ equality.
+
+ @since 3.5.0
+-}
+pallUniqueBy ::
+    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+    (PElemConstraint ell a, PListLike ell) =>
+    Term s (PComparator a :--> ell a :--> PMaybe PBool)
+pallUniqueBy = phoistAcyclic $
+    plam $ \cmp xs ->
+        precList (\self x -> pelimList (go cmp self x) success) (const success) # xs
   where
+    success :: forall (s' :: S). Term s' (PMaybe PBool)
+    success = pcon . PJust . pconstant $ True
+    pcompareByCont ::
+        forall (s' :: S).
+        Term s' (PComparator a) ->
+        Term s' a ->
+        Term s' a ->
+        Term s' (PMaybe PBool) ->
+        Term s' (PMaybe PBool)
+    pcompareByCont cmp x y cont = pmatch (pcompareBy # cmp # x # y) $ \case
+        PLT -> cont
+        PEQ -> pcon . PJust . pconstant $ False
+        PGT -> pcon PNothing
     go ::
         forall (s' :: S).
-        Term s' (PComparator a :--> ell (ell a) :--> ell (ell a))
-    go = phoistAcyclic $
-        pfix #$ plam $ \self cmp xss ->
-            pmatch (PList.puncons # xss) $ \case
-                PNothing -> pnil
-                PJust xss' -> pmatch xss' $ \(PPair h t) ->
-                    pmatch (PList.puncons # t) $ \case
-                        PNothing -> xss
-                        PJust xss'' -> pmatch xss'' $ \(PPair h' t') ->
-                            pcons # (pmergeUnsafe # cmp # h # h') # (self # cmp # t')
+        Term s' (PComparator a) ->
+        Term s' (ell a :--> PMaybe PBool) ->
+        Term s' a ->
+        Term s' a ->
+        Term s' (ell a) ->
+        Term s' (PMaybe PBool)
+    go cmp self x peek rest =
+        pcompareByCont cmp x peek $
+            let result = self # rest
+             in pmatch result $ \case
+                    PNothing -> result
+                    PJust b ->
+                        pif
+                            b
+                            (pelimList (\peek' _ -> pcompareByCont cmp peek peek' success) success rest)
+                            result
 
--- This assumes both argument list-likes are sorted by the argument comparator:
--- be careful how you call this!
-pmergeUnsafe ::
+{- | As 'pallUnique', but errors if the list-like argument is found to be
+ unsorted instead of returning 'PNothing'.
+
+ @since 3.5.0
+-}
+ptryAllUnique ::
+    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+    (POrd a, PElemConstraint ell a, PListLike ell) =>
+    Term s (ell a :--> PBool)
+ptryAllUnique = phoistAcyclic $ plam (ptryAllUniqueBy # pfromOrd @a #)
+
+{- | As 'pallUniqueBy', but errors if the list-like argument is found to be
+ unsorted instead of returning 'PNothing'.
+
+ @since 3.5.0
+-}
+ptryAllUniqueBy ::
+    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+    (PElemConstraint ell a, PListLike ell) =>
+    Term s (PComparator a :--> ell a :--> PBool)
+ptryAllUniqueBy = phoistAcyclic $
+    plam $ \cmp xs ->
+        ptraceIfNothing "ptryAllUniqueBy: argument is unordered" $ pallUniqueBy # cmp # xs
+
+{- | Merge two list-like structures, whose contents are sorted by the 'POrd'
+ instance for their contents, into one sorted list-like structure. This will
+ error if it finds that one of the list-like structures given to it as an
+ argument is not sorted.
+
+ @since 3.5.0
+-}
+ptryMerge ::
+    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+    (POrd a, PElemConstraint ell a, PListLike ell) =>
+    Term s (ell a :--> ell a :--> ell a)
+ptryMerge = phoistAcyclic $ plam (ptryMergeBy # pfromOrd @a #)
+
+{- | As 'ptryMerge', but instead of using 'POrd' to determine sorting, uses a
+ custom 'PComparator'. Will error out if one of the list-like structures given
+ as an argument is not sorted according to the custom 'PComparator'.
+
+ @since 3.5.0
+-}
+ptryMergeBy ::
     forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
     (PElemConstraint ell a, PListLike ell) =>
     Term s (PComparator a :--> ell a :--> ell a :--> ell a)
-pmergeUnsafe = phoistAcyclic $
+ptryMergeBy = phoistAcyclic $
     pfix #$ plam $ \self cmp xs ys ->
-        pmatch (PList.puncons # xs) $ \case
-            -- Exhausted xs, yield ys as-is.
-            PNothing -> ys
-            PJust xs' -> pmatch (PList.puncons # ys) $ \case
-                -- Exhausted ys, yield xs as-is.
-                PNothing -> xs
-                PJust ys' -> pmatch xs' $ \(PPair leftH leftT) ->
-                    pmatch ys' $ \(PPair rightH rightT) ->
-                        pmatch (pcompareBy # cmp # leftH # rightH) $ \case
-                            -- Right before left.
-                            PGT -> pcons # rightH #$ pcons # leftH # (self # cmp # leftT # rightT)
-                            -- Left before right.
-                            _ -> pcons # leftH #$ pcons # rightH # (self # cmp # leftT # rightT)
-
-pmergeStart_2_3 ::
-    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
-    (PElemConstraint ell a, PListLike ell, PElemConstraint ell (ell a)) =>
-    Term s (PComparator a :--> ell a :--> ell (ell a))
-pmergeStart_2_3 = phoistAcyclic $
-    pfix #$ plam $ \self cmp ->
-        pmatchList pnil $ \_0 ->
-            pmatchList (plist [psingletonUnhoisted _0]) $ \_1 ->
-                pmatchList (plist [psort2 cmp _0 _1]) $ \_2 ->
-                    pmatchList (plist [psort3 cmp _0 _1 _2]) $ \_3 rest ->
-                        pcons # psort4 cmp _0 _1 _2 _3 #$ self # cmp # rest
-  where
-    psort2 ::
-        forall (s' :: S).
-        Term s' (PComparator a) ->
-        Term s' a ->
-        Term s' a ->
-        Term s' (ell a)
-    psort2 cmp _0 _1 = pswap cmp _0 _1 $
-        \_0 _1 -> plist [_0, _1]
-    psort3 ::
-        forall (s' :: S).
-        Term s' (PComparator a) ->
-        Term s' a ->
-        Term s' a ->
-        Term s' a ->
-        Term s' (ell a)
-    psort3 cmp _0 _1 _2 = pswap cmp _0 _2 $
-        \_0 _2 -> pswap cmp _0 _1 $
-            \_0 _1 -> pswap cmp _1 _2 $
-                \_1 _2 -> plist [_0, _1, _2]
-    psort4 ::
-        forall (s' :: S).
-        Term s' (PComparator a) ->
-        Term s' a ->
-        Term s' a ->
-        Term s' a ->
-        Term s' a ->
-        Term s' (ell a)
-    psort4 cmp _0 _1 _2 _3 =
-        pswap cmp _0 _2 $ \_0 _2 ->
-            pswap cmp _1 _3 $ \_1 _3 ->
-                (\f -> f # cmp # _0 # _1 # _2 # _3) $
-                    phoistAcyclic $
-                        plam $
-                            \cmp' _0 _1 _2 _3 ->
-                                pswap cmp' _0 _1 $ \_0 _1 ->
-                                    pswap cmp' _2 _3 $ \_2 _3 ->
-                                        pswap cmp' _1 _2 $ \_1 _2 ->
-                                            plist [_0, _1, _2, _3]
-    pswap ::
-        forall (r :: S -> Type) (s' :: S).
-        Term s' (PComparator a) ->
-        Term s' a ->
-        Term s' a ->
-        (Term s' a -> Term s' a -> Term s' r) ->
-        Term s' r
-    pswap cmp x y cont = pmatch (pcompareBy # cmp # x # y) $ \case
-        PGT -> cont y x
-        _ -> cont x y
-
--- Unhoisted psingleton
-psingletonUnhoisted ::
-    forall (ell :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
-    (PElemConstraint ell a, PListLike ell) =>
-    Term s a ->
-    Term s (ell a)
-psingletonUnhoisted x = plist [x]
-
--- Turns any Foldable into a list-like, unhoisted
-plist ::
-    forall (ell :: (S -> Type) -> S -> Type) (f :: Type -> Type) (a :: S -> Type) (s :: S).
-    (Foldable f, PListLike ell, PElemConstraint ell a) =>
-    f (Term s a) ->
-    Term s (ell a)
-plist = foldr (\x xs -> pcons # x # xs) pnil
-
--- CPS-chaining-friendly uncons.
-pmatchList ::
-    forall (r :: S -> Type) (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
-    (PElemConstraint ell a, PListLike ell) =>
-    -- Continuation for \'nil\'.
-    Term s r ->
-    -- Continuation for \'cons\'.
-    (Term s a -> Term s (ell a) -> Term s r) ->
-    -- The list-like to match on.
-    Term s (ell a) ->
-    Term s r
-pmatchList = flip pelimList
-
-passertOrderBy ::
-    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
-    (PElemConstraint ell a, PListLike ell) =>
-    Term s (PComparator a :--> ell a :--> ell a)
-passertOrderBy = phoistAcyclic $
-    plam $ \cmp ->
-        precList (\self x -> pelimList (go cmp self x) (psingleton # x)) (const pnil)
+        -- Check if either side of the merge is exhausted; if it is, just check the
+        -- remaining argument and yield.
+        phandleList xs (passertSorted # cmp # ys) $ \xsHead xsTail ->
+            phandleList ys (passertSorted # cmp # xs) $ \ysHead ysTail ->
+                -- 'Peek ahead' of both tails to verify ordering holds.
+                phandleList xsTail (go cmp xsHead ysHead ysTail) $ \xsPeek _ ->
+                    phandleList ysTail (go cmp ysHead xsHead xsTail) $ \ysPeek _ ->
+                        pmatch (pcompareBy # cmp # xsHead # xsPeek) $ \case
+                            -- We are out-of-order, vomit.
+                            PGT -> ptraceError "ptryMergeBy: argument list-like out of order"
+                            _ -> pmatch (pcompareBy # cmp # ysHead # ysPeek) $ \case
+                                -- We are out-of-order, vomit.
+                                PGT -> ptraceError "ptryMergeBy: argument list-like out of order"
+                                -- Perform one step of the merge.
+                                _ -> pmatch (pcompareBy # cmp # xsHead # ysHead) $ \case
+                                    -- ysHead goes first.
+                                    PGT -> pcons # ysHead #$ self # cmp # xs # ysTail
+                                    -- xsHead goes first.
+                                    _ -> pcons # xsHead #$ self # cmp # xsTail # ys
   where
     go ::
         forall (s' :: S).
         Term s' (PComparator a) ->
-        Term s' (ell a :--> ell a) ->
         Term s' a ->
         Term s' a ->
         Term s' (ell a) ->
         Term s' (ell a)
-    go cmp self h peeked t = pmatch (pcompareBy # cmp # h # peeked) $ \case
-        -- We are out of order, vomit.
-        PGT -> ptraceError "ptryMergeBy: argument list-like out of order"
-        _ -> pcons # h #$ self #$ pcons # peeked # t
+    go cmp single h t = pmatch (pcompareBy # cmp # single # h) $ \case
+        PGT -> pcons # h #$ pcons # single #$ passertSorted # cmp # t
+        _ -> pcons # single #$ pcons # h #$ passertSorted # cmp # t
+
+-- Helpers
+
+-- pelimList with the list-like first, and handles the 'nil case' before the
+-- 'cons' case
+phandleList ::
+    forall (a :: S -> Type) (r :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+    (PElemConstraint ell a, PListLike ell) =>
+    Term s (ell a) ->
+    Term s r ->
+    (Term s a -> Term s (ell a) -> Term s r) ->
+    Term s r
+phandleList xs whenNil whenCons = pelimList whenCons whenNil xs
+
+-- ensures the argument is sorted by the comparator, erroring if not
+passertSorted ::
+    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+    (PElemConstraint ell a, PListLike ell) =>
+    Term s (PComparator a :--> ell a :--> ell a)
+passertSorted = phoistAcyclic $
+    plam $ \cmp xs ->
+        pif
+            (pisSortedBy # cmp # xs)
+            xs
+            (ptraceError "ptryMergeBy: argument list-like out of order")
