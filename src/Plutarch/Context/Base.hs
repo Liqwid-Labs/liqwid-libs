@@ -419,7 +419,7 @@ timeRange ::
     a
 timeRange r = pack $ mempty{bbTimeRange = r}
 
-{- | Specify an output of a script context. 
+{- | Specify an output of a script context.
 
  @since 2.0.0
 -}
@@ -430,7 +430,7 @@ output ::
     a
 output x = pack mempty{bbOutputs = pure x}
 
-{- | Specify an input of a script context. 
+{- | Specify an input of a script context.
 
  @since 2.0.0
 -}
@@ -441,7 +441,7 @@ input ::
     a
 input x = pack mempty{bbInputs = pure x}
 
-{- | Specify a reference input of a script context. 
+{- | Specify a reference input of a script context.
 
  @since 2.0.0
 -}

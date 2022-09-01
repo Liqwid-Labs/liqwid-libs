@@ -26,9 +26,10 @@ import Plutarch.Context.Base (
         bbInputs,
         bbMints,
         bbOutputs,
+        bbReferenceInputs,
         bbSignatures
     ),
-    Builder (..),
+    Builder (pack, _bb),
     unpack,
     yieldBaseTxInfo,
     yieldExtraDatums,
@@ -45,6 +46,7 @@ import PlutusLedgerApi.V2 (
         txInfoInputs,
         txInfoMint,
         txInfoOutputs,
+        txInfoReferenceInputs,
         txInfoSignatories
     ),
     fromList,
@@ -70,6 +72,7 @@ instance Builder TxInfoBuilder where
 buildTxInfo :: TxInfoBuilder -> TxInfo
 buildTxInfo (unpack -> builder@BB{..}) =
     let (ins, inDat) = yieldInInfoDatums bbInputs
+        (refin, _) = yieldInInfoDatums bbReferenceInputs
         (outs, outDat) = yieldOutDatums bbOutputs
         mintedValue = yieldMint bbMints
         extraDat = yieldExtraDatums bbDatums
@@ -78,6 +81,7 @@ buildTxInfo (unpack -> builder@BB{..}) =
         txinfo =
             base
                 { txInfoInputs = ins
+                , txInfoReferenceInputs = refin
                 , txInfoOutputs = outs
                 , txInfoData = fromList $ inDat <> outDat <> extraDat
                 , txInfoMint = mintedValue

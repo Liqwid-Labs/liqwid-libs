@@ -38,8 +38,8 @@ import Data.Functor.Contravariant.Divisible (choose)
 import Data.Maybe (isJust)
 import Optics (lens)
 import Plutarch.Context.Base (
-    BaseBuilder (BB, bbDatums, bbInputs, bbMints, bbOutputs, bbSignatures),
-    Builder (..),
+    BaseBuilder (BB, bbDatums, bbInputs, bbMints, bbOutputs, bbReferenceInputs, bbSignatures),
+    Builder (pack, _bb),
     UTXO,
     unpack,
     utxoToTxOut,
@@ -60,6 +60,7 @@ import PlutusLedgerApi.V2 (
         txInfoInputs,
         txInfoMint,
         txInfoOutputs,
+        txInfoReferenceInputs,
         txInfoSignatories
     ),
     TxOutRef (..),
@@ -182,6 +183,7 @@ buildSpending' ::
     ScriptContext
 buildSpending' builder@(unpack -> BB{..}) =
     let (ins, inDat) = yieldInInfoDatums bbInputs
+        (refin, _) = yieldInInfoDatums bbReferenceInputs
         (outs, outDat) = yieldOutDatums bbOutputs
         mintedValue = yieldMint bbMints
         extraDat = yieldExtraDatums bbDatums
@@ -189,6 +191,7 @@ buildSpending' builder@(unpack -> BB{..}) =
         txinfo =
             base
                 { txInfoInputs = ins
+                , txInfoReferenceInputs = refin
                 , txInfoOutputs = outs
                 , txInfoData = fromList $ inDat <> outDat <> extraDat
                 , txInfoMint = mintedValue
