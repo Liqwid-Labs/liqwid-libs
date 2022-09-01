@@ -21,7 +21,6 @@ import Data.Kind (Type)
 import Data.List (intercalate, nubBy)
 import Data.Universe (Finite (universeF))
 import Plutarch (S, Term, plam, (#), (#$), type (:-->))
-import Plutarch.Extra.List (plookup)
 import Plutarch.Extra.Maybe (pmaybe)
 import Plutarch.Lift (PLift, PUnsafeLiftDecl (PLifted), pconstant)
 import Plutarch.Maybe (pfromJust)
@@ -29,6 +28,15 @@ import Plutarch.Prelude (
     PBuiltinList,
     PBuiltinPair,
     PEq,
+    PIsListLike,
+    PMaybe (PJust, PNothing),
+    pcon,
+    pfind,
+    pfstBuiltin,
+    phoistAcyclic,
+    pmatch,
+    psndBuiltin,
+    (#==),
  )
 import Plutarch.Test.QuickCheck.Instances (
     TestableTerm (
@@ -160,3 +168,14 @@ plamFinite f = plam $ \x -> pfromJust #$ plookup # x # table
   where
     table :: Term s (PBuiltinList (PBuiltinPair a b))
     table = pconstant $ (id &&& f) <$> universeF
+
+plookup ::
+    forall (a :: S -> Type) (b :: S -> Type) (s :: S) list.
+    (PEq a, PIsListLike list (PBuiltinPair a b)) =>
+    Term s (a :--> list (PBuiltinPair a b) :--> PMaybe b)
+plookup =
+    phoistAcyclic $
+        plam $ \k xs ->
+            pmatch (pfind # plam (\p -> pfstBuiltin # p #== k) # xs) $ \case
+                PNothing -> pcon PNothing
+                PJust p -> pcon (PJust (psndBuiltin # p))

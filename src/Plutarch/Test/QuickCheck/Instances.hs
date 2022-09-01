@@ -27,14 +27,12 @@ import Plutarch (
     TracingMode (DoTracing),
     compile,
     pcon,
-    plam,
     pmatch,
     pto,
     (#),
     (#$),
  )
 import Plutarch.Api.V1 (
-    AmountGuarantees (NonZero),
     PCredential (PPubKeyCredential, PScriptCredential),
     PCurrencySymbol (PCurrencySymbol),
     PExtended (PFinite, PNegInf, PPosInf),
@@ -47,10 +45,6 @@ import Plutarch.Api.V1 (
     PValidatorHash (PValidatorHash),
     PValue (PValue),
  )
-import qualified Plutarch.Api.V1.AssocMap as Assoc (
-    pfilter,
-    pmap,
- )
 import Plutarch.Api.V1.Time (PPOSIXTime (PPOSIXTime))
 import Plutarch.Api.V1.Tuple (
     PTuple,
@@ -58,19 +52,15 @@ import Plutarch.Api.V1.Tuple (
     ptuple,
     ptupleFromBuiltin,
  )
-import qualified "plutarch" Plutarch.Api.V1.Value as Value (
-    pnormalize,
- )
 import Plutarch.Api.V2 (
-    AmountGuarantees (NoGuarantees, Positive),
-    KeyGuarantees (Sorted, Unsorted),
+    AmountGuarantees (NoGuarantees),
+    KeyGuarantees (Unsorted),
     PAddress (PAddress),
     PMaybeData (PDJust, PDNothing),
     PPubKeyHash (PPubKeyHash),
     PStakingCredential (PStakingHash, PStakingPtr),
  )
 import Plutarch.Evaluate (evalScript)
-import Plutarch.Extra.Map.Unsorted (psort)
 import Plutarch.Extra.Maybe (
     pfromDJust,
     pisDJust,
@@ -86,7 +76,6 @@ import Plutarch.Prelude (
     PBuiltinPair,
     PByteString,
     PEither (PLeft, PRight),
-    PEq ((#==)),
     PInteger,
     PIsData,
     PIsListLike,
@@ -94,9 +83,8 @@ import Plutarch.Prelude (
     PList,
     PListLike (pcons, phead, pnil, pnull, ptail),
     PMaybe (PJust, PNothing),
-    POrd,
     PPair (PPair),
-    PPartialOrd ((#<), (#<=)),
+    PPartialOrd ((#<)),
     PRational (PRational),
     PString,
     PUnit,
@@ -109,12 +97,12 @@ import Plutarch.Prelude (
     pfield,
     pfromData,
     pif,
-    pnot,
     pnumerator,
     pshow,
     ptraceError,
  )
 import Plutarch.Show (PShow)
+import Plutarch.Test.QuickCheck.Helpers (loudEval)
 import Test.QuickCheck (
     Arbitrary (arbitrary, shrink),
     CoArbitrary (coarbitrary),
@@ -152,16 +140,12 @@ data TestableTerm a = TestableTerm
 
 -- | @since 2.0.0
 instance (forall (s :: S). Num (Term s a)) => Num (TestableTerm a) where
-    (+) = lift2Testable (+)
-    (*) = lift2Testable (*)
-    abs = liftTestable abs
-    negate = liftTestable negate
-    signum = liftTestable signum
+    (+) = liftT2 (+)
+    (*) = liftT2 (*)
+    abs = liftT abs
+    negate = liftT negate
+    signum = liftT signum
     fromInteger i = TestableTerm (fromInteger i :: Term s a)
-
--- | @since 2.0.0
-instance (forall (s :: S). Eq (Term s a)) => Eq (TestableTerm a) where
-    (TestableTerm x) == (TestableTerm y) = x == y
 
 {- | For any Plutarch Type that have a `PShow` instance, `Show` is
      available as well. For those that don't have @PShow@ instances,
@@ -223,16 +207,14 @@ class PCoArbitrary (a :: S -> Type) where
 -}
 instance PArbitrary p => Arbitrary (TestableTerm p) where
     arbitrary = parbitrary
-    shrink = pshrink
+    shrink = pshrink . (\(TestableTerm x) -> TestableTerm $ loudEval x)
 
 instance PCoArbitrary p => CoArbitrary (TestableTerm p) where
     coarbitrary = pcoarbitrary
 
 -- | @since 2.0.0
 instance (PArbitrary p, PIsData p) => PArbitrary (PAsData p) where
-    parbitrary = do
-        (TestableTerm x) <- parbitrary
-        return $ TestableTerm $ pdata x
+    parbitrary = pdataT <$> parbitrary
     pshrink = fmap pdataT . shrink . pfromDataT
 
 instance (PCoArbitrary p, PIsData p) => PCoArbitrary (PAsData p) where
@@ -267,7 +249,7 @@ instance PArbitrary PByteString where
     parbitrary = sized $ \r -> do
         len <- chooseInt (0, r)
         bs <- genByteString len
-        return $ TestableTerm $ pconstant bs
+        return $ pconstantT bs
 
     pshrink = fmap pconstantT . shrinkByteString . pliftT
 
@@ -283,14 +265,14 @@ instance PArbitrary PPositive where
 
 -- | @since 2.0.0
 instance PCoArbitrary PPositive where
-    pcoarbitrary = pcoarbitrary . liftTestable pto
+    pcoarbitrary = pcoarbitrary . liftT pto
 
 -- | @since 2.0.0
 instance PArbitrary PRational where
     parbitrary = do
         (TestableTerm x) <- parbitrary
         (TestableTerm y) <- parbitrary
-        return $ TestableTerm $ pcon $ PRational x y
+        return $ pconT $ PRational x y
 
     pshrink (TestableTerm x) =
         [ TestableTerm $ pcon $ PRational a (pdenominator # x)
@@ -431,8 +413,8 @@ instance
 
     pshrink = fmap fromTuple . shrink . toTuple
       where
-        toTuple = liftTestable (pfromData . ptupleFromBuiltin . pdata)
-        fromTuple = liftTestable (pfromData . pbuiltinPairFromTuple . pdata)
+        toTuple = liftT (pfromData . ptupleFromBuiltin . pdata)
+        fromTuple = liftT (pfromData . pbuiltinPairFromTuple . pdata)
 
 instance
     {-# OVERLAPPING #-}
@@ -443,7 +425,7 @@ instance
     ) =>
     PCoArbitrary (PBuiltinPair (PAsData a) (PAsData b))
     where
-    pcoarbitrary (liftTestable ptupleFromBuiltin . pdataT -> t) = pcoarbitrary t
+    pcoarbitrary (liftT ptupleFromBuiltin . pdataT -> t) = pcoarbitrary t
 
 -- | @since 2.0.0
 instance
@@ -543,28 +525,6 @@ instance
     pshrink = fmap reMap . shrink . unMap
       where
         reMap (TestableTerm x) = pconT $ PMap x
-        unMap = flip pmatchT $ \(PMap a) -> a
-
--- | @since 2.0.0
-instance
-    forall (a :: S -> Type) (b :: S -> Type).
-    ( PArbitrary a
-    , PArbitrary b
-    , PIsData a
-    , PIsData b
-    , POrd a
-    ) =>
-    PArbitrary (PMap 'Sorted a b)
-    where
-    parbitrary = do
-        (TestableTerm x) <- parbitrary
-        return $ TestableTerm $ psort # pcon (PMap x)
-
-    pshrink =
-        fmap (\(TestableTerm x) -> TestableTerm $ psort # pcon (PMap x))
-            . shrink
-            . unMap
-      where
         unMap = flip pmatchT $ \(PMap a) -> a
 
 -- | @since 2.0.0
@@ -724,151 +684,6 @@ instance PArbitrary (PValue 'Unsorted 'NoGuarantees) where
       where
         unValue = flip pmatchT $ \(PValue a) -> a
 
--- | @since 2.0.0
-instance PArbitrary (PValue 'Unsorted 'NonZero) where
-    parbitrary = do
-        (TestableTerm val) <- parbitrary
-        return $
-            pconT $
-                PValue $
-                    Assoc.pmap
-                        # plam
-                            ( \x ->
-                                Assoc.pfilter
-                                    # plam
-                                        (\y -> pnot # (y #== 0))
-                                    # x
-                            )
-                        # val
-
-    pshrink = fmap reValue . shrink . unValue
-      where
-        unValue = flip pmatchT $ \(PValue a) -> a
-        reValue (TestableTerm val) =
-            pconT $
-                PValue $
-                    Assoc.pmap
-                        # plam
-                            ( \x ->
-                                Assoc.pfilter
-                                    # plam
-                                        (\y -> pnot # (y #== 0))
-                                    # x
-                            )
-                        # val
-
--- | @since 2.0.0
-instance PArbitrary (PValue 'Unsorted 'Positive) where
-    parbitrary = do
-        (TestableTerm val) <- parbitrary
-        return $
-            pconT $
-                PValue $
-                    Assoc.pmap
-                        # plam
-                            ( \x ->
-                                Assoc.pfilter
-                                    # plam
-                                        (\y -> pnot # (0 #< y))
-                                    # x
-                            )
-                        # val
-
-    pshrink = fmap reValue . shrink . unValue
-      where
-        unValue = flip pmatchT $ \(PValue a) -> a
-        reValue (TestableTerm val) =
-            pconT $
-                PValue $
-                    Assoc.pmap
-                        # plam
-                            ( \x ->
-                                Assoc.pfilter
-                                    # plam
-                                        (\y -> pnot # (0 #< y))
-                                    # x
-                            )
-                        # val
-
--- | @since 2.0.0
-instance PArbitrary (PValue 'Sorted 'NoGuarantees) where
-    parbitrary = do
-        (TestableTerm val) <- parbitrary
-        return $ pconT $ PValue val
-
-    pshrink = fmap (\(TestableTerm x) -> pconT $ PValue x) . shrink . unValue
-      where
-        unValue = flip pmatchT $ \(PValue a) -> a
-
--- | @since 2.0.0
-instance PArbitrary (PValue 'Sorted 'NonZero) where
-    parbitrary = do
-        (TestableTerm val) <- parbitrary
-        return $
-            TestableTerm $
-                Value.pnormalize
-                    #$ pcon
-                    $ PValue $
-                        Assoc.pmap
-                            # plam
-                                ( \x ->
-                                    Assoc.pfilter
-                                        # plam
-                                            (\y -> pnot # (y #== 0))
-                                        # x
-                                )
-                            # val
-
-    pshrink = fmap reValue . shrink . unValue
-      where
-        unValue = flip pmatchT $ \(PValue a) -> a
-        reValue (TestableTerm val) =
-            pconT $
-                PValue $
-                    Assoc.pmap
-                        # plam
-                            ( \x ->
-                                Assoc.pfilter
-                                    # plam
-                                        (\y -> pnot # (y #== 0))
-                                    # x
-                            )
-                        # val
-
--- | @since 2.0.0
-instance PArbitrary (PValue 'Sorted 'Positive) where
-    parbitrary = do
-        (TestableTerm val) <-
-            ( parbitrary ::
-                    Gen (TestableTerm (PValue 'Sorted 'NonZero))
-                )
-        return $
-            pconT $
-                PValue $
-                    Assoc.pmap
-                        # plam
-                            ( \x ->
-                                Assoc.pfilter
-                                    # plam (0 #<=)
-                                    # x
-                            )
-                        # pto val
-
-    pshrink = fmap reValue . shrink . unValue
-      where
-        unValue = flip pmatchT $ \(PValue a) -> a
-        reValue (TestableTerm val) =
-            pconT $
-                PValue $
-                    Assoc.pmap
-                        # plam
-                            ( \x ->
-                                Assoc.pfilter
-                                    # plam (\y -> pnot # (0 #< y))
-                                    # x
-                            )
-                        # val
-
 ------------------------------------------------------------
 -- Helpers
 
@@ -911,21 +726,21 @@ pleft = flip pmatchT $ \case
     _ -> ptraceError "asked for PLeft when it is PRight"
 
 -- | @since 2.0.0
-liftTestable ::
+liftT ::
     forall (a :: S -> Type) (b :: S -> Type).
     (forall (s :: S). Term s a -> Term s b) ->
     TestableTerm a ->
     TestableTerm b
-liftTestable f (TestableTerm x) = TestableTerm $ f x
+liftT f (TestableTerm x) = TestableTerm $ f x
 
 -- | @since 2.0.0
-lift2Testable ::
+liftT2 ::
     forall (a :: S -> Type) (b :: S -> Type) (c :: S -> Type).
     (forall (s :: S). Term s a -> Term s b -> Term s c) ->
     TestableTerm a ->
     TestableTerm b ->
     TestableTerm c
-lift2Testable f (TestableTerm x) (TestableTerm y) = TestableTerm $ f x y
+liftT2 f (TestableTerm x) (TestableTerm y) = TestableTerm $ f x y
 
 ppFstT ::
     forall {a :: S -> Type} {b :: S -> Type}.
@@ -987,14 +802,14 @@ ptFstT ::
     (PIsData a) =>
     TestableTerm (PTuple a b) ->
     TestableTerm (PAsData a)
-ptFstT = liftTestable (pfield @"_0" #)
+ptFstT = liftT (pfield @"_0" #)
 
 ptSndT ::
     forall {a :: S -> Type} {b :: S -> Type}.
     (PIsData b) =>
     TestableTerm (PTuple a b) ->
     TestableTerm (PAsData b)
-ptSndT = liftTestable (pfield @"_1" #)
+ptSndT = liftT (pfield @"_1" #)
 
 constrPList ::
     forall {a :: S -> Type} {b :: (S -> Type) -> S -> Type}.
