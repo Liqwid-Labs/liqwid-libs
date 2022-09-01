@@ -36,6 +36,8 @@ module Plutarch.Extra.Ord (
     -- *** Basic
     pcompareBy,
     pequateBy,
+    pleqBy,
+    pgeqBy,
 
     -- *** Sortedness checking
     pisSortedBy,
@@ -309,6 +311,28 @@ pequateBy ::
     Term s (PComparator a :--> a :--> a :--> PBool)
 pequateBy = phoistAcyclic $ plam $ \cmp x y -> pcon PEQ #== (pto cmp # x # y)
 
+{- | Uses a 'PComparator' for a less-than-or-equals check.
+
+ @since 3.6.0
+-}
+pleqBy ::
+    forall (a :: S -> Type) (s :: S).
+    Term s (PComparator a :--> a :--> a :--> PBool)
+pleqBy = phoistAcyclic $
+    plam $ \cmp x y ->
+        pto (pto cmp # x # y) #<= 1
+
+{- | Uses a 'PComparator' for a greater-than-or-equals check.
+
+ @since 3.6.0
+-}
+pgeqBy ::
+    forall (a :: S -> Type) (s :: S).
+    Term s (PComparator a :--> a :--> a :--> PBool)
+pgeqBy = phoistAcyclic $
+    plam $ \cmp x y ->
+        1 #<= pto (pto cmp # x # y)
+
 {- | Verifies that a list-like structure is ordered according to the
  'PComparator' argument.
 
@@ -321,7 +345,7 @@ pisSortedBy ::
 pisSortedBy = phoistAcyclic $
     plam $ \cmp xs ->
         let success = pconstant True
-         in precList2 (go cmp) (const success) success # xs
+         in precList2 (go cmp) success # xs
   where
     go ::
         forall (s' :: S).
@@ -333,10 +357,7 @@ pisSortedBy = phoistAcyclic $
     go cmp x y result =
         pif
             result
-            ( pmatch (pcompareBy # cmp # x # y) $ \case
-                PGT -> pconstant False
-                _ -> result
-            )
+            (pif (pleqBy # cmp # x # y) result (pconstant False))
             result
 
 {- | Verifies that a list-like structure is both ordered (by the 'POrd' instance
@@ -367,7 +388,7 @@ pallUniqueBy ::
 pallUniqueBy = phoistAcyclic $
     plam $ \cmp xs ->
         let success = pcon . PJust . pconstant $ True
-         in precList2 (go cmp) (const success) success # xs
+         in precList2 (go cmp) success # xs
   where
     go ::
         forall (s' :: S).
@@ -431,37 +452,29 @@ ptryMergeBy ::
     (PElemConstraint ell a, PListLike ell) =>
     Term s (PComparator a :--> ell a :--> ell a :--> ell a)
 ptryMergeBy = phoistAcyclic $
-    pfix #$ plam $ \self cmp xs ys ->
-        -- Check if either side of the merge is exhausted; if it is, just check the
-        -- remaining argument and yield.
-        phandleList xs (passertSorted # cmp # ys) $ \xsHead xsTail ->
-            phandleList ys (passertSorted # cmp # xs) $ \ysHead ysTail ->
-                -- 'Peek ahead' of both tails to verify ordering holds.
-                phandleList xsTail (go cmp xsHead ysHead ysTail) $ \xsPeek _ ->
-                    phandleList ysTail (go cmp ysHead xsHead xsTail) $ \ysPeek _ ->
-                        pmatch (pcompareBy # cmp # xsHead # xsPeek) $ \case
-                            -- We are out-of-order, vomit.
-                            PGT -> ptraceError "ptryMergeBy: argument list-like out of order"
-                            _ -> pmatch (pcompareBy # cmp # ysHead # ysPeek) $ \case
-                                -- We are out-of-order, vomit.
-                                PGT -> ptraceError "ptryMergeBy: argument list-like out of order"
-                                -- Perform one step of the merge.
-                                _ -> pmatch (pcompareBy # cmp # xsHead # ysHead) $ \case
-                                    -- ysHead goes first.
-                                    PGT -> pcons # ysHead #$ self # cmp # xs # ysTail
-                                    -- xsHead goes first.
-                                    _ -> pcons # xsHead #$ self # cmp # xsTail # ys
+    plam $ \cmp xs ys ->
+        phandleList xs (passertSorted # cmp # ys) $ \x xs' ->
+            phandleList ys (passertSorted # cmp # xs) $ \y ys' ->
+                (pfix #$ plam $ go cmp) # x # xs' # y # ys'
   where
     go ::
         forall (s' :: S).
         Term s' (PComparator a) ->
+        Term s' (a :--> ell a :--> a :--> ell a :--> ell a) ->
         Term s' a ->
+        Term s' (ell a) ->
         Term s' a ->
         Term s' (ell a) ->
         Term s' (ell a)
-    go cmp single h t = pmatch (pcompareBy # cmp # single # h) $ \case
-        PGT -> pcons # h #$ pcons # single #$ passertSorted # cmp # t
-        _ -> pcons # single #$ pcons # h #$ passertSorted # cmp # t
+    go cmp self x xs y ys = pmatch (pcompareBy # cmp # x # y) $ \case
+        PGT -> phandleList ys (pcons # y #$ passertSorted # cmp # xs) $ \y' ys' ->
+            pmatch (pcompareBy # cmp # y # y') $ \case
+                PGT -> ptraceError "ptryMergeBy: argument list-like out of order"
+                _ -> pcons # y #$ self # x # xs # y' # ys'
+        _ -> phandleList xs (pcons # x #$ passertSorted # cmp # ys) $ \x' xs' ->
+            pmatch (pcompareBy # cmp # x # x') $ \case
+                PGT -> ptraceError "ptryMergeBy: argument list-like out of order"
+                _ -> pcons # x #$ self # x' # xs' # y # ys
 
 -- Helpers
 
@@ -470,13 +483,19 @@ precList2 ::
     forall (a :: S -> Type) (r :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
     (PElemConstraint ell a, PListLike ell) =>
     (Term s a -> Term s a -> Term s r -> Term s r) ->
-    (Term s a -> Term s r) ->
     Term s r ->
     Term s (ell a :--> r)
-precList2 when2 when1 when0 = pfix #$ plam $ \self xs ->
-    phandleList xs when0 $ \x xs' ->
-        phandleList xs' (when1 x) $ \peek _ ->
-            when2 x peek (self # xs')
+precList2 whenContinuing whenDone = plam $ \xs ->
+    phandleList xs whenDone $ \x xs' ->
+        (pfix #$ plam $ go) # x # xs'
+  where
+    go ::
+        Term s (a :--> ell a :--> r) ->
+        Term s a ->
+        Term s (ell a) ->
+        Term s r
+    go self x xs = phandleList xs whenDone $ \y ys ->
+        whenContinuing x y (self # y # ys)
 
 -- pelimList with the list-like first, and handles the 'nil case' before the
 -- 'cons' case
