@@ -319,28 +319,25 @@ pisSortedBy ::
     (PElemConstraint ell a, PListLike ell) =>
     Term s (PComparator a :--> ell a :--> PBool)
 pisSortedBy = phoistAcyclic $
-    plam $ \cmp ->
-        precList (\self x -> pelimList (go cmp self x) (pconstant True)) (const (pconstant True))
+    plam $ \cmp xs ->
+        let success = pconstant True
+         in precList2 (go cmp) (const success) success # xs
   where
     go ::
         forall (s' :: S).
         Term s' (PComparator a) ->
-        Term s' (ell a :--> PBool) ->
         Term s' a ->
         Term s' a ->
-        Term s' (ell a) ->
+        Term s' PBool ->
         Term s' PBool
-    go cmp self h peek t = pmatch (pcompareBy # cmp # h # peek) $ \case
-        PGT -> pconstant False
-        _ ->
-            let result = self # t
-             in pelimList
-                    ( \peek2 _ -> pmatch (pcompareBy # cmp # peek # peek2) $ \case
-                        PGT -> pconstant False
-                        _ -> result
-                    )
-                    result
-                    t
+    go cmp x y result =
+        pif
+            result
+            ( pmatch (pcompareBy # cmp # x # y) $ \case
+                PGT -> pconstant False
+                _ -> result
+            )
+            result
 
 {- | Verifies that a list-like structure is both ordered (by the 'POrd' instance
  it's full of) and has no duplicates (by the 'PEq' instance it's full of).
@@ -369,39 +366,22 @@ pallUniqueBy ::
     Term s (PComparator a :--> ell a :--> PMaybe PBool)
 pallUniqueBy = phoistAcyclic $
     plam $ \cmp xs ->
-        precList (\self x -> pelimList (go cmp self x) success) (const success) # xs
+        let success = pcon . PJust . pconstant $ True
+         in precList2 (go cmp) (const success) success # xs
   where
-    success :: forall (s' :: S). Term s' (PMaybe PBool)
-    success = pcon . PJust . pconstant $ True
-    pcompareByCont ::
+    go ::
         forall (s' :: S).
         Term s' (PComparator a) ->
         Term s' a ->
         Term s' a ->
         Term s' (PMaybe PBool) ->
         Term s' (PMaybe PBool)
-    pcompareByCont cmp x y cont = pmatch (pcompareBy # cmp # x # y) $ \case
-        PLT -> cont
-        PEQ -> pcon . PJust . pconstant $ False
-        PGT -> pcon PNothing
-    go ::
-        forall (s' :: S).
-        Term s' (PComparator a) ->
-        Term s' (ell a :--> PMaybe PBool) ->
-        Term s' a ->
-        Term s' a ->
-        Term s' (ell a) ->
-        Term s' (PMaybe PBool)
-    go cmp self x peek rest =
-        pcompareByCont cmp x peek $
-            let result = self # rest
-             in pmatch result $ \case
-                    PNothing -> result
-                    PJust b ->
-                        pif
-                            b
-                            (pelimList (\peek' _ -> pcompareByCont cmp peek peek' success) success rest)
-                            result
+    go cmp x y result = pmatch result $ \case
+        PNothing -> result
+        PJust _ -> pmatch (pcompareBy # cmp # x # y) $ \case
+            PLT -> result
+            PEQ -> pcon . PJust . pconstant $ False
+            PGT -> pcon PNothing
 
 {- | As 'pallUnique', but errors if the list-like argument is found to be
  unsorted instead of returning 'PNothing'.
@@ -484,6 +464,19 @@ ptryMergeBy = phoistAcyclic $
         _ -> pcons # single #$ pcons # h #$ passertSorted # cmp # t
 
 -- Helpers
+
+-- Similar to zipWith f xs (tail xs)
+precList2 ::
+    forall (a :: S -> Type) (r :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+    (PElemConstraint ell a, PListLike ell) =>
+    (Term s a -> Term s a -> Term s r -> Term s r) ->
+    (Term s a -> Term s r) ->
+    Term s r ->
+    Term s (ell a :--> r)
+precList2 when2 when1 when0 = pfix #$ plam $ \self xs ->
+    phandleList xs when0 $ \x xs' ->
+        phandleList xs' (when1 x) $ \peek _ ->
+            when2 x peek (self # xs')
 
 -- pelimList with the list-like first, and handles the 'nil case' before the
 -- 'cons' case
