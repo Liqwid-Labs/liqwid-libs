@@ -45,6 +45,7 @@ import Plutarch.Context.Base (
     BaseBuilder (..),
     Builder,
     UTXO (..),
+    mintToValue,
     unpack,
  )
 import PlutusLedgerApi.V2 (
@@ -79,7 +80,8 @@ data CheckerErrorType e
     | DuplicateTxOutRefIndex [Integer]
     | NonPositiveValue Value
     | NoZeroSum Value
-    | MissingRedeemer TxOutRef ValidatorHash
+    | MissingRedeemer ValidatorHash
+    | SpecifyRedeemerForNonValidatorInput
     | OtherError e
     deriving stock (Show, Eq)
 
@@ -117,9 +119,8 @@ instance P.Pretty e => P.Pretty (CheckerErrorType e) where
     pretty (NoZeroSum val) =
         "Transaction doesn't not have equal inflow and outflow." <> P.line
             <> "Diff:" P.<+> P.pretty val
-    pretty (MissingRedeemer ref hash) =
-        "Missing script redeemer while spending:" P.<+> P.pretty ref
-            <> P.line P.<+> "Owned by validator:" P.<+> P.pretty hash
+    pretty (MissingRedeemer hash) =
+        "Missing script redeemer while spending UTxO owned by:" P.<+> P.pretty hash
     pretty (OtherError e) = P.pretty e
 
 -- | @since 2.1.0
@@ -281,6 +282,19 @@ checkCredential = contramap classif checkByteString
     classif (PubKeyCredential (PubKeyHash x)) = x
     classif (ScriptCredential (ValidatorHash x)) = x
 
+-- | @since 2.3.0
+checkValidatorRedeemer :: Checker e UTXO
+checkValidatorRedeemer = checkWith check
+  where
+    check u =
+        let cred = fromMaybe (PubKeyCredential "") $ utxoCredential u
+            redeemer = utxoRedeemer u
+         in case (cred, redeemer) of
+                (ScriptCredential _, Just _) -> mempty
+                (ScriptCredential h, Nothing) -> checkFail $ MissingRedeemer h
+                (_, Just _) -> checkFail SpecifyRedeemerForNonValidatorInput
+                _ -> mempty
+
 {- | Check if TxId follows the format
 
  @since 2.1.0
@@ -313,7 +327,7 @@ checkZeroSum = Checker $
             -- TODO: This is quite wired, AssocMap doesn't implment Functor, but it does on haddock.
             i = mconcat . toList $ utxoValue <$> bbInputs
             o = mconcat . toList $ utxoValue <$> bbOutputs
-            m = mconcat . toList $ bbMints
+            m = foldMap mintToValue . toList $ bbMints
          in if i <> m /= o <> bbFee
                 then basicError $ NoZeroSum (diff (i <> m <> bbFee) o)
                 else mempty
@@ -333,6 +347,9 @@ checkInputs =
                 , contramap
                     (fmap (fromMaybe (PubKeyCredential "") . utxoCredential) . bbInputs . unpack)
                     (checkFoldable checkCredential)
+                , contramap
+                    (bbInputs . unpack)
+                    (checkFoldable checkValidatorRedeemer)
                 ]
         , checkAt AtInputOutRef $
             mconcat
@@ -376,7 +393,7 @@ checkReferenceInputs =
 checkMints :: Builder a => Checker e a
 checkMints =
     checkAt AtMint $
-        contramap (mconcat . toList . bbMints . unpack) nullAda
+        contramap (foldMap mintToValue . toList . bbMints . unpack) nullAda
   where
     nullAda :: Checker e Value
     nullAda = checkWith $ \x ->
