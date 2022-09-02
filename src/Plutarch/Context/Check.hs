@@ -54,6 +54,7 @@ import PlutusLedgerApi.V2 (
     LedgerBytes (LedgerBytes),
     PubKeyHash (PubKeyHash),
     TokenName,
+    TxOutRef,
     ValidatorHash (ValidatorHash),
     Value (Value, getValue),
     adaSymbol,
@@ -78,6 +79,7 @@ data CheckerErrorType e
     | DuplicateTxOutRefIndex [Integer]
     | NonPositiveValue Value
     | NoZeroSum Value
+    | MissingRedeemer TxOutRef ValidatorHash
     | OtherError e
     deriving stock (Show, Eq)
 
@@ -115,6 +117,9 @@ instance P.Pretty e => P.Pretty (CheckerErrorType e) where
     pretty (NoZeroSum val) =
         "Transaction doesn't not have equal inflow and outflow." <> P.line
             <> "Diff:" P.<+> P.pretty val
+    pretty (MissingRedeemer ref hash) =
+        "Missing script redeemer while spending:" P.<+> P.pretty ref
+            <> P.line P.<+> "Owned by validator:" P.<+> P.pretty hash
     pretty (OtherError e) = P.pretty e
 
 -- | @since 2.1.0

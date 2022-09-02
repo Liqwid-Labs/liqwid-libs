@@ -36,6 +36,7 @@ import Optics (lens)
 import Plutarch.Context.Base (
     BaseBuilder (BB, bbDatums, bbInputs, bbMints, bbOutputs, bbReferenceInputs, bbSignatures),
     Builder (pack, _bb),
+    mintToValue,
     unpack,
     yieldBaseTxInfo,
     yieldExtraDatums,
@@ -171,7 +172,7 @@ instance P.Pretty MintingError where
 checkMinting :: Checker MintingError MintingBuilder
 checkMinting =
     contramap
-        ((mconcat . toList . bbMints . unpack) &&& mbMintingCS)
+        ((foldMap mintToValue . toList . bbMints . unpack) &&& mbMintingCS)
         ( choose
             (\(mints, cs) -> maybe (Left ()) (Right . hasCS mints) cs)
             (checkFail $ OtherError MintingCurrencySymbolNotGiven)

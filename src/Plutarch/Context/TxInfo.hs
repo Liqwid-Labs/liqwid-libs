@@ -35,7 +35,9 @@ import Plutarch.Context.Base (
     yieldExtraDatums,
     yieldInInfoDatums,
     yieldMint,
+    yieldMintRedeemerMap,
     yieldOutDatums,
+    yieldScriptInputRedeemerMap,
  )
 import PlutusLedgerApi.V2 (
     ScriptContext (ScriptContext),
@@ -46,11 +48,13 @@ import PlutusLedgerApi.V2 (
         txInfoInputs,
         txInfoMint,
         txInfoOutputs,
+        txInfoRedeemers,
         txInfoReferenceInputs,
         txInfoSignatories
     ),
     fromList,
  )
+import PlutusTx.AssocMap qualified as AssocMap
 
 {- | Builder that builds TxInfo.
 
@@ -77,6 +81,12 @@ buildTxInfo (unpack -> builder@BB{..}) =
         mintedValue = yieldMint bbMints
         extraDat = yieldExtraDatums bbDatums
         base = yieldBaseTxInfo builder
+        redeemerMap =
+            AssocMap.fromList $
+                mconcat
+                    [ yieldMintRedeemerMap bbMints
+                    , yieldScriptInputRedeemerMap bbInputs
+                    ]
 
         txinfo =
             base
@@ -86,6 +96,7 @@ buildTxInfo (unpack -> builder@BB{..}) =
                 , txInfoData = fromList $ inDat <> outDat <> extraDat
                 , txInfoMint = mintedValue
                 , txInfoSignatories = toList bbSignatures
+                , txInfoRedeemers = redeemerMap
                 }
      in txinfo
 

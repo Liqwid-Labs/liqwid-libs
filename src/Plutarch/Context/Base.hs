@@ -36,11 +36,14 @@ module Plutarch.Context.Base (
     withValue,
     withRefIndex,
     withRef,
+    withRedeemer,
 
     -- * Others
     unpack,
     signedWith,
     mint,
+    mintWith,
+    mintSingletonWith,
     extraData,
     txId,
     fee,
@@ -55,10 +58,13 @@ module Plutarch.Context.Base (
     yieldExtraDatums,
     yieldInInfoDatums,
     yieldOutDatums,
+    yieldScriptInputRedeemerMap,
+    yieldMintRedeemerMap,
     mkOutRefIndices,
+    mintToValue,
 ) where
 
-import Acc (Acc)
+import Acc (Acc, fromReverseList)
 import Control.Arrow (Arrow ((&&&)))
 import Data.Foldable (Foldable (toList))
 import Data.Kind (Type)
@@ -69,10 +75,12 @@ import Plutarch (S)
 import Plutarch.Api.V2 (datumHash)
 import Plutarch.Builtin (PIsData, pdata, pforgetData)
 import Plutarch.Lift (PUnsafeLiftDecl (PLifted), pconstant, plift)
+import PlutusLedgerApi.V1.Value qualified as Value
 import PlutusLedgerApi.V2 (
     Address (Address, addressCredential, addressStakingCredential),
     BuiltinData (BuiltinData),
     Credential (PubKeyCredential, ScriptCredential),
+    CurrencySymbol,
     Data,
     Datum (Datum),
     DatumHash,
@@ -80,8 +88,11 @@ import PlutusLedgerApi.V2 (
     OutputDatum (NoOutputDatum, OutputDatum, OutputDatumHash),
     POSIXTime,
     PubKeyHash (PubKeyHash),
+    Redeemer (Redeemer),
     ScriptHash,
+    ScriptPurpose (Minting, Spending),
     StakingCredential,
+    TokenName,
     TxId (TxId),
     TxInInfo (TxInInfo),
     TxInfo (
@@ -102,15 +113,23 @@ import PlutusLedgerApi.V2 (
     TxOut (TxOut),
     TxOutRef (TxOutRef),
     ValidatorHash,
-    Value,
+    Value (getValue),
     always,
  )
-import PlutusTx.AssocMap qualified as AssocMap (fromList)
+import PlutusTx.AssocMap qualified as AssocMap
 
 -- | @since 2.1.0
 data DatumType
     = InlineDatum Data
     | ContextDatum Data
+    deriving stock (Show)
+
+-- | @since 2.3.0
+data Mint = Mint
+    { mintSymbol :: CurrencySymbol
+    , mintTokens :: [(TokenName, Integer)]
+    , mintRedeemer :: Maybe Data
+    }
     deriving stock (Show)
 
 {- | 'UTXO' is used to represent any input or output of a transaction in the builders.
@@ -133,20 +152,21 @@ data UTXO = UTXO
     , utxoReferenceScript :: Maybe ScriptHash
     , utxoTxId :: Maybe TxId
     , utxoTxIdx :: Maybe Integer
+    , utxoRedeemer :: Maybe Data
     }
     deriving stock (Show)
 
 -- | @since 2.0.0
 instance Semigroup UTXO where
-    (UTXO c stc v d rs t tidx) <> (UTXO c' stc' v' d' rs' t' tidx') =
-        UTXO (choose c c') (choose stc stc') (v <> v') (choose d d') (choose rs rs') (choose t t') (choose tidx tidx')
+    (UTXO c stc v d rs t tidx r) <> (UTXO c' stc' v' d' rs' t' tidx' r') =
+        UTXO (choose c c') (choose stc stc') (v <> v') (choose d d') (choose rs rs') (choose t t') (choose tidx tidx') (choose r r')
       where
         choose _ (Just b) = Just b
         choose a Nothing = a
 
 -- | @since 2.0.0
 instance Monoid UTXO where
-    mempty = UTXO Nothing Nothing mempty Nothing Nothing Nothing Nothing
+    mempty = UTXO Nothing Nothing mempty Nothing Nothing Nothing Nothing Nothing
 
 {- | Pulls address output of given UTXO'
 
@@ -213,6 +233,14 @@ withInlineDatum dat = mempty{utxoData = Just . InlineDatum . datafy $ dat}
 -}
 withReferenceScript :: ScriptHash -> UTXO
 withReferenceScript sh = mempty{utxoReferenceScript = Just sh}
+
+-- | @2.3.0
+withRedeemer ::
+    forall (b :: Type) (p :: S -> Type).
+    (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
+    b ->
+    UTXO
+withRedeemer r = mempty{utxoRedeemer = Just $ datafy r}
 
 {- | Specify reference `TxId` of a UTXO.
 
@@ -312,7 +340,7 @@ data BaseBuilder = BB
     , bbOutputs :: Acc UTXO
     , bbSignatures :: Acc PubKeyHash
     , bbDatums :: Acc Data
-    , bbMints :: Acc Value
+    , bbMints :: Acc Mint
     , bbFee :: Value
     , bbTimeRange :: Interval POSIXTime
     , bbTxId :: TxId
@@ -373,7 +401,33 @@ mint ::
     (Builder a) =>
     Value ->
     a
-mint val = pack $ mempty{bbMints = pure val}
+mint val = pack $ mempty{bbMints = fromReverseList $ valueToMints val}
+  where
+    valueToMints :: Value -> [Mint]
+    valueToMints = fmap f . AssocMap.toList . getValue
+      where
+        f (cs, ts) = Mint cs (AssocMap.toList ts) Nothing
+
+-- | @since 2.3.0
+mintWith ::
+    forall (a :: Type) (r :: Type) (p :: S -> Type).
+    (PUnsafeLiftDecl p, PLifted p ~ r, PIsData p, Builder a) =>
+    CurrencySymbol ->
+    [(TokenName, Integer)] ->
+    r ->
+    a
+mintWith cs ts r = pack $ mempty{bbMints = pure $ Mint cs ts $ Just $ datafy r}
+
+-- | @since 2.3.0
+mintSingletonWith ::
+    forall (a :: Type) (r :: Type) (p :: S -> Type).
+    (PUnsafeLiftDecl p, PLifted p ~ r, PIsData p, Builder a) =>
+    CurrencySymbol ->
+    TokenName ->
+    Integer ->
+    r ->
+    a
+mintSingletonWith cs tn q = mintWith cs [(tn, q)]
 
 {- | Append extra datum to @ScriptContex@.
 
@@ -479,10 +533,16 @@ yieldBaseTxInfo (unpack -> BB{..}) =
  @since 1.1.0
 -}
 yieldMint ::
-    Acc Value ->
+    Acc Mint ->
     Value
-yieldMint (toList -> vals) =
-    mconcat vals
+yieldMint = foldMap mintToValue . toList
+
+-- | @since 2.3.0
+mintToValue :: Mint -> Value
+mintToValue m =
+    foldMap f $ mintTokens m
+  where
+    f = uncurry $ Value.singleton $ mintSymbol m
 
 {- | Provide DatumHash-Datum pair to Continuation Monad.
 
@@ -529,6 +589,31 @@ yieldOutDatums (toList -> outputs) =
     createDatumPairs :: [UTXO] -> [(DatumHash, Datum)]
     createDatumPairs = mapMaybe utxoDatumPair
 
+-- | @since 2.3.0
+yieldScriptInputRedeemerMap ::
+    Acc UTXO ->
+    [(ScriptPurpose, Redeemer)]
+yieldScriptInputRedeemerMap = mapMaybe utxoToRedeemerPair . toList
+  where
+    utxoToRedeemerPair :: UTXO -> Maybe (ScriptPurpose, Redeemer)
+    utxoToRedeemerPair u = do
+        refId <- utxoTxId u
+        refIdx <- utxoTxIdx u
+        let txRef = TxOutRef refId refIdx
+        r <- utxoRedeemer u
+        pure (Spending txRef, Redeemer $ BuiltinData r)
+
+-- | @since 2.3.0
+yieldMintRedeemerMap ::
+    Acc Mint ->
+    [(ScriptPurpose, Redeemer)]
+yieldMintRedeemerMap = mapMaybe mintToRedeemerPair . toList
+  where
+    mintToRedeemerPair :: Mint -> Maybe (ScriptPurpose, Redeemer)
+    mintToRedeemerPair m = do
+        r <- mintRedeemer m
+        pure (Minting $ mintSymbol m, Redeemer $ BuiltinData r)
+
 {- | Automatically generate `TxOutRef`s from given builder.
  It tries to reserve index if given one; otherwise, it grants
  incremental indices to each inputs starting from one. If there
@@ -550,10 +635,10 @@ mkOutRefIndices = over _bb go
     grantIndex (toList -> xs) = fromList $ grantIndex' 1 [] xs
 
     grantIndex' :: Integer -> [Integer] -> [UTXO] -> [UTXO]
-    grantIndex' top used (x@(UTXO _ _ _ _ _ _ Nothing) : xs)
+    grantIndex' top used (x@(UTXO _ _ _ _ _ _ Nothing _) : xs)
         | top `elem` used = grantIndex' (top + 1) used (x : xs)
         | otherwise = x{utxoTxIdx = Just top} : grantIndex' (top + 1) (top : used) xs
-    grantIndex' top used (x@(UTXO _ _ _ _ _ _ (Just i)) : xs)
+    grantIndex' top used (x@(UTXO _ _ _ _ _ _ (Just i) _) : xs)
         | i `elem` used = grantIndex' top used (x{utxoTxIdx = Nothing} : xs)
         | otherwise = x : grantIndex' top (i : used) xs
     grantIndex' _ _ [] = []
