@@ -1,3 +1,4 @@
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
 -- Needed to 'link' Ordering and POrdering
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -51,7 +52,7 @@ module Plutarch.Extra.Ord (
     -- *** Sorted merging
     ptryMerge,
     ptryMergeBy,
-    {-
+
     -- *** Sorting
     psort,
     psortBy,
@@ -59,7 +60,6 @@ module Plutarch.Extra.Ord (
     -- *** Nubbing
     pnubSort,
     pnubSortBy,
-    -}
 ) where
 
 import Data.Semigroup (Semigroup (stimes), stimesIdempotentMonoid)
@@ -75,6 +75,7 @@ import Plutarch.Lift (
     ),
     PUnsafeLiftDecl (PLifted),
  )
+import Plutarch.List (pconvertLists)
 
 {- | A representation of a comparison at the Plutarch level. Equivalent to
  'Ordering' in Haskell.
@@ -476,7 +477,276 @@ ptryMergeBy = phoistAcyclic $
                 PGT -> ptraceError "ptryMergeBy: argument list-like out of order"
                 _ -> pcons # x #$ self # x' # xs' # y # ys
 
+{- | Sort a list-like by the 'POrd' instance of its contents.
+
+ This uses a [merge sort](https://en.wikipedia.org/wiki/Merge_sort)
+ implementation, which is also
+ [stable](https://en.wikipedia.org/wiki/Sorting_algorithm#Stability). As this
+ is a comparison sort, it requires a linearithmic ($n \log(n)$) number of
+ comparisons to complete.
+
+ @since 3.6.0
+-}
+psort ::
+    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+    (POrd a, PElemConstraint ell a, PListLike ell) =>
+    Term s (ell a :--> ell a)
+psort = phoistAcyclic $ plam (psortBy # pfromOrd @a #)
+
+{- | As 'psort', but uses a custom 'PComparator' for order comparisons.
+
+ @since 3.6.0
+-}
+psortBy ::
+    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+    (PElemConstraint ell a, PListLike ell) =>
+    Term s (PComparator a :--> ell a :--> ell a)
+psortBy = phoistAcyclic $
+    plam $ \cmp xs ->
+        pmergeAllUnsafe cmp pmergeUnsafe #$ pmergesort # cmp # xs
+
+{- | As 'psort', but also throws out all duplicates according to the 'PEq'
+ instance of its argument's contents.
+
+ @since 3.6.0
+-}
+pnubSort ::
+    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+    (POrd a, PElemConstraint ell a, PListLike ell) =>
+    Term s (ell a :--> ell a)
+pnubSort = phoistAcyclic $ plam (pnubSortBy # pfromOrd @a #)
+
+{- | As 'pnubSort', but uses a custom 'PComparator' for both ordering and
+ equality.
+
+ @since 3.6.0
+-}
+pnubSortBy ::
+    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+    (PElemConstraint ell a, PListLike ell) =>
+    Term s (PComparator a :--> ell a :--> ell a)
+pnubSortBy = phoistAcyclic $
+    plam $ \cmp xs ->
+        pmergeAllUnsafe cmp pmergeUnsafeNoDupes #$ pmergesort # cmp # xs
+
 -- Helpers
+
+-- Merges nested PLists and repacks into a list-like of your choice, given a
+-- method of merging the PLists themselves.
+--
+-- Only call this if you are _sure_ that the 'inner' PLists are sorted according
+-- to the argument comparator!
+pmergeAllUnsafe ::
+    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+    (PElemConstraint ell a, PListLike ell) =>
+    Term s (PComparator a) ->
+    (forall (s' :: S). Term s' (PComparator a) -> Term s' (PList a) -> Term s' (PList a) -> Term s' (PList a)) ->
+    Term s (PList (PList a) :--> ell a)
+pmergeAllUnsafe cmp f = pfix #$ plam $ \self xs ->
+    phandleList xs pnil $ \x' xs' ->
+        phandleList xs' (pconvertLists # x') $ \_ _ ->
+            self #$ go # xs
+  where
+    go :: Term s (PList (PList a) :--> PList (PList a))
+    go = pfix #$ plam $ \self xs ->
+        phandleList xs pnil $ \x' xs' ->
+            phandleList xs' xs $ \x'' xs'' ->
+                pcons # f cmp x' x'' #$ self # xs''
+
+-- Merges two PLists, leaving duplicates in place.
+--
+-- Only call this if you are _sure_ that the PLists are sorted according to the
+-- argument comparator!
+pmergeUnsafe ::
+    forall (a :: S -> Type) (s :: S).
+    Term s (PComparator a) ->
+    Term s (PList a) ->
+    Term s (PList a) ->
+    Term s (PList a)
+pmergeUnsafe cmp xs ys =
+    phandleList xs ys $ \x' xs' ->
+        phandleList ys xs $ \y' ys' ->
+            (pfix #$ plam $ go) # x' # xs' # y' # ys'
+  where
+    go ::
+        Term s (a :--> PList a :--> a :--> PList a :--> PList a) ->
+        Term s a ->
+        Term s (PList a) ->
+        Term s a ->
+        Term s (PList a) ->
+        Term s (PList a)
+    go self xsHead xsTail ysHead ysTail =
+        pmatch (pcompareBy # cmp # xsHead # ysHead) $ \case
+            PGT -> pcons # ysHead #$ phandleList ysTail (pcons # xsHead # xsTail) $
+                \newYsHead newYsTail -> self # xsHead # xsTail # newYsHead # newYsTail
+            _ -> pcons # xsHead #$ phandleList xsTail (pcons # ysHead # ysTail) $
+                \newXsHead newXsTail -> self # newXsHead # newXsTail # ysHead # ysTail
+
+-- Merges two PLists, throwing out duplicates.
+--
+-- Only call this if you are _sure_ that the PLists are sorted according to the
+-- argument comparator!
+pmergeUnsafeNoDupes ::
+    forall (a :: S -> Type) (s :: S).
+    Term s (PComparator a) ->
+    Term s (PList a) ->
+    Term s (PList a) ->
+    Term s (PList a)
+pmergeUnsafeNoDupes cmp xs ys =
+    phandleList xs (pnubUnsafe # cmp # ys) $ \x' xs' ->
+        phandleList ys (pnubUnsafe # cmp # xs) $ \y' ys' ->
+            (pfix #$ plam $ go) # x' # xs' # y' # ys'
+  where
+    go ::
+        Term s (a :--> PList a :--> a :--> PList a :--> PList a) ->
+        Term s a ->
+        Term s (PList a) ->
+        Term s a ->
+        Term s (PList a) ->
+        Term s (PList a)
+    go self xsHead xsTail ysHead ysTail =
+        pmatch (pcompareBy # cmp # xsHead # ysHead) $ \case
+            PLT -> pcons # xsHead #$ phandleList xsTail (pnubUnsafe # cmp #$ pcons # ysHead # ysTail) $
+                \newXsHead newXsTail -> self # newXsHead # newXsTail # ysHead # ysTail
+            PEQ -> pcons # xsHead #$ phandleList xsTail (pnubUnsafe # cmp # ysTail) $
+                \newXsHead newXsTail -> phandleList ysTail (pnubUnsafe # cmp # xsTail) $
+                    \newYsHead newYsTail -> self # newXsHead # newXsTail # newYsHead # newYsTail
+            PGT -> pcons # ysHead #$ phandleList ysTail (pnubUnsafe # cmp #$ pcons # xsHead # xsTail) $
+                \newYsHead newYsTail -> self # xsHead # xsTail # newYsHead # newYsTail
+
+-- Removes all duplicates from a sorted list.
+--
+-- Only call this if you are _sure_ that the PLists are sorted according to the
+-- argument comparator!
+pnubUnsafe ::
+    forall (a :: S -> Type) (s :: S).
+    Term s (PComparator a :--> PList a :--> PList a)
+pnubUnsafe = phoistAcyclic $ plam $ \cmp -> precList2 (go cmp) pnil
+  where
+    go ::
+        forall (s' :: S).
+        Term s' (PComparator a) ->
+        Term s' a ->
+        Term s' a ->
+        Term s' (PList a) ->
+        Term s' (PList a)
+    go cmp x peek rest =
+        pif
+            (pequateBy # cmp # x # peek)
+            rest
+            (pcons # x # rest)
+
+-- Breaks the argument into sorted chunks; currently, these go up to size 4. To
+-- speed up the chunk sorting, we use sorting networks.
+pmergesort ::
+    forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+    (PElemConstraint ell a, PListLike ell) =>
+    Term s (PComparator a :--> ell a :--> PList (PList a))
+pmergesort = phoistAcyclic $
+    pfix #$ plam $ \self cmp ->
+        pmatchList pnil $
+            \_0 -> pmatchList (plist [psing _0]) $
+                \_1 -> pmatchList (plist [psort2 cmp _0 _1]) $
+                    \_2 -> pmatchList (plist [psort3 cmp _0 _1 _2]) $
+                        \_3 rest -> pcon $ PSCons (psort4 cmp _0 _1 _2 _3) (self # cmp # rest)
+  where
+    pmatchList ::
+        forall (r :: S -> Type) (s' :: S).
+        Term s' r ->
+        (Term s' a -> Term s' (ell a) -> Term s' r) ->
+        Term s' (ell a) ->
+        Term s' r
+    pmatchList = flip pelimList
+
+-- Unhoisted Foldable lifter
+plist ::
+    forall (a :: S -> Type) (f :: Type -> Type) (s :: S).
+    (Foldable f) =>
+    f (Term s a) ->
+    Term s (PList a)
+plist = foldr (\x -> pcon . PSCons x) (pcon PSNil)
+
+-- Unhoisted singleton maker
+psing ::
+    forall (a :: S -> Type) (s :: S).
+    Term s a ->
+    Term s (PList a)
+psing x = plist [x]
+
+-- Two-item sorting network; basically a comparison.
+psort2 ::
+    forall (a :: S -> Type) (s :: S).
+    Term s (PComparator a) ->
+    Term s a ->
+    Term s a ->
+    Term s (PList a)
+psort2 cmp _0 _1 =
+    pswap cmp _0 _1 $ \_0 _1 ->
+        plist [_0, _1]
+
+-- Three-item sorting network. The layers are:
+--
+
+-- * Arg 0 vs arg 2
+
+-- * Arg 0 vs arg 1
+
+-- * Arg 1 vs arg 2
+psort3 ::
+    forall (a :: S -> Type) (s :: S).
+    Term s (PComparator a) ->
+    Term s a ->
+    Term s a ->
+    Term s a ->
+    Term s (PList a)
+psort3 cmp _0 _1 _2 =
+    pswap cmp _0 _2 $ \_0 _2 ->
+        pswap cmp _0 _1 $ \_0 _1 ->
+            pswap cmp _1 _2 $ \_1 _2 ->
+                plist [_0, _1, _2]
+
+-- Four-item sorting network. The layers are:
+--
+
+-- * Arg 0 vs arg 2 and arg 1 versus arg 3
+
+-- * Arg 0 vs arg 1 and arg 2 versus arg 3
+
+-- * Arg 1 versus arg 2
+
+--
+-- We perform the layer parallelism sequentially; it doesn't affect the
+-- semantics, it just makes us sad because it's slow.
+psort4 ::
+    forall (a :: S -> Type) (s :: S).
+    Term s (PComparator a) ->
+    Term s a ->
+    Term s a ->
+    Term s a ->
+    Term s a ->
+    Term s (PList a)
+psort4 cmp _0 _1 _2 _3 =
+    pswap cmp _0 _2 $ \_0 _2 ->
+        pswap cmp _1 _3 $ \_1 _3 ->
+            (\f -> f # cmp # _0 # _1 # _2 # _3) $
+                phoistAcyclic $
+                    plam $
+                        \cmp' _0 _1 _2 _3 ->
+                            pswap cmp' _0 _1 $ \_0 _1 ->
+                                pswap cmp' _2 _3 $ \_2 _3 ->
+                                    pswap cmp' _1 _2 $ \_1 _2 ->
+                                        plist [_0, _1, _2, _3]
+
+-- Runs a 'sorting network layer' driven by a given PComparator. Written in CPS
+-- style for efficiency.
+pswap ::
+    forall (a :: S -> Type) (r :: S -> Type) (s :: S).
+    Term s (PComparator a) ->
+    Term s a ->
+    Term s a ->
+    (Term s a -> Term s a -> Term s r) ->
+    Term s r
+pswap cmp x y cont = pif (pleqBy # cmp # x # y) (cont x y) (cont y x)
 
 -- Similar to zipWith f xs (tail xs)
 precList2 ::
