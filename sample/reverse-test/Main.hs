@@ -14,57 +14,57 @@ module Main (main) where
 
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
 import Plutarch.Prelude (
-    PBuiltinList,
-    PInteger,
-    PIsListLike,
-    S,
-    Term,
-    Type,
-    pcons,
-    pfoldl,
-    phoistAcyclic,
-    plam,
-    pnil,
-    (#),
-    (:-->),
+  PBuiltinList,
+  PInteger,
+  PIsListLike,
+  S,
+  Term,
+  Type,
+  pcons,
+  pfoldl,
+  phoistAcyclic,
+  plam,
+  pnil,
+  (#),
+  (:-->),
  )
 
 import Plutarch.Test.QuickCheck (
-    Equality (OnPEq),
-    Partiality (ByComplete),
-    TestableTerm (TestableTerm),
-    haskEquiv,
-    haskEquiv',
-    pconstantT,
+  Equality (OnPEq),
+  Partiality (ByComplete),
+  TestableTerm (TestableTerm),
+  haskEquiv,
+  haskEquiv',
+  pconstantT,
  )
 
 import Generics.SOP (NP (Nil, (:*)))
 import Test.QuickCheck (
-    arbitrary,
+  arbitrary,
  )
 import Test.Tasty (adjustOption, defaultMain, testGroup)
 import Test.Tasty.ExpectedFailure (expectFail)
 import Test.Tasty.QuickCheck (
-    Gen,
-    Property,
-    QuickCheckTests,
-    testProperty,
-    vectorOf,
+  Gen,
+  Property,
+  QuickCheckTests,
+  testProperty,
+  vectorOf,
  )
 
 -- This is the "correct" implmentation of reversing function.
 preverseCorrect ::
-    forall (t :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
-    PIsListLike t a =>
-    Term s (t a :--> t a)
+  forall (t :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
+  PIsListLike t a =>
+  Term s (t a :--> t a)
 preverseCorrect = phoistAcyclic $ pfoldl # plam (\ys y -> pcons # y # ys) # pnil
 
 -- This is the "wrong" implmentation of reversing function. It will
 -- return the input.
 preverseWrong ::
-    forall (t :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
-    PIsListLike t a =>
-    Term s (t a :--> t a)
+  forall (t :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
+  PIsListLike t a =>
+  Term s (t a :--> t a)
 preverseWrong = plam id
 
 -- Haskell equivalence of reversing function.
@@ -86,24 +86,24 @@ propWrong = haskEquiv' @( 'OnPEq) @( 'ByComplete) hreverse (preverseWrong @PBuil
 -- from `Generics.SOP`. (hint: it's using `NP`)
 propCustom :: Property
 propCustom =
-    haskEquiv @( 'OnPEq) @( 'ByComplete) hreverse (TestableTerm preverseCorrect) (genList :* Nil)
+  haskEquiv @( 'OnPEq) @( 'ByComplete) hreverse (TestableTerm preverseCorrect) (genList :* Nil)
   where
     genList :: Gen (TestableTerm (PBuiltinList PInteger))
     genList = do
-        a <- vectorOf 10 arbitrary
-        return $ pconstantT a
+      a <- vectorOf 10 arbitrary
+      return $ pconstantT a
 
 main :: IO ()
 main = do
-    -- This will fix some problems regarding text encoding.
-    setLocaleEncoding utf8
-    defaultMain . adjustOption go $
-        testGroup
-            ""
-            [ testProperty "Correct 'preverse'" propCorrect
-            , expectFail $ testProperty "Wrong 'preverse'" propWrong
-            , testProperty "Correct 'preverse' with custom generator" propCustom
-            ]
+  -- This will fix some problems regarding text encoding.
+  setLocaleEncoding utf8
+  defaultMain . adjustOption go $
+    testGroup
+      ""
+      [ testProperty "Correct 'preverse'" propCorrect
+      , expectFail $ testProperty "Wrong 'preverse'" propWrong
+      , testProperty "Correct 'preverse' with custom generator" propCustom
+      ]
   where
     -- 100 tests is way too small for a property test to search for a counterexample,
     -- it is recommanded to use at least 10,000. However, more is better.
