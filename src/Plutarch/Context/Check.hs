@@ -35,6 +35,7 @@ module Plutarch.Context.Check (
 ) where
 
 import Acc (Acc)
+import Control.Arrow ((&&&))
 import Data.Foldable (toList)
 import Data.Functor ((<$))
 import Data.Functor.Contravariant (Contravariant (contramap))
@@ -52,8 +53,10 @@ import PlutusLedgerApi.V2 (
     BuiltinByteString,
     Credential (PubKeyCredential, ScriptCredential),
     CurrencySymbol,
+    Data,
     LedgerBytes (LedgerBytes),
     PubKeyHash (PubKeyHash),
+    Redeemer,
     TokenName,
     TxOutRef,
     ValidatorHash (ValidatorHash),
@@ -282,18 +285,20 @@ checkCredential = contramap classif checkByteString
     classif (PubKeyCredential (PubKeyHash x)) = x
     classif (ScriptCredential (ValidatorHash x)) = x
 
--- | @since 2.3.0
+{- | Check if a validator output has a redeemer attached.
+
+ @since 2.3.0
+-}
 checkValidatorRedeemer :: Checker e UTXO
-checkValidatorRedeemer = checkWith check
-  where
-    check u =
-        let cred = fromMaybe (PubKeyCredential "") $ utxoCredential u
-            redeemer = utxoRedeemer u
-         in case (cred, redeemer) of
-                (ScriptCredential _, Just _) -> mempty
-                (ScriptCredential h, Nothing) -> checkFail $ MissingRedeemer h
-                (_, Just _) -> checkFail SpecifyRedeemerForNonValidatorInput
-                _ -> mempty
+checkValidatorRedeemer =
+    contramap
+        ((fromMaybe (PubKeyCredential "") . utxoCredential) &&& utxoRedeemer)
+        ( checkWith $ \case
+            (ScriptCredential _, Just _) -> mempty
+            (ScriptCredential h, Nothing) -> checkFail $ MissingRedeemer h
+            (_, Just _) -> checkFail SpecifyRedeemerForNonValidatorInput
+            _ -> mempty
+        )
 
 {- | Check if TxId follows the format
 

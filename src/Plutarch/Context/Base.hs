@@ -58,8 +58,7 @@ module Plutarch.Context.Base (
     yieldExtraDatums,
     yieldInInfoDatums,
     yieldOutDatums,
-    yieldScriptInputRedeemerMap,
-    yieldMintRedeemerMap,
+    yieldRedeemerMap,
     mkOutRefIndices,
     mintToValue,
 ) where
@@ -124,11 +123,15 @@ data DatumType
     | ContextDatum Data
     deriving stock (Show)
 
--- | @since 2.3.0
+{- | Minted tokens that have the same symbol, and the redeemer used to mint
+      those tokens.
+
+     @since 2.3.0
+-}
 data Mint = Mint
     { mintSymbol :: CurrencySymbol
     , mintTokens :: [(TokenName, Integer)]
-    , mintRedeemer :: Maybe Data
+    , mintRedeemer :: Data
     }
     deriving stock (Show)
 
@@ -234,7 +237,10 @@ withInlineDatum dat = mempty{utxoData = Just . InlineDatum . datafy $ dat}
 withReferenceScript :: ScriptHash -> UTXO
 withReferenceScript sh = mempty{utxoReferenceScript = Just sh}
 
--- | @2.3.0
+{- | Associate a redeemer to a UTXO.
+
+ @2.3.0
+-}
 withRedeemer ::
     forall (b :: Type) (p :: S -> Type).
     (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
@@ -406,9 +412,12 @@ mint val = pack $ mempty{bbMints = fromReverseList $ valueToMints val}
     valueToMints :: Value -> [Mint]
     valueToMints = fmap f . AssocMap.toList . getValue
       where
-        f (cs, ts) = Mint cs (AssocMap.toList ts) Nothing
+        f (cs, ts) = Mint cs (AssocMap.toList ts) $ datafy ()
 
--- | @since 2.3.0
+{- | Mint tokens with given redeemer.
+
+ @since 2.3.0
+-}
 mintWith ::
     forall (a :: Type) (r :: Type) (p :: S -> Type).
     (PUnsafeLiftDecl p, PLifted p ~ r, PIsData p, Builder a) =>
@@ -416,9 +425,12 @@ mintWith ::
     [(TokenName, Integer)] ->
     r ->
     a
-mintWith cs ts r = pack $ mempty{bbMints = pure $ Mint cs ts $ Just $ datafy r}
+mintWith cs ts r = pack $ mempty{bbMints = pure $ Mint cs ts $ datafy r}
 
--- | @since 2.3.0
+{- Mint singleton valuw with given redeemer.
+
+ @since 2.3.0
+-}
 mintSingletonWith ::
     forall (a :: Type) (r :: Type) (p :: S -> Type).
     (PUnsafeLiftDecl p, PLifted p ~ r, PIsData p, Builder a) =>
@@ -537,7 +549,10 @@ yieldMint ::
     Value
 yieldMint = foldMap mintToValue . toList
 
--- | @since 2.3.0
+{- | Convert a 'Mint' to a 'Value'.
+
+     @since 2.3.0
+-}
 mintToValue :: Mint -> Value
 mintToValue m =
     foldMap f $ mintTokens m
@@ -589,13 +604,17 @@ yieldOutDatums (toList -> outputs) =
     createDatumPairs :: [UTXO] -> [(DatumHash, Datum)]
     createDatumPairs = mapMaybe utxoDatumPair
 
--- | @since 2.3.0
-yieldScriptInputRedeemerMap ::
+{- | Provide script purepose - redeemer map for outputs to
+ Continutation Monad.
+
+     @since 2.3.0
+-}
+yieldRedeemerMap ::
     Acc UTXO ->
-    [(ScriptPurpose, Redeemer)]
-yieldScriptInputRedeemerMap = mapMaybe utxoToRedeemerPair . toList
+    Acc Mint ->
+    AssocMap.Map ScriptPurpose Redeemer
+yieldRedeemerMap au am = AssocMap.fromList $ scriptInputs <> mints
   where
-    utxoToRedeemerPair :: UTXO -> Maybe (ScriptPurpose, Redeemer)
     utxoToRedeemerPair u = do
         refId <- utxoTxId u
         refIdx <- utxoTxIdx u
@@ -603,16 +622,12 @@ yieldScriptInputRedeemerMap = mapMaybe utxoToRedeemerPair . toList
         r <- utxoRedeemer u
         pure (Spending txRef, Redeemer $ BuiltinData r)
 
--- | @since 2.3.0
-yieldMintRedeemerMap ::
-    Acc Mint ->
-    [(ScriptPurpose, Redeemer)]
-yieldMintRedeemerMap = mapMaybe mintToRedeemerPair . toList
-  where
-    mintToRedeemerPair :: Mint -> Maybe (ScriptPurpose, Redeemer)
-    mintToRedeemerPair m = do
-        r <- mintRedeemer m
-        pure (Minting $ mintSymbol m, Redeemer $ BuiltinData r)
+    scriptInputs = mapMaybe utxoToRedeemerPair $ toList au
+
+    mintToRedeemerPair m =
+        (Minting $ mintSymbol m, Redeemer $ BuiltinData $ mintRedeemer m)
+
+    mints = mintToRedeemerPair <$> toList am
 
 {- | Automatically generate `TxOutRef`s from given builder.
  It tries to reserve index if given one; otherwise, it grants
