@@ -18,9 +18,9 @@ otherwise.
   extra speed, and `PComparator`s.
 * `ptryMerge` and `ptryMergeBy` in `Plutarch.Extra.Ord`, for merging list-likes
   sorted by a given `PComparator`.
-* `pAllUnique` and `pAllUniqueBy` in `Plutarch.Extra.Ord`, for verifying the
+* `pallUnique` and `pallUniqueBy` in `Plutarch.Extra.Ord`, for verifying the
   uniqueness of the composition of a list-like.
-* `pnubSort` and `pNubSortBy`, for eliminating duplicates as well as sorting.
+* `pnubSort` and `pnubSortBy`, for eliminating duplicates as well as sorting.
 
 ### Removed
 

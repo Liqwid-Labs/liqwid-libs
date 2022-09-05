@@ -503,7 +503,13 @@ psortBy ::
     Term s (PComparator a :--> ell a :--> ell a)
 psortBy = phoistAcyclic $
     plam $ \cmp xs ->
-        pmergeAllUnsafe cmp pmergeUnsafe #$ pmergesort # cmp # xs
+        pmergeAllUnsafe
+            cmp
+            (const (pconvertLists #))
+            pmergeUnsafe
+            #$ pmergesort
+            # cmp
+            # xs
 
 {- | As 'psort', but also throws out all duplicates according to the 'PEq'
  instance of its argument's contents.
@@ -527,7 +533,13 @@ pnubSortBy ::
     Term s (PComparator a :--> ell a :--> ell a)
 pnubSortBy = phoistAcyclic $
     plam $ \cmp xs ->
-        pmergeAllUnsafe cmp pmergeUnsafeNoDupes #$ pmergesort # cmp # xs
+        pmergeAllUnsafe
+            cmp
+            (\cmp' xs' -> pconvertLists #$ pnubUnsafe # cmp' # xs')
+            pmergeUnsafeNoDupes
+            #$ pmergesort
+            # cmp
+            # xs
 
 -- Helpers
 
@@ -540,18 +552,19 @@ pmergeAllUnsafe ::
     forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
     (PElemConstraint ell a, PListLike ell) =>
     Term s (PComparator a) ->
+    (forall (s' :: S). Term s' (PComparator a) -> Term s' (PList a) -> Term s' (ell a)) ->
     (forall (s' :: S). Term s' (PComparator a) -> Term s' (PList a) -> Term s' (PList a) -> Term s' (PList a)) ->
     Term s (PList (PList a) :--> ell a)
-pmergeAllUnsafe cmp f = pfix #$ plam $ \self xs ->
+pmergeAllUnsafe cmp whenSingleton whenMerging = pfix #$ plam $ \self xs ->
     phandleList xs pnil $ \x' xs' ->
-        phandleList xs' (pconvertLists # x') $ \_ _ ->
+        phandleList xs' (whenSingleton cmp x') $ \_ _ ->
             self #$ go # xs
   where
     go :: Term s (PList (PList a) :--> PList (PList a))
     go = pfix #$ plam $ \self xs ->
         phandleList xs pnil $ \x' xs' ->
             phandleList xs' xs $ \x'' xs'' ->
-                pcons # f cmp x' x'' #$ self # xs''
+                pcons # whenMerging cmp x' x'' #$ self # xs''
 
 -- Merges two PLists, leaving duplicates in place.
 --

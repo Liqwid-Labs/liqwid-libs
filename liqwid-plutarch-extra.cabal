@@ -134,3 +134,19 @@ library
     , text
 
   hs-source-dirs:  src
+
+-- Test suite
+
+test-suite properties
+  import:         common-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  build-depends:
+    , liqwid-plutarch-extra
+    , plutarch-quickcheck
+    , QuickCheck
+    , tasty
+    , tasty-quickcheck
+
+  ghc-options:    -O2 -threaded -rtsopts -with-rtsopts=-N
+  hs-source-dirs: test/properties
