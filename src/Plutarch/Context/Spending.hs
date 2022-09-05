@@ -48,6 +48,7 @@ import Plutarch.Context.Base (
     yieldInInfoDatums,
     yieldMint,
     yieldOutDatums,
+    yieldRedeemerMap,
  )
 import Plutarch.Context.Check
 import PlutusLedgerApi.V2 (
@@ -60,6 +61,7 @@ import PlutusLedgerApi.V2 (
         txInfoInputs,
         txInfoMint,
         txInfoOutputs,
+        txInfoRedeemers,
         txInfoReferenceInputs,
         txInfoSignatories
     ),
@@ -188,6 +190,7 @@ buildSpending' builder@(unpack -> BB{..}) =
         mintedValue = yieldMint bbMints
         extraDat = yieldExtraDatums bbDatums
         base = yieldBaseTxInfo builder
+        redeemerMap = yieldRedeemerMap bbInputs bbMints
         txinfo =
             base
                 { txInfoInputs = ins
@@ -196,6 +199,7 @@ buildSpending' builder@(unpack -> BB{..}) =
                 , txInfoData = fromList $ inDat <> outDat <> extraDat
                 , txInfoMint = mintedValue
                 , txInfoSignatories = toList bbSignatures
+                , txInfoRedeemers = redeemerMap
                 }
         vInRef = case sbValidatorInput builder >>= yieldValidatorInput ins of
             Nothing -> TxOutRef "" 0
