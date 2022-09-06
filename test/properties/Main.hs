@@ -26,8 +26,10 @@ main = do
         [ testGroup
             "Plutarch.Extra.Ord"
             [ testProperty "sorted lists should prove sorted" propSortedList
+            , testProperty "singleton lists are always sorted" propSortedSingleton
             , testProperty "nubbed lists should prove ordered" propNubList
             , testProperty "nubbed lists should prove unique" propNubList'
+            , testProperty "singleton lists are always nubbed" propNubSingleton
             ]
         ]
   where
@@ -35,6 +37,12 @@ main = do
     go = max 1000
 
 -- Properties
+
+propSortedSingleton :: Property
+propSortedSingleton =
+    forAllShrinkShow arbitrary shrink show . fromPFun $
+        plam $ \x ->
+            pisSortedBy # cmp #$ psortBy @_ @PList # cmp #$ psingleton # x
 
 propSortedList :: Property
 propSortedList =
@@ -55,6 +63,14 @@ propNubList' =
             ptraceIfNothing
                 "unexpectedly out-of-order"
                 (pallUniqueBy # cmp #$ pnubSortBy @_ @PList # cmp # xs)
+
+propNubSingleton :: Property
+propNubSingleton =
+    forAllShrinkShow arbitrary shrink show . fromPFun $
+        plam $ \x ->
+            ptraceIfNothing
+                "unexpectedly out-of-order"
+                (pallUniqueBy # cmp #$ pnubSortBy @_ @PList # cmp #$ psingleton # x)
 
 -- Helpers
 

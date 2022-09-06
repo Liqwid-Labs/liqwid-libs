@@ -24,7 +24,7 @@ otherwise.
 
 ### Removed
 
-* `pmergeBy` and `pisSortedBy`, as they are fragile.
+* `pmergeBy` as it is fragile.
 * `pmsort` and `pmsortBy`, due to efficiency concerns.
 * `pnubSortBy`, `pnubSort`, `pisUniqBy`, `pisUniq`, `pisUniq'`, `pisUniqBy'` 
   due to removal of sorting functions or fragility.
@@ -43,6 +43,8 @@ otherwise.
 * `pfindJust` type arguments are now: 'target' element type, list-like 
   structure type, 'source' element type, `s` tag.
 * `preplicate` now specifies the order of its type arguments.
+* `pisSortedBy` now moved to `Plutarch.Extra.Ord` and uses the new `PComparator`
+  functionality.
 
 ## 3.5.0 -- 2022-08-30
 
