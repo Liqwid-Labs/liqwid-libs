@@ -92,7 +92,7 @@ newtype PFoo s
       ( Term s
           ( PDataRecord
               '[ "abc" ':= PInteger
-               , "def" ':= PBuiltinList PInteger
+               , "def" ':= PBuiltinList (PAsData PInteger)
                ]
           )
       )
@@ -121,6 +121,18 @@ type family GetRecordTypes (n :: [[Type]]) :: [S -> Type] where
     GetRecordTypes '[x ': xs] = PConstanted x ': GetRecordTypes '[xs]
     GetRecordTypes '[ '[]] = '[]
 
+type family UD' (p :: S -> Type) :: S -> Type where
+    UD' (p x1 x2 x3 x4 x5) = p (UD' x1) (UD' x2) (UD' x3) (UD' x4) (UD' x5)
+    UD' (p x1 x2 x3 x4) = p (UD' x1) (UD' x2) (UD' x3) (UD' x4)
+    UD' (p x1 x2 x3) = p (UD' x1) (UD' x2) (UD' x3)
+    UD' (p x1 x2) = p (UD' x1) (UD' x2)
+    UD' (p x1) = p (PAsData (UD' x1))
+    UD' p = p
+
+type family UD (p :: [S -> Type]) :: [S -> Type] where
+    UD (x ': xs) = UD' x ': UD xs
+    UD '[] = '[]
+
 type family PUnlabel (n :: [PLabeledType]) :: [S -> Type] where
     PUnlabel ((_ ':= p) ': xs) = p ': PUnlabel xs
     PUnlabel '[] = '[]
@@ -132,7 +144,7 @@ type family MatchTypes' (n :: [S -> Type]) (m :: [S -> Type]) :: Bool where
     MatchTypes' '[] ys = 'False
     MatchTypes' xs '[] = 'False
 
-type family MatchTypesError (n :: [[Type]]) (m :: [S -> Type]) (a :: Bool) :: Constraint where
+type family MatchTypesError (n :: [S -> Type]) (m :: [S -> Type]) (a :: Bool) :: Constraint where
     MatchTypesError _ _ 'True = ()
     MatchTypesError n m 'False =
         ( 'True ~ 'False
@@ -141,15 +153,15 @@ type family MatchTypesError (n :: [[Type]]) (m :: [S -> Type]) (a :: Bool) :: Co
                 ':$$: 'Text "\tMismatch between constituent Haskell and Plutarch types"
                 ':$$: 'Text "Constituent Haskell Types: "
                 ':$$: 'Text "\t"
-                ':<>: 'ShowType (GetRecordTypes n)
+                ':<>: 'ShowType n
                 ':$$: 'Text "Constituent Plutarch Types: "
                 ':$$: 'Text "\t"
                 ':<>: 'ShowType m
             )
         )
 
-type MatchTypes (n :: [[Type]]) (m :: [S -> Type]) =
-    (MatchTypesError n m (MatchTypes' (GetRecordTypes n) m))
+type MatchTypes (n :: [S -> Type]) (m :: [S -> Type]) =
+    (MatchTypesError n m (MatchTypes' n m))
 
 class
     ( PGeneric p
@@ -160,7 +172,7 @@ instance
     forall (p :: S -> Type).
     ( PGeneric p
     , PCode p ~ '[ '[GetPRecord p]]
-    , MatchTypes (SOP.Code (PLifted p)) (PUnlabel (GetPRecord' (PCode p)))
+    , MatchTypes (UD (GetRecordTypes (SOP.Code (PLifted p)))) (PUnlabel (GetPRecord' (PCode p)))
     ) =>
     IsPlutusTypeDataList p
 
