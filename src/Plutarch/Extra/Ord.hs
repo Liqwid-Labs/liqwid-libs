@@ -63,6 +63,7 @@ module Plutarch.Extra.Ord (
 ) where
 
 import Data.Semigroup (Semigroup (stimes), stimesIdempotentMonoid)
+import Plutarch.Extra.List (precListLookahead)
 import Plutarch.Extra.Maybe (ptraceIfNothing)
 import Plutarch.Extra.TermCont (pletC)
 import Plutarch.Internal.PlutusType (PlutusType (pcon', pmatch'))
@@ -748,6 +749,26 @@ psort4 cmp _0 _1 _2 _3 =
 
 -- Runs a 'sorting network layer' driven by a given PComparator. Written in CPS
 -- style for efficiency.
+--
+-- Note
+--
+-- Chaining this leads to duplication in each 'pif' branch, which can cause
+-- script sizes to blow up. Specifically, the total number of 'pifs' will be
+-- 2 ^ (n - 1), where n is the length of the 'swap chain'.
+--
+-- To reduce blowup, you want to 'cut' your swap chain into larger 'stages',
+-- separated by a lambda. You can see an example of how to do this in the psort4
+-- function in this module.
+--
+-- Three to four swaps per 'stage' is a good compromise. Using more lambdas
+-- increases execution costs, as each lambda needs to be hoisted, or you still
+-- end up with duplication costs. In order to hoist such a lambda, it needs to
+-- receive the entire list as an argument, as otherwise, it would need access to
+-- out-of-scope variables, which is prevented by the type system.
+--
+-- Using 'plet' instead of hoisting doesn't really help, unless the whole
+-- sorting network is only called once, since you pay almost the same cost for
+-- each execution as hoisting would require.
 pswap ::
     forall (a :: S -> Type) (r :: S -> Type) (s :: S).
     Term s (PComparator a) ->
@@ -756,26 +777,6 @@ pswap ::
     (Term s a -> Term s a -> Term s r) ->
     Term s r
 pswap cmp x y cont = pif (pleqBy # cmp # x # y) (cont x y) (cont y x)
-
--- precList with 'lookahead' capabilities
-precListLookahead ::
-    forall (a :: S -> Type) (r :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
-    (PElemConstraint ell a, PListLike ell) =>
-    (Term s (a :--> ell a :--> r) -> Term s a -> Term s a -> Term s (ell a) -> Term s r) ->
-    (Term s a -> Term s r) ->
-    Term s r ->
-    Term s (ell a :--> r)
-precListLookahead whenContinuing whenOne whenDone = plam $ \xs ->
-    phandleList xs whenDone $ \x' xs' ->
-        (pfix #$ plam $ go) # x' # xs'
-  where
-    go ::
-        Term s (a :--> ell a :--> r) ->
-        Term s a ->
-        Term s (ell a) ->
-        Term s r
-    go self h t = phandleList t (whenOne h) $ \peek rest ->
-        whenContinuing self h peek rest
 
 -- pelimList with the list-like first, and handles the 'nil case' before the
 -- 'cons' case

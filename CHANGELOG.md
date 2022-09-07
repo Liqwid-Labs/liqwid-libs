@@ -21,6 +21,8 @@ otherwise.
 * `pallUnique` and `pallUniqueBy` in `Plutarch.Extra.Ord`, for verifying the
   uniqueness of the composition of a list-like.
 * `pnubSort` and `pnubSortBy`, for eliminating duplicates as well as sorting.
+* `precListLookahead` to `Plutarch.Extra.List`, for recursive list elimination
+  with a 'look-ahead'.
 
 ### Removed
 

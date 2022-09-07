@@ -19,6 +19,9 @@ module Plutarch.Extra.List (
     -- * Search
     pfindJust,
     plookupAssoc,
+
+    -- * Elimination
+    precListLookahead,
 ) where
 
 {- | Similar to 'pmap', but allows elements to be thrown out. More precisely,
@@ -123,3 +126,36 @@ preplicate = phoistAcyclic $
             (count #<= 0)
             pnil
             (pcons # x # (self # (count - 1) # x))
+
+-- Similar to 'precList', but with a \'look-ahead\' in the list-like structure
+-- being eliminated. This is more efficient than repeated use of 'pelimList' (or
+-- worse, 'puncons'). Furthermore, the \'self argument\' is not passed to the
+-- \'nil\' and \'singleton\' cases, as it's pointless there.
+--
+-- @ since 3.6.0
+precListLookahead ::
+    forall (a :: S -> Type) (r :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+    (PElemConstraint ell a, PListLike ell) =>
+    -- | The \'two or more\' case. First @'Term' s a@ is the \'head\', second is
+    -- a \'peek-ahead\', while the @'Term' s (ell a)@ is what remains /after/
+    -- the \'peek-ahead\'.
+    (Term s (a :--> ell a :--> r) -> Term s a -> Term s a -> Term s (ell a) -> Term s r) ->
+    -- | The \'singleton\' case, used both for true singletons and also for the
+    -- end of a non-empty list-like.
+    (Term s a -> Term s r) ->
+    -- | The \'nil\' case.
+    Term s r ->
+    Term s (ell a :--> r)
+precListLookahead whenContinuing whenOne whenDone =
+    plam $
+        pelimList (\x xs -> (pfix #$ plam $ go) # x # xs) whenDone
+  where
+    go ::
+        Term s (a :--> ell a :--> r) ->
+        Term s a ->
+        Term s (ell a) ->
+        Term s r
+    go self h =
+        pelimList
+            (whenContinuing self h)
+            (whenOne h)
