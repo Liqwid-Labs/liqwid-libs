@@ -150,3 +150,20 @@ test-suite properties
 
   ghc-options:    -O2 -threaded -rtsopts -with-rtsopts=-N
   hs-source-dirs: test/properties
+
+-- Benchmarks
+
+benchmark sorting
+  import:         common-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  build-depends:
+    , data-default
+    , liqwid-plutarch-extra
+    , plutus-core
+    , tagged
+    , tasty
+    , text
+
+  ghc-options:    -O2 -threaded -rtsopts -with-rtsopts=-N
+  hs-source-dirs: bench/sorting
