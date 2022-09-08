@@ -77,6 +77,7 @@ import Plutarch.Lift (
     PUnsafeLiftDecl (PLifted),
  )
 import Plutarch.List (pconvertLists)
+import Plutarch.Unsafe (punsafeCoerce)
 
 {- | A representation of a comparison at the Plutarch level. Equivalent to
  'Ordering' in Haskell.
@@ -148,23 +149,11 @@ instance PlutusType POrdering where
 
 -- | @since 3.6.0
 instance PEq POrdering where
-    x #== y = pmatch x $ \case
-        PLT -> pmatch y $ \case
-            PLT -> pcon PTrue
-            _ -> pcon PFalse
-        PEQ -> pmatch y $ \case
-            PEQ -> pcon PTrue
-            _ -> pcon PFalse
-        PGT -> pmatch y $ \case
-            PGT -> pcon PTrue
-            _ -> pcon PFalse
+    x #== y = pto x #== pto y
 
 -- | @since 3.6.0
 instance Semigroup (Term s POrdering) where
-    x <> y = pmatch x $ \case
-        PLT -> pcon PLT
-        PEQ -> y
-        PGT -> pcon PGT
+    x <> y = pif (pto x #< 2) (punsafeCoerce $ pto x * pto y) x
     stimes = stimesIdempotentMonoid
 
 -- | @since 3.6.0
