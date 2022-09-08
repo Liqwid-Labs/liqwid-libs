@@ -157,6 +157,10 @@ benchmark sorting
   import:         common-lang
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
+  other-modules:
+    PComparator
+    POrdering
+
   build-depends:
     , data-default
     , liqwid-plutarch-extra
