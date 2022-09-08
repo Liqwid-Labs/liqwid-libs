@@ -24,10 +24,6 @@ module Plutarch.Extra.Ord (
     pfromOrd,
     pfromOrdBy,
 
-    -- ** Combining comparators
-    pproductComparator,
-    psumComparator,
-
     -- ** Transforming comparators
     pmapComparator,
     preverseComparator,
@@ -65,7 +61,6 @@ module Plutarch.Extra.Ord (
 import Data.Semigroup (Semigroup (stimes), stimesIdempotentMonoid)
 import Plutarch.Extra.List (precListLookahead)
 import Plutarch.Extra.Maybe (ptraceIfNothing)
-import Plutarch.Extra.TermCont (pletC)
 import Plutarch.Internal.PlutusType (PlutusType (pcon', pmatch'))
 import Plutarch.Lift (
     PConstantDecl (
@@ -161,8 +156,10 @@ instance Monoid (Term s POrdering) where
     mempty = pcon PEQ
 
 -- | @since 3.6.0
-newtype PComparator (a :: S -> Type) (s :: S)
-    = PComparator (Term s (a :--> a :--> POrdering))
+data PComparator (a :: S -> Type) (s :: S) = PComparator
+    { pcomparatorEq :: Term s (a :--> a :--> PBool)
+    , pcomparatorLe :: Term s (a :--> a :--> PBool)
+    }
     deriving stock
         ( -- | @since 3.6.0
           Generic
@@ -174,7 +171,9 @@ newtype PComparator (a :: S -> Type) (s :: S)
 
 -- | @since 3.6.0
 instance DerivePlutusType (PComparator a) where
-    type DPTStrat _ = PlutusTypeNewtype
+    type DPTStrat _ = PlutusTypeScott
+
+-- TODO: Semigroup, Monoid
 
 {- | Given a type with a 'POrd' instance, construct a 'PComparator' from that
  instance.
@@ -185,10 +184,9 @@ pfromOrd ::
     forall (a :: S -> Type) (s :: S).
     (POrd a) =>
     Term s (PComparator a)
-pfromOrd = pcon . PComparator $
-    phoistAcyclic $
-        plam $ \x y ->
-            pif (x #== y) (pcon PEQ) (pif (x #< y) (pcon PLT) (pcon PGT))
+pfromOrd =
+    pcon . PComparator (phoistAcyclic $ plam (#==)) $
+        phoistAcyclic (plam (#<=))
 
 {- | As 'pfromOrd', but instead uses a projection function into the 'POrd'
  instance to construct the 'PComparator'. Allows other \'-by\' behaviours.
@@ -200,62 +198,8 @@ pfromOrdBy ::
     (POrd a) =>
     Term s ((b :--> a) :--> PComparator b)
 pfromOrdBy = phoistAcyclic $
-    plam $ \f -> pcon . PComparator . plam $ \x y ->
-        unTermCont $ do
-            fx <- pletC (f # x)
-            fy <- pletC (f # y)
-            pure $
-                pif
-                    (fx #== fy)
-                    (pcon PEQ)
-                    ( pif
-                        (fx #< fy)
-                        (pcon PLT)
-                        (pcon PGT)
-                    )
-
-{- | Given a way of \'separating\' a @c@ into an @a@ and a @b@, as well as
- 'PComparator's for @a@ and @b@, make a 'PComparator' for @c@.
-
- = Note
-
- This uses the fact that 'POrdering' is a 'Semigroup', and assumes that @c@ is
- a tuple of @a@ and @b@ in some sense, and that it should be ordered
- lexicographically on that basis.
-
- @since 3.6.0
--}
-pproductComparator ::
-    forall (a :: S -> Type) (b :: S -> Type) (c :: S -> Type) (s :: S).
-    Term s ((c :--> PPair a b) :--> PComparator a :--> PComparator b :--> PComparator c)
-pproductComparator = phoistAcyclic $
-    plam $ \split cmpA cmpB -> pcon . PComparator . plam $ \x y ->
-        pmatch (split # x) $ \(PPair xA xB) ->
-            pmatch (split # y) $ \(PPair yA yB) ->
-                (pcompareBy # cmpA # xA # yA) <> (pcompareBy # cmpB # xB # yB)
-
-{- | Given a way of \'discriminating\' a @c@ into either an @a@ or a @b@, as
- well as 'PComparator's for @a@ and @b@, make a 'PComparator' for @c@.
-
- = Note
-
- This assumes that \'@c@s that are @a@s\' should be ordered before \'@c@s that
- are @b@s\'.
-
- @since 3.6.0
--}
-psumComparator ::
-    forall (a :: S -> Type) (b :: S -> Type) (c :: S -> Type) (s :: S).
-    Term s ((c :--> PEither a b) :--> PComparator a :--> PComparator b :--> PComparator c)
-psumComparator = phoistAcyclic $
-    plam $ \discriminate cmpA cmpB -> pcon . PComparator . plam $ \x y ->
-        pmatch (discriminate # x) $ \case
-            PLeft xA -> pmatch (discriminate # y) $ \case
-                PLeft yA -> pcompareBy # cmpA # xA # yA
-                PRight _ -> pcon PLT
-            PRight xB -> pmatch (discriminate # y) $ \case
-                PRight yB -> pcompareBy # cmpB # xB # yB
-                PLeft _ -> pcon PGT
+    plam $ \f ->
+        pmapComparator # f # pfromOrd @a
 
 {- | Given a projection from a type to another type which we have a
  'PComparator' for, construct a new 'PComparator'.
@@ -266,8 +210,10 @@ pmapComparator ::
     forall (a :: S -> Type) (b :: S -> Type) (s :: S).
     Term s ((b :--> a) :--> PComparator a :--> PComparator b)
 pmapComparator = phoistAcyclic $
-    plam $ \f cmp -> pcon . PComparator . plam $ \x y ->
-        pcompareBy # cmp # (f # x) # (f # y)
+    plam $ \f cmp ->
+        pmatch cmp $ \(PComparator peq ple) ->
+            pcon . PComparator (plam $ \x y -> peq # (f # x) # (f # y)) $
+                plam $ \x y -> ple # (f # x) # (f # y)
 
 {- | Reverses the ordering described by a 'PComparator'.
 
@@ -277,11 +223,9 @@ preverseComparator ::
     forall (a :: S -> Type) (s :: S).
     Term s (PComparator a :--> PComparator a)
 preverseComparator = phoistAcyclic $
-    plam $ \cmp -> pcon . PComparator . plam $ \x y ->
-        pmatch (pcompareBy # cmp # x # y) $ \case
-            PEQ -> pcon PEQ
-            PLT -> pcon PGT
-            PGT -> pcon PLT
+    plam $ \cmp ->
+        pmatch cmp $ \(PComparator peq ple) ->
+            pcon . PComparator peq $ plam $ \x y -> ple # y # x
 
 {- | \'Runs\' a 'PComparator'.
 
@@ -291,7 +235,16 @@ pcompareBy ::
     forall (a :: S -> Type) (s :: S).
     Term s (PComparator a :--> a :--> a :--> POrdering)
 pcompareBy = phoistAcyclic $
-    plam $ \cmp x y -> pto cmp # x # y
+    plam $ \cmp x y ->
+        pmatch cmp $ \(PComparator peq ple) ->
+            pif
+                (peq # x # y)
+                (pcon PEQ)
+                ( pif
+                    (ple # x # y)
+                    (pcon PLT)
+                    (pcon PGT)
+                )
 
 {- | Uses a 'PComparator' for an equality check.
 
@@ -300,7 +253,9 @@ pcompareBy = phoistAcyclic $
 pequateBy ::
     forall (a :: S -> Type) (s :: S).
     Term s (PComparator a :--> a :--> a :--> PBool)
-pequateBy = phoistAcyclic $ plam $ \cmp x y -> pcon PEQ #== (pto cmp # x # y)
+pequateBy = phoistAcyclic $
+    plam $ \cmp x y ->
+        pmatch cmp $ \(PComparator peq _) -> peq # x # y
 
 {- | Uses a 'PComparator' for a less-than-or-equals check.
 
@@ -311,7 +266,7 @@ pleqBy ::
     Term s (PComparator a :--> a :--> a :--> PBool)
 pleqBy = phoistAcyclic $
     plam $ \cmp x y ->
-        pto (pto cmp # x # y) #<= 1
+        pmatch cmp $ \(PComparator _ ple) -> ple # x # y
 
 {- | Uses a 'PComparator' for a greater-than-or-equals check.
 
@@ -322,7 +277,11 @@ pgeqBy ::
     Term s (PComparator a :--> a :--> a :--> PBool)
 pgeqBy = phoistAcyclic $
     plam $ \cmp x y ->
-        1 #<= pto (pto cmp # x # y)
+        pmatch cmp $ \(PComparator peq ple) ->
+            pif
+                (peq # x # y)
+                (pcon PTrue)
+                (pnot #$ ple # x # y)
 
 {- | Verifies that a list-like structure is ordered according to the
  'PComparator' argument.
@@ -457,15 +416,21 @@ ptryMergeBy = phoistAcyclic $
         Term s' a ->
         Term s' (ell a) ->
         Term s' (ell a)
-    go cmp self x xs y ys = pmatch (pcompareBy # cmp # x # y) $ \case
-        PGT -> pcons # y #$ phandleList ys (passertSortedLookahead # cmp # x # xs) $ \y' ys' ->
-            pmatch (pcompareBy # cmp # y # y') $ \case
-                PGT -> unorderedError
-                _ -> self # x # xs # y' # ys'
-        _ -> pcons # x #$ phandleList xs (passertSortedLookahead # cmp # y # ys) $ \x' xs' ->
-            pmatch (pcompareBy # cmp # x # x') $ \case
-                PGT -> unorderedError
-                _ -> self # x' # xs' # y # ys
+    go cmp self x xs y ys =
+        pif
+            (pleqBy # cmp # x # y)
+            ( pcons # x #$ phandleList xs (passertSortedLookahead # cmp # y # ys) $ \x' xs' ->
+                pif
+                    (pleqBy # cmp # x # x')
+                    (self # x' # xs' # y # ys)
+                    unorderedError
+            )
+            ( pcons # y #$ phandleList ys (passertSortedLookahead # cmp # x # xs) $ \y' ys' ->
+                pif
+                    (pleqBy # cmp # y # y')
+                    (self # x # xs # y' # ys')
+                    unorderedError
+            )
 
 {- | Sort a list-like by the 'POrd' instance of its contents.
 
@@ -578,9 +543,10 @@ pmergeUnsafe cmp xs ys =
         Term s (PList a)
     go self x' xs' ys' =
         phandleList ys' (pcons # x' # xs') $ \y'' ys'' ->
-            pmatch (pcompareBy # cmp # x' # y'') $ \case
-                PGT -> pcons # y'' #$ self # x' # xs' # ys''
-                _ -> pcons # x' #$ self # y'' # ys'' # xs'
+            pif
+                (pleqBy # cmp # x' # y'')
+                (pcons # x' #$ self # y'' # ys'' # xs')
+                (pcons # y'' #$ self # x' # xs' # ys'')
 
 -- Merges two PLists, throwing out duplicates.
 --

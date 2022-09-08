@@ -33,8 +33,14 @@ import PComparator (
 import POrdering (POrdering' (PEQ', PGT'), pdot)
 import Plutarch (compile)
 import Plutarch.Evaluate (evalScriptHuge, evalTerm)
-import Plutarch.Extra.List (preplicate)
-import Plutarch.Extra.Ord (pfromOrd, pnubSort, pnubSortBy, preverseComparator)
+import Plutarch.Extra.Ord (
+    pfromOrd,
+    pnubSort,
+    pnubSortBy,
+    preverseComparator,
+    psort,
+    psortBy,
+ )
 import PlutusCore.Evaluation.Machine.ExBudget (ExBudget (ExBudget))
 import PlutusCore.Evaluation.Machine.ExMemory (
     CostingInteger,
@@ -56,9 +62,15 @@ main = do
     defaultMain . testGroup "Sorting-related benchmarks" $
         [ testGroup
             "nub"
-            [ testGroup "PList PInteger" $ uncurry benchNub <$> lengths
-            , testGroup "PList PInteger, custom comparator" $ uncurry benchNubCustom <$> lengths
-            , testGroup "PBuiltinList PInteger" $ uncurry benchNub' <$> lengths
+            [ testGroup "PList PInteger" $ uncurry benchNub <$> lengthArgs
+            , testGroup "PList PInteger, custom comparator" $ uncurry benchNubCustom <$> lengthArgs
+            , testGroup "PBuiltinList PInteger" $ uncurry benchNub' <$> lengthArgs
+            ]
+        , testGroup
+            "sort"
+            [ testGroup "PList PInteger" $ uncurry benchSort <$> lengthArgs
+            , testGroup "PList PInteger, custom comparator" $ uncurry benchSortCustom <$> lengthArgs
+            , testGroup "PBuiltinList PInteger" $ uncurry benchSort' <$> lengthArgs
             ]
         , testGroup
             "POrdering"
@@ -127,33 +139,57 @@ main = do
             ]
         ]
   where
-    -- Need to do it this way because there's no Enum instance for Term s
-    -- PInteger
-    lengths :: [(forall (s :: S). Term s PInteger, Int)]
-    lengths = [(pconstant i, fromIntegral i) | i <- [1 .. 40]]
+    lengthArgs ::
+        forall (ell :: (S -> Type) -> S -> Type).
+        (PElemConstraint ell PInteger, PListLike ell) =>
+        [(forall (s :: S). Term s (ell PInteger), Int)]
+    lengthArgs = [(piota # pconstant i, fromIntegral i) | i <- [5, 10 .. 40]]
 
 -- Benchmarks
 
-benchNub :: (forall (s :: S). Term s PInteger) -> Int -> TestTree
-benchNub plen len =
+benchNub :: (forall (s :: S). Term s (PList PInteger)) -> Int -> TestTree
+benchNub dat len =
     singleTest
         ("pnubSort, length " <> show len)
-        (ScriptBench2 (pnubSort @PInteger @PList, preplicate # plen # 1))
+        (ScriptBench2 (pnubSort, dat))
 
-benchNub' :: (forall (s :: S). Term s PInteger) -> Int -> TestTree
-benchNub' plen len =
+benchSort :: (forall (s :: S). Term s (PList PInteger)) -> Int -> TestTree
+benchSort dat len =
+    singleTest
+        ("psort, length " <> show len)
+        (ScriptBench2 (psort, dat))
+
+benchNub' :: (forall (s :: S). Term s (PBuiltinList PInteger)) -> Int -> TestTree
+benchNub' dat len =
     singleTest
         ("pnubSort, length " <> show len)
-        (ScriptBench2 (pnubSort @PInteger @PBuiltinList, preplicate # plen # 1))
+        (ScriptBench2 (pnubSort, dat))
 
-benchNubCustom :: (forall (s :: S). Term s PInteger) -> Int -> TestTree
-benchNubCustom plen len =
+benchSort' :: (forall (s :: S). Term s (PBuiltinList PInteger)) -> Int -> TestTree
+benchSort' dat len =
     singleTest
-        ("pnubSort, custom comparator, length " <> show len)
+        ("psort, length " <> show len)
+        (ScriptBench2 (psort, dat))
+
+benchNubCustom :: (forall (s :: S). Term s (PList PInteger)) -> Int -> TestTree
+benchNubCustom dat len =
+    singleTest
+        ("pnubSortBy, custom comparator, length " <> show len)
         ( ScriptBench3
-            ( pnubSortBy @PInteger @PList
+            ( pnubSortBy
             , preverseComparator # pfromOrd
-            , preplicate # plen # 1
+            , dat
+            )
+        )
+
+benchSortCustom :: (forall (s :: S). Term s (PList PInteger)) -> Int -> TestTree
+benchSortCustom dat len =
+    singleTest
+        ("psortBy, custom comparator, length " <> show len)
+        ( ScriptBench3
+            ( psortBy
+            , preverseComparator # pfromOrd
+            , dat
             )
         )
 
@@ -251,3 +287,11 @@ ensureThreeDigits i
     | i < 10 = "00" <> show i
     | i < 100 = "0" <> show i
     | otherwise = show i
+
+piota ::
+    forall (ell :: (S -> Type) -> S -> Type) (s :: S).
+    (PElemConstraint ell PInteger, PListLike ell) =>
+    Term s (PInteger :--> ell PInteger)
+piota = phoistAcyclic $
+    pfix #$ plam $ \self i ->
+        pif (i #<= 0) pnil (pcons # i #$ self # (i - 1))
