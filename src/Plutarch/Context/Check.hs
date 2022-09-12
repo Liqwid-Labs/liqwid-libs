@@ -1,7 +1,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# OPTIONS_GHC -Wno-all #-}
 
 module Plutarch.Context.Check (
     Checker (..),
@@ -19,7 +18,6 @@ module Plutarch.Context.Check (
     checkFail,
     checkBool,
     checkWith,
-    checkIfWith,
     checkByteString,
     checkPositiveValue,
     checkTxId,
@@ -32,15 +30,15 @@ module Plutarch.Context.Check (
     checkOutputs,
     checkDatumPairs,
     checkPhase1,
+    checkValidatorRedeemer,
 ) where
 
 import Acc (Acc)
 import Control.Arrow ((&&&))
 import Data.Foldable (toList)
-import Data.Functor ((<$))
 import Data.Functor.Contravariant (Contravariant (contramap))
 import Data.Functor.Contravariant.Divisible (Decidable (choose, lose), Divisible (conquer, divide))
-import Data.Maybe (catMaybes, fromMaybe)
+import Data.Maybe (fromMaybe)
 import Data.Void (absurd)
 import Plutarch.Context.Base (
     BaseBuilder (..),
@@ -53,12 +51,9 @@ import PlutusLedgerApi.V2 (
     BuiltinByteString,
     Credential (PubKeyCredential, ScriptCredential),
     CurrencySymbol,
-    Data,
     LedgerBytes (LedgerBytes),
     PubKeyHash (PubKeyHash),
-    Redeemer,
     TokenName,
-    TxOutRef,
     ValidatorHash (ValidatorHash),
     Value (Value, getValue),
     adaSymbol,
@@ -124,6 +119,8 @@ instance P.Pretty e => P.Pretty (CheckerErrorType e) where
             <> "Diff:" P.<+> P.pretty val
     pretty (MissingRedeemer hash) =
         "Missing script redeemer while spending UTxO owned by:" P.<+> P.pretty hash
+    pretty SpecifyRedeemerForNonValidatorInput =
+        "Set redeemer for a input that is not owned by a validator"
     pretty (OtherError e) = P.pretty e
 
 -- | @since 2.1.0
@@ -209,7 +206,7 @@ checkFail = Checker . const . basicError
 checkAt :: CheckerPos -> Checker e a -> Checker e a
 checkAt at c = Checker (fmap (updatePos at) . runChecker c)
   where
-    updatePos at (CheckerError (x, _)) = CheckerError (x, at)
+    updatePos at' (CheckerError (x, _)) = CheckerError (x, at')
 
 {- | Apply checker type @a@ to foldable @t a@. It will check all
  elements of the foldable structure.
@@ -363,7 +360,7 @@ checkInputs =
                     (checkFoldable checkByteString)
                 , contramap
                     (getDups . toList . fmap (fromMaybe 0 . utxoTxIdx) . bbInputs . unpack)
-                    (checkWith $ \x -> checkIfWith null DuplicateTxOutRefIndex)
+                    (checkWith $ const $ checkIfWith null DuplicateTxOutRefIndex)
                 ]
         ]
   where

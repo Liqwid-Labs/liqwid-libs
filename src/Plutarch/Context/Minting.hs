@@ -34,7 +34,7 @@ import Data.Functor.Contravariant (contramap)
 import Data.Functor.Contravariant.Divisible (choose)
 import Optics (lens)
 import Plutarch.Context.Base (
-    BaseBuilder (BB, bbDatums, bbInputs, bbMints, bbOutputs, bbReferenceInputs, bbSignatures),
+    BaseBuilder (BB, bbDatums, bbInputs, bbMints, bbOutputs, bbRedeemers, bbReferenceInputs, bbSignatures),
     Builder (pack, _bb),
     mintToValue,
     unpack,
@@ -133,7 +133,7 @@ buildMinting' builder@(unpack -> BB{..}) =
                 , txInfoOutputs = outs
                 , txInfoData = fromList $ inDat <> outDat <> extraDat
                 , txInfoMint = mintedValue
-                , txInfoRedeemers = redeemerMap
+                , txInfoRedeemers = fromList $ toList bbRedeemers <> redeemerMap
                 , txInfoSignatories = toList bbSignatures
                 }
 

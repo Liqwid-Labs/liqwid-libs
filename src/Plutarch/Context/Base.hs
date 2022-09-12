@@ -45,6 +45,7 @@ module Plutarch.Context.Base (
     mintWith,
     mintSingletonWith,
     extraData,
+    extraRedeemer,
     txId,
     fee,
     timeRange,
@@ -162,7 +163,15 @@ data UTXO = UTXO
 -- | @since 2.0.0
 instance Semigroup UTXO where
     (UTXO c stc v d rs t tidx r) <> (UTXO c' stc' v' d' rs' t' tidx' r') =
-        UTXO (choose c c') (choose stc stc') (v <> v') (choose d d') (choose rs rs') (choose t t') (choose tidx tidx') (choose r r')
+        UTXO
+            (choose c c')
+            (choose stc stc')
+            (v <> v')
+            (choose d d')
+            (choose rs rs')
+            (choose t t')
+            (choose tidx tidx')
+            (choose r r')
       where
         choose _ (Just b) = Just b
         choose a Nothing = a
@@ -238,6 +247,9 @@ withReferenceScript :: ScriptHash -> UTXO
 withReferenceScript sh = mempty{utxoReferenceScript = Just sh}
 
 {- | Associate a redeemer to a UTXO.
+
+ Note that the redeemer is added to the final redeemer map only when it's in
+  inputs and have both 'TxId' and 'TxIdx' explicitly provided by the user.
 
  @2.3.0
 -}
@@ -350,30 +362,33 @@ data BaseBuilder = BB
     , bbFee :: Value
     , bbTimeRange :: Interval POSIXTime
     , bbTxId :: TxId
+    , bbRedeemers :: Acc (ScriptPurpose, Redeemer)
     }
     deriving stock (Show)
 
 -- | @since 1.1.0
 instance Semigroup BaseBuilder where
-    BB ins refIns outs sigs dats ms fval range tid <> BB ins' refIns' outs' sigs' dats' ms' fval' range' tid' =
-        BB
-            (ins <> ins')
-            (refIns <> refIns')
-            (outs <> outs')
-            (sigs <> sigs')
-            (dats <> dats')
-            (ms <> ms')
-            (fval <> fval')
-            (choose bbTimeRange range range')
-            (choose bbTxId tid tid')
-      where
-        choose f a b
-            | f mempty == b = a
-            | otherwise = b
+    BB ins refIns outs sigs dats ms fval range tid rs
+        <> BB ins' refIns' outs' sigs' dats' ms' fval' range' tid' rs' =
+            BB
+                (ins <> ins')
+                (refIns <> refIns')
+                (outs <> outs')
+                (sigs <> sigs')
+                (dats <> dats')
+                (ms <> ms')
+                (fval <> fval')
+                (choose bbTimeRange range range')
+                (choose bbTxId tid tid')
+                (rs <> rs')
+          where
+            choose f a b
+                | f mempty == b = a
+                | otherwise = b
 
 -- | @since 1.1.0
 instance Monoid BaseBuilder where
-    mempty = BB mempty mempty mempty mempty mempty mempty mempty always (TxId "")
+    mempty = BB mempty mempty mempty mempty mempty mempty mempty always (TxId "") mempty
 
 -- | @since 2.1.0
 instance Builder BaseBuilder where
@@ -398,6 +413,17 @@ signedWith ::
     a
 signedWith pkh = pack $ mempty{bbSignatures = pure pkh}
 
+-- | @since 2.3.0
+valueToMints ::
+    forall r (p :: S -> Type).
+    (PUnsafeLiftDecl p, PLifted p ~ r, PIsData p) =>
+    r ->
+    Value ->
+    [Mint]
+valueToMints r = fmap f . AssocMap.toList . getValue
+  where
+    f (cs, ts) = Mint cs (AssocMap.toList ts) $ datafy r
+
 {- | Mint given value.
 
  @since 2.0.0
@@ -407,12 +433,7 @@ mint ::
     (Builder a) =>
     Value ->
     a
-mint val = pack $ mempty{bbMints = fromReverseList $ valueToMints val}
-  where
-    valueToMints :: Value -> [Mint]
-    valueToMints = fmap f . AssocMap.toList . getValue
-      where
-        f (cs, ts) = Mint cs (AssocMap.toList ts) $ datafy ()
+mint val = pack $ mempty{bbMints = fromReverseList $ valueToMints () val}
 
 {- | Mint tokens with given redeemer.
 
@@ -421,11 +442,10 @@ mint val = pack $ mempty{bbMints = fromReverseList $ valueToMints val}
 mintWith ::
     forall (a :: Type) (r :: Type) (p :: S -> Type).
     (PUnsafeLiftDecl p, PLifted p ~ r, PIsData p, Builder a) =>
-    CurrencySymbol ->
-    [(TokenName, Integer)] ->
     r ->
+    Value ->
     a
-mintWith cs ts r = pack $ mempty{bbMints = pure $ Mint cs ts $ datafy r}
+mintWith r val = pack $ mempty{bbMints = fromReverseList $ valueToMints r val}
 
 {- Mint singleton valuw with given redeemer.
 
@@ -434,12 +454,12 @@ mintWith cs ts r = pack $ mempty{bbMints = pure $ Mint cs ts $ datafy r}
 mintSingletonWith ::
     forall (a :: Type) (r :: Type) (p :: S -> Type).
     (PUnsafeLiftDecl p, PLifted p ~ r, PIsData p, Builder a) =>
+    r ->
     CurrencySymbol ->
     TokenName ->
     Integer ->
-    r ->
     a
-mintSingletonWith cs tn q = mintWith cs [(tn, q)]
+mintSingletonWith r cs tn q = mintWith r $ Value.singleton cs tn q
 
 {- | Append extra datum to @ScriptContex@.
 
@@ -451,6 +471,14 @@ extraData ::
     d ->
     a
 extraData x = pack $ mempty{bbDatums = pure . datafy $ x}
+
+extraRedeemer ::
+    forall (a :: Type) (r :: Type) (p :: S -> Type).
+    (Builder a, PUnsafeLiftDecl p, PLifted p ~ r, PIsData p) =>
+    ScriptPurpose ->
+    r ->
+    a
+extraRedeemer p r = pack $ mempty{bbRedeemers = pure (p, Redeemer $ BuiltinData $ datafy r)}
 
 {- | Specify `TxId` of a script context.
 
@@ -604,7 +632,7 @@ yieldOutDatums (toList -> outputs) =
     createDatumPairs :: [UTXO] -> [(DatumHash, Datum)]
     createDatumPairs = mapMaybe utxoDatumPair
 
-{- | Provide script purepose - redeemer map for outputs to
+{- | Provide script purpose - redeemer map for outputs to
  Continutation Monad.
 
      @since 2.3.0
@@ -612,9 +640,10 @@ yieldOutDatums (toList -> outputs) =
 yieldRedeemerMap ::
     Acc UTXO ->
     Acc Mint ->
-    AssocMap.Map ScriptPurpose Redeemer
-yieldRedeemerMap au am = AssocMap.fromList $ scriptInputs <> mints
+    [(ScriptPurpose, Redeemer)]
+yieldRedeemerMap au am = scriptInputs <> mints
   where
+    utxoToRedeemerPair :: UTXO -> Maybe (ScriptPurpose, Redeemer)
     utxoToRedeemerPair u = do
         refId <- utxoTxId u
         refIdx <- utxoTxIdx u
@@ -622,11 +651,14 @@ yieldRedeemerMap au am = AssocMap.fromList $ scriptInputs <> mints
         r <- utxoRedeemer u
         pure (Spending txRef, Redeemer $ BuiltinData r)
 
+    scriptInputs :: [(ScriptPurpose, Redeemer)]
     scriptInputs = mapMaybe utxoToRedeemerPair $ toList au
 
+    mintToRedeemerPair :: Mint -> (ScriptPurpose, Redeemer)
     mintToRedeemerPair m =
         (Minting $ mintSymbol m, Redeemer $ BuiltinData $ mintRedeemer m)
 
+    mints :: [(ScriptPurpose, Redeemer)]
     mints = mintToRedeemerPair <$> toList am
 
 {- | Automatically generate `TxOutRef`s from given builder.

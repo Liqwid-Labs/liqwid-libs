@@ -38,7 +38,7 @@ import Data.Functor.Contravariant.Divisible (choose)
 import Data.Maybe (isJust)
 import Optics (lens)
 import Plutarch.Context.Base (
-    BaseBuilder (BB, bbDatums, bbInputs, bbMints, bbOutputs, bbReferenceInputs, bbSignatures),
+    BaseBuilder (BB, bbDatums, bbInputs, bbMints, bbOutputs, bbRedeemers, bbReferenceInputs, bbSignatures),
     Builder (pack, _bb),
     UTXO,
     unpack,
@@ -191,6 +191,7 @@ buildSpending' builder@(unpack -> BB{..}) =
         extraDat = yieldExtraDatums bbDatums
         base = yieldBaseTxInfo builder
         redeemerMap = yieldRedeemerMap bbInputs bbMints
+
         txinfo =
             base
                 { txInfoInputs = ins
@@ -199,7 +200,7 @@ buildSpending' builder@(unpack -> BB{..}) =
                 , txInfoData = fromList $ inDat <> outDat <> extraDat
                 , txInfoMint = mintedValue
                 , txInfoSignatories = toList bbSignatures
-                , txInfoRedeemers = redeemerMap
+                , txInfoRedeemers = fromList $ toList bbRedeemers <> redeemerMap
                 }
         vInRef = case sbValidatorInput builder >>= yieldValidatorInput ins of
             Nothing -> TxOutRef "" 0

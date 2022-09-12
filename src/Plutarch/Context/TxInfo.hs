@@ -26,6 +26,7 @@ import Plutarch.Context.Base (
         bbInputs,
         bbMints,
         bbOutputs,
+        bbRedeemers,
         bbReferenceInputs,
         bbSignatures
     ),
@@ -89,7 +90,7 @@ buildTxInfo (unpack -> builder@BB{..}) =
                 , txInfoData = fromList $ inDat <> outDat <> extraDat
                 , txInfoMint = mintedValue
                 , txInfoSignatories = toList bbSignatures
-                , txInfoRedeemers = redeemerMap
+                , txInfoRedeemers = fromList $ toList bbRedeemers <> redeemerMap
                 }
      in txinfo
 
