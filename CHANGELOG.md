@@ -2,6 +2,19 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 2.3.0 -- 2020-09-13
+
+### Added
+
+* Redeemer map support in general.
+* `withRedeemer` attaches a redeemer to a UTxO.
+* `mintWith` and `mintSingletonWith` allow minting with a given redeemer
+* `checkValidatorRedeemer` ensures that given UTxO have redeemer, if owned by any validator.
+
+### Modified 
+
+* `mint` sets the redeemer used for minting to `()` by default.
+
 ## 2.2.0 -- 2020-08-22
 
 ### Added
