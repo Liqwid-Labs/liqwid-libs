@@ -1,7 +1,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# OPTIONS_GHC -Wno-all #-}
 
 module Plutarch.Context.Check (
     Checker (..),
@@ -19,7 +18,6 @@ module Plutarch.Context.Check (
     checkFail,
     checkBool,
     checkWith,
-    checkIfWith,
     checkByteString,
     checkPositiveValue,
     checkTxId,
@@ -32,19 +30,21 @@ module Plutarch.Context.Check (
     checkOutputs,
     checkDatumPairs,
     checkPhase1,
+    checkValidatorRedeemer,
 ) where
 
 import Acc (Acc)
+import Control.Arrow ((&&&))
 import Data.Foldable (toList)
-import Data.Functor ((<$))
 import Data.Functor.Contravariant (Contravariant (contramap))
 import Data.Functor.Contravariant.Divisible (Decidable (choose, lose), Divisible (conquer, divide))
-import Data.Maybe (catMaybes, fromMaybe)
+import Data.Maybe (fromMaybe)
 import Data.Void (absurd)
 import Plutarch.Context.Base (
     BaseBuilder (..),
     Builder,
     UTXO (..),
+    mintToValue,
     unpack,
  )
 import PlutusLedgerApi.V2 (
@@ -78,6 +78,8 @@ data CheckerErrorType e
     | DuplicateTxOutRefIndex [Integer]
     | NonPositiveValue Value
     | NoZeroSum Value
+    | MissingRedeemer ValidatorHash
+    | SpecifyRedeemerForNonValidatorInput
     | OtherError e
     deriving stock (Show, Eq)
 
@@ -115,6 +117,10 @@ instance P.Pretty e => P.Pretty (CheckerErrorType e) where
     pretty (NoZeroSum val) =
         "Transaction doesn't not have equal inflow and outflow." <> P.line
             <> "Diff:" P.<+> P.pretty val
+    pretty (MissingRedeemer hash) =
+        "Missing script redeemer while spending UTxO owned by:" P.<+> P.pretty hash
+    pretty SpecifyRedeemerForNonValidatorInput =
+        "Set redeemer for a input that is not owned by a validator"
     pretty (OtherError e) = P.pretty e
 
 -- | @since 2.1.0
@@ -200,7 +206,7 @@ checkFail = Checker . const . basicError
 checkAt :: CheckerPos -> Checker e a -> Checker e a
 checkAt at c = Checker (fmap (updatePos at) . runChecker c)
   where
-    updatePos at (CheckerError (x, _)) = CheckerError (x, at)
+    updatePos at' (CheckerError (x, _)) = CheckerError (x, at')
 
 {- | Apply checker type @a@ to foldable @t a@. It will check all
  elements of the foldable structure.
@@ -276,6 +282,21 @@ checkCredential = contramap classif checkByteString
     classif (PubKeyCredential (PubKeyHash x)) = x
     classif (ScriptCredential (ValidatorHash x)) = x
 
+{- | Check if a validator output has a redeemer attached.
+
+ @since 2.3.0
+-}
+checkValidatorRedeemer :: Checker e UTXO
+checkValidatorRedeemer =
+    contramap
+        ((fromMaybe (PubKeyCredential "") . utxoCredential) &&& utxoRedeemer)
+        ( checkWith $ \case
+            (ScriptCredential _, Just _) -> mempty
+            (ScriptCredential h, Nothing) -> checkFail $ MissingRedeemer h
+            (_, Just _) -> checkFail SpecifyRedeemerForNonValidatorInput
+            _ -> mempty
+        )
+
 {- | Check if TxId follows the format
 
  @since 2.1.0
@@ -308,7 +329,7 @@ checkZeroSum = Checker $
             -- TODO: This is quite wired, AssocMap doesn't implment Functor, but it does on haddock.
             i = mconcat . toList $ utxoValue <$> bbInputs
             o = mconcat . toList $ utxoValue <$> bbOutputs
-            m = mconcat . toList $ bbMints
+            m = foldMap mintToValue . toList $ bbMints
          in if i <> m /= o <> bbFee
                 then basicError $ NoZeroSum (diff (i <> m <> bbFee) o)
                 else mempty
@@ -328,6 +349,9 @@ checkInputs =
                 , contramap
                     (fmap (fromMaybe (PubKeyCredential "") . utxoCredential) . bbInputs . unpack)
                     (checkFoldable checkCredential)
+                , contramap
+                    (bbInputs . unpack)
+                    (checkFoldable checkValidatorRedeemer)
                 ]
         , checkAt AtInputOutRef $
             mconcat
@@ -336,7 +360,7 @@ checkInputs =
                     (checkFoldable checkByteString)
                 , contramap
                     (getDups . toList . fmap (fromMaybe 0 . utxoTxIdx) . bbInputs . unpack)
-                    (checkWith $ \x -> checkIfWith null DuplicateTxOutRefIndex)
+                    (checkWith $ const $ checkIfWith null DuplicateTxOutRefIndex)
                 ]
         ]
   where
@@ -371,7 +395,7 @@ checkReferenceInputs =
 checkMints :: Builder a => Checker e a
 checkMints =
     checkAt AtMint $
-        contramap (mconcat . toList . bbMints . unpack) nullAda
+        contramap (foldMap mintToValue . toList . bbMints . unpack) nullAda
   where
     nullAda :: Checker e Value
     nullAda = checkWith $ \x ->

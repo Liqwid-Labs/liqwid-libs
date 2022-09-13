@@ -26,6 +26,7 @@ import Plutarch.Context.Base (
         bbInputs,
         bbMints,
         bbOutputs,
+        bbRedeemers,
         bbReferenceInputs,
         bbSignatures
     ),
@@ -36,6 +37,7 @@ import Plutarch.Context.Base (
     yieldInInfoDatums,
     yieldMint,
     yieldOutDatums,
+    yieldRedeemerMap,
  )
 import PlutusLedgerApi.V2 (
     ScriptContext (ScriptContext),
@@ -46,6 +48,7 @@ import PlutusLedgerApi.V2 (
         txInfoInputs,
         txInfoMint,
         txInfoOutputs,
+        txInfoRedeemers,
         txInfoReferenceInputs,
         txInfoSignatories
     ),
@@ -77,6 +80,7 @@ buildTxInfo (unpack -> builder@BB{..}) =
         mintedValue = yieldMint bbMints
         extraDat = yieldExtraDatums bbDatums
         base = yieldBaseTxInfo builder
+        redeemerMap = yieldRedeemerMap bbInputs bbMints
 
         txinfo =
             base
@@ -86,6 +90,7 @@ buildTxInfo (unpack -> builder@BB{..}) =
                 , txInfoData = fromList $ inDat <> outDat <> extraDat
                 , txInfoMint = mintedValue
                 , txInfoSignatories = toList bbSignatures
+                , txInfoRedeemers = fromList $ toList bbRedeemers <> redeemerMap
                 }
      in txinfo
 

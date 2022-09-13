@@ -26,9 +26,13 @@ module Plutarch.Context (
     B.withValue,
     B.withRefIndex,
     B.withRef,
+    B.withRedeemer,
     B.signedWith,
     B.mint,
+    B.mintWith,
+    B.mintSingletonWith,
     B.extraData,
+    B.extraRedeemer,
     B.txId,
     B.fee,
     B.unpack,
@@ -85,6 +89,7 @@ module Plutarch.Context (
     C.checkPhase1,
     C.renderErrors,
     C.flattenValue,
+    C.checkValidatorRedeemer,
 ) where
 
 import Plutarch.Context.Base qualified as B

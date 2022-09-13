@@ -34,14 +34,16 @@ import Data.Functor.Contravariant (contramap)
 import Data.Functor.Contravariant.Divisible (choose)
 import Optics (lens)
 import Plutarch.Context.Base (
-    BaseBuilder (BB, bbDatums, bbInputs, bbMints, bbOutputs, bbReferenceInputs, bbSignatures),
+    BaseBuilder (BB, bbDatums, bbInputs, bbMints, bbOutputs, bbRedeemers, bbReferenceInputs, bbSignatures),
     Builder (pack, _bb),
+    mintToValue,
     unpack,
     yieldBaseTxInfo,
     yieldExtraDatums,
     yieldInInfoDatums,
     yieldMint,
     yieldOutDatums,
+    yieldRedeemerMap,
  )
 import Plutarch.Context.Check (
     Checker (runChecker),
@@ -61,6 +63,7 @@ import PlutusLedgerApi.V2 (
         txInfoInputs,
         txInfoMint,
         txInfoOutputs,
+        txInfoRedeemers,
         txInfoReferenceInputs,
         txInfoSignatories
     ),
@@ -121,6 +124,7 @@ buildMinting' builder@(unpack -> BB{..}) =
         mintedValue = yieldMint bbMints
         extraDat = yieldExtraDatums bbDatums
         base = yieldBaseTxInfo builder
+        redeemerMap = yieldRedeemerMap bbInputs bbMints
 
         txinfo =
             base
@@ -129,6 +133,7 @@ buildMinting' builder@(unpack -> BB{..}) =
                 , txInfoOutputs = outs
                 , txInfoData = fromList $ inDat <> outDat <> extraDat
                 , txInfoMint = mintedValue
+                , txInfoRedeemers = fromList $ toList bbRedeemers <> redeemerMap
                 , txInfoSignatories = toList bbSignatures
                 }
 
@@ -171,7 +176,7 @@ instance P.Pretty MintingError where
 checkMinting :: Checker MintingError MintingBuilder
 checkMinting =
     contramap
-        ((mconcat . toList . bbMints . unpack) &&& mbMintingCS)
+        ((foldMap mintToValue . toList . bbMints . unpack) &&& mbMintingCS)
         ( choose
             (\(mints, cs) -> maybe (Left ()) (Right . hasCS mints) cs)
             (checkFail $ OtherError MintingCurrencySymbolNotGiven)

@@ -2,14 +2,21 @@
 
 module SpendingBuilder (specs) where
 
+import Data.Functor.Contravariant (Contravariant (contramap))
 import Plutarch.Context (
+    BaseBuilder (bbInputs),
+    CheckerPos (AtInput),
     SpendingBuilder,
+    checkAt,
+    checkFoldable,
+    checkValidatorRedeemer,
     input,
     mint,
     output,
     pubKey,
     script,
     tryBuildSpending,
+    unpack,
     withDatum,
     withRef,
     withRefIndex,
@@ -101,4 +108,24 @@ specs =
                 Left err -> assertFailure $ "Failed with error : " <> show (P.pretty err)
                 Right (scriptContextPurpose -> Spending outref) -> txOutRefId outref @?= "abababcc"
                 Right _ -> assertFailure "SpendingBuilder built script context that is not spending"
+        , testCase "Spending validator input without a redeemer results in an error" $
+            case tryBuildSpending
+                ( checkAt AtInput $
+                    contramap
+                        (bbInputs . unpack)
+                        (checkFoldable checkValidatorRedeemer)
+                )
+                ( sample
+                    <> input
+                        ( mconcat
+                            [ script "aaaaa"
+                            , withValue (singleton "hello" "world" 114514)
+                            , withRefIndex 1919810
+                            , withRefTxId "232d7527be97b9abe27c0d7578c9e09ad11f40d83391006714a2e40d"
+                            ]
+                        )
+                    <> withSpendingOutRefIdx 1919810
+                ) of
+                Left _ -> pure ()
+                Right _ -> assertFailure "Builder succeed when it should have failed"
         ]
