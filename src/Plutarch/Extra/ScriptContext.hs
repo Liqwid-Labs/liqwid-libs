@@ -56,7 +56,7 @@ import Plutarch.Api.V2 (
 import Plutarch.Extra.AssetClass (PAssetClass, passetClassValueOf)
 import Plutarch.Extra.Function ((#.*))
 import Plutarch.Extra.Functor (PFunctor (pfmap))
-import Plutarch.Extra.List (pfirstJust)
+import Plutarch.Extra.List (pfindJust)
 import Plutarch.Extra.Maybe (pfromJust, pisJust, pjust, pnothing, ptraceIfNothing)
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.Unsafe (punsafeCoerce)
@@ -169,7 +169,7 @@ pisTokenSpent =
 pfindTxInByTxOutRef :: forall (s :: S). Term s (PTxOutRef :--> PBuiltinList PTxInInfo :--> PMaybe PTxInInfo)
 pfindTxInByTxOutRef = phoistAcyclic $
     plam $ \txOutRef inputs ->
-        pfirstJust
+        pfindJust
             # plam
                 ( \r ->
                     pmatch r $ \(PTxInInfo txInInfo) ->
@@ -221,7 +221,7 @@ presolveOutputDatum = phoistAcyclic $
 
 {- | As 'presolveOutputDatum', but error if there's no 'PDatum' to be had.
 
- @since 3.5.0
+ @since 3.6.0
 -}
 ptryResolveOutputDatum ::
     forall (keys :: KeyGuarantees) (s :: S).

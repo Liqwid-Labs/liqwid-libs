@@ -57,7 +57,7 @@ import qualified Plutarch.List as PList
  This is necessarily linear in the size of the map performance-wise, as we
  have to scan the entire map to find the key in the worst case.
 
- @since 3.3.0
+ @since 3.4.0
 -}
 padjust ::
     forall (k :: S -> Type) (v :: S -> Type) (s :: S).
@@ -89,7 +89,7 @@ padjust = phoistAcyclic $
  between keys proportional to the product of the lengths of both arguments:
  that is, this function is quadratic.
 
- @since 3.3.0
+ @since 3.4.0
 -}
 pkeysEqualUnsorted ::
     forall (k :: S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S).
@@ -193,7 +193,7 @@ pkvPairKey = phoistAcyclic $ plam $ \kv -> pfromData (pfstBuiltin # kv)
 
 {- | Get the value of a key-value pair.
 
- @since 3.3.0
+ @since 3.4.0
 -}
 pkvPairValue ::
     forall (k :: S -> Type) (v :: S -> Type) (s :: S).
@@ -204,7 +204,7 @@ pkvPairValue = phoistAcyclic $ plam $ \kv -> pfromData (psndBuiltin # kv)
 {- | Compare two key-value pairs by their keys. Gives 'PTrue' if the key of the
  first argument pair is less than the key of the second argument pair.
 
- @since 3.3.0
+ @since 3.4.0
 -}
 pkvPairLt ::
     forall (k :: S -> Type) (v :: S -> Type) (s :: S).
@@ -221,7 +221,7 @@ pkvPairLt = phoistAcyclic $
 
 {- | As 'plookup', but errors when the key is missing.
 
- @since 3.3.0
+ @since 3.4.0
 -}
 ptryLookup ::
     forall (k :: S -> Type) (v :: S -> Type) (keys :: KeyGuarantees) (s :: S).
@@ -240,7 +240,7 @@ ptryLookup = phoistAcyclic $
  If there are duplicate keys in the input, the /last/ key will \'win\' in a
  lookup.
 
- @since 3.3.0
+ @since 3.4.0
 -}
 punsortedMapFromFoldable ::
     forall (k :: S -> Type) (v :: S -> Type) (f :: Type -> Type) (s :: S).
@@ -266,7 +266,7 @@ punsortedMapFromFoldable = pcon . PMap . foldl' go (pcon PNil)
  If there are duplicate keys, only the /last/ key-value pair will remain in
  the result.
 
- @since 3.3.0
+ @since 3.4.0
 -}
 psortedMapFromFoldable ::
     forall (k :: S -> Type) (v :: S -> Type) (f :: Type -> Type) (s :: S).
@@ -292,7 +292,7 @@ psortedMapFromFoldable = foldl' go pempty
  arranged the type signature to make specifying this easy with
  @TypeApplications@.
 
- @since 3.3.0
+ @since 3.4.0
 -}
 pkeys ::
     forall
@@ -322,7 +322,7 @@ pkeys = phoistAcyclic $
  Performance will be equivalent to a lookup followed by an insert (or delete),
  as well as the cost of calling the \'updater\'.
 
- @since 3.3.0
+ @since 3.4.0
 -}
 pupdate ::
     forall (k :: S -> Type) (v :: S -> Type) (s :: S).
@@ -338,7 +338,7 @@ pupdate = phoistAcyclic $
 {- | Left-associative fold of a 'PMap' with keys. Keys and values will be
  presented in key order.
 
- @since 3.3.0
+ @since 3.4.0
 -}
 pfoldlWithKey ::
     forall (a :: S -> Type) (k :: S -> Type) (v :: S -> Type) (s :: S).
@@ -352,7 +352,7 @@ pfoldlWithKey = phoistAcyclic $
 {- | Project all key-value pairs into a 'Monoid', then combine. Keys and values
  will be presented in key order.
 
- @since 3.3.0
+ @since 3.4.0
 -}
 pfoldMapWithKey ::
     forall (m :: S -> Type) (k :: S -> Type) (v :: S -> Type) (s :: S).
