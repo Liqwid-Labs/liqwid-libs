@@ -2,33 +2,33 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Plutarch.Context.SubBuilder (
-    SubBuilder (..),
-    buildTxOut,
-    buildTxInInfo,
-    buildTxOuts,
-    buildTxInInfos,
-    buildDatumHashPairs,
+  SubBuilder (..),
+  buildTxOut,
+  buildTxInInfo,
+  buildTxOuts,
+  buildTxInInfos,
+  buildDatumHashPairs,
 ) where
 
 import Data.Foldable (Foldable (toList))
 import Data.Maybe (mapMaybe)
 import Optics (lens)
 import Plutarch.Context.Base (
-    BaseBuilder (..),
-    Builder (..),
-    UTXO (..),
-    datumWithHash,
-    unpack,
-    utxoDatumPair,
-    utxoToTxOut,
-    yieldInInfoDatums,
+  BaseBuilder (..),
+  Builder (..),
+  UTXO (..),
+  datumWithHash,
+  unpack,
+  utxoDatumPair,
+  utxoToTxOut,
+  yieldInInfoDatums,
  )
 import PlutusLedgerApi.V2 (
-    Datum,
-    DatumHash,
-    TxInInfo (TxInInfo),
-    TxOut,
-    TxOutRef (TxOutRef),
+  Datum,
+  DatumHash,
+  TxInInfo (TxInInfo),
+  TxOut,
+  TxOutRef (TxOutRef),
  )
 
 {- | Smaller builder that builds context smaller than TxInfo.
@@ -36,12 +36,12 @@ import PlutusLedgerApi.V2 (
  @since 2.0.0
 -}
 newtype SubBuilder
-    = SubBuilder BaseBuilder
-    deriving (Semigroup, Monoid) via BaseBuilder
+  = SubBuilder BaseBuilder
+  deriving (Semigroup, Monoid) via BaseBuilder
 
 instance Builder SubBuilder where
-    _bb = lens (\(SubBuilder x) -> x) (\_ b -> SubBuilder b)
-    pack = SubBuilder
+  _bb = lens (\(SubBuilder x) -> x) (\_ b -> SubBuilder b)
+  pack = SubBuilder
 
 {- | Builds TxOut from `UTXO`.
 
@@ -55,31 +55,31 @@ buildTxOut = utxoToTxOut
  @since 2.0.0
 -}
 buildTxInInfo :: UTXO -> Maybe TxInInfo
-buildTxInInfo u@(UTXO{..}) = do
-    txid <- utxoTxId
-    txidx <- utxoTxIdx
-    return $ TxInInfo (TxOutRef txid txidx) (utxoToTxOut u)
+buildTxInInfo u@(UTXO {..}) = do
+  txid <- utxoTxId
+  txidx <- utxoTxIdx
+  return $ TxInInfo (TxOutRef txid txidx) (utxoToTxOut u)
 
 {- | Builds all TxOuts from given builder.
 
  @since 2.0.0
 -}
 buildTxOuts :: SubBuilder -> [TxOut]
-buildTxOuts (unpack -> BB{..}) = utxoToTxOut <$> toList bbOutputs
+buildTxOuts (unpack -> BB {..}) = utxoToTxOut <$> toList bbOutputs
 
 {- | Builds all TxInInfos from given builder. Returns reason when failed.
 
  @since 2.1.0
 -}
 buildTxInInfos :: SubBuilder -> [TxInInfo]
-buildTxInInfos (unpack -> BB{..}) =
-    fst $ yieldInInfoDatums bbInputs
+buildTxInInfos (unpack -> BB {..}) =
+  fst $ yieldInInfoDatums bbInputs
 
 {- | Builds Datum-Hash pair from all inputs, outputs, extra data of given builder.
 
  @since 2.0.0
 -}
 buildDatumHashPairs :: SubBuilder -> [(DatumHash, Datum)]
-buildDatumHashPairs (unpack -> BB{..}) =
-    mapMaybe utxoDatumPair (toList (bbInputs <> bbOutputs))
-        <> (datumWithHash <$> toList bbDatums)
+buildDatumHashPairs (unpack -> BB {..}) =
+  mapMaybe utxoDatumPair (toList (bbInputs <> bbOutputs))
+    <> (datumWithHash <$> toList bbDatums)
