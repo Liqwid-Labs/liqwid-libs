@@ -460,7 +460,7 @@ psortBy = phoistAcyclic $
     plam $ \cmp xs ->
         pmergeAllUnsafe
             cmp
-            (const (pconvertLists #))
+            (const id)
             pmergeUnsafe
             #$ pmergeStart_2_3_4
             # cmp
@@ -490,7 +490,7 @@ pnubSortBy = phoistAcyclic $
     plam $ \cmp xs ->
         pmergeAllUnsafe
             cmp
-            (\cmp' xs' -> pconvertLists #$ pnubUnsafe # cmp' # xs')
+            (\cmp' xs' -> pnubUnsafe # cmp' # xs')
             pmergeUnsafeNoDupes
             #$ pmergeStart_2_3_4
             # cmp
@@ -507,14 +507,18 @@ pmergeAllUnsafe ::
     forall (a :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
     (PElemConstraint ell a, PListLike ell) =>
     Term s (PComparator a) ->
-    (forall (s' :: S). Term s' (PComparator a) -> Term s' (PList a) -> Term s' (ell a)) ->
+    (forall (s' :: S). Term s' (PComparator a) -> Term s' (PList a) -> Term s' (PList a)) ->
     (forall (s' :: S). Term s' (PComparator a) -> Term s' (PList a) -> Term s' (PList a) -> Term s' (PList a)) ->
     Term s (PList (PList a) :--> ell a)
-pmergeAllUnsafe cmp whenSingleton whenMerging = pfix #$ plam $ \self xs ->
-    phandleList xs pnil $ \x' xs' ->
-        phandleList xs' (whenSingleton cmp x') $ \_ _ ->
-            self #$ pmergePairs # xs
+pmergeAllUnsafe cmp whenSingleton whenMerging = plam $ \xs -> pconvertLists #$ pfix # plam go # xs
   where
+    go ::
+        Term s (PList (PList a) :--> PList a) ->
+        Term s (PList (PList a)) ->
+        Term s (PList a)
+    go self xs = phandleList xs pnil $ \y ys ->
+        phandleList ys (whenSingleton cmp y) $ \_ _ ->
+            self #$ pmergePairs # xs
     pmergePairs :: Term s (PList (PList a) :--> PList (PList a))
     pmergePairs = pfix #$ plam $ \self xs ->
         phandleList xs pnil $ \x' xs' ->
