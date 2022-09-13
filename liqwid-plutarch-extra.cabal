@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               liqwid-plutarch-extra
-version:            3.5.0
+version:            3.6.0
 synopsis:           A collection of Plutarch extras from Liqwid Labs
 description:        Several useful data types and functions for Plutarch.
 homepage:           https://github.com/Liqwid-Labs/liqwid-plutarch-extra
@@ -104,6 +104,7 @@ library
     Plutarch.Extra.Monoid
     Plutarch.Extra.MultiSig
     Plutarch.Extra.Numeric
+    Plutarch.Extra.Ord
     Plutarch.Extra.Precompile
     Plutarch.Extra.Profunctor
     Plutarch.Extra.Record
@@ -133,3 +134,40 @@ library
     , text
 
   hs-source-dirs:  src
+
+-- Test suite
+
+test-suite properties
+  import:         common-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  build-depends:
+    , liqwid-plutarch-extra
+    , plutarch-quickcheck
+    , QuickCheck
+    , tasty
+    , tasty-quickcheck
+
+  ghc-options:    -O2 -threaded -rtsopts -with-rtsopts=-N
+  hs-source-dirs: test/properties
+
+-- Benchmarks
+
+benchmark sorting
+  import:         common-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  other-modules:
+    PComparator
+    POrdering
+
+  build-depends:
+    , data-default
+    , liqwid-plutarch-extra
+    , plutus-core
+    , tagged
+    , tasty
+    , text
+
+  ghc-options:    -O2 -threaded -rtsopts -with-rtsopts=-N
+  hs-source-dirs: bench/sorting

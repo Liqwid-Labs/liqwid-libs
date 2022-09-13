@@ -27,7 +27,7 @@ import Plutarch.Api.V2 (
  )
 import Plutarch.Builtin (ppairDataBuiltin)
 import Plutarch.Extra.AssetClass (PAssetClass)
-import qualified Plutarch.Extra.List
+import Plutarch.Extra.List (plookupAssoc)
 import Plutarch.Extra.Maybe (pexpectJustC)
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import PlutusLedgerApi.V1.Value (AssetClass (AssetClass))
@@ -100,7 +100,7 @@ psymbolValueOf =
         plam $ \sym value'' -> unTermCont $ do
             PValue value' <- pmatchC value''
             PMap value <- pmatchC value'
-            m' <- pexpectJustC 0 (Plutarch.Extra.List.plookup # pdata sym # value)
+            m' <- pexpectJustC 0 (plookupAssoc # pfstBuiltin # psndBuiltin # pdata sym # value)
             PMap m <- pmatchC (pfromData m')
             pure $ pfoldr # plam (\x v -> pfromData (psndBuiltin # x) + v) # 0 # m
 

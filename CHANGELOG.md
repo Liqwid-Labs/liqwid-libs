@@ -2,6 +2,52 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.6.0 -- 2022-09-14
+
+All additions, removals and changes refer to `Plutarch.Extra.List` unless stated
+otherwise.
+
+### Added
+
+* `plookupAssoc`, designed as a very general treatment of list-like structures
+  as assoc lists.
+* `Plutarch.Extra.Ord` module, containing a new type `POrdering` corresponding
+  to the Haskell `Ordering`, as well as `PComparator`, representing a
+  \'materialized ordering\'.
+* `psort` and `psortBy` in `Plutarch.Extra.Ord`, using sorting networks for 
+  extra speed, and `PComparator`s.
+* `ptryMerge` and `ptryMergeBy` in `Plutarch.Extra.Ord`, for merging list-likes
+  sorted by a given `PComparator`.
+* `pallUnique` and `pallUniqueBy` in `Plutarch.Extra.Ord`, for verifying the
+  uniqueness of the composition of a list-like.
+* `pnubSort` and `pnubSortBy`, for eliminating duplicates as well as sorting.
+* `precListLookahead` to `Plutarch.Extra.List`, for recursive list elimination
+  with a 'look-ahead'.
+
+### Removed
+
+* `pmergeBy` as it is fragile.
+* `pmsort` and `pmsortBy`, due to efficiency concerns.
+* `pnubSortBy`, `pnubSort`, `pisUniqBy`, `pisUniq`, `pisUniq'`, `pisUniqBy'` 
+  due to removal of sorting functions or fragility.
+* `plookup` and `plookupTuple`, replaced by the more general `plookupAssoc`.
+* `pisSorted`, as it is provided by `plutarch-extra` as `pcheckSorted`.
+* `pnotNull` and `pfind'`, as they are a bit redundant.
+
+### Changed
+
+* `pcheckSorted` and `preverse` are no longer re-exported.
+* `pfind'` type arguments are now: content type, list-like 
+  structure type, `s` tag.
+* `pfirstJust` renamed `pfindJust`.
+* `pmapMaybe` type arguments are now: list-like structure 
+  type, 'target' element type, 'source' element type, `s` tag.
+* `pfindJust` type arguments are now: 'target' element type, list-like 
+  structure type, 'source' element type, `s` tag.
+* `preplicate` now specifies the order of its type arguments.
+* `pisSortedBy` now moved to `Plutarch.Extra.Ord` and uses the new `PComparator`
+  functionality.
+
 ## 3.5.0 -- 2022-08-30
 
 ### Added
@@ -10,7 +56,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   only accept Plutarch types that have `PDataRecord` as an `Inner` type. 
   Otherwise, it behaves identically to `PlutusTypeNewtype`.
 
-## 3.3.0 -- 2022-08-25
+## 3.4.0 -- 2022-08-25
 
 All additions, removals and changes refer to `Plutarch.Extra.Map` unless stated
 otherwise.
