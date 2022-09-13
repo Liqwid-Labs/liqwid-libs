@@ -11,48 +11,48 @@
  possible Script Context from TxInfo.
 -}
 module Plutarch.Context.TxInfo (
-    TxInfoBuilder (..),
-    spends,
-    mints,
-    buildTxInfo,
+  TxInfoBuilder (..),
+  spends,
+  mints,
+  buildTxInfo,
 ) where
 
 import Data.Foldable (Foldable (toList))
 import Optics (lens)
 import Plutarch.Context.Base (
-    BaseBuilder (
-        BB,
-        bbDatums,
-        bbInputs,
-        bbMints,
-        bbOutputs,
-        bbRedeemers,
-        bbReferenceInputs,
-        bbSignatures
-    ),
-    Builder (pack, _bb),
-    unpack,
-    yieldBaseTxInfo,
-    yieldExtraDatums,
-    yieldInInfoDatums,
-    yieldMint,
-    yieldOutDatums,
-    yieldRedeemerMap,
+  BaseBuilder (
+    BB,
+    bbDatums,
+    bbInputs,
+    bbMints,
+    bbOutputs,
+    bbRedeemers,
+    bbReferenceInputs,
+    bbSignatures
+  ),
+  Builder (pack, _bb),
+  unpack,
+  yieldBaseTxInfo,
+  yieldExtraDatums,
+  yieldInInfoDatums,
+  yieldMint,
+  yieldOutDatums,
+  yieldRedeemerMap,
  )
 import PlutusLedgerApi.V2 (
-    ScriptContext (ScriptContext),
-    ScriptPurpose (Spending),
-    TxInInfo (txInInfoOutRef),
-    TxInfo (
-        txInfoData,
-        txInfoInputs,
-        txInfoMint,
-        txInfoOutputs,
-        txInfoRedeemers,
-        txInfoReferenceInputs,
-        txInfoSignatories
-    ),
-    fromList,
+  ScriptContext (ScriptContext),
+  ScriptPurpose (Spending),
+  TxInInfo (txInInfoOutRef),
+  TxInfo (
+    txInfoData,
+    txInfoInputs,
+    txInfoMint,
+    txInfoOutputs,
+    txInfoRedeemers,
+    txInfoReferenceInputs,
+    txInfoSignatories
+  ),
+  fromList,
  )
 
 {- | Builder that builds TxInfo.
@@ -60,45 +60,45 @@ import PlutusLedgerApi.V2 (
  @since 2.0.0
 -}
 newtype TxInfoBuilder
-    = TxInfoBuilder BaseBuilder
-    deriving (Semigroup, Monoid) via BaseBuilder
+  = TxInfoBuilder BaseBuilder
+  deriving (Semigroup, Monoid) via BaseBuilder
 
 -- | @since 2.1.0
 instance Builder TxInfoBuilder where
-    _bb = lens (\(TxInfoBuilder x) -> x) (\_ b -> TxInfoBuilder b)
-    pack = TxInfoBuilder
+  _bb = lens (\(TxInfoBuilder x) -> x) (\_ b -> TxInfoBuilder b)
+  pack = TxInfoBuilder
 
 {- | Builds `TxInfo` from TxInfoBuilder.
 
  @since 2.0.0
 -}
 buildTxInfo :: TxInfoBuilder -> TxInfo
-buildTxInfo (unpack -> builder@BB{..}) =
-    let (ins, inDat) = yieldInInfoDatums bbInputs
-        (refin, _) = yieldInInfoDatums bbReferenceInputs
-        (outs, outDat) = yieldOutDatums bbOutputs
-        mintedValue = yieldMint bbMints
-        extraDat = yieldExtraDatums bbDatums
-        base = yieldBaseTxInfo builder
-        redeemerMap = yieldRedeemerMap bbInputs bbMints
+buildTxInfo (unpack -> builder@BB {..}) =
+  let (ins, inDat) = yieldInInfoDatums bbInputs
+      (refin, _) = yieldInInfoDatums bbReferenceInputs
+      (outs, outDat) = yieldOutDatums bbOutputs
+      mintedValue = yieldMint bbMints
+      extraDat = yieldExtraDatums bbDatums
+      base = yieldBaseTxInfo builder
+      redeemerMap = yieldRedeemerMap bbInputs bbMints
 
-        txinfo =
-            base
-                { txInfoInputs = ins
-                , txInfoReferenceInputs = refin
-                , txInfoOutputs = outs
-                , txInfoData = fromList $ inDat <> outDat <> extraDat
-                , txInfoMint = mintedValue
-                , txInfoSignatories = toList bbSignatures
-                , txInfoRedeemers = fromList $ toList bbRedeemers <> redeemerMap
-                }
-     in txinfo
+      txinfo =
+        base
+          { txInfoInputs = ins
+          , txInfoReferenceInputs = refin
+          , txInfoOutputs = outs
+          , txInfoData = fromList $ inDat <> outDat <> extraDat
+          , txInfoMint = mintedValue
+          , txInfoSignatories = toList bbSignatures
+          , txInfoRedeemers = fromList $ toList bbRedeemers <> redeemerMap
+          }
+   in txinfo
 
 spends :: TxInfo -> [ScriptContext]
 spends txinfo =
-    [ ScriptContext txinfo (Spending . txInInfoOutRef $ ins)
-    | ins <- txInfoInputs txinfo
-    ]
+  [ ScriptContext txinfo (Spending . txInInfoOutRef $ ins)
+  | ins <- txInfoInputs txinfo
+  ]
 
 mints :: TxInfo -> [ScriptContext]
 mints _txinfo = undefined
