@@ -14,8 +14,6 @@ module Plutarch.Extra.ScriptContext (
     pisUTXOSpent,
     pvalueSpent,
     ptxSignedBy,
-    ptryFindDatum,
-    pfindDatum,
     pfindTxInByTxOutRef,
     pvalidatorHashFromAddress,
     pscriptHashFromAddress,
@@ -24,6 +22,7 @@ module Plutarch.Extra.ScriptContext (
     pfindOutputsToAddress,
     pfromPDatum,
     presolveOutputDatum,
+    ptryResolveOutputDatum,
     ptryFromOutputDatum,
     pfromOutputDatum,
     pfromDatumHash,
@@ -58,7 +57,7 @@ import Plutarch.Extra.AssetClass (PAssetClass, passetClassValueOf)
 import Plutarch.Extra.Function ((#.*))
 import Plutarch.Extra.Functor (PFunctor (pfmap))
 import Plutarch.Extra.List (pfindJust)
-import Plutarch.Extra.Maybe (pfromJust, pisJust, pjust, pnothing)
+import Plutarch.Extra.Maybe (pfromJust, pisJust, pjust, pnothing, ptraceIfNothing)
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.Unsafe (punsafeCoerce)
 
@@ -189,20 +188,6 @@ ptxSignedBy :: forall (s :: S). Term s (PBuiltinList (PAsData PPubKeyHash) :--> 
 ptxSignedBy = phoistAcyclic $
     plam $ \sigs sig -> pelem # sig # sigs
 
-{- | Find a datum with the given hash.
-
-    @since 1.1.0
--}
-pfindDatum ::
-    forall (s :: S).
-    Term
-        s
-        ( PDatumHash
-            :--> PMap 'Unsorted PDatumHash PDatum
-            :--> PMaybe PDatum
-        )
-pfindDatum = AssocMap.plookup
-
 {- | Convert a 'PDatum' to the give type @a@.
 
  @since 3.0.3
@@ -213,34 +198,16 @@ pfromPDatum ::
     Term s (PDatum :--> a)
 pfromPDatum = phoistAcyclic $ plam $ flip ptryFrom fst . pto
 
-{- | Find a datum with the given hash, and `ptryFrom` it.
-
-    @since 1.1.0
--}
-ptryFindDatum ::
-    forall (a :: S -> Type) (s :: S).
-    PTryFrom PData a =>
-    Term
-        s
-        ( PDatumHash
-            :--> PMap 'Unsorted PDatumHash PDatum
-            :--> PMaybe a
-        )
-ptryFindDatum =
-    phoistAcyclic $
-        (pfmap # pfromPDatum)
-            #.* AssocMap.plookup
-
 {- | Extract the datum from a 'POutputDatum'.
 
      @since 3.0.3
 -}
 presolveOutputDatum ::
-    forall (s :: S).
+    forall (keys :: KeyGuarantees) (s :: S).
     Term
         s
         ( POutputDatum
-            :--> PMap 'Unsorted PDatumHash PDatum
+            :--> PMap keys PDatumHash PDatum
             :--> PMaybe PDatum
         )
 presolveOutputDatum = phoistAcyclic $
@@ -251,6 +218,17 @@ presolveOutputDatum = phoistAcyclic $
             ptrace "inline datum" pjust # datum
         POutputDatumHash ((pfield @"datumHash" #) -> hash) ->
             ptrace "datum hash" $ AssocMap.plookup # hash # m
+
+{- | As 'presolveOutputDatum', but error if there's no 'PDatum' to be had.
+
+ @since 3.6.0
+-}
+ptryResolveOutputDatum ::
+    forall (keys :: KeyGuarantees) (s :: S).
+    Term s (POutputDatum :--> PMap keys PDatumHash PDatum :--> PDatum)
+ptryResolveOutputDatum = phoistAcyclic $
+    plam $ \od m ->
+        ptraceIfNothing "ptryResolveOutputDatum: no PDatum" $ presolveOutputDatum # od # m
 
 {- | Extract the datum from a 'POutputDatum' and convert it to the given type.
 

@@ -23,6 +23,8 @@ otherwise.
 * `pnubSort` and `pnubSortBy`, for eliminating duplicates as well as sorting.
 * `precListLookahead` to `Plutarch.Extra.List`, for recursive list elimination
   with a 'look-ahead'.
+* `ptryResolveOutputDatum`, an 'erroring' counterpart for `presolveOutputDatum`,
+  in `Plutarch.Extra.ScriptContext`.
 
 ### Removed
 
@@ -33,6 +35,9 @@ otherwise.
 * `plookup` and `plookupTuple`, replaced by the more general `plookupAssoc`.
 * `pisSorted`, as it is provided by `plutarch-extra` as `pcheckSorted`.
 * `pnotNull` and `pfind'`, as they are a bit redundant.
+* `pfindDatum` and `ptryFindDatum`, as they're superceded by
+  `presolveOutputDatum` and `ptryResolveOutputDatum`, in
+  `Plutarch.Extra.ScriptContext`.
 
 ### Changed
 
