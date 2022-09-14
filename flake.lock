@@ -455,11 +455,11 @@
         "nixpkgs-2205": "nixpkgs-2205"
       },
       "locked": {
-        "lastModified": 1660165784,
-        "narHash": "sha256-uSwB6jmiP0giQM9NwCkXloabfRnbDSsd1EAKXbTQpq4=",
+        "lastModified": 1660580223,
+        "narHash": "sha256-r1i92rrUjSBdnQZpHLxeCAtVGMHYqKQHm05mzddIte8=",
         "owner": "Liqwid-Labs",
         "repo": "liqwid-nix",
-        "rev": "07d35ade0f9a1bab07413d059ccec63982592552",
+        "rev": "fa1eeba35b37ac2551a00798dffdf053879699c3",
         "type": "github"
       },
       "original": {
@@ -770,11 +770,11 @@
         "secp256k1-haskell": "secp256k1-haskell"
       },
       "locked": {
-        "lastModified": 1659381657,
-        "narHash": "sha256-W0EWY0DV2idbIeqtJnShVHQ83exME8TK2GYQGbVpz8A=",
+        "lastModified": 1660670400,
+        "narHash": "sha256-EoPMfaFCXzcHIiUYprCR51yxLb5mlsfuIJ29adBeyEU=",
         "owner": "Plutonomicon",
         "repo": "plutarch-plutus",
-        "rev": "45b7c77a9ee9bd6c7dc25ddebcc3d12c58c4c3a2",
+        "rev": "f0805033ec7ad83643ba3c90902673ba6e5b90c3",
         "type": "github"
       },
       "original": {

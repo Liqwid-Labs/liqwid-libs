@@ -17,6 +17,7 @@ usage:
 	@echo "  format_nix -- Format *.nix files only"
 	@echo "  format_check -- Check if all haskell stuff have been formatted correctly"
 	@echo "  lint -- Get hlint suggestions for project"
+	@echo "  ci -- Run all the CI checks"
 
 hoogle:
 	pkill hoogle || true
@@ -48,3 +49,7 @@ tag:
 
 lint:
 	hlint $(TARGETS)
+
+ci:
+	@ [[ "$$(uname -sm)" == "Linux x86_64" ]] || (echo "NOTE: CI only builds on Linux x86_64. Your system is $$(uname -sm), continuing...")
+	nix build .#check.$(shell nix eval -f '<nixpkgs>' system)
