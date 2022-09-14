@@ -11,8 +11,8 @@ module Codec.Serialise.Orphans () where
 
 import Codec.Serialise (Serialise)
 import Data.Tagged (Tagged (Tagged))
-import PlutusLedgerApi.V1 (TxId, TxOutRef)
 import PlutusLedgerApi.V1.Value (AssetClass, CurrencySymbol, TokenName)
+import PlutusLedgerApi.V2 (TxId, TxOutRef)
 
 deriving anyclass instance
   Serialise TxOutRef

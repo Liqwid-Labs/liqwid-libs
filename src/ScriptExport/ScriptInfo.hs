@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 {- |
 Module     : Agora.ScriptInfo
 Maintainer : emi@haskell.fyi
@@ -27,17 +25,12 @@ import Data.ByteString.Short qualified as SBS
 import Data.Text (Text)
 import GHC.Generics qualified as GHC
 import Plutarch (ClosedTerm, Config (Config, tracingMode), TracingMode (NoTracing))
-import Plutarch.Api.V1 (PMintingPolicy, PValidator, mkMintingPolicy, mkValidator, scriptHash)
-import PlutusLedgerApi.V1 (
-  MintingPolicy (getMintingPolicy),
-  Script,
-  Validator (getValidator),
- )
-import PlutusLedgerApi.V1.Scripts (ScriptHash)
+import Plutarch.Api.V2 (PMintingPolicy, PValidator, mkMintingPolicy, mkValidator, scriptHash)
+import PlutusLedgerApi.V2 (MintingPolicy (getMintingPolicy), Script, ScriptHash, Validator (getValidator))
 
 {- | Bundle containing a 'Validator' and its hash.
 
-     @since 1.0.0
+     @since 1.1.0
 -}
 data ScriptInfo = ScriptInfo
   { cborHex :: Text
@@ -48,17 +41,17 @@ data ScriptInfo = ScriptInfo
   -- ^ Hash of the validator.
   }
   deriving stock
-    ( -- | @since 1.0.0
+    ( -- | @since 1.1.0
       Show
-    , -- | @since 1.0.0
+    , -- | @since 1.1.0
       Eq
-    , -- | @since 1.0.0
+    , -- | @since 1.1.0
       GHC.Generic
     )
   deriving anyclass
-    ( -- | @since 1.0.0
+    ( -- | @since 1.1.0
       Aeson.ToJSON
-    , -- | @since 1.0.0
+    , -- | @since 1.1.0
       Aeson.FromJSON
     )
 
@@ -80,7 +73,7 @@ exportConfig =
 
 {- | Create a 'ScriptInfo' given a Plutarch term of a policy.
 
-     @since 1.0.0
+     @since 1.1.0
 -}
 mkPolicyInfo :: ClosedTerm PMintingPolicy -> ScriptInfo
 mkPolicyInfo term =
@@ -88,7 +81,7 @@ mkPolicyInfo term =
 
 {- | Create a 'ScriptInfo' given a Plutarch term of a validator.
 
-     @since 1.0.0
+     @since 1.1.0
 -}
 mkValidatorInfo :: ClosedTerm PValidator -> ScriptInfo
 mkValidatorInfo term =

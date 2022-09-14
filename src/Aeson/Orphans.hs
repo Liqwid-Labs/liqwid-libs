@@ -24,10 +24,9 @@ import Data.Text.Encoding qualified as T
 
 --------------------------------------------------------------------------------
 
-import PlutusLedgerApi.V1 qualified as Plutus
 import PlutusLedgerApi.V1.Bytes qualified as Plutus
-import PlutusLedgerApi.V1.Scripts qualified as Plutus
 import PlutusLedgerApi.V1.Value qualified as Plutus
+import PlutusLedgerApi.V2 qualified as Plutus
 
 --------------------------------------------------------------------------------
 
