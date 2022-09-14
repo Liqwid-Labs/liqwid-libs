@@ -126,6 +126,7 @@ import PlutusLedgerApi.V2 (
   Value (getValue),
   always,
  )
+import PlutusTx.AssocMap (Map)
 import PlutusTx.AssocMap qualified as AssocMap
 
 -- | @since 2.1.0
@@ -146,6 +147,10 @@ data Mint = Mint
   }
   deriving stock (Show)
 
+{- | Normalize mint amount.
+
+ @since 2.4.0
+-}
 normalizeMint :: Mint -> Mint
 normalizeMint m =
   m
@@ -225,6 +230,10 @@ utxoDatumPair u =
     InlineDatum _ -> Nothing
     ContextDatum d -> Just $ datumWithHash d
 
+{- | Normalize the value 'UTXO' holds.
+
+ @since 2.4.0
+-}
 normalizeUTXO :: UTXO -> UTXO
 normalizeUTXO utxo =
   utxo
@@ -714,9 +723,9 @@ mkOutRefIndices = over _bb go
       | otherwise = x : grantIndex' top (i : used) xs
     grantIndex' _ _ [] = []
 
-{- | Given a list of pairs, combine second element of pair when first element
-     is equal, using given concat function. The output will be reverse of what's
-     given.
+{- | Given a list of pairs, combine second element of pair when first
+     element is equal, using the given concat function. The output
+     will be the reverse of what's given.
 
  @since 2.4.0
 -}
@@ -732,8 +741,9 @@ normalizePair c (k, v) ((k', v') : xs)
   | k == k' = (k, c v v') : xs
   | otherwise = (k', v') : normalizePair c (k, v) xs
 
-{- | Given an AssocMap, combine all values when key is equal, using given
-     concat function. The output will be reverse of what's given.
+{- | Given an 'AssocMap', combine all values when the key is equal,
+     using the given concat function. The output will be the reverse
+     of what's given.
 
  @since 2.4.0
 -}
@@ -741,25 +751,24 @@ normalizeMap ::
   forall (k :: Type) (v :: Type).
   Eq k =>
   (v -> v -> v) ->
-  AssocMap.Map k v ->
-  AssocMap.Map k v
+  Map k v ->
+  Map k v
 normalizeMap c (AssocMap.toList -> m) =
   AssocMap.fromList $ foldr (normalizePair c) [] m
 
-{- | Sort given AssocMap by given comparator.
+{- | Sort given 'AssocMap' by given comparator.
 
  @since 2.4.0
 -}
 sortMap ::
   forall (k :: Type) (v :: Type).
   Ord k =>
-  AssocMap.Map k v ->
-  AssocMap.Map k v
+  Map k v ->
+  Map k v
 sortMap (AssocMap.toList -> m) =
   AssocMap.fromList $ sortBy (\(k, _) (k', _) -> compare k k') m
 
-{- | Normalize and sort Value. It will normalize and sort both
-     'CurrencySymbol' and 'TokenName'.
+{- | Normalize and sort 'Value'.
 
  @since 2.4.0
 -}
