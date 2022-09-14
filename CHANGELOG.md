@@ -2,6 +2,16 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 2.4.0 -- 2020-09-14
+
+### Added
+
+* `normalizePair`, `normalizeMap`, `normalizeValue`, `normalizeUTXO`,
+  and `normalizeMint` added for normalizing the data. It will combine
+  elements with same "key" with given concatenation function.
+* `sortMap` sorts `AssocMap.Map` by the key.
+* `mkNormalized` added for normalizing all `Value`s and `Mint`s in `Builder`.
+
 ## 2.3.0 -- 2020-09-13
 
 ### Added

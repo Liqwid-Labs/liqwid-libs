@@ -62,12 +62,22 @@ module Plutarch.Context.Base (
   yieldRedeemerMap,
   mkOutRefIndices,
   mintToValue,
+
+  -- * Normalizers
+  normalizePair,
+  normalizeMap,
+  normalizeValue,
+  normalizeUTXO,
+  normalizeMint,
+  sortMap,
+  mkNormalized,
 ) where
 
 import Acc (Acc, fromReverseList)
 import Control.Arrow (Arrow ((&&&)))
 import Data.Foldable (Foldable (toList))
 import Data.Kind (Type)
+import Data.List (sortBy)
 import Data.Maybe (fromMaybe, mapMaybe)
 import GHC.Exts (fromList)
 import Optics (Lens', lens, over, view)
@@ -135,6 +145,14 @@ data Mint = Mint
   , mintRedeemer :: Data
   }
   deriving stock (Show)
+
+normalizeMint :: Mint -> Mint
+normalizeMint m =
+  m
+    { mintTokens =
+        sortBy (\(t, _) (t', _) -> compare t t') $
+          foldr (normalizePair (+)) [] $ mintTokens m
+    }
 
 {- | 'UTXO' is used to represent any input or output of a transaction in the builders.
 
@@ -206,6 +224,12 @@ utxoDatumPair u =
   utxoData u >>= \case
     InlineDatum _ -> Nothing
     ContextDatum d -> Just $ datumWithHash d
+
+normalizeUTXO :: UTXO -> UTXO
+normalizeUTXO utxo =
+  utxo
+    { utxoValue = normalizeValue $ utxoValue utxo
+    }
 
 {- | Construct TxOut of given UTXO
 
@@ -689,3 +713,81 @@ mkOutRefIndices = over _bb go
       | i `elem` used = grantIndex' top used (x {utxoTxIdx = Nothing} : xs)
       | otherwise = x : grantIndex' top (i : used) xs
     grantIndex' _ _ [] = []
+
+{- | Given a list of pairs, combine second element of pair when first element
+     is equal, using given concat function. The output will be reverse of what's
+     given.
+
+ @since 2.4.0
+-}
+normalizePair ::
+  forall (k :: Type) (v :: Type).
+  Eq k =>
+  (v -> v -> v) ->
+  (k, v) ->
+  [(k, v)] ->
+  [(k, v)]
+normalizePair _ p [] = [p]
+normalizePair c (k, v) ((k', v') : xs)
+  | k == k' = (k, c v v') : xs
+  | otherwise = (k', v') : normalizePair c (k, v) xs
+
+{- | Given an AssocMap, combine all values when key is equal, using given
+     concat function. The output will be reverse of what's given.
+
+ @since 2.4.0
+-}
+normalizeMap ::
+  forall (k :: Type) (v :: Type).
+  Eq k =>
+  (v -> v -> v) ->
+  AssocMap.Map k v ->
+  AssocMap.Map k v
+normalizeMap c (AssocMap.toList -> m) =
+  AssocMap.fromList $ foldr (normalizePair c) [] m
+
+{- | Sort given AssocMap by given comparator.
+
+ @since 2.4.0
+-}
+sortMap ::
+  forall (k :: Type) (v :: Type).
+  Ord k =>
+  AssocMap.Map k v ->
+  AssocMap.Map k v
+sortMap (AssocMap.toList -> m) =
+  AssocMap.fromList $ sortBy (\(k, _) (k', _) -> compare k k') m
+
+{- | Normalize and sort Value. It will normalize and sort both
+     'CurrencySymbol' and 'TokenName'.
+
+ @since 2.4.0
+-}
+normalizeValue :: Value -> Value
+normalizeValue (getValue -> val) =
+  Value.Value $
+    sortMap $
+      normalizeMap
+        ( \x y ->
+            sortMap $ normalizeMap (+) $ AssocMap.unionWith (+) x y
+        )
+        val
+
+{- | Normalize all values and mints in the given builder.
+
+ @since 2.4.0
+-}
+mkNormalized ::
+  forall (a :: Type).
+  Builder a =>
+  a ->
+  a
+mkNormalized = over _bb go
+  where
+    go bb@BB {..} =
+      bb
+        { bbInputs = normalizeUTXO <$> bbInputs
+        , bbReferenceInputs = normalizeUTXO <$> bbReferenceInputs
+        , bbOutputs = normalizeUTXO <$> bbOutputs
+        , bbMints = normalizeMint <$> bbMints
+        }
