@@ -19,6 +19,7 @@ module Plutarch.Context.Base (
   Builder (..),
   BaseBuilder (..),
   UTXO (..),
+  Mint (..),
 
   -- * Modular constructors
   output,
@@ -145,7 +146,7 @@ data Mint = Mint
   , mintTokens :: [(TokenName, Integer)]
   , mintRedeemer :: Data
   }
-  deriving stock (Show)
+  deriving stock (Show, Eq)
 
 {- | Normalize mint amount.
 

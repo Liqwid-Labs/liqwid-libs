@@ -94,9 +94,11 @@ module Plutarch.Context (
   C.checkOutputs,
   C.checkDatumPairs,
   C.checkPhase1,
+  C.checkNormalized,  
   C.renderErrors,
   C.flattenValue,
   C.checkValidatorRedeemer,
+  C.checkValueNormalized,
 ) where
 
 import Plutarch.Context.Base qualified as B

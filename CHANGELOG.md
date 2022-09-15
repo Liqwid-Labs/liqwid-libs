@@ -11,6 +11,8 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   elements with same "key" with given concatenation function.
 * `sortMap` sorts `AssocMap.Map` by the key.
 * `mkNormalized` added for normalizing all `Value`s and `Mint`s in `Builder`.
+* `checkNormalized` checks if values in builder are normalized.
+* `checkValueNormalized` checks if given value is normalized.
 
 ## 2.3.0 -- 2020-09-13
 
