@@ -78,12 +78,12 @@ common common-tests
     , plutarch-context-builder
     , plutus-core
     , plutus-ledger-api
+    , plutus-tx
     , prettyprinter
     , QuickCheck
     , tasty
     , tasty-hunit
     , tasty-quickcheck
-    , plutus-tx
 
 -- Libraries
 

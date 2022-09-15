@@ -94,7 +94,7 @@ module Plutarch.Context (
   C.checkOutputs,
   C.checkDatumPairs,
   C.checkPhase1,
-  C.checkNormalized,  
+  C.checkNormalized,
   C.renderErrors,
   C.flattenValue,
   C.checkValidatorRedeemer,

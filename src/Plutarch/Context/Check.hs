@@ -30,9 +30,9 @@ module Plutarch.Context.Check (
   checkOutputs,
   checkDatumPairs,
   checkPhase1,
-  checkNormalized,  
+  checkNormalized,
   checkValidatorRedeemer,
-  checkValueNormalized,  
+  checkValueNormalized,
 ) where
 
 import Acc (Acc)
@@ -47,9 +47,9 @@ import Plutarch.Context.Base (
   Builder,
   UTXO (..),
   mintToValue,
-  unpack,
+  normalizeMint,
   normalizeValue,
-  normalizeMint,  
+  unpack,
  )
 import PlutusLedgerApi.V2 (
   BuiltinByteString,
@@ -473,9 +473,10 @@ checkNormalized =
     , checkAt AtMint $
         contramap
           (bbMints . unpack)
-          (checkFoldable $
-             checkWith $ \x -> 
-              checkIf (\m -> m == normalizeMint m) $ NonNormalizedValue (mintToValue x))
+          ( checkFoldable $
+              checkWith $ \x ->
+                checkIf (\m -> m == normalizeMint m) $ NonNormalizedValue (mintToValue x)
+          )
     ]
 
 {- | All checks combined for Phase-1 check.

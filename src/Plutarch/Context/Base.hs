@@ -146,7 +146,12 @@ data Mint = Mint
   , mintTokens :: [(TokenName, Integer)]
   , mintRedeemer :: Data
   }
-  deriving stock (Show, Eq)
+  deriving stock
+    ( -- | @since 2.3.0
+      Show
+    , -- | @since 2.4.0
+      Eq
+    )
 
 {- | Normalize mint amount.
 

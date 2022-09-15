@@ -5,16 +5,16 @@ module Main (main) where
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
 import Plutarch.Context
 import PlutusLedgerApi.V2 (
-  Value(Value),
   Address (Address),
   Credential (PubKeyCredential),
   PubKeyHash (PubKeyHash),
   ScriptContext (scriptContextTxInfo),
   StakingCredential (StakingPtr),
   TxInfo (txInfoOutputs),
+  Value (Value),
   singleton,
  )
-import PlutusTx.AssocMap qualified as AssocMap  
+import PlutusTx.AssocMap qualified as AssocMap
 
 import MintingBuilder qualified (specs)
 import SpendingBuilder qualified (specs)
@@ -47,12 +47,12 @@ main = do
         mempty
         ( mkNormalized $
             generalSample
-            <> withSpendingUTXO
-              ( pubKey "aabb"
-                  <> withValue (normalizeValue nonNormalizedValue)
-                  <> withRefIndex 5                  
-                  <> withStakingCredential (StakingPtr 0 0 0)
-              )
+              <> withSpendingUTXO
+                ( pubKey "aabb"
+                    <> withValue (normalizeValue nonNormalizedValue)
+                    <> withRefIndex 5
+                    <> withStakingCredential (StakingPtr 0 0 0)
+                )
         )
     c = buildTxInfo $ mkNormalized generalSample
     d = buildTxOuts $ mkNormalized generalSample
@@ -75,14 +75,14 @@ generalSample =
           <> withValue (singleton "dd" "world" 123)
     , mint $ singleton "aaaa" "hello" 333
     ]
-    
-nonNormalizedValue :: Value    
+
+nonNormalizedValue :: Value
 nonNormalizedValue =
-      Value $
-      AssocMap.fromList $
-      (\(x, y) -> (x, AssocMap.fromList y)) <$>
-      [ ("ccaa", [("c", 2), ("tokenhi", 10), ("hello", 30)])
-      , ("ccaa", [("tokenhi", 30), ("a", 2), ("world", 40), ("b", 1)])
-      , ("eeff", [("hey", 123)])
-      , ("ccaa", [("hello", 20), ("b", 2), ("world", 20)])
-      ]      
+  Value $
+    AssocMap.fromList $
+      (\(x, y) -> (x, AssocMap.fromList y))
+        <$> [ ("ccaa", [("c", 2), ("tokenhi", 10), ("hello", 30)])
+            , ("ccaa", [("tokenhi", 30), ("a", 2), ("world", 40), ("b", 1)])
+            , ("eeff", [("hey", 123)])
+            , ("ccaa", [("hello", 20), ("b", 2), ("world", 20)])
+            ]
