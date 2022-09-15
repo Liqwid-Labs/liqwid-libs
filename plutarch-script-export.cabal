@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutarch-script-export
-version:            1.1.0
+version:            1.1.1
 extra-source-files: CHANGELOG.md
 author:             Emily Martins <emi@haskell.fyi>
 license:            Apache-2.0
