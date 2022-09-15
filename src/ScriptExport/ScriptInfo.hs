@@ -13,6 +13,7 @@ module ScriptExport.ScriptInfo (
   mkScriptInfo,
   mkValidatorInfo,
   mkPolicyInfo,
+  mkStakeValidatorInfo,
 ) where
 
 import Aeson.Orphans ()
@@ -25,8 +26,8 @@ import Data.ByteString.Short qualified as SBS
 import Data.Text (Text)
 import GHC.Generics qualified as GHC
 import Plutarch (ClosedTerm, Config (Config, tracingMode), TracingMode (NoTracing))
-import Plutarch.Api.V2 (PMintingPolicy, PValidator, mkMintingPolicy, mkValidator, scriptHash)
-import PlutusLedgerApi.V2 (MintingPolicy (getMintingPolicy), Script, ScriptHash, Validator (getValidator))
+import Plutarch.Api.V2 (PMintingPolicy, PStakeValidator, PValidator, mkMintingPolicy, mkStakeValidator, mkValidator, scriptHash)
+import PlutusLedgerApi.V2 (MintingPolicy (getMintingPolicy), Script, ScriptHash, StakeValidator (getStakeValidator), Validator (getValidator))
 
 {- | Bundle containing a 'Validator' and its hash.
 
@@ -86,3 +87,11 @@ mkPolicyInfo term =
 mkValidatorInfo :: ClosedTerm PValidator -> ScriptInfo
 mkValidatorInfo term =
   mkScriptInfo (getValidator $ mkValidator exportConfig term)
+
+{- | Create a 'ScriptInfo' given a Plutarch term of a stake validator.
+
+     @since 1.1.1
+-}
+mkStakeValidatorInfo :: ClosedTerm PStakeValidator -> ScriptInfo
+mkStakeValidatorInfo term =
+  mkScriptInfo (getStakeValidator $ mkStakeValidator exportConfig term)
