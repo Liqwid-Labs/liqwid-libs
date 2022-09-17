@@ -45,6 +45,7 @@ import Plutarch.Context.Base (
   yieldOutDatums,
   yieldRedeemerMap,
  )
+import Plutarch.Context.Internal(Normalizer(mkNormalized'), mkNormalized)  
 import Plutarch.Context.Check (
   Checker (runChecker),
   CheckerError,
@@ -101,6 +102,10 @@ instance Monoid MintingBuilder where
 instance Builder MintingBuilder where
   _bb = lens mbInner (\x b -> x {mbInner = b})
   pack x = mempty {mbInner = x}
+
+instance Normalizer MintingBuilder where
+  mkNormalized' (MB bb cs) =
+    MB (mkNormalized bb) cs
 
 {- | Set CurrencySymbol for building Minting ScriptContext.
 

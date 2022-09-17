@@ -97,6 +97,7 @@ library
     Plutarch.Context.Spending
     Plutarch.Context.SubBuilder
     Plutarch.Context.TxInfo
+    Plutarch.Context.Internal
 
   build-depends:
     , acc

@@ -25,7 +25,6 @@ import Test.Tasty.HUnit (testCase, (@?=))
 main :: IO ()
 main = do
   setLocaleEncoding utf8
-  print $ runChecker @() checkNormalized (generalSample :: BaseBuilder)
   defaultMain . testGroup "Sample Tests" $
     [ testCase "TxInfo matches with both Minting and Spending Script Purposes" $
         scriptContextTxInfo a @?= scriptContextTxInfo b
@@ -49,7 +48,7 @@ main = do
             generalSample
               <> withSpendingUTXO
                 ( pubKey "aabb"
-                    <> withValue (normalizeValue nonNormalizedValue)
+                    <> withValue nonNormalizedValue
                     <> withRefIndex 5
                     <> withStakingCredential (StakingPtr 0 0 0)
                 )

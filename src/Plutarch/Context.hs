@@ -44,7 +44,6 @@ module Plutarch.Context (
   B.normalizeUTXO,
   B.normalizeMint,
   B.sortMap,
-  B.mkNormalized,
   S.SpendingBuilder (..),
   S.withSpendingUTXO,
   S.withSpendingOutRef,
@@ -99,6 +98,7 @@ module Plutarch.Context (
   C.flattenValue,
   C.checkValidatorRedeemer,
   C.checkValueNormalized,
+  I.mkNormalized,
 ) where
 
 import Plutarch.Context.Base qualified as B
@@ -107,3 +107,5 @@ import Plutarch.Context.Minting qualified as M
 import Plutarch.Context.Spending qualified as S
 import Plutarch.Context.SubBuilder qualified as Sub
 import Plutarch.Context.TxInfo qualified as T
+
+import Plutarch.Context.Internal qualified as I

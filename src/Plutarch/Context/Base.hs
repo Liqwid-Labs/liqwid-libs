@@ -71,7 +71,7 @@ module Plutarch.Context.Base (
   normalizeUTXO,
   normalizeMint,
   sortMap,
-  mkNormalized,
+  mkNormalizedBase,
 ) where
 
 import Acc (Acc, fromReverseList)
@@ -796,12 +796,12 @@ normalizeValue (getValue -> val) =
 
  @since 2.4.0
 -}
-mkNormalized ::
+mkNormalizedBase ::
   forall (a :: Type).
   Builder a =>
   a ->
   a
-mkNormalized = over _bb go
+mkNormalizedBase = over _bb go
   where
     go bb@BB {..} =
       bb
