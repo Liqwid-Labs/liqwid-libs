@@ -162,7 +162,8 @@ normalizeMint m =
   m
     { mintTokens =
         sortBy (\(t, _) (t', _) -> compare t t') $
-          foldr (normalizePair (+)) [] $ mintTokens m
+          filter (\(_, v) -> v /= 0) $ 
+            foldr (normalizePair (+)) [] $ mintTokens m
     }
 
 {- | 'UTXO' is used to represent any input or output of a transaction in the builders.
@@ -784,7 +785,10 @@ normalizeValue (getValue -> val) =
     sortMap $
       normalizeMap
         ( \x y ->
-            sortMap $ normalizeMap (+) $ AssocMap.unionWith (+) x y
+            AssocMap.filter (\v -> v /= 0) $
+              sortMap $
+                normalizeMap (+) $
+                  AssocMap.unionWith (+) x y
         )
         val
 
