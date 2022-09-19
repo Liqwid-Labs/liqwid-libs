@@ -2,6 +2,7 @@
 
 module Main (main) where
 
+import Data.Bifunctor (second)
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
 import Plutarch.Context
 import PlutusLedgerApi.V2 (
@@ -13,7 +14,11 @@ import PlutusLedgerApi.V2 (
   TxInfo (txInfoOutputs),
   Value (Value),
   singleton,
+  adaSymbol,
+  adaToken,
+  fromList
  )
+import PlutusLedgerApi.V1 (getValue)
 import PlutusTx.AssocMap qualified as AssocMap
 
 import MintingBuilder qualified (specs)
@@ -38,6 +43,14 @@ main = do
         null (runChecker checkNormalized (mkNormalized generalSample :: BaseBuilder)) @?= True
     , SpendingBuilder.specs
     , MintingBuilder.specs
+    , testCase "normalizeValue removes 0 entries unless they are ADA" $
+      (getValue . normalizeValue . Value $
+       fromList [("cc", fromList [("token name",0)]),
+                 zeroAdaTuple])
+      @?= (getValue . Value $ fromList [zeroAdaTuple])
+    , testCase "normalizeValue adds 0 ADA entry if it is missing" $
+      (getValue . normalizeValue . Value $ fromList [])
+      @?= (getValue . Value $ fromList [zeroAdaTuple])
     ]
   where
     a = buildMinting mempty (mkNormalized $ generalSample <> withMinting "aaaa")
@@ -55,6 +68,8 @@ main = do
         )
     c = buildTxInfo $ mkNormalized generalSample
     d = buildTxOuts $ mkNormalized generalSample
+
+    zeroAdaTuple = (adaSymbol, fromList [(adaToken, 0)])
 
 generalSample :: (Monoid a, Builder a) => a
 generalSample =
@@ -79,7 +94,7 @@ nonNormalizedValue :: Value
 nonNormalizedValue =
   Value $
     AssocMap.fromList $
-      (Data.Bifunctor.second AssocMap.fromList)
+      second AssocMap.fromList
         <$> [ ("ccaa", [("c", 2), ("tokenhi", 10), ("hello", 30)])
             , ("ccaa", [("tokenhi", 30), ("a", 2), ("world", 40), ("b", 1)])
             , ("eeff", [("hey", 123)])
