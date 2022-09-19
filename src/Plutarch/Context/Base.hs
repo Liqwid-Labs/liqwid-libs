@@ -625,7 +625,7 @@ yieldMint = foldMap mintToValue . toList
 -}
 mintToValue :: Mint -> Value
 mintToValue m =
-  (foldMap f $ mintTokens m) <> Value.singleton adaSymbol adaToken 0
+  foldMap f (mintTokens m) <> Value.singleton adaSymbol adaToken 0
   where
     f = uncurry $ Value.singleton $ mintSymbol m
 
@@ -790,21 +790,23 @@ sortMap (AssocMap.toList -> m) =
 -}
 normalizeValue :: Value -> Value
 normalizeValue (Value.getValue -> val) =
-  Value.Value $
-    AssocMap.filter (/= AssocMap.empty) $
-      sortMap $
-        ensureAda $
-          AssocMap.mapMaybe
-            (Just . sortMap . AssocMap.filter (/= 0))
-            $ combineMap (AssocMap.unionWith (+)) val
-  where
-    ensureAda x =
-      fromMaybe
-        (AssocMap.insert adaSymbol (AssocMap.fromList [(adaToken, 0)]) x)
-        $ do
-          tm <- AssocMap.lookup adaSymbol x
-          _ <- AssocMap.lookup adaToken tm
-          return x
+  let val' = AssocMap.insert adaSymbol (AssocMap.fromList [(adaToken, 0)]) val
+   in Value.Value
+        . AssocMap.filter (/= AssocMap.empty)
+        . sortMap
+        . AssocMap.mapWithKey
+          ( \cs tm ->
+              sortMap $
+                AssocMap.mapMaybeWithKey
+                  ( \tk v ->
+                      if v /= 0 || (tk == adaToken && cs == adaSymbol)
+                        then Just v
+                        else Nothing
+                  )
+                  tm
+          )
+        . combineMap (AssocMap.unionWith (+))
+        $ val'
 
 {- | Normalize all values and mints in the given builder.
 
