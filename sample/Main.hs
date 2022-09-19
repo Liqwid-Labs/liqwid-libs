@@ -51,6 +51,15 @@ main = do
     , testCase "normalizeValue adds 0 ADA entry if it is missing" $
       (getValue . normalizeValue . Value $ fromList [])
       @?= (getValue . Value $ fromList [zeroAdaTuple])
+    , testCase "normalizeValue adds matching entires" $
+      (getValue . normalizeValue . Value $ fromList [ zeroAdaTuple
+                                                    , ("cc", fromList [("token", 1)])
+                                                    , ("cc", fromList [("token", 1)])
+                                                    ])
+      @?= (getValue . normalizeValue . Value $ fromList [ zeroAdaTuple
+                                                    , ("cc", fromList [("token", 2)])
+                                                    ])
+
     ]
   where
     a = buildMinting mempty (mkNormalized $ generalSample <> withMinting "aaaa")
