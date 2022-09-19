@@ -1,10 +1,9 @@
-
-
 module Main (main) where
 
 import Data.Bifunctor (second)
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
 import Plutarch.Context
+import PlutusLedgerApi.V1 (getValue)
 import PlutusLedgerApi.V2 (
   Address (Address),
   Credential (PubKeyCredential),
@@ -13,12 +12,11 @@ import PlutusLedgerApi.V2 (
   StakingCredential (StakingPtr),
   TxInfo (txInfoOutputs),
   Value (Value),
-  singleton,
   adaSymbol,
   adaToken,
-  fromList
+  fromList,
+  singleton,
  )
-import PlutusLedgerApi.V1 (getValue)
 import PlutusTx.AssocMap qualified as AssocMap
 
 import MintingBuilder qualified (specs)
@@ -44,22 +42,30 @@ main = do
     , SpendingBuilder.specs
     , MintingBuilder.specs
     , testCase "normalizeValue removes 0 entries unless they are ADA" $
-      (getValue . normalizeValue . Value $
-       fromList [("cc", fromList [("token name",0)]),
-                 zeroAdaTuple])
-      @?= (getValue . Value $ fromList [zeroAdaTuple])
+        ( getValue . normalizeValue . Value $
+            fromList
+              [ ("cc", fromList [("token name", 0)])
+              , zeroAdaTuple
+              ]
+        )
+          @?= (getValue . Value $ fromList [zeroAdaTuple])
     , testCase "normalizeValue adds 0 ADA entry if it is missing" $
-      (getValue . normalizeValue . Value $ fromList [])
-      @?= (getValue . Value $ fromList [zeroAdaTuple])
+        (getValue . normalizeValue . Value $ fromList [])
+          @?= (getValue . Value $ fromList [zeroAdaTuple])
     , testCase "normalizeValue adds matching entires" $
-      (getValue . normalizeValue . Value $ fromList [ zeroAdaTuple
-                                                    , ("cc", fromList [("token", 1)])
-                                                    , ("cc", fromList [("token", 1)])
-                                                    ])
-      @?= (getValue . normalizeValue . Value $ fromList [ zeroAdaTuple
-                                                    , ("cc", fromList [("token", 2)])
-                                                    ])
-
+        ( getValue . normalizeValue . Value $
+            fromList
+              [ zeroAdaTuple
+              , ("cc", fromList [("token", 1)])
+              , ("cc", fromList [("token", 1)])
+              ]
+        )
+          @?= ( getValue . Value $
+                  fromList
+                    [ zeroAdaTuple
+                    , ("cc", fromList [("token", 2)])
+                    ]
+              )
     ]
   where
     a = buildMinting mempty (mkNormalized $ generalSample <> withMinting "aaaa")

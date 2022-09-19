@@ -65,8 +65,8 @@ module Plutarch.Context.Base (
   mintToValue,
 
   -- * Normalizers
-  normalizePair,
-  normalizeMap,
+  combinePair,
+  combineMap,
   normalizeValue,
   normalizeUTXO,
   normalizeMint,
@@ -125,6 +125,8 @@ import PlutusLedgerApi.V2 (
   TxOutRef (TxOutRef),
   ValidatorHash,
   Value (getValue),
+  adaSymbol,
+  adaToken,
   always,
  )
 import PlutusTx.AssocMap (Map)
@@ -163,7 +165,7 @@ normalizeMint m =
     { mintTokens =
         sortBy (\(t, _) (t', _) -> compare t t') $
           filter (\(_, v) -> v /= 0) $
-            foldr (normalizePair (+)) [] $ mintTokens m
+            foldr (combinePair (+)) [] $ mintTokens m
     }
 
 {- | 'UTXO' is used to represent any input or output of a transaction in the builders.
@@ -623,7 +625,7 @@ yieldMint = foldMap mintToValue . toList
 -}
 mintToValue :: Mint -> Value
 mintToValue m =
-  foldMap f $ mintTokens m
+  (foldMap f $ mintTokens m) <> Value.singleton adaSymbol adaToken 0
   where
     f = uncurry $ Value.singleton $ mintSymbol m
 
@@ -736,17 +738,17 @@ mkOutRefIndices = over _bb go
 
  @since 2.4.0
 -}
-normalizePair ::
+combinePair ::
   forall (k :: Type) (v :: Type).
   Eq k =>
   (v -> v -> v) ->
   (k, v) ->
   [(k, v)] ->
   [(k, v)]
-normalizePair _ p [] = [p]
-normalizePair c (k, v) ((k', v') : xs)
+combinePair _ p [] = [p]
+combinePair c (k, v) ((k', v') : xs)
   | k == k' = (k, c v v') : xs
-  | otherwise = (k', v') : normalizePair c (k, v) xs
+  | otherwise = (k', v') : combinePair c (k, v) xs
 
 {- | Given an 'AssocMap', combine all values when the key is equal,
      using the given concat function. The output will be the reverse
@@ -754,14 +756,14 @@ normalizePair c (k, v) ((k', v') : xs)
 
  @since 2.4.0
 -}
-normalizeMap ::
+combineMap ::
   forall (k :: Type) (v :: Type).
   Eq k =>
   (v -> v -> v) ->
   Map k v ->
   Map k v
-normalizeMap c (AssocMap.toList -> m) =
-  AssocMap.fromList $ foldr (normalizePair c) [] m
+combineMap c (AssocMap.toList -> m) =
+  AssocMap.fromList $ foldr (combinePair c) [] m
 
 {- | Sort given 'AssocMap' by given comparator.
 
@@ -777,20 +779,32 @@ sortMap (AssocMap.toList -> m) =
 
 {- | Normalize and sort 'Value'.
 
+    - 'Value' entries that match on both the 'CurrencySymbol' and
+      'TokenName' are combined, with their amounts added together
+    - 'Value' entries in the outer map are sorted by currency symbol
+    - 'Value' entries in the inner map are sorted by token name
+    - Non-ADA zero-entries are dropped
+    - If the `Value` is missing an ADA entry, as 0 ADA entries is added
+
  @since 2.4.0
 -}
 normalizeValue :: Value -> Value
-normalizeValue (getValue -> val) =
+normalizeValue (Value.getValue -> val) =
   Value.Value $
-    sortMap $
-      normalizeMap
-        ( \x y ->
-            AssocMap.filter (/= 0) $
-              sortMap $
-                normalizeMap (+) $
-                  AssocMap.unionWith (+) x y
-        )
-        val
+    AssocMap.filter (/= AssocMap.empty) $
+      sortMap $
+        ensureAda $
+          AssocMap.mapMaybe
+            (Just . sortMap . AssocMap.filter (/= 0))
+            $ combineMap (AssocMap.unionWith (+)) val
+  where
+    ensureAda x =
+      fromMaybe
+        (AssocMap.insert adaSymbol (AssocMap.fromList [(adaToken, 0)]) x)
+        $ do
+          tm <- AssocMap.lookup adaSymbol x
+          _ <- AssocMap.lookup adaToken tm
+          return x
 
 {- | Normalize all values and mints in the given builder.
 
