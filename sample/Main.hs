@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeApplications #-}
+
 
 module Main (main) where
 
@@ -35,7 +35,7 @@ main = do
     , testCase "Checker should fail when there is a value that is not normalized" $
         null (runChecker checkNormalized (generalSample :: BaseBuilder)) @?= False
     , testCase "Checker should succeed when there is a value that is not normalized" $
-        null (runChecker checkNormalized (mkNormalized $ generalSample :: BaseBuilder)) @?= True
+        null (runChecker checkNormalized (mkNormalized generalSample :: BaseBuilder)) @?= True
     , SpendingBuilder.specs
     , MintingBuilder.specs
     ]
@@ -79,7 +79,7 @@ nonNormalizedValue :: Value
 nonNormalizedValue =
   Value $
     AssocMap.fromList $
-      (\(x, y) -> (x, AssocMap.fromList y))
+      (Data.Bifunctor.second AssocMap.fromList)
         <$> [ ("ccaa", [("c", 2), ("tokenhi", 10), ("hello", 30)])
             , ("ccaa", [("tokenhi", 30), ("a", 2), ("world", 40), ("b", 1)])
             , ("eeff", [("hey", 123)])

@@ -93,11 +93,11 @@ library
   other-modules:
     Plutarch.Context.Base
     Plutarch.Context.Check
+    Plutarch.Context.Internal
     Plutarch.Context.Minting
     Plutarch.Context.Spending
     Plutarch.Context.SubBuilder
     Plutarch.Context.TxInfo
-    Plutarch.Context.Internal
 
   build-depends:
     , acc

@@ -162,7 +162,7 @@ normalizeMint m =
   m
     { mintTokens =
         sortBy (\(t, _) (t', _) -> compare t t') $
-          filter (\(_, v) -> v /= 0) $ 
+          filter (\(_, v) -> v /= 0) $
             foldr (normalizePair (+)) [] $ mintTokens m
     }
 
@@ -785,7 +785,7 @@ normalizeValue (getValue -> val) =
     sortMap $
       normalizeMap
         ( \x y ->
-            AssocMap.filter (\v -> v /= 0) $
+            AssocMap.filter (/= 0) $
               sortMap $
                 normalizeMap (+) $
                   AssocMap.unionWith (+) x y

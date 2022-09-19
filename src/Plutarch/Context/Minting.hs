@@ -45,7 +45,6 @@ import Plutarch.Context.Base (
   yieldOutDatums,
   yieldRedeemerMap,
  )
-import Plutarch.Context.Internal(Normalizer(mkNormalized'), mkNormalized)  
 import Plutarch.Context.Check (
   Checker (runChecker),
   CheckerError,
@@ -55,6 +54,7 @@ import Plutarch.Context.Check (
   flattenValue,
   handleErrors,
  )
+import Plutarch.Context.Internal (Normalizer (mkNormalized'), mkNormalized)
 import PlutusLedgerApi.V2 (
   CurrencySymbol,
   ScriptContext (ScriptContext),

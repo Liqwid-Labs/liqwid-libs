@@ -39,7 +39,7 @@ import Plutarch.Context.Base (
   yieldOutDatums,
   yieldRedeemerMap,
  )
-import Plutarch.Context.Internal(Normalizer(mkNormalized'), mkNormalized)  
+import Plutarch.Context.Internal (Normalizer (mkNormalized'), mkNormalized)
 import PlutusLedgerApi.V2 (
   ScriptContext (ScriptContext),
   ScriptPurpose (Spending),
@@ -70,7 +70,7 @@ instance Builder TxInfoBuilder where
   pack = TxInfoBuilder
 
 instance Normalizer TxInfoBuilder where
-  mkNormalized' (TxInfoBuilder x) = TxInfoBuilder $ mkNormalized x  
+  mkNormalized' (TxInfoBuilder x) = TxInfoBuilder $ mkNormalized x
 
 {- | Builds `TxInfo` from TxInfoBuilder.
 

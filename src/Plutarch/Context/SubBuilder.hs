@@ -23,7 +23,7 @@ import Plutarch.Context.Base (
   utxoToTxOut,
   yieldInInfoDatums,
  )
-import Plutarch.Context.Internal(Normalizer(mkNormalized'), mkNormalized)  
+import Plutarch.Context.Internal (Normalizer (mkNormalized'), mkNormalized)
 import PlutusLedgerApi.V2 (
   Datum,
   DatumHash,

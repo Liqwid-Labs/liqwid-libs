@@ -41,9 +41,9 @@ import Plutarch.Context.Base (
   BaseBuilder (BB, bbDatums, bbInputs, bbMints, bbOutputs, bbRedeemers, bbReferenceInputs, bbSignatures),
   Builder (pack, _bb),
   UTXO,
+  normalizeUTXO,
   unpack,
   utxoToTxOut,
-  normalizeUTXO,
   yieldBaseTxInfo,
   yieldExtraDatums,
   yieldInInfoDatums,
@@ -51,8 +51,8 @@ import Plutarch.Context.Base (
   yieldOutDatums,
   yieldRedeemerMap,
  )
-import Plutarch.Context.Internal(Normalizer(mkNormalized'), mkNormalized)    
 import Plutarch.Context.Check
+import Plutarch.Context.Internal (Normalizer (mkNormalized'), mkNormalized)
 import PlutusLedgerApi.V2 (
   ScriptContext (ScriptContext),
   ScriptPurpose (Spending),
@@ -109,7 +109,7 @@ instance Normalizer SpendingBuilder where
   mkNormalized' (SB bb vi) =
     SB (mkNormalized bb) (normalize <$> vi)
     where
-      normalize x = 
+      normalize x =
         case x of
           ValidatorUTXO utxo -> ValidatorUTXO $ normalizeUTXO utxo
           a -> a
