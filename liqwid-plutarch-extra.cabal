@@ -92,6 +92,7 @@ library
     Plutarch.Extra.Compile
     Plutarch.Extra.Const
     Plutarch.Extra.DebuggableScript
+    Plutarch.Extra.ExchangeRate
     Plutarch.Extra.Field
     Plutarch.Extra.FixedDecimal
     Plutarch.Extra.Function
@@ -106,6 +107,7 @@ library
     Plutarch.Extra.Ord
     Plutarch.Extra.Precompile
     Plutarch.Extra.Profunctor
+    Plutarch.Extra.Rational
     Plutarch.Extra.Record
     Plutarch.Extra.ScriptContext
     Plutarch.Extra.Star
@@ -117,18 +119,15 @@ library
     Plutarch.Extra.Time
     Plutarch.Extra.Traversable
     Plutarch.Extra.Tuple
-    Plutarch.Extra.Value
-    Plutarch.Extra.Units.ScottAssetClass
-    Plutarch.Extra.Units.DataAssetClass
     Plutarch.Extra.Units.Quantity
-    Plutarch.Extra.Units.Rational
+    Plutarch.Extra.Value
     Plutarch.Orphans
 
   build-depends:
     , aeson
     , bytestring
-    , containers
     , composition-prelude
+    , containers
     , data-default
     , deepseq
     , generics-sop

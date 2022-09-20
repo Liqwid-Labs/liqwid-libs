@@ -1,97 +1,258 @@
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE OverloadedRecordDot #-}
+
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+{- | Provideds a scott-encoded asset class type and utility functions
+ NOTE: This module exports types of the same name as
+ @Liqwid.Units.DataAssetClass@. It should be imported qualified.
+-}
 module Plutarch.Extra.AssetClass (
-    PAssetClass (..),
-    passetClass,
-    passetClassValueOf,
-    pvalueOf,
+    -- * AssetClass - Hask
+    AssetClass (AssetClass, symbol, name),
+
+    -- * AssetClass - Plutarch
+    PAssetClass (PAssetClass, psymbol, pname),
+    adaSymbolData,
+    isAdaClass,
+    adaClass,
+    padaClass,
+    emptyTokenNameData,
+    pcoerceCls,
+    psymbolAssetClass,
+    pconstantCls,
+
+    -- * AssetClassData - Hask
+    AssetClassData (AssetClassData, symbol, name),
+
+    -- * AssetClassData - Plutarch
+    PAssetClassData (PAssetClassData),
+
+    -- * Scott <-> Data conversions
+    toScottEncoding,
+    ptoScottEncoding,
+    fromScottEncoding,
+    pfromScottEncoding,
+    pviaScottEncoding,
 ) where
+
+--------------------------------------------------------------------------------
+
+import GHC.TypeLits (Symbol)
+
+--------------------------------------------------------------------------------
+
+import qualified Data.Aeson as Aeson
+import qualified Generics.SOP as SOP
+
+--------------------------------------------------------------------------------
+
+import Plutarch.DataRepr (PDataFields)
+import Plutarch.Extra.IsData (
+    DerivePConstantViaDataList (DerivePConstantViaDataList),
+    ProductIsData (ProductIsData),
+ )
+import Plutarch.Lift (
+    PConstantDecl,
+    PUnsafeLiftDecl (PLifted),
+ )
+
+import qualified PlutusTx
+
+--------------------------------------------------------------------------------
+
+import Plutarch.Extra.Record (mkRecordConstr, (.&), (.=))
+
+import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
+import qualified GHC.Generics as GHC
+
+--------------------------------------------------------------------------------
 
 import Plutarch.Api.V1 (
     PCurrencySymbol,
     PTokenName,
-    PValue (PValue),
  )
-import Plutarch.Api.V1.AssocMap (PMap (PMap))
-import Plutarch.Api.V2 (
-    AmountGuarantees,
-    KeyGuarantees,
- )
-import Plutarch.DataRepr (PDataFields)
-import Plutarch.Extra.TermCont (pletC, pmatchC)
 
--- | @since 1.0.0
-newtype PAssetClass (s :: S)
-    = PAssetClass
+import Plutarch.Unsafe (punsafeCoerce)
+
+--------------------------------------------------------------------------------
+
+import Plutarch.Orphans ()
+
+--------------------------------------------------------------------------------
+
+import qualified PlutusLedgerApi.V1.Value as Plutus
+
+--------------------------------------------------------------------------------
+-- AssetClass & Variants
+
+-- | Version of Plutus AssetClass, with CurrencyUnit tag
+data AssetClass (tag :: Symbol) = AssetClass
+    { symbol :: Plutus.CurrencySymbol
+    , name :: Plutus.TokenName
+    }
+    deriving stock (Eq, Ord, Show, GHC.Generic)
+    deriving anyclass
+        ( ToJSON
+        , FromJSON
+        , FromJSONKey
+        , ToJSONKey
+        )
+
+-- | Scott-encoded AssetClass
+data PAssetClass (unit :: Symbol) (s :: S) = PAssetClass
+    { psymbol :: Term s (PAsData PCurrencySymbol)
+    , pname :: Term s (PAsData PTokenName)
+    }
+    deriving stock (GHC.Generic)
+    deriving anyclass (PEq, PlutusType) -- Scott-encoded
+
+instance DerivePlutusType (PAssetClass unit) where
+    type DPTStrat _ = PlutusTypeScott
+
+pconstantCls ::
+    forall (unit :: Symbol) (s :: S).
+    AssetClass unit ->
+    Term s (PAssetClass unit)
+pconstantCls (AssetClass sym tk) =
+    pcon $
+        PAssetClass (pconstantData sym) (pconstantData tk)
+
+-- | Coerce the unit tag of a PAssetClass''
+pcoerceCls ::
+    forall (b :: Symbol) (a :: Symbol) (s :: S).
+    Term s (PAssetClass a) ->
+    Term s (PAssetClass b)
+pcoerceCls = punsafeCoerce
+
+-- | Construct a PAssetClass'' with empty TokenName
+psymbolAssetClass ::
+    forall (unit :: Symbol) (s :: S).
+    Term s (PAsData PCurrencySymbol) ->
+    PAssetClass unit s
+psymbolAssetClass sym = PAssetClass sym emptyTokenNameData
+
+--------------------------------------------------------------------------------
+-- Simple Helpers
+
+-- | Check whether an AssetClass is the Ada Class
+isAdaClass :: AssetClass "Underlying" -> Bool
+isAdaClass (AssetClass s n) = s == s' && n == n'
+  where
+    (AssetClass s' n') = adaClass
+
+-- | Ada CurrencySymbol - ""
+adaSymbolData :: forall (s :: S). Term s (PAsData PCurrencySymbol)
+adaSymbolData = pconstantData ""
+
+-- | Ada AssetClass - ("", "")
+adaClass :: AssetClass "Ada"
+adaClass = AssetClass "" ""
+
+-- | Ada AssetClass - Plutarch-level
+padaClass :: forall (s :: S). Term s (PAssetClass "Ada")
+padaClass = pconstantCls adaClass
+
+-- | Empty String as a 'PTokenName'
+emptyTokenNameData :: forall (s :: S). Term s (PAsData PTokenName)
+emptyTokenNameData = pconstantData ""
+
+----------------------------------------
+-- Data-Encoded version
+
+-- | Data-encoded AssetClass without the phantom-tag
+data AssetClassData = AssetClassData
+    { symbol :: Plutus.CurrencySymbol
+    , name :: Plutus.TokenName
+    }
+    deriving stock (Eq, Ord, Show, GHC.Generic)
+    deriving anyclass
+        ( Aeson.ToJSON
+        , Aeson.FromJSON
+        , Aeson.FromJSONKey
+        , Aeson.ToJSONKey
+        , SOP.Generic
+        )
+    deriving
+        (PlutusTx.ToData, PlutusTx.FromData)
+        via Plutarch.Extra.IsData.ProductIsData AssetClassData
+    deriving
+        (Plutarch.Lift.PConstantDecl)
+        via ( Plutarch.Extra.IsData.DerivePConstantViaDataList
+                AssetClassData
+                PAssetClassData
+            )
+
+-- | Tagless data-encoded AssetClass
+newtype PAssetClassData (s :: S)
+    = PAssetClassData
         ( Term
             s
             ( PDataRecord
-                '[ "currencySymbol" ':= PCurrencySymbol
-                 , "tokenName" ':= PTokenName
+                '[ "symbol" ':= PCurrencySymbol
+                 , "name" ':= PTokenName
                  ]
             )
         )
-    deriving stock
-        ( -- | @since 0.1.0
-          Generic
+    deriving stock (GHC.Generic)
+    deriving anyclass (PlutusType, PEq, PIsData, PDataFields, PShow)
+
+instance DerivePlutusType PAssetClassData where
+    type DPTStrat _ = PlutusTypeNewtype
+
+instance Plutarch.Lift.PUnsafeLiftDecl PAssetClassData where
+    type PLifted PAssetClassData = AssetClassData
+
+-- | Convert from `AssetClassData` to `AssetClass`
+toScottEncoding :: forall (tag :: Symbol). AssetClassData -> AssetClass tag
+toScottEncoding (AssetClassData sym tk) = AssetClass sym tk
+
+-- | Convert from `AssetClass` to `AssetClassData`
+fromScottEncoding :: forall (tag :: Symbol). AssetClass tag -> AssetClassData
+fromScottEncoding (AssetClass sym tk) = AssetClassData sym tk
+
+-- | Convert from `PAssetClassData` to `PAssetClass`
+ptoScottEncoding ::
+    forall (tag :: Symbol) (s :: S).
+    Term
+        s
+        ( PAsData PAssetClassData
+            :--> PAssetClass tag
         )
-    deriving anyclass
-        ( -- | @since 0.1.0
-          PlutusType
-        , -- | @since 0.1.0
-          PIsData
-        , -- | @since 0.1.0
-          PDataFields
-        , -- | @since 1.0.0
-          PEq
+ptoScottEncoding = phoistAcyclic $
+    plam $ \cls ->
+        pletFields @["symbol", "name"] (pto cls) $
+            \cls' -> pcon $ PAssetClass cls'.symbol cls'.name
+
+-- | Convert from `PAssetClass` to `PAssetClassData`
+pfromScottEncoding ::
+    forall (tag :: Symbol) (s :: S).
+    Term
+        s
+        ( PAssetClass tag
+            :--> PAsData PAssetClassData
         )
+pfromScottEncoding = phoistAcyclic $
+    plam $ \cls -> pmatch cls $
+        \(PAssetClass sym tk) ->
+            pdata $
+                mkRecordConstr
+                    PAssetClassData
+                    ( #symbol .= sym
+                        .& #name .= tk
+                    )
 
--- | @since 1.4.0
-instance DerivePlutusType PAssetClass where
-    type DPTStrat _ = PlutusTypeData
-
--- | @since 1.0.0
-passetClass ::
-    forall (s :: S).
-    Term s (PCurrencySymbol :--> PTokenName :--> PAssetClass)
-passetClass = phoistAcyclic $
-    plam $ \cs tn ->
-        pcon . PAssetClass $ pdcons # pdata cs # (pdcons # pdata tn # pdnil)
-
--- | @since 1.0.0
-passetClassValueOf ::
-    forall (s :: S) (keys :: KeyGuarantees) (amounts :: AmountGuarantees).
-    Term s (PValue keys amounts :--> PAssetClass :--> PInteger)
-passetClassValueOf = phoistAcyclic $
-    plam $ \val ac -> unTermCont $ do
-        cs <- pletC (pfromData $ pfield @"currencySymbol" # ac)
-        tn <- pletC (pfromData $ pfield @"tokenName" # ac)
-        pure $ pvalueOf # val # cs # tn
-
--- | @since 1.0.0
-pvalueOf ::
-    forall (s :: S) (keys :: KeyGuarantees) (amounts :: AmountGuarantees).
-    Term s (PValue keys amounts :--> PCurrencySymbol :--> PTokenName :--> PInteger)
-pvalueOf = phoistAcyclic $
-    plam $ \val cs tn -> unTermCont $ do
-        PValue m <- pmatchC val
-        PMap m' <- pmatchC m
-        res <- pmatchC (pfind # (go # cs) # m')
-        case res of
-            PNothing -> pure 0
-            PJust inner -> do
-                PMap innerMap <- pmatchC (pfromData $ psndBuiltin # inner)
-                res2 <- pmatchC (pfind # (go # tn) # innerMap)
-                case res2 of
-                    PNothing -> pure 0
-                    PJust answer -> pure . pfromData $ psndBuiltin # answer
-  where
-    go ::
-        forall (a :: S -> Type) (b :: S -> Type) (s' :: S).
-        (PIsData a, PEq a) =>
-        Term s' (a :--> PBuiltinPair (PAsData a) (PAsData b) :--> PBool)
-    go = phoistAcyclic $
-        plam $ \target p -> unTermCont $ do
-            a' <- pletC (pfromData $ pfstBuiltin # p)
-            pure (target #== a')
+{- | Wrap a function using the Scott-encoded AssetClass to one using the
+ Data-Encoded version
+-}
+pviaScottEncoding ::
+    forall (tag :: Symbol) (a :: PType).
+    ClosedTerm (PAssetClass tag :--> a) ->
+    ClosedTerm (PAsData PAssetClassData :--> a)
+pviaScottEncoding fn = phoistAcyclic $
+    plam $ \cls ->
+        fn #$ ptoScottEncoding # cls

@@ -4,7 +4,7 @@
 -- requiring this unusual solution.
 {-# OPTIONS_GHC -Wwarn=orphans #-}
 
-module Plutarch.Extra.Units.Rational (
+module Plutarch.Extra.Rational (
     mulTruncate,
     mulDivTruncate,
     divTruncate,
@@ -70,8 +70,9 @@ divRational =
             (PRational num denom) <- pmatch r
             (pto denom * x) #% num
 
--- | Create a `PRational` out of two `PIntegers`. Will error if the denominator
--- is  non-positive.
+{- | Create a `PRational` out of two `PIntegers`. Will error if the denominator
+ is  non-positive.
+-}
 (#%) ::
     forall (s :: S).
     Term s PInteger ->
