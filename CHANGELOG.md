@@ -2,6 +2,29 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.8.0 -- 2022-09-20
+
+### Added
+
+* `Plutarch.Extra.ExchangeRate`: Utilities for working with ExchangeRates at 
+  the type level.
+* `Plutarch.Extra.Rational`: arithmetic and lifting functions for rational types.
+* `ToData` and `FromData` instances for `Ratio Integer` to `Plutarch.Orphans`
+* `Plutarch.Extra.Value`: TODO: Fill me in
+
+### Modified
+
+* `Plutarch.Extra.AssetClass`: Modified the old asset-class module to used tagged
+  variants. Provides Data and Scott-encoded versions of Assetclasses
+  (currency symbol and token name pairs), along with helper functions and
+  conversion functions.
+  * Field names have changed from `currencySymbol` and `tokenName` to `symbol`
+    and `name`.
+* `Plutarch.Extra.ScriptContext`: `pisTokenSpent` now tags a `tag :: Symbol` in
+  its type, reflecting the move towards tag AssetClasses
+
+
+
 ## 3.7.0 -- 2022-09-20
 
 ### Moved
