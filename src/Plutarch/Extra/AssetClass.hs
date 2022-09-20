@@ -7,9 +7,8 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-{- | Provideds a scott-encoded asset class type and utility functions
- NOTE: This module exports types of the same name as
- @Liqwid.Units.DataAssetClass@. It should be imported qualified.
+{- | Provides Data and Scott encoded  asset class types and utility
+  functions.
 -}
 module Plutarch.Extra.AssetClass (
     -- * AssetClass - Hask
@@ -93,30 +92,57 @@ import qualified PlutusLedgerApi.V1.Value as Plutus
 --------------------------------------------------------------------------------
 -- AssetClass & Variants
 
--- | Version of Plutus AssetClass, with CurrencyUnit tag
+{- | Version of Plutus AssetClass, with currency unit tag
+ @since 3.8.0
+-}
 data AssetClass (tag :: Symbol) = AssetClass
     { symbol :: Plutus.CurrencySymbol
     , name :: Plutus.TokenName
     }
-    deriving stock (Eq, Ord, Show, GHC.Generic)
+    deriving stock
+        ( -- | @since 3.8.0
+          Eq
+        , -- | @since 3.8.0
+          Ord
+        , -- | @since 3.8.0
+          Show
+        , -- | @since 3.8.0
+          GHC.Generic
+        )
     deriving anyclass
-        ( ToJSON
-        , FromJSON
-        , FromJSONKey
-        , ToJSONKey
+        ( -- | @since 3.8.0
+          ToJSON
+        , -- | @since 3.8.0
+          FromJSON
+        , -- | @since 3.8.0
+          FromJSONKey
+        , -- | @since 3.8.0
+          ToJSONKey
         )
 
--- | Scott-encoded AssetClass
+{- | Scott-encoded AssetClass
+ @since 3.8.0
+-}
 data PAssetClass (unit :: Symbol) (s :: S) = PAssetClass
     { psymbol :: Term s (PAsData PCurrencySymbol)
     , pname :: Term s (PAsData PTokenName)
     }
-    deriving stock (GHC.Generic)
-    deriving anyclass (PEq, PlutusType) -- Scott-encoded
+    deriving stock
+        ( -- | @since 3.8.0
+          GHC.Generic
+        )
+    deriving anyclass
+        ( -- | @since 3.8.0
+          PEq
+        , -- | @since 3.8.0
+          PlutusType
+        )
 
+-- | @since 3.8.0
 instance DerivePlutusType (PAssetClass unit) where
     type DPTStrat _ = PlutusTypeScott
 
+-- | @since 3.8.0
 pconstantCls ::
     forall (unit :: Symbol) (s :: S).
     AssetClass unit ->
@@ -125,14 +151,18 @@ pconstantCls (AssetClass sym tk) =
     pcon $
         PAssetClass (pconstantData sym) (pconstantData tk)
 
--- | Coerce the unit tag of a PAssetClass''
+{- | Coerce the unit tag of a PAssetClass
+ | @since 3.8.0
+-}
 pcoerceCls ::
     forall (b :: Symbol) (a :: Symbol) (s :: S).
     Term s (PAssetClass a) ->
     Term s (PAssetClass b)
 pcoerceCls = punsafeCoerce
 
--- | Construct a PAssetClass'' with empty TokenName
+{- | Construct a PAssetClass with empty TokenName
+ | @since 3.8.0
+-}
 psymbolAssetClass ::
     forall (unit :: Symbol) (s :: S).
     Term s (PAsData PCurrencySymbol) ->
@@ -142,55 +172,89 @@ psymbolAssetClass sym = PAssetClass sym emptyTokenNameData
 --------------------------------------------------------------------------------
 -- Simple Helpers
 
--- | Check whether an AssetClass is the Ada Class
-isAdaClass :: AssetClass "Underlying" -> Bool
+{- | Check whether an AssetClass is the Ada Class
+ | @since 3.8.0
+-}
+isAdaClass :: forall (tag :: Symbol). AssetClass tag -> Bool
 isAdaClass (AssetClass s n) = s == s' && n == n'
   where
     (AssetClass s' n') = adaClass
 
--- | Ada CurrencySymbol - ""
+{- | Ada CurrencySymbol - ""
+ | @since 3.8.0
+-}
 adaSymbolData :: forall (s :: S). Term s (PAsData PCurrencySymbol)
 adaSymbolData = pconstantData ""
 
--- | Ada AssetClass - ("", "")
+{- | Ada AssetClass - ("", "")
+ | @since 3.8.0
+-}
 adaClass :: AssetClass "Ada"
 adaClass = AssetClass "" ""
 
--- | Ada AssetClass - Plutarch-level
+{- | Ada AssetClass - Plutarch-level
+ | @since 3.8.0
+-}
 padaClass :: forall (s :: S). Term s (PAssetClass "Ada")
 padaClass = pconstantCls adaClass
 
--- | Empty String as a 'PTokenName'
+{- | Empty String as a 'PTokenName'
+ | @since 3.8.0
+-}
 emptyTokenNameData :: forall (s :: S). Term s (PAsData PTokenName)
 emptyTokenNameData = pconstantData ""
 
 ----------------------------------------
 -- Data-Encoded version
 
--- | Data-encoded AssetClass without the phantom-tag
+{- | Data-encoded AssetClass without the phantom-tag
+ | @since 3.8.0
+-}
 data AssetClassData = AssetClassData
     { symbol :: Plutus.CurrencySymbol
     , name :: Plutus.TokenName
     }
-    deriving stock (Eq, Ord, Show, GHC.Generic)
+    deriving stock
+        ( -- | @since 3.8.0
+          Eq
+        , -- | @since 3.8.0
+          Ord
+        , -- | @since 3.8.0
+          Show
+        , -- | @since 3.8.0
+          GHC.Generic
+        )
     deriving anyclass
-        ( Aeson.ToJSON
-        , Aeson.FromJSON
-        , Aeson.FromJSONKey
-        , Aeson.ToJSONKey
-        , SOP.Generic
+        ( -- | @since 3.8.0
+          Aeson.ToJSON
+        , -- | @since 3.8.0
+          Aeson.FromJSON
+        , -- | @since 3.8.0
+          Aeson.FromJSONKey
+        , -- | @since 3.8.0
+          Aeson.ToJSONKey
+        , -- | @since 3.8.0
+          SOP.Generic
         )
     deriving
-        (PlutusTx.ToData, PlutusTx.FromData)
+        ( -- | @since 3.8.0
+          PlutusTx.ToData
+        , -- | @since 3.8.0
+          PlutusTx.FromData
+        )
         via Plutarch.Extra.IsData.ProductIsData AssetClassData
     deriving
-        (Plutarch.Lift.PConstantDecl)
+        ( -- | @since 3.8.0
+          Plutarch.Lift.PConstantDecl
+        )
         via ( Plutarch.Extra.IsData.DerivePConstantViaDataList
                 AssetClassData
                 PAssetClassData
             )
 
--- | Tagless data-encoded AssetClass
+{- | Tagless data-encoded AssetClass
+ | @since 3.8.0
+-}
 newtype PAssetClassData (s :: S)
     = PAssetClassData
         ( Term
@@ -201,24 +265,46 @@ newtype PAssetClassData (s :: S)
                  ]
             )
         )
-    deriving stock (GHC.Generic)
-    deriving anyclass (PlutusType, PEq, PIsData, PDataFields, PShow)
+    deriving stock
+        ( -- | @since 3.8.0
+          GHC.Generic
+        )
+    deriving anyclass
+        ( -- | @since 3.8.0
+          PlutusType
+        , -- | @since 3.8.0
+          PEq
+        , -- | @since 3.8.0
+          PIsData
+        , -- | @since 3.8.0
+          PDataFields
+        , -- | @since 3.8.0
+          PShow
+        )
 
+-- | @since 3.8.0
 instance DerivePlutusType PAssetClassData where
     type DPTStrat _ = PlutusTypeNewtype
 
+-- | @since 3.8.0
 instance Plutarch.Lift.PUnsafeLiftDecl PAssetClassData where
     type PLifted PAssetClassData = AssetClassData
 
--- | Convert from `AssetClassData` to `AssetClass`
+{- | Convert from `AssetClassData` to `AssetClass`
+ | @since 3.8.0
+-}
 toScottEncoding :: forall (tag :: Symbol). AssetClassData -> AssetClass tag
 toScottEncoding (AssetClassData sym tk) = AssetClass sym tk
 
--- | Convert from `AssetClass` to `AssetClassData`
+{- | Convert from `AssetClass` to `AssetClassData`
+ | @since 3.8.0
+-}
 fromScottEncoding :: forall (tag :: Symbol). AssetClass tag -> AssetClassData
 fromScottEncoding (AssetClass sym tk) = AssetClassData sym tk
 
--- | Convert from `PAssetClassData` to `PAssetClass`
+{- | Convert from `PAssetClassData` to `PAssetClass`
+ @since 3.8.0
+-}
 ptoScottEncoding ::
     forall (tag :: Symbol) (s :: S).
     Term
@@ -231,7 +317,9 @@ ptoScottEncoding = phoistAcyclic $
         pletFields @["symbol", "name"] (pto cls) $
             \cls' -> pcon $ PAssetClass cls'.symbol cls'.name
 
--- | Convert from `PAssetClass` to `PAssetClassData`
+{- | Convert from `PAssetClass` to `PAssetClassData`
+ @since 3.8.0
+-}
 pfromScottEncoding ::
     forall (tag :: Symbol) (s :: S).
     Term
@@ -251,6 +339,8 @@ pfromScottEncoding = phoistAcyclic $
 
 {- | Wrap a function using the Scott-encoded AssetClass to one using the
  Data-Encoded version
+
+ @since 3.8.0
 -}
 pviaScottEncoding ::
     forall (tag :: Symbol) (a :: PType).
@@ -260,7 +350,9 @@ pviaScottEncoding fn = phoistAcyclic $
     plam $ \cls ->
         fn #$ ptoScottEncoding # cls
 
--- | Version of assetClassValue for tagged AssetClass & Tagged
+{- | Version of assetClassValue for tagged AssetClass & Tagged
+ @since 3.8.0
+-}
 assetClassValue ::
     forall (unit :: Symbol).
     AssetClass unit ->

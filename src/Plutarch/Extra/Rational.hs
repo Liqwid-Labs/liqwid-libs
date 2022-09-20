@@ -29,7 +29,10 @@ import PlutusTx (fromData)
 
 --------------------------------------------------------------------------------
 
--- | Combined multiply-truncate
+{- | Combined multiply-truncate
+
+ @since 3.8.0
+-}
 mulTruncate ::
     forall (s :: S).
     Term s (PRational :--> PInteger :--> PInteger)
@@ -41,6 +44,8 @@ mulTruncate =
 
 {- | Multiply the first argument by the second argument, divide by the third,
  truncating
+
+ @since 3.8.0
 -}
 mulDivTruncate ::
     forall (s :: S).
@@ -50,7 +55,10 @@ mulDivTruncate =
         plam $ \x num denom -> P.do
             pdiv # (num * x) # denom
 
--- | Combined divide-truncate
+{- | Combined divide-truncate
+
+ @since 3.8.0
+-}
 divTruncate ::
     forall (s :: S).
     Term s (PRational :--> PInteger :--> PInteger)
@@ -60,7 +68,10 @@ divTruncate =
             (PRational num denom) <- pmatch ex
             mulDivTruncate # x # pto denom # num
 
--- | Multiply a Rational by an Integer, without reducing the fraction
+{- | Multiply a Rational by an Integer, without reducing the fraction
+
+ @since 3.8.0
+-}
 mulRational ::
     forall (s :: S).
     Term s (PInteger :--> PRational :--> PRational)
@@ -70,7 +81,10 @@ mulRational =
             (PRational num denom) <- pmatch r
             pcon $ PRational (num * x) denom
 
--- | Multiply a Rational by an Integer, without reducing the fraction
+{- | Multiply a Rational by an Integer, without reducing the fraction
+
+ @sinmce 3.8.0
+-}
 divRational ::
     forall (s :: S).
     Term s (PInteger :--> PRational :--> PRational)
@@ -82,6 +96,8 @@ divRational =
 
 {- | Create a `PRational` out of two `PIntegers`. Will error if the denominator
  is  non-positive.
+
+ @since 3.8.0
 -}
 (#%) ::
     forall (s :: S).

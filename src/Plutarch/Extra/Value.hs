@@ -6,6 +6,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Plutarch.Extra.Value (
+  -- TODO: Label these imports better
     psingletonValue,
     passetClassValue,
     pvalueOf,
@@ -17,8 +18,6 @@ module Plutarch.Extra.Value (
     pgeqByClass',
     type AddGuarantees,
     phasOnlyOneTokenOfCurrencySymbol,
-
-    -- * PValue utils
     passetClassValueOf,
     findValue,
     pvalue,
