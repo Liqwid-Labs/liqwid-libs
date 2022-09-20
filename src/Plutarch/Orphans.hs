@@ -10,7 +10,7 @@
  Description: Orphan instances for Plutarch and Plutus types, including
   JSON serialization.
 -}
-module Plutarch.Orphans (AsBase16Bytes (..)) where
+module Plutarch.Orphans () where
 
 import Control.Composition (on, (.*))
 import Data.Coerce (Coercible, coerce)
@@ -107,7 +107,7 @@ instance PTryFrom PData (PAsData PScriptHash) where
 -- Aeson (JSON) instances
 
 -- | Represent a ByteString as a hex-encoded JSON String
-newtype AsBase16Bytes (a :: Type) = AsBase16Bytes {unAsBase16Bytes :: a}
+newtype AsBase16Bytes (a :: Type) = AsBase16Bytes a
 
 {- | Represent any serializable value as a hex-encoded JSON String of its
  serialization
