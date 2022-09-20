@@ -10,28 +10,42 @@
  Description: Orphan instances for Plutarch and Plutus types, including
   JSON serialization.
 -}
-module Plutarch.Orphans (AsBase16Bytes (AsBase16Bytes, unAsBase16Bytes)) where
+module Plutarch.Orphans (AsBase16Bytes (..)) where
 
 import Control.Composition (on, (.*))
 import Data.Coerce (Coercible, coerce)
 import Plutarch.Api.V2 (PDatumHash (PDatumHash), PScriptHash (PScriptHash))
-import Plutarch.Builtin (PIsData (..))
+import Plutarch.Builtin (PIsData (pdataImpl, pfromDataImpl))
 import Plutarch.Extra.TermCont (ptryFromC)
-import Plutarch.TryFrom (PTryFrom (..))
+import Plutarch.TryFrom (PTryFrom (ptryFrom'), PTryFromExcess)
 import Plutarch.Unsafe (punsafeCoerce, punsafeDowncast)
 
-import qualified Codec.Serialise as Codec
+import Codec.Serialise (Serialise, deserialiseOrFail, serialise)
 import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Types as Aeson.Types
-import qualified Data.ByteString.Lazy as Lazy
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T.Encoding
+import Data.Aeson.Types (parserThrowError)
+import Data.ByteString.Lazy (fromStrict, toStrict)
+import Data.Text (Text)
+import Data.Text.Encoding (encodeUtf8)
 
 --------------------------------------------------------------------------------
 
-import qualified PlutusLedgerApi.V1.Bytes as Plutus.Bytes
-import qualified PlutusLedgerApi.V1.Scripts as Plutus.Scripts
-import qualified PlutusLedgerApi.V2 as Plutus
+import PlutusLedgerApi.V1.Bytes (bytes, encodeByteString, fromHex)
+import PlutusLedgerApi.V2 (
+    BuiltinByteString,
+    CurrencySymbol (CurrencySymbol),
+    LedgerBytes (LedgerBytes),
+    MintingPolicy (MintingPolicy),
+    POSIXTime (POSIXTime),
+    Script,
+    ScriptHash (ScriptHash),
+    StakeValidator (StakeValidator),
+    StakeValidatorHash (StakeValidatorHash),
+    TokenName (TokenName),
+    TxId (TxId),
+    TxOutRef,
+    Validator (Validator),
+    ValidatorHash (ValidatorHash),
+ )
 
 newtype Flip f a b = Flip (f b a) deriving stock (Generic)
 
@@ -104,149 +118,149 @@ newtype AsBase16Codec (a :: Type) = AsBase16Codec {unAsBase16Codec :: a}
 -- Instances for `deriving via`
 
 instance
-    (Coercible a Plutus.LedgerBytes) =>
+    (Coercible a LedgerBytes) =>
     Aeson.ToJSON (AsBase16Bytes a)
     where
     toJSON =
         Aeson.String
-            . Plutus.Bytes.encodeByteString
-            . Plutus.Bytes.bytes
-            . coerce @(AsBase16Bytes a) @Plutus.Bytes.LedgerBytes
+            . encodeByteString
+            . bytes
+            . coerce @(AsBase16Bytes a) @LedgerBytes
 
 instance
-    (Coercible Plutus.Bytes.LedgerBytes a) =>
+    (Coercible LedgerBytes a) =>
     Aeson.FromJSON (AsBase16Bytes a)
     where
     parseJSON v =
-        Aeson.parseJSON @T.Text v
+        Aeson.parseJSON @Text v
             >>= either
-                (Aeson.Types.parserThrowError [] . show)
+                (parserThrowError [] . show)
                 ( pure
                     . coerce @_
                         @(AsBase16Bytes a)
                 )
-                . Plutus.Bytes.fromHex
-                . T.Encoding.encodeUtf8
+                . fromHex
+                . encodeUtf8
 
-instance (Codec.Serialise a) => Aeson.ToJSON (AsBase16Codec a) where
+instance (Serialise a) => Aeson.ToJSON (AsBase16Codec a) where
     toJSON =
         Aeson.String
-            . Plutus.Bytes.encodeByteString
-            . Lazy.toStrict
-            . Codec.serialise @a
+            . encodeByteString
+            . toStrict
+            . serialise @a
             . unAsBase16Codec
 
-instance (Codec.Serialise a) => Aeson.FromJSON (AsBase16Codec a) where
+instance (Serialise a) => Aeson.FromJSON (AsBase16Codec a) where
     parseJSON v =
-        Aeson.parseJSON @T.Text v
+        Aeson.parseJSON @Text v
             >>= either
-                (Aeson.Types.parserThrowError [] . show)
+                (parserThrowError [] . show)
                 (pure . AsBase16Codec)
-                . Codec.deserialiseOrFail
-                . Lazy.fromStrict
-                . T.Encoding.encodeUtf8
+                . deserialiseOrFail
+                . fromStrict
+                . encodeUtf8
 
-deriving via (AsBase16Bytes Plutus.TxId) instance Aeson.ToJSON Plutus.TxId
-deriving via (AsBase16Bytes Plutus.TxId) instance Aeson.FromJSON Plutus.TxId
+deriving via (AsBase16Bytes TxId) instance Aeson.ToJSON TxId
+deriving via (AsBase16Bytes TxId) instance Aeson.FromJSON TxId
 
-deriving anyclass instance Aeson.ToJSON Plutus.TxOutRef
-deriving anyclass instance Aeson.FromJSON Plutus.TxOutRef
-
-deriving via
-    (AsBase16Bytes Plutus.CurrencySymbol)
-    instance
-        (Aeson.ToJSON Plutus.CurrencySymbol)
-deriving via
-    (AsBase16Bytes Plutus.CurrencySymbol)
-    instance
-        (Aeson.FromJSON Plutus.CurrencySymbol)
+deriving anyclass instance Aeson.ToJSON TxOutRef
+deriving anyclass instance Aeson.FromJSON TxOutRef
 
 deriving via
-    (AsBase16Bytes Plutus.TokenName)
+    (AsBase16Bytes CurrencySymbol)
     instance
-        (Aeson.ToJSON Plutus.TokenName)
+        (Aeson.ToJSON CurrencySymbol)
 deriving via
-    (AsBase16Bytes Plutus.TokenName)
+    (AsBase16Bytes CurrencySymbol)
     instance
-        (Aeson.FromJSON Plutus.TokenName)
+        (Aeson.FromJSON CurrencySymbol)
 
 deriving via
-    (AsBase16Bytes Plutus.ValidatorHash)
+    (AsBase16Bytes TokenName)
     instance
-        (Aeson.ToJSON Plutus.ValidatorHash)
+        (Aeson.ToJSON TokenName)
 deriving via
-    (AsBase16Bytes Plutus.ValidatorHash)
+    (AsBase16Bytes TokenName)
     instance
-        (Aeson.FromJSON Plutus.ValidatorHash)
+        (Aeson.FromJSON TokenName)
 
 deriving via
-    (AsBase16Bytes Plutus.StakeValidatorHash)
+    (AsBase16Bytes ValidatorHash)
     instance
-        (Aeson.ToJSON Plutus.StakeValidatorHash)
+        (Aeson.ToJSON ValidatorHash)
 deriving via
-    (AsBase16Bytes Plutus.StakeValidatorHash)
+    (AsBase16Bytes ValidatorHash)
     instance
-        (Aeson.FromJSON Plutus.StakeValidatorHash)
+        (Aeson.FromJSON ValidatorHash)
 
 deriving via
-    (AsBase16Codec Plutus.StakeValidator)
+    (AsBase16Bytes StakeValidatorHash)
     instance
-        (Aeson.ToJSON Plutus.StakeValidator)
+        (Aeson.ToJSON StakeValidatorHash)
 deriving via
-    (AsBase16Codec Plutus.StakeValidator)
+    (AsBase16Bytes StakeValidatorHash)
     instance
-        (Aeson.FromJSON Plutus.StakeValidator)
+        (Aeson.FromJSON StakeValidatorHash)
 
 deriving via
-    (AsBase16Bytes Plutus.ScriptHash)
+    (AsBase16Codec StakeValidator)
     instance
-        (Aeson.ToJSON Plutus.ScriptHash)
+        (Aeson.ToJSON StakeValidator)
 deriving via
-    (AsBase16Bytes Plutus.ScriptHash)
+    (AsBase16Codec StakeValidator)
     instance
-        (Aeson.FromJSON Plutus.ScriptHash)
+        (Aeson.FromJSON StakeValidator)
+
+deriving via
+    (AsBase16Bytes ScriptHash)
+    instance
+        (Aeson.ToJSON ScriptHash)
+deriving via
+    (AsBase16Bytes ScriptHash)
+    instance
+        (Aeson.FromJSON ScriptHash)
 
 deriving via
     Integer
     instance
-        (Aeson.ToJSON Plutus.POSIXTime)
+        (Aeson.ToJSON POSIXTime)
 deriving via
     Integer
     instance
-        (Aeson.FromJSON Plutus.POSIXTime)
+        (Aeson.FromJSON POSIXTime)
 
 deriving via
-    (AsBase16Bytes Plutus.BuiltinByteString)
+    (AsBase16Bytes BuiltinByteString)
     instance
-        (Aeson.ToJSON Plutus.BuiltinByteString)
+        (Aeson.ToJSON BuiltinByteString)
 deriving via
-    (AsBase16Bytes Plutus.BuiltinByteString)
+    (AsBase16Bytes BuiltinByteString)
     instance
-        (Aeson.FromJSON Plutus.BuiltinByteString)
+        (Aeson.FromJSON BuiltinByteString)
 
 deriving via
-    (AsBase16Codec Plutus.Validator)
+    (AsBase16Codec Validator)
     instance
-        (Aeson.ToJSON Plutus.Validator)
+        (Aeson.ToJSON Validator)
 deriving via
-    (AsBase16Codec Plutus.Validator)
+    (AsBase16Codec Validator)
     instance
-        (Aeson.FromJSON Plutus.Validator)
+        (Aeson.FromJSON Validator)
 
 deriving via
-    (AsBase16Codec Plutus.MintingPolicy)
+    (AsBase16Codec MintingPolicy)
     instance
-        (Aeson.ToJSON Plutus.MintingPolicy)
+        (Aeson.ToJSON MintingPolicy)
 deriving via
-    (AsBase16Codec Plutus.MintingPolicy)
+    (AsBase16Codec MintingPolicy)
     instance
-        (Aeson.FromJSON Plutus.MintingPolicy)
+        (Aeson.FromJSON MintingPolicy)
 
 deriving via
-    (AsBase16Codec Plutus.Script)
+    (AsBase16Codec Script)
     instance
-        (Aeson.ToJSON Plutus.Script)
+        (Aeson.ToJSON Script)
 deriving via
-    (AsBase16Codec Plutus.Script)
+    (AsBase16Codec Script)
     instance
-        (Aeson.FromJSON Plutus.Script)
+        (Aeson.FromJSON Script)
