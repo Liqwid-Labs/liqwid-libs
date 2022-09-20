@@ -19,6 +19,7 @@ module Plutarch.Context.Base (
   Builder (..),
   BaseBuilder (..),
   UTXO (..),
+  Mint (..),
 
   -- * Modular constructors
   output,
@@ -62,12 +63,22 @@ module Plutarch.Context.Base (
   yieldRedeemerMap,
   mkOutRefIndices,
   mintToValue,
+
+  -- * Normalizers
+  combinePair,
+  combineMap,
+  normalizeValue,
+  normalizeUTXO,
+  normalizeMint,
+  sortMap,
+  mkNormalizedBase,
 ) where
 
 import Acc (Acc, fromReverseList)
 import Control.Arrow (Arrow ((&&&)))
 import Data.Foldable (Foldable (toList))
 import Data.Kind (Type)
+import Data.List (sortBy)
 import Data.Maybe (fromMaybe, mapMaybe)
 import GHC.Exts (fromList)
 import Optics (Lens', lens, over, view)
@@ -114,8 +125,11 @@ import PlutusLedgerApi.V2 (
   TxOutRef (TxOutRef),
   ValidatorHash,
   Value (getValue),
+  adaSymbol,
+  adaToken,
   always,
  )
+import PlutusTx.AssocMap (Map)
 import PlutusTx.AssocMap qualified as AssocMap
 
 -- | @since 2.1.0
@@ -134,7 +148,25 @@ data Mint = Mint
   , mintTokens :: [(TokenName, Integer)]
   , mintRedeemer :: Data
   }
-  deriving stock (Show)
+  deriving stock
+    ( -- | @since 2.3.0
+      Show
+    , -- | @since 2.4.0
+      Eq
+    )
+
+{- | Normalize mint amount.
+
+ @since 2.4.0
+-}
+normalizeMint :: Mint -> Mint
+normalizeMint m =
+  m
+    { mintTokens =
+        sortBy (\(t, _) (t', _) -> compare t t') $
+          filter (\(_, v) -> v /= 0) $
+            foldr (combinePair (+)) [] $ mintTokens m
+    }
 
 {- | 'UTXO' is used to represent any input or output of a transaction in the builders.
 
@@ -206,6 +238,16 @@ utxoDatumPair u =
   utxoData u >>= \case
     InlineDatum _ -> Nothing
     ContextDatum d -> Just $ datumWithHash d
+
+{- | Normalize the value 'UTXO' holds.
+
+ @since 2.4.0
+-}
+normalizeUTXO :: UTXO -> UTXO
+normalizeUTXO utxo =
+  utxo
+    { utxoValue = normalizeValue $ utxoValue utxo
+    }
 
 {- | Construct TxOut of given UTXO
 
@@ -583,7 +625,7 @@ yieldMint = foldMap mintToValue . toList
 -}
 mintToValue :: Mint -> Value
 mintToValue m =
-  foldMap f $ mintTokens m
+  foldMap f (mintTokens m) <> Value.singleton adaSymbol adaToken 0
   where
     f = uncurry $ Value.singleton $ mintSymbol m
 
@@ -689,3 +731,98 @@ mkOutRefIndices = over _bb go
       | i `elem` used = grantIndex' top used (x {utxoTxIdx = Nothing} : xs)
       | otherwise = x : grantIndex' top (i : used) xs
     grantIndex' _ _ [] = []
+
+{- | Given a list of pairs, combine second element of pair when first
+     element is equal, using the given concat function. The output
+     will be the reverse of what's given.
+
+ @since 2.4.0
+-}
+combinePair ::
+  forall (k :: Type) (v :: Type).
+  Eq k =>
+  (v -> v -> v) ->
+  (k, v) ->
+  [(k, v)] ->
+  [(k, v)]
+combinePair _ p [] = [p]
+combinePair c (k, v) ((k', v') : xs)
+  | k == k' = (k, c v v') : xs
+  | otherwise = (k', v') : combinePair c (k, v) xs
+
+{- | Given an 'AssocMap', combine all values when the key is equal,
+     using the given concat function. The output will be the reverse
+     of what's given.
+
+ @since 2.4.0
+-}
+combineMap ::
+  forall (k :: Type) (v :: Type).
+  Eq k =>
+  (v -> v -> v) ->
+  Map k v ->
+  Map k v
+combineMap c (AssocMap.toList -> m) =
+  AssocMap.fromList $ foldr (combinePair c) [] m
+
+{- | Sort given 'AssocMap' by given comparator.
+
+ @since 2.4.0
+-}
+sortMap ::
+  forall (k :: Type) (v :: Type).
+  Ord k =>
+  Map k v ->
+  Map k v
+sortMap (AssocMap.toList -> m) =
+  AssocMap.fromList $ sortBy (\(k, _) (k', _) -> compare k k') m
+
+{- | Normalize and sort 'Value'.
+
+    - 'Value' entries that match on both the 'CurrencySymbol' and
+      'TokenName' are combined, with their amounts added together
+    - 'Value' entries in the outer map are sorted by currency symbol
+    - 'Value' entries in the inner map are sorted by token name
+    - Non-ADA zero-entries are dropped
+    - If the `Value` is missing an ADA entry, as 0 ADA entries is added
+
+ @since 2.4.0
+-}
+normalizeValue :: Value -> Value
+normalizeValue (Value.getValue -> val) =
+  let val' = AssocMap.insert adaSymbol (AssocMap.fromList [(adaToken, 0)]) val
+   in Value.Value
+        . AssocMap.filter (/= AssocMap.empty)
+        . sortMap
+        . AssocMap.mapWithKey
+          ( \cs tm ->
+              sortMap $
+                AssocMap.mapMaybeWithKey
+                  ( \tk v ->
+                      if v /= 0 || (tk == adaToken && cs == adaSymbol)
+                        then Just v
+                        else Nothing
+                  )
+                  tm
+          )
+        . combineMap (AssocMap.unionWith (+))
+        $ val'
+
+{- | Normalize all values and mints in the given builder.
+
+ @since 2.4.0
+-}
+mkNormalizedBase ::
+  forall (a :: Type).
+  Builder a =>
+  a ->
+  a
+mkNormalizedBase = over _bb go
+  where
+    go bb@BB {..} =
+      bb
+        { bbInputs = normalizeUTXO <$> bbInputs
+        , bbReferenceInputs = normalizeUTXO <$> bbReferenceInputs
+        , bbOutputs = normalizeUTXO <$> bbOutputs
+        , bbMints = normalizeMint <$> bbMints
+        }

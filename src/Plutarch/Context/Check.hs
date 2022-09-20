@@ -30,7 +30,9 @@ module Plutarch.Context.Check (
   checkOutputs,
   checkDatumPairs,
   checkPhase1,
+  checkNormalized,
   checkValidatorRedeemer,
+  checkValueNormalized,
 ) where
 
 import Acc (Acc)
@@ -45,6 +47,8 @@ import Plutarch.Context.Base (
   Builder,
   UTXO (..),
   mintToValue,
+  normalizeMint,
+  normalizeValue,
   unpack,
  )
 import PlutusLedgerApi.V2 (
@@ -77,6 +81,7 @@ data CheckerErrorType e
   | NonAdaFee Value
   | DuplicateTxOutRefIndex [Integer]
   | NonPositiveValue Value
+  | NonNormalizedValue Value
   | NoZeroSum Value
   | MissingRedeemer ValidatorHash
   | SpecifyRedeemerForNonValidatorInput
@@ -114,6 +119,7 @@ instance P.Pretty e => P.Pretty (CheckerErrorType e) where
   pretty (NonAdaFee val) = "Transaction takes tokens other than Ada as fee:" P.<+> P.pretty val
   pretty (DuplicateTxOutRefIndex idx) = "Overlapping input indices: " P.<+> P.pretty idx
   pretty (NonPositiveValue val) = P.pretty val P.<+> "is an invalid value (contains non positive)."
+  pretty (NonNormalizedValue val) = P.pretty val P.<+> "is not normalized."
   pretty (NoZeroSum val) =
     "Transaction doesn't not have equal inflow and outflow." <> P.line
       <> "Diff:" P.<+> P.pretty val
@@ -275,6 +281,16 @@ checkPositiveValue :: Checker e Value
 checkPositiveValue = checkWith $ \x -> contramap isPos $ checkBool (NonPositiveValue x)
   where
     isPos = all (\(_, _, x) -> x > 0) . flattenValue
+
+{- | Check if 'Value' is normalized.
+
+ @since 2.4.0
+-}
+checkValueNormalized :: Checker e Value
+checkValueNormalized =
+  checkWith $ \x -> contramap isNormalized $ checkBool (NonNormalizedValue x)
+  where
+    isNormalized val = getValue (normalizeValue val) == getValue val
 
 checkCredential :: Checker e Credential
 checkCredential = contramap classif checkByteString
@@ -440,6 +456,28 @@ checkDatumPairs :: Builder a => Checker e a
 checkDatumPairs =
   checkAt AtData $
     contramap (length . bbDatums . unpack) (checkIf (== 0) OrphanDatum)
+
+{- | Check if values in builder are normalized.
+
+ @since 2.4.0
+-}
+checkNormalized :: Builder a => Checker e a
+checkNormalized =
+  mconcat
+    [ checkAt AtOutput $
+        contramap (fmap utxoValue . bbOutputs . unpack) (checkFoldable checkValueNormalized)
+    , checkAt AtInput $
+        contramap (fmap utxoValue . bbInputs . unpack) (checkFoldable checkValueNormalized)
+    , checkAt AtReferenceInput $
+        contramap (fmap utxoValue . bbReferenceInputs . unpack) (checkFoldable checkValueNormalized)
+    , checkAt AtMint $
+        contramap
+          (bbMints . unpack)
+          ( checkFoldable $
+              checkWith $ \x ->
+                checkIf (\m -> m == normalizeMint m) $ NonNormalizedValue (mintToValue x)
+          )
+    ]
 
 {- | All checks combined for Phase-1 check.
 

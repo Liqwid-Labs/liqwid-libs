@@ -38,6 +38,12 @@ module Plutarch.Context (
   B.unpack,
   B.timeRange,
   B.mkOutRefIndices,
+  B.combinePair,
+  B.combineMap,
+  B.normalizeValue,
+  B.normalizeUTXO,
+  B.normalizeMint,
+  B.sortMap,
   S.SpendingBuilder (..),
   S.withSpendingUTXO,
   S.withSpendingOutRef,
@@ -87,9 +93,12 @@ module Plutarch.Context (
   C.checkOutputs,
   C.checkDatumPairs,
   C.checkPhase1,
+  C.checkNormalized,
   C.renderErrors,
   C.flattenValue,
   C.checkValidatorRedeemer,
+  C.checkValueNormalized,
+  I.mkNormalized,
 ) where
 
 import Plutarch.Context.Base qualified as B
@@ -98,3 +107,5 @@ import Plutarch.Context.Minting qualified as M
 import Plutarch.Context.Spending qualified as S
 import Plutarch.Context.SubBuilder qualified as Sub
 import Plutarch.Context.TxInfo qualified as T
+
+import Plutarch.Context.Internal qualified as I

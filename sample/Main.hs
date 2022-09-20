@@ -1,7 +1,9 @@
 module Main (main) where
 
+import Data.Bifunctor (second)
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
 import Plutarch.Context
+import PlutusLedgerApi.V1 (getValue)
 import PlutusLedgerApi.V2 (
   Address (Address),
   Credential (PubKeyCredential),
@@ -9,8 +11,13 @@ import PlutusLedgerApi.V2 (
   ScriptContext (scriptContextTxInfo),
   StakingCredential (StakingPtr),
   TxInfo (txInfoOutputs),
+  Value (Value),
+  adaSymbol,
+  adaToken,
+  fromList,
   singleton,
  )
+import PlutusTx.AssocMap qualified as AssocMap
 
 import MintingBuilder qualified (specs)
 import SpendingBuilder qualified (specs)
@@ -28,30 +35,63 @@ main = do
         scriptContextTxInfo a @?= c
     , testCase "TxOut list from TxInfoBuilder should match one from buildTxOut" $
         txInfoOutputs (scriptContextTxInfo a) @?= d
+    , testCase "Checker should fail when there is a value that is not normalized" $
+        null (runChecker checkNormalized (generalSample :: BaseBuilder)) @?= False
+    , testCase "Checker should succeed when there is a value that is not normalized" $
+        null (runChecker checkNormalized (mkNormalized generalSample :: BaseBuilder)) @?= True
     , SpendingBuilder.specs
     , MintingBuilder.specs
+    , testCase "normalizeValue removes 0 entries unless they are ADA" $
+        ( getValue . normalizeValue . Value $
+            fromList
+              [ ("cc", fromList [("token name", 0)])
+              , zeroAdaTuple
+              ]
+        )
+          @?= (getValue . Value $ fromList [zeroAdaTuple])
+    , testCase "normalizeValue adds 0 ADA entry if it is missing" $
+        (getValue . normalizeValue . Value $ fromList [])
+          @?= (getValue . Value $ fromList [zeroAdaTuple])
+    , testCase "normalizeValue adds matching entires" $
+        ( getValue . normalizeValue . Value $
+            fromList
+              [ zeroAdaTuple
+              , ("cc", fromList [("token", 1)])
+              , ("cc", fromList [("token", 1)])
+              ]
+        )
+          @?= ( getValue . Value $
+                  fromList
+                    [ zeroAdaTuple
+                    , ("cc", fromList [("token", 2)])
+                    ]
+              )
     ]
   where
-    a = buildMinting mempty (generalSample <> withMinting "aaaa")
+    a = buildMinting mempty (mkNormalized $ generalSample <> withMinting "aaaa")
     b =
       buildSpending
         mempty
-        ( generalSample
-            <> withSpendingUTXO
-              ( pubKey "aabb"
-                  <> withValue (singleton "cc" "hello" 123)
-                  <> withStakingCredential (StakingPtr 0 0 0)
-              )
+        ( mkNormalized $
+            generalSample
+              <> withSpendingUTXO
+                ( pubKey "aabb"
+                    <> withValue nonNormalizedValue
+                    <> withRefIndex 5
+                    <> withStakingCredential (StakingPtr 0 0 0)
+                )
         )
-    c = buildTxInfo generalSample
-    d = buildTxOuts generalSample
+    c = buildTxInfo $ mkNormalized generalSample
+    d = buildTxOuts $ mkNormalized generalSample
+
+    zeroAdaTuple = (adaSymbol, fromList [(adaToken, 0)])
 
 generalSample :: (Monoid a, Builder a) => a
 generalSample =
   mconcat
     [ input $
         pubKey "aabb"
-          <> withValue (singleton "cc" "hello" 123)
+          <> withValue nonNormalizedValue
           <> withRefIndex 5
           <> withStakingCredential (StakingPtr 0 0 0)
     , input $
@@ -64,3 +104,14 @@ generalSample =
           <> withValue (singleton "dd" "world" 123)
     , mint $ singleton "aaaa" "hello" 333
     ]
+
+nonNormalizedValue :: Value
+nonNormalizedValue =
+  Value $
+    AssocMap.fromList $
+      second AssocMap.fromList
+        <$> [ ("ccaa", [("c", 2), ("tokenhi", 10), ("hello", 30)])
+            , ("ccaa", [("tokenhi", 30), ("a", 2), ("world", 40), ("b", 1)])
+            , ("eeff", [("hey", 123)])
+            , ("ccaa", [("hello", 20), ("b", 2), ("world", 20)])
+            ]

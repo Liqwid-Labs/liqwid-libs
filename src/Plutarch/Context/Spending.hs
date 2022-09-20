@@ -41,6 +41,7 @@ import Plutarch.Context.Base (
   BaseBuilder (BB, bbDatums, bbInputs, bbMints, bbOutputs, bbRedeemers, bbReferenceInputs, bbSignatures),
   Builder (pack, _bb),
   UTXO,
+  normalizeUTXO,
   unpack,
   utxoToTxOut,
   yieldBaseTxInfo,
@@ -51,6 +52,7 @@ import Plutarch.Context.Base (
   yieldRedeemerMap,
  )
 import Plutarch.Context.Check
+import Plutarch.Context.Internal (Normalizer (mkNormalized'), mkNormalized)
 import PlutusLedgerApi.V2 (
   ScriptContext (ScriptContext),
   ScriptPurpose (Spending),
@@ -102,6 +104,15 @@ instance Semigroup SpendingBuilder where
 -- | @since 1.1.0
 instance Monoid SpendingBuilder where
   mempty = SB mempty Nothing
+
+instance Normalizer SpendingBuilder where
+  mkNormalized' (SB bb vi) =
+    SB (mkNormalized bb) (normalize <$> vi)
+    where
+      normalize x =
+        case x of
+          ValidatorUTXO utxo -> ValidatorUTXO $ normalizeUTXO utxo
+          a -> a
 
 {- | Set Validator Input with given UTXO. Note, the given UTXO should
    exist in the inputs, otherwise the builder would fail.

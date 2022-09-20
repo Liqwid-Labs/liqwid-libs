@@ -54,6 +54,7 @@ import Plutarch.Context.Check (
   flattenValue,
   handleErrors,
  )
+import Plutarch.Context.Internal (Normalizer (mkNormalized'), mkNormalized)
 import PlutusLedgerApi.V2 (
   CurrencySymbol,
   ScriptContext (ScriptContext),
@@ -101,6 +102,10 @@ instance Monoid MintingBuilder where
 instance Builder MintingBuilder where
   _bb = lens mbInner (\x b -> x {mbInner = b})
   pack x = mempty {mbInner = x}
+
+instance Normalizer MintingBuilder where
+  mkNormalized' (MB bb cs) =
+    MB (mkNormalized bb) cs
 
 {- | Set CurrencySymbol for building Minting ScriptContext.
 

@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutarch-context-builder
-version:            2.2.0
+version:            2.4.0
 synopsis:           A builder for ScriptContexts
 description:
   Defines a builder for ScriptContexts, with helpers for commonly-needed uses.
@@ -78,6 +78,7 @@ common common-tests
     , plutarch-context-builder
     , plutus-core
     , plutus-ledger-api
+    , plutus-tx
     , prettyprinter
     , QuickCheck
     , tasty
@@ -92,6 +93,7 @@ library
   other-modules:
     Plutarch.Context.Base
     Plutarch.Context.Check
+    Plutarch.Context.Internal
     Plutarch.Context.Minting
     Plutarch.Context.Spending
     Plutarch.Context.SubBuilder

@@ -23,6 +23,7 @@ import Plutarch.Context.Base (
   utxoToTxOut,
   yieldInInfoDatums,
  )
+import Plutarch.Context.Internal (Normalizer (mkNormalized'), mkNormalized)
 import PlutusLedgerApi.V2 (
   Datum,
   DatumHash,
@@ -42,6 +43,9 @@ newtype SubBuilder
 instance Builder SubBuilder where
   _bb = lens (\(SubBuilder x) -> x) (\_ b -> SubBuilder b)
   pack = SubBuilder
+
+instance Normalizer SubBuilder where
+  mkNormalized' (SubBuilder x) = SubBuilder $ mkNormalized x
 
 {- | Builds TxOut from `UTXO`.
 
