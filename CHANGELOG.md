@@ -2,6 +2,12 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.7.0 -- 2022-09-20
+
+### Added
+
+* `Aeson` instances for Plutus types (in the `Plutarch.Orphans` module)
+
 ## 3.6.0 -- 2022-09-14
 
 All additions, removals and changes refer to `Plutarch.Extra.List` unless stated
