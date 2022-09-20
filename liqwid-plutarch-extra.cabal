@@ -100,7 +100,6 @@ library
     Plutarch.Extra.IsData
     Plutarch.Extra.List
     Plutarch.Extra.Map
-    Plutarch.Extra.Maybe
     Plutarch.Extra.Monoid
     Plutarch.Extra.MultiSig
     Plutarch.Extra.Numeric
@@ -143,6 +142,7 @@ test-suite properties
   main-is:        Main.hs
   build-depends:
     , liqwid-plutarch-extra
+    , plutarch-extra
     , plutarch-quickcheck
     , QuickCheck
     , tasty
