@@ -2,6 +2,15 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.7.0 -- 2022-09-20
+
+### Moved
+
+* `Plutarch.Extra.Maybe` is entirely moved to
+  `Plutonomicon/plutarch-plutus/plutarch-extra`. The module name in
+  `plutarch-extra` is identical, so existing code will build without
+  problems.
+
 ## 3.6.0 -- 2022-09-14
 
 All additions, removals and changes refer to `Plutarch.Extra.List` unless stated
@@ -14,7 +23,7 @@ otherwise.
 * `Plutarch.Extra.Ord` module, containing a new type `POrdering` corresponding
   to the Haskell `Ordering`, as well as `PComparator`, representing a
   \'materialized ordering\'.
-* `psort` and `psortBy` in `Plutarch.Extra.Ord`, using sorting networks for 
+* `psort` and `psortBy` in `Plutarch.Extra.Ord`, using sorting networks for
   extra speed, and `PComparator`s.
 * `ptryMerge` and `ptryMergeBy` in `Plutarch.Extra.Ord`, for merging list-likes
   sorted by a given `PComparator`.
@@ -30,7 +39,7 @@ otherwise.
 
 * `pmergeBy` as it is fragile.
 * `pmsort` and `pmsortBy`, due to efficiency concerns.
-* `pnubSortBy`, `pnubSort`, `pisUniqBy`, `pisUniq`, `pisUniq'`, `pisUniqBy'` 
+* `pnubSortBy`, `pnubSort`, `pisUniqBy`, `pisUniq`, `pisUniq'`, `pisUniqBy'`
   due to removal of sorting functions or fragility.
 * `plookup` and `plookupTuple`, replaced by the more general `plookupAssoc`.
 * `pisSorted`, as it is provided by `plutarch-extra` as `pcheckSorted`.
@@ -42,12 +51,12 @@ otherwise.
 ### Changed
 
 * `pcheckSorted` and `preverse` are no longer re-exported.
-* `pfind'` type arguments are now: content type, list-like 
+* `pfind'` type arguments are now: content type, list-like
   structure type, `s` tag.
 * `pfirstJust` renamed `pfindJust`.
-* `pmapMaybe` type arguments are now: list-like structure 
+* `pmapMaybe` type arguments are now: list-like structure
   type, 'target' element type, 'source' element type, `s` tag.
-* `pfindJust` type arguments are now: 'target' element type, list-like 
+* `pfindJust` type arguments are now: 'target' element type, list-like
   structure type, 'source' element type, `s` tag.
 * `preplicate` now specifies the order of its type arguments.
 * `pisSortedBy` now moved to `Plutarch.Extra.Ord` and uses the new `PComparator`
@@ -58,7 +67,7 @@ otherwise.
 ### Added
 
 * `PlutusTypeDataList` is a new deriving strategy for `ProductIsData`. It will
-  only accept Plutarch types that have `PDataRecord` as an `Inner` type. 
+  only accept Plutarch types that have `PDataRecord` as an `Inner` type.
   Otherwise, it behaves identically to `PlutusTypeNewtype`.
 
 ## 3.4.0 -- 2022-08-25
@@ -91,7 +100,7 @@ otherwise.
 * `plookup'` renamed to `ptryLookup`, uses `plookup` internally.
 * `pkeys` now produces any `PListLike`, and more clearly specifies its
   guarantees.
-* `pupdate`, `pfoldlWithKey` and `pfoldMapWithKey` now only work with 
+* `pupdate`, `pfoldlWithKey` and `pfoldMapWithKey` now only work with
   `Sorted` `PMap`s.
 * `pkvPairLt` now only needs a `PPartialOrd` constraint.
 * `pkeysEqual` now requires `PIsData k` and `PEq k`, but avoids two intermediate
@@ -103,7 +112,7 @@ otherwise.
 
 ### Added
 
-* A `Plutarch.Extra.Time` module, containing utilities for working with time and 
+* A `Plutarch.Extra.Time` module, containing utilities for working with time and
    time ranges.
 * Some utilities for working with closed bounded time ranges, including
 
@@ -140,11 +149,11 @@ otherwise.
 
 ### Added
 
-- `#.*`, `#.**`, `#.***` for plutarch function composition. They have similar 
+- `#.*`, `#.**`, `#.***` for plutarch function composition. They have similar
   semantics as their counter parts in `Control.Composition`.
 - `pfstTuple` and `psndTuple` for `PTuple`.
 - Some orphan instances, including
-  
+
   - `PIsData (PAsData a)`
   - `PTryFrom PData (PAsData PDatumHash)`
   - `PTryFrom PData (PAsData ScriptHash)`
