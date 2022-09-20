@@ -1,5 +1,9 @@
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE OverloadedRecordDot #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module Plutarch.Extra.Value (
     psingletonValue,
@@ -26,8 +30,15 @@ module Plutarch.Extra.Value (
     pgeqValueEntry,
     psplitValue,
     plookup',
+    unsafeMatchValueAssetsInternal,
+    matchValueAssets,
+    mkSingleValue,
+    mkSingleValue'
+
 ) where
 
+import Data.List (sort, nub)
+import Data.Coerce (coerce)
 import GHC.TypeLits (Symbol)
 import Plutarch.Api.V1 (
     PCurrencySymbol,
@@ -42,12 +53,16 @@ import Plutarch.Api.V2 (
  )
 import Plutarch.Builtin (pforgetData, ppairDataBuiltin)
 import Plutarch.Extra.Applicative (ppure)
-import Plutarch.Extra.AssetClass (PAssetClass (PAssetClass), PAssetClassData)
+import Plutarch.Extra.AssetClass (PAssetClass (PAssetClass), PAssetClassData,
+                                  AssetClass (AssetClass, symbol, name))
+import Plutarch.DataRepr.Internal.Field (HRec (HCons, HNil), Labeled (Labeled))
 import Plutarch.Extra.List (plookupAssoc)
 import Plutarch.Extra.Maybe (pexpectJustC)
-import Plutarch.Extra.Tagged (PTagged)
+import Plutarch.Extra.Tagged (PTagged (PTagged))
 import Plutarch.Extra.TermCont (pletC, pmatchC)
-import PlutusLedgerApi.V1.Value (AssetClass (AssetClass))
+import qualified Data.Map.Strict as Map
+import Data.Map.Strict (Map)
+
 
 {- | Create a `PValue` that only contains specific amount tokens of the given symbol and name.
 
@@ -123,10 +138,10 @@ psymbolValueOf =
    @since 1.1.0
 -}
 passetClassValueOf' ::
-    forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
-    AssetClass ->
+    forall (tag :: Symbol) (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
+    AssetClass tag ->
     Term s (PValue keys amounts :--> PInteger)
-passetClassValueOf' (AssetClass (sym, token)) =
+passetClassValueOf' (AssetClass sym token) =
     phoistAcyclic $ plam $ \value -> pvalueOf # value # pconstant sym # pconstant token
 
 {- | Return '>=' on two values comparing by only a particular AssetClass.
@@ -158,8 +173,8 @@ pgeqBySymbol =
    @since 1.1.0
 -}
 pgeqByClass' ::
-    forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
-    AssetClass ->
+    forall (tag :: Symbol) (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
+    AssetClass tag ->
     Term s (PValue keys amounts :--> PValue keys amounts :--> PBool)
 pgeqByClass' ac =
     phoistAcyclic $
@@ -533,3 +548,224 @@ matchSingle tk x xs = plet x $ \pair ->
         (((pfstBuiltin # pair) #== tk) #&& (pnull # xs))
         (pfromData $ psndBuiltin # pair)
         perror
+
+
+{- | Finds a first matching PAssetClass in PValueMap when also returning the
+ rest of the PValueMap
+-}
+matchOrTryRec ::
+    forall (unit :: Symbol) (k :: KeyGuarantees) (s :: S).
+    AssetClass unit ->
+    Term
+        s
+        ( PBuiltinList
+                ( PBuiltinPair
+                    (PAsData PCurrencySymbol)
+                    (PAsData (PMap k PTokenName PInteger))
+                )
+            :--> PPair
+                    (PAsData PInteger)
+                    ( PBuiltinList
+                            ( PBuiltinPair
+                                (PAsData PCurrencySymbol)
+                                (PAsData (PMap k PTokenName PInteger))
+                            )
+                    )
+        )
+matchOrTryRec requiredAsset = phoistAcyclic $
+    plam $ \inputpvalue -> plet (pcon $ PPair (pdata 0) inputpvalue) $ \def ->
+        precValue
+            ( \self pcurrencySymbol pTokenName pint rest ->
+                pif
+                    ( pconstantData requiredAsset.symbol #== pcurrencySymbol
+                        #&& pconstantData requiredAsset.name #== pTokenName
+                    )
+                    -- assetClass found - return its quantity and tail of PValueMap
+                    (pcon $ PPair pint rest)
+                    -- assetClass not found - skipping current position
+                    (self # rest)
+            )
+            (const def)
+            # inputpvalue
+
+unsafeMatchValueAssetsInternal ::
+    forall (k :: KeyGuarantees) (s :: S).
+    Term
+        s
+        ( PBuiltinList
+            ( PBuiltinPair
+                (PAsData PCurrencySymbol)
+                (PAsData (PMap k PTokenName PInteger))
+            )
+        ) ->
+    [SomeAssetClass] ->
+    TermCont s (Map SomeAssetClass (Term s (PAsData PInteger)))
+unsafeMatchValueAssetsInternal _ [] = pure Map.empty
+unsafeMatchValueAssetsInternal
+    inputpvalue
+    (sa@(SomeAssetClass someAsset) : rest) = do
+        (PPair pint newValueMap) <-
+            TermCont . pmatch $
+                matchOrTryRec someAsset
+                    # inputpvalue
+        remaining <- unsafeMatchValueAssetsInternal newValueMap rest
+        pure $ Map.insert sa pint remaining
+
+
+{- |
+  Extracts amount of given PAssetClass from PValue. Behaves like a pattern
+  match on PValue.  Not all AssetClasses need to be provided, only these that
+  you are interested in.
+  __Example__
+  @
+  example :: Term s PValueMap -> TermCont s ()
+  example pval = do
+    rec <- matchValueAssets @'['("ada", AssetClass "Ada")]
+             pval
+             (HCons (Labeled adaClass) HNil)
+    -- or using operators
+    rec2 <- matchValueAssets pval $ (Proxy @"ada" .|== adaClass) HNil
+    let adaFromRec = rec.ada
+  @
+-}
+matchValueAssets ::
+    forall (input :: [(Symbol, Type)]) (s :: S).
+    ( MatchValueAssetReferences input s
+    , HRecToList input SomeAssetClass
+    ) =>
+    Term
+        s
+        ( PBuiltinList
+                ( PBuiltinPair
+                    (PAsData PCurrencySymbol)
+                    (PAsData (PMap 'Sorted PTokenName PInteger))
+                )
+        ) ->
+    HRec input ->
+    TermCont s (HRec (OutputMatchValueAssets input s))
+matchValueAssets pvaluemap inputs = do
+    -- nub reduces case Underlying being Ada also
+    let sortedInputs = sort . nub . hrecToList $ inputs
+    -- perform actuall pattern match and save references to Haskell's Map
+    matchedMap <- unsafeMatchValueAssetsInternal pvaluemap sortedInputs
+    -- reconstruct HRec with references saved on the matchedMap
+    pure $ matchValueAssetReferences @input matchedMap inputs
+
+
+{- | This function does not check if keys are duplicated or are in different
+ order
+-}
+
+class HRecToList (xs :: [(Symbol, Type)]) (x :: Type) where
+    hrecToList :: HRec xs -> [x]
+
+{- | Existential wrapper for `AssetClass`. Useful to use `AssetClass` as a key
+ type in Map.
+-}
+data SomeAssetClass = forall (unit :: Symbol). SomeAssetClass (AssetClass unit)
+
+instance Eq SomeAssetClass where
+    (SomeAssetClass a) == (SomeAssetClass b) = a == coerce b
+
+instance Ord SomeAssetClass where
+    (SomeAssetClass a) `compare` (SomeAssetClass b) =
+        let symbolOrder = a.symbol `compare` b.symbol
+         in if symbolOrder /= EQ
+                then symbolOrder
+                else a.name `compare` b.name
+
+instance HRecToList '[] (x :: Type) where
+    hrecToList _ = []
+
+-- | Converts type level lists of tagged assets back to dynamic-typed assets
+instance
+    forall (rest :: [(Symbol, Type)]) (name :: Symbol) (tag :: Symbol).
+    HRecToList rest SomeAssetClass =>
+    HRecToList
+        ('(name, AssetClass tag) ': rest)
+        SomeAssetClass
+    where
+    hrecToList (HCons (Labeled x) xs) = SomeAssetClass x : hrecToList xs
+
+-- | Associates given Symbol of AssetClass to PTagged tag PInteger
+type family OutputMatchValueAssets (ps :: [(Symbol, Type)]) (s :: S) where
+    OutputMatchValueAssets '[] _ = '[]
+    OutputMatchValueAssets ('(name, AssetClass tag) ': rest) s =
+        '( name
+         , Term
+            s
+            (PAsData (PTagged tag PInteger))
+         )
+            ': OutputMatchValueAssets rest s
+
+class MatchValueAssetReferences (input :: [(Symbol, Type)]) (s :: S) where
+    matchValueAssetReferences ::
+        Map SomeAssetClass (Term s (PAsData PInteger)) ->
+        HRec input ->
+        HRec (OutputMatchValueAssets input s)
+
+instance MatchValueAssetReferences '[] (s :: S) where
+    matchValueAssetReferences _ _ = HNil
+
+instance
+    forall
+        (name :: Symbol)
+        (classSymbol :: Symbol)
+        (is :: [(Symbol, Type)])
+        (s :: S).
+    MatchValueAssetReferences is s =>
+    MatchValueAssetReferences
+        ('(name, AssetClass classSymbol) ': is)
+        s
+    where
+    matchValueAssetReferences valueMap (HCons (Labeled cls) rest) =
+        HCons
+            ( Labeled @name
+                ( pdata $
+                    pcon $
+                        PTagged $
+                            pfromData (valueMap Map.! SomeAssetClass cls)
+                )
+            )
+            (matchValueAssetReferences valueMap rest)
+
+
+-- | Helper to construct the inner-mapping of a PValue
+mkSingleValue ::
+    forall (key :: KeyGuarantees) (tag :: Symbol) (s :: S).
+    Term
+        s
+        ( PAsData PCurrencySymbol :--> PAsData PTokenName :--> PTagged tag PInteger
+            :--> PBuiltinPair
+                    (PAsData PCurrencySymbol)
+                    (PAsData (PMap key PTokenName PInteger))
+        )
+mkSingleValue = phoistAcyclic $
+    plam $ \sym tk q ->
+        ppairDataBuiltin
+            # sym
+            # pdata (pcon $ PMap $ pfromList [ppairDataBuiltin # tk # pdata (pto q)])
+
+{- | Version of mkSingleValue with a haskell-level constant, hoisting with the
+ applied arguments
+-}
+mkSingleValue' ::
+    forall (tag :: Symbol) (k :: KeyGuarantees) (s :: S).
+    AssetClass tag ->
+    Term
+        s
+        ( PTagged tag PInteger
+            :--> PBuiltinPair
+                    (PAsData PCurrencySymbol)
+                    (PAsData (PMap k PTokenName PInteger))
+        )
+mkSingleValue' (AssetClass sym tk) =
+    phoistAcyclic $ mkSingleValue # pconstantData sym # pconstantData tk
+
+-- TODO: Remove me, once Seungheon's PR lands
+pfromList ::
+    forall (list :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
+    (PIsListLike list a) =>
+    [Term s a] ->
+    Term s (list a)
+pfromList = foldr (\x xs -> pcons # x # xs) pnil

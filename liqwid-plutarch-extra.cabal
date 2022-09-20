@@ -119,7 +119,6 @@ library
     Plutarch.Extra.Time
     Plutarch.Extra.Traversable
     Plutarch.Extra.Tuple
-    Plutarch.Extra.Units.Quantity
     Plutarch.Extra.Value
     Plutarch.Orphans
 

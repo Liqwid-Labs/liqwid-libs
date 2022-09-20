@@ -3,6 +3,8 @@
 -- TODO: Either disable warning about orphans altogether or address the issue
 -- requiring this unusual solution.
 {-# OPTIONS_GHC -Wwarn=orphans #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Plutarch.Extra.Rational (
     mulTruncate,
@@ -10,12 +12,20 @@ module Plutarch.Extra.Rational (
     divTruncate,
     mulRational,
     divRational,
+    pliftTaggedRational,
 ) where
 
 -------------------------------------------------------------------------------
 
+import GHC.Stack (HasCallStack)
 import qualified Plutarch.Monadic as P
 import Plutarch.Positive (ptryPositive)
+import PlutusTx (fromData)
+import Plutarch.Extra.Tagged (PTagged)
+import Data.Tagged (Tagged)
+import Data.Maybe (fromJust)
+import Plutarch.Builtin (pforgetData)
+import Plutarch.Orphans ()
 
 --------------------------------------------------------------------------------
 
@@ -83,3 +93,14 @@ x #% y =
         (y #< 0)
         (pcon $ PRational (x * (-1)) (ptryPositive # (y * (-1))))
         (pcon $ PRational x (ptryPositive # y))
+
+-- | `plift` for Tagged Rationals (kind polymorphic)
+pliftTaggedRational ::
+    forall k (tag :: k).
+    HasCallStack =>
+    ClosedTerm (PTagged tag PRational) ->
+    Tagged tag Rational
+pliftTaggedRational term =
+    fromJust $
+        PlutusTx.fromData $
+            plift (pforgetData $ pdata term)

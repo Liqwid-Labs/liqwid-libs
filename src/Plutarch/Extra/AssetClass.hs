@@ -1,11 +1,11 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedRecordDot #-}
-
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ExistentialQuantification #-}
 
 {- | Provideds a scott-encoded asset class type and utility functions
  NOTE: This module exports types of the same name as
@@ -14,6 +14,7 @@
 module Plutarch.Extra.AssetClass (
     -- * AssetClass - Hask
     AssetClass (AssetClass, symbol, name),
+    assetClassValue,
 
     -- * AssetClass - Plutarch
     PAssetClass (PAssetClass, psymbol, pname),
@@ -38,6 +39,7 @@ module Plutarch.Extra.AssetClass (
     fromScottEncoding,
     pfromScottEncoding,
     pviaScottEncoding,
+
 ) where
 
 --------------------------------------------------------------------------------
@@ -46,12 +48,15 @@ import GHC.TypeLits (Symbol)
 
 --------------------------------------------------------------------------------
 
+import Data.Tagged (Tagged, untag)
+import qualified PlutusLedgerApi.V1.Value as Value
 import qualified Data.Aeson as Aeson
 import qualified Generics.SOP as SOP
 
 --------------------------------------------------------------------------------
 
-import Plutarch.DataRepr (PDataFields)
+import Plutarch.DataRepr ( PDataFields )
+
 import Plutarch.Extra.IsData (
     DerivePConstantViaDataList (DerivePConstantViaDataList),
     ProductIsData (ProductIsData),
@@ -74,9 +79,8 @@ import qualified GHC.Generics as GHC
 
 import Plutarch.Api.V1 (
     PCurrencySymbol,
-    PTokenName,
+    PTokenName
  )
-
 import Plutarch.Unsafe (punsafeCoerce)
 
 --------------------------------------------------------------------------------
@@ -256,3 +260,12 @@ pviaScottEncoding ::
 pviaScottEncoding fn = phoistAcyclic $
     plam $ \cls ->
         fn #$ ptoScottEncoding # cls
+
+-- | Version of assetClassValue for tagged AssetClass & Tagged
+assetClassValue ::
+    forall (unit :: Symbol).
+    AssetClass unit ->
+    Tagged unit Integer ->
+    Value.Value
+assetClassValue (AssetClass sym tk) q = Value.singleton sym tk $ untag q
+
