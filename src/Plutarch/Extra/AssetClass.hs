@@ -1,11 +1,11 @@
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ExistentialQuantification #-}
 
 {- | Provideds a scott-encoded asset class type and utility functions
  NOTE: This module exports types of the same name as
@@ -39,7 +39,6 @@ module Plutarch.Extra.AssetClass (
     fromScottEncoding,
     pfromScottEncoding,
     pviaScottEncoding,
-
 ) where
 
 --------------------------------------------------------------------------------
@@ -48,14 +47,14 @@ import GHC.TypeLits (Symbol)
 
 --------------------------------------------------------------------------------
 
-import Data.Tagged (Tagged, untag)
-import qualified PlutusLedgerApi.V1.Value as Value
 import qualified Data.Aeson as Aeson
+import Data.Tagged (Tagged, untag)
 import qualified Generics.SOP as SOP
+import qualified PlutusLedgerApi.V1.Value as Value
 
 --------------------------------------------------------------------------------
 
-import Plutarch.DataRepr ( PDataFields )
+import Plutarch.DataRepr (PDataFields)
 
 import Plutarch.Extra.IsData (
     DerivePConstantViaDataList (DerivePConstantViaDataList),
@@ -79,7 +78,7 @@ import qualified GHC.Generics as GHC
 
 import Plutarch.Api.V1 (
     PCurrencySymbol,
-    PTokenName
+    PTokenName,
  )
 import Plutarch.Unsafe (punsafeCoerce)
 
@@ -268,4 +267,3 @@ assetClassValue ::
     Tagged unit Integer ->
     Value.Value
 assetClassValue (AssetClass sym tk) q = Value.singleton sym tk $ untag q
-

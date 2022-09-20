@@ -1,9 +1,9 @@
-{-# LANGUAGE PartialTypeSignatures #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE OverloadedRecordDot #-}
-{-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE OverloadedRecordDot #-}
+{-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Plutarch.Extra.Value (
     psingletonValue,
@@ -33,12 +33,13 @@ module Plutarch.Extra.Value (
     unsafeMatchValueAssetsInternal,
     matchValueAssets,
     mkSingleValue,
-    mkSingleValue'
-
+    mkSingleValue',
 ) where
 
-import Data.List (sort, nub)
 import Data.Coerce (coerce)
+import Data.List (nub, sort)
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import GHC.TypeLits (Symbol)
 import Plutarch.Api.V1 (
     PCurrencySymbol,
@@ -52,17 +53,17 @@ import Plutarch.Api.V2 (
     KeyGuarantees (Sorted),
  )
 import Plutarch.Builtin (pforgetData, ppairDataBuiltin)
-import Plutarch.Extra.Applicative (ppure)
-import Plutarch.Extra.AssetClass (PAssetClass (PAssetClass), PAssetClassData,
-                                  AssetClass (AssetClass, symbol, name))
 import Plutarch.DataRepr.Internal.Field (HRec (HCons, HNil), Labeled (Labeled))
+import Plutarch.Extra.Applicative (ppure)
+import Plutarch.Extra.AssetClass (
+    AssetClass (AssetClass, name, symbol),
+    PAssetClass (PAssetClass),
+    PAssetClassData,
+ )
 import Plutarch.Extra.List (plookupAssoc)
 import Plutarch.Extra.Maybe (pexpectJustC)
 import Plutarch.Extra.Tagged (PTagged (PTagged))
 import Plutarch.Extra.TermCont (pletC, pmatchC)
-import qualified Data.Map.Strict as Map
-import Data.Map.Strict (Map)
-
 
 {- | Create a `PValue` that only contains specific amount tokens of the given symbol and name.
 
@@ -206,10 +207,10 @@ precValue ::
     ( Term
         s
         ( PBuiltinList
-                ( PBuiltinPair
-                    (PAsData PCurrencySymbol)
-                    (PAsData (PMap k PTokenName PInteger))
-                )
+            ( PBuiltinPair
+                (PAsData PCurrencySymbol)
+                (PAsData (PMap k PTokenName PInteger))
+            )
             :--> r
         ) ->
       Term s (PAsData PCurrencySymbol) ->
@@ -218,20 +219,20 @@ precValue ::
       Term
         s
         ( PBuiltinList
-                ( PBuiltinPair
-                    (PAsData PCurrencySymbol)
-                    (PAsData (PMap k PTokenName PInteger))
-                )
+            ( PBuiltinPair
+                (PAsData PCurrencySymbol)
+                (PAsData (PMap k PTokenName PInteger))
+            )
         ) ->
       Term s r
     ) ->
     ( Term
         s
         ( PBuiltinList
-                ( PBuiltinPair
-                    (PAsData PCurrencySymbol)
-                    (PAsData (PMap k PTokenName PInteger))
-                )
+            ( PBuiltinPair
+                (PAsData PCurrencySymbol)
+                (PAsData (PMap k PTokenName PInteger))
+            )
             :--> r
         ) ->
       Term s r
@@ -239,10 +240,10 @@ precValue ::
     Term
         s
         ( PBuiltinList
-                ( PBuiltinPair
-                    (PAsData PCurrencySymbol)
-                    (PAsData (PMap k PTokenName PInteger))
-                )
+            ( PBuiltinPair
+                (PAsData PCurrencySymbol)
+                (PAsData (PMap k PTokenName PInteger))
+            )
             :--> r
         )
 precValue mcons =
@@ -280,10 +281,10 @@ pelimValue ::
       Term
         s
         ( PBuiltinList
-                ( PBuiltinPair
-                    (PAsData PCurrencySymbol)
-                    (PAsData (PMap k PTokenName PInteger))
-                )
+            ( PBuiltinPair
+                (PAsData PCurrencySymbol)
+                (PAsData (PMap k PTokenName PInteger))
+            )
         ) ->
       Term s r
     ) ->
@@ -291,10 +292,10 @@ pelimValue ::
     Term
         s
         ( PBuiltinList
-                ( PBuiltinPair
-                    (PAsData PCurrencySymbol)
-                    (PAsData (PMap k PTokenName PInteger))
-                )
+            ( PBuiltinPair
+                (PAsData PCurrencySymbol)
+                (PAsData (PMap k PTokenName PInteger))
+            )
         ) ->
     Term s r
 pelimValue mcons mnil =
@@ -482,10 +483,10 @@ findValue ::
     Term
         s
         ( PBuiltinList
-                ( PBuiltinPair
-                    (PAsData PCurrencySymbol)
-                    (PAsData (PMap k PTokenName PInteger))
-                )
+            ( PBuiltinPair
+                (PAsData PCurrencySymbol)
+                (PAsData (PMap k PTokenName PInteger))
+            )
             :--> PInteger
         ) ->
     Term
@@ -497,10 +498,10 @@ findValue ::
     Term
         s
         ( PBuiltinList
-                ( PBuiltinPair
-                    (PAsData PCurrencySymbol)
-                    (PAsData (PMap k PTokenName PInteger))
-                )
+            ( PBuiltinPair
+                (PAsData PCurrencySymbol)
+                (PAsData (PMap k PTokenName PInteger))
+            )
         ) ->
     Term s PInteger
 findValue sym tk self x xs = plet x $ \pair ->
@@ -528,10 +529,10 @@ pvalue ::
     Term
         s
         ( PBuiltinList
-                ( PBuiltinPair
-                    (PAsData PCurrencySymbol)
-                    (PAsData (PMap k PTokenName PInteger))
-                )
+            ( PBuiltinPair
+                (PAsData PCurrencySymbol)
+                (PAsData (PMap k PTokenName PInteger))
+            )
             :--> PAsData (PValue k amounts)
         )
 pvalue = phoistAcyclic $ plam $ pdata . pcon . PValue . pcon . PMap
@@ -549,7 +550,6 @@ matchSingle tk x xs = plet x $ \pair ->
         (pfromData $ psndBuiltin # pair)
         perror
 
-
 {- | Finds a first matching PAssetClass in PValueMap when also returning the
  rest of the PValueMap
 -}
@@ -559,17 +559,17 @@ matchOrTryRec ::
     Term
         s
         ( PBuiltinList
-                ( PBuiltinPair
-                    (PAsData PCurrencySymbol)
-                    (PAsData (PMap k PTokenName PInteger))
-                )
+            ( PBuiltinPair
+                (PAsData PCurrencySymbol)
+                (PAsData (PMap k PTokenName PInteger))
+            )
             :--> PPair
                     (PAsData PInteger)
                     ( PBuiltinList
-                            ( PBuiltinPair
-                                (PAsData PCurrencySymbol)
-                                (PAsData (PMap k PTokenName PInteger))
-                            )
+                        ( PBuiltinPair
+                            (PAsData PCurrencySymbol)
+                            (PAsData (PMap k PTokenName PInteger))
+                        )
                     )
         )
 matchOrTryRec requiredAsset = phoistAcyclic $
@@ -611,7 +611,6 @@ unsafeMatchValueAssetsInternal
         remaining <- unsafeMatchValueAssetsInternal newValueMap rest
         pure $ Map.insert sa pint remaining
 
-
 {- |
   Extracts amount of given PAssetClass from PValue. Behaves like a pattern
   match on PValue.  Not all AssetClasses need to be provided, only these that
@@ -636,10 +635,10 @@ matchValueAssets ::
     Term
         s
         ( PBuiltinList
-                ( PBuiltinPair
-                    (PAsData PCurrencySymbol)
-                    (PAsData (PMap 'Sorted PTokenName PInteger))
-                )
+            ( PBuiltinPair
+                (PAsData PCurrencySymbol)
+                (PAsData (PMap 'Sorted PTokenName PInteger))
+            )
         ) ->
     HRec input ->
     TermCont s (HRec (OutputMatchValueAssets input s))
@@ -651,11 +650,9 @@ matchValueAssets pvaluemap inputs = do
     -- reconstruct HRec with references saved on the matchedMap
     pure $ matchValueAssetReferences @input matchedMap inputs
 
-
 {- | This function does not check if keys are duplicated or are in different
  order
 -}
-
 class HRecToList (xs :: [(Symbol, Type)]) (x :: Type) where
     hrecToList :: HRec xs -> [x]
 
@@ -728,7 +725,6 @@ instance
                 )
             )
             (matchValueAssetReferences valueMap rest)
-
 
 -- | Helper to construct the inner-mapping of a PValue
 mkSingleValue ::

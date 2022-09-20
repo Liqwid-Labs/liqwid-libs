@@ -1,10 +1,10 @@
+{-# LANGUAGE PolyKinds #-}
 -- TODO: Remove this and replace with TermCont.
 {-# LANGUAGE QualifiedDo #-}
+{-# LANGUAGE RankNTypes #-}
 -- TODO: Either disable warning about orphans altogether or address the issue
 -- requiring this unusual solution.
 {-# OPTIONS_GHC -Wwarn=orphans #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
 
 module Plutarch.Extra.Rational (
     mulTruncate,
@@ -17,15 +17,15 @@ module Plutarch.Extra.Rational (
 
 -------------------------------------------------------------------------------
 
+import Data.Maybe (fromJust)
+import Data.Tagged (Tagged)
 import GHC.Stack (HasCallStack)
+import Plutarch.Builtin (pforgetData)
+import Plutarch.Extra.Tagged (PTagged)
 import qualified Plutarch.Monadic as P
+import Plutarch.Orphans ()
 import Plutarch.Positive (ptryPositive)
 import PlutusTx (fromData)
-import Plutarch.Extra.Tagged (PTagged)
-import Data.Tagged (Tagged)
-import Data.Maybe (fromJust)
-import Plutarch.Builtin (pforgetData)
-import Plutarch.Orphans ()
 
 --------------------------------------------------------------------------------
 
