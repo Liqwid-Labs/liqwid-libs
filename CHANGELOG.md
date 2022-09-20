@@ -11,6 +11,12 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   `plutarch-extra` is identical, so existing code will build without
   problems.
 
+## 3.6.1 -- 2022-09-20
+
+### Added
+
+* `Aeson` instances for Plutus types (in the `Plutarch.Orphans` module)
+
 ## 3.6.0 -- 2022-09-14
 
 All additions, removals and changes refer to `Plutarch.Extra.List` unless stated

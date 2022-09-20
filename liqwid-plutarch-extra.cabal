@@ -121,6 +121,8 @@ library
     Plutarch.Orphans
 
   build-depends:
+    , aeson
+    , bytestring
     , composition-prelude
     , data-default
     , deepseq
@@ -129,6 +131,7 @@ library
     , plutarch-extra
     , plutarch-numeric
     , plutus-core
+    , serialise
     , tagged
     , text
 
