@@ -166,11 +166,13 @@ instance (Serialise a) => Aeson.FromJSON (AsBase16Codec a) where
 
 -- @ since 3.6.1
 deriving via (AsBase16Bytes TxId) instance Aeson.ToJSON TxId
+
 -- @ since 3.6.1
 deriving via (AsBase16Bytes TxId) instance Aeson.FromJSON TxId
 
 -- @ since 3.6.1
 deriving anyclass instance Aeson.ToJSON TxOutRef
+
 -- @ since 3.6.1
 deriving anyclass instance Aeson.FromJSON TxOutRef
 
@@ -179,6 +181,7 @@ deriving via
     (AsBase16Bytes CurrencySymbol)
     instance
         (Aeson.ToJSON CurrencySymbol)
+
 -- @ since 3.6.1
 deriving via
     (AsBase16Bytes CurrencySymbol)
@@ -190,6 +193,7 @@ deriving via
     (AsBase16Bytes TokenName)
     instance
         (Aeson.ToJSON TokenName)
+
 -- @ since 3.6.1
 deriving via
     (AsBase16Bytes TokenName)
@@ -201,6 +205,7 @@ deriving via
     (AsBase16Bytes ValidatorHash)
     instance
         (Aeson.ToJSON ValidatorHash)
+
 -- @ since 3.6.1
 deriving via
     (AsBase16Bytes ValidatorHash)
@@ -212,6 +217,7 @@ deriving via
     (AsBase16Bytes StakeValidatorHash)
     instance
         (Aeson.ToJSON StakeValidatorHash)
+
 -- @ since 3.6.1
 deriving via
     (AsBase16Bytes StakeValidatorHash)
@@ -223,6 +229,7 @@ deriving via
     (AsBase16Codec StakeValidator)
     instance
         (Aeson.ToJSON StakeValidator)
+
 -- @ since 3.6.1
 deriving via
     (AsBase16Codec StakeValidator)
@@ -234,6 +241,7 @@ deriving via
     (AsBase16Bytes ScriptHash)
     instance
         (Aeson.ToJSON ScriptHash)
+
 -- @ since 3.6.1
 deriving via
     (AsBase16Bytes ScriptHash)
@@ -245,6 +253,7 @@ deriving via
     Integer
     instance
         (Aeson.ToJSON POSIXTime)
+
 -- @ since 3.6.1
 deriving via
     Integer
@@ -256,6 +265,7 @@ deriving via
     (AsBase16Bytes BuiltinByteString)
     instance
         (Aeson.ToJSON BuiltinByteString)
+
 -- @ since 3.6.1
 deriving via
     (AsBase16Bytes BuiltinByteString)
@@ -267,6 +277,7 @@ deriving via
     (AsBase16Codec Validator)
     instance
         (Aeson.ToJSON Validator)
+
 -- @ since 3.6.1
 deriving via
     (AsBase16Codec Validator)
@@ -278,6 +289,7 @@ deriving via
     (AsBase16Codec MintingPolicy)
     instance
         (Aeson.ToJSON MintingPolicy)
+
 -- @ since 3.6.1
 deriving via
     (AsBase16Codec MintingPolicy)
@@ -289,6 +301,7 @@ deriving via
     (AsBase16Codec Script)
     instance
         (Aeson.ToJSON Script)
+
 -- @ since 3.6.1
 deriving via
     (AsBase16Codec Script)
