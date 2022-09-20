@@ -118,6 +118,10 @@ library
     Plutarch.Extra.Traversable
     Plutarch.Extra.Tuple
     Plutarch.Extra.Value
+    Plutarch.Extra.Units.ScottAssetClass
+    Plutarch.Extra.Units.DataAssetClass
+    Plutarch.Extra.Units.Quantity
+    Plutarch.Extra.Units.Rational
     Plutarch.Orphans
 
   build-depends:
