@@ -117,6 +117,7 @@ newtype AsBase16Codec (a :: Type) = AsBase16Codec {unAsBase16Codec :: a}
 --------------------
 -- Instances for `deriving via`
 
+-- @ since 3.6.1
 instance
     (Coercible a LedgerBytes) =>
     Aeson.ToJSON (AsBase16Bytes a)
@@ -127,6 +128,7 @@ instance
             . bytes
             . coerce @(AsBase16Bytes a) @LedgerBytes
 
+-- @ since 3.6.1
 instance
     (Coercible LedgerBytes a) =>
     Aeson.FromJSON (AsBase16Bytes a)
@@ -142,6 +144,7 @@ instance
                 . fromHex
                 . encodeUtf8
 
+-- @ since 3.6.1
 instance (Serialise a) => Aeson.ToJSON (AsBase16Codec a) where
     toJSON =
         Aeson.String
@@ -150,6 +153,7 @@ instance (Serialise a) => Aeson.ToJSON (AsBase16Codec a) where
             . serialise @a
             . unAsBase16Codec
 
+-- @ since 3.6.1
 instance (Serialise a) => Aeson.FromJSON (AsBase16Codec a) where
     parseJSON v =
         Aeson.parseJSON @Text v
@@ -160,106 +164,132 @@ instance (Serialise a) => Aeson.FromJSON (AsBase16Codec a) where
                 . fromStrict
                 . encodeUtf8
 
+-- @ since 3.6.1
 deriving via (AsBase16Bytes TxId) instance Aeson.ToJSON TxId
+-- @ since 3.6.1
 deriving via (AsBase16Bytes TxId) instance Aeson.FromJSON TxId
 
+-- @ since 3.6.1
 deriving anyclass instance Aeson.ToJSON TxOutRef
+-- @ since 3.6.1
 deriving anyclass instance Aeson.FromJSON TxOutRef
 
+-- @ since 3.6.1
 deriving via
     (AsBase16Bytes CurrencySymbol)
     instance
         (Aeson.ToJSON CurrencySymbol)
+-- @ since 3.6.1
 deriving via
     (AsBase16Bytes CurrencySymbol)
     instance
         (Aeson.FromJSON CurrencySymbol)
 
+-- @ since 3.6.1
 deriving via
     (AsBase16Bytes TokenName)
     instance
         (Aeson.ToJSON TokenName)
+-- @ since 3.6.1
 deriving via
     (AsBase16Bytes TokenName)
     instance
         (Aeson.FromJSON TokenName)
 
+-- @ since 3.6.1
 deriving via
     (AsBase16Bytes ValidatorHash)
     instance
         (Aeson.ToJSON ValidatorHash)
+-- @ since 3.6.1
 deriving via
     (AsBase16Bytes ValidatorHash)
     instance
         (Aeson.FromJSON ValidatorHash)
 
+-- @ since 3.6.1
 deriving via
     (AsBase16Bytes StakeValidatorHash)
     instance
         (Aeson.ToJSON StakeValidatorHash)
+-- @ since 3.6.1
 deriving via
     (AsBase16Bytes StakeValidatorHash)
     instance
         (Aeson.FromJSON StakeValidatorHash)
 
+-- @ since 3.6.1
 deriving via
     (AsBase16Codec StakeValidator)
     instance
         (Aeson.ToJSON StakeValidator)
+-- @ since 3.6.1
 deriving via
     (AsBase16Codec StakeValidator)
     instance
         (Aeson.FromJSON StakeValidator)
 
+-- @ since 3.6.1
 deriving via
     (AsBase16Bytes ScriptHash)
     instance
         (Aeson.ToJSON ScriptHash)
+-- @ since 3.6.1
 deriving via
     (AsBase16Bytes ScriptHash)
     instance
         (Aeson.FromJSON ScriptHash)
 
+-- @ since 3.6.1
 deriving via
     Integer
     instance
         (Aeson.ToJSON POSIXTime)
+-- @ since 3.6.1
 deriving via
     Integer
     instance
         (Aeson.FromJSON POSIXTime)
 
+-- @ since 3.6.1
 deriving via
     (AsBase16Bytes BuiltinByteString)
     instance
         (Aeson.ToJSON BuiltinByteString)
+-- @ since 3.6.1
 deriving via
     (AsBase16Bytes BuiltinByteString)
     instance
         (Aeson.FromJSON BuiltinByteString)
 
+-- @ since 3.6.1
 deriving via
     (AsBase16Codec Validator)
     instance
         (Aeson.ToJSON Validator)
+-- @ since 3.6.1
 deriving via
     (AsBase16Codec Validator)
     instance
         (Aeson.FromJSON Validator)
 
+-- @ since 3.6.1
 deriving via
     (AsBase16Codec MintingPolicy)
     instance
         (Aeson.ToJSON MintingPolicy)
+-- @ since 3.6.1
 deriving via
     (AsBase16Codec MintingPolicy)
     instance
         (Aeson.FromJSON MintingPolicy)
 
+-- @ since 3.6.1
 deriving via
     (AsBase16Codec Script)
     instance
         (Aeson.ToJSON Script)
+-- @ since 3.6.1
 deriving via
     (AsBase16Codec Script)
     instance
