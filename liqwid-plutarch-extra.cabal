@@ -127,6 +127,7 @@ library
   build-depends:
     , aeson
     , bytestring
+    , containers
     , composition-prelude
     , data-default
     , deepseq
