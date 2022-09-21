@@ -22,7 +22,22 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
     and `name`.
 * `Plutarch.Extra.ScriptContext`: `pisTokenSpent` now tags a `tag :: Symbol` in
   its type, reflecting the move towards tag AssetClasses
+* `Plutarch.Extra.Value`:
+  * Changed `passetClassValue` to become `passetClassDataValue`, since it uses
+  the data-encoded version.
+  * The removal of `psingletonValue` changes the type signature to return a 
+  `'Sorted`, `'Nonzero` `Value`.
+* `Plutarch.Extra.FixedDecimal`: the removal 
+  * The removal of `psingletonValue` changes the type signature to return a 
+  `'Sorted`, `'Nonzero` `Value`. 
 
+### Removed
+
+* `Plutarch.Extra.Value`:
+ * `psingletonValue`: removed, because it exists as `psingleton` from 
+    `Plutarch.Api.V1.Value`. This changes type signatures to include a `'Sorted`,
+     `NonZero` value (see "Modified" above).
+ 
 
 
 ## 3.7.0 -- 2022-09-20

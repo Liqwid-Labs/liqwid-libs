@@ -1,6 +1,6 @@
+{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE PackageImports #-}
 
 module Plutarch.Extra.Rational (
     mulTruncate,
@@ -18,10 +18,10 @@ import Data.Tagged (Tagged)
 import GHC.Stack (HasCallStack)
 import Plutarch.Builtin (pforgetData)
 import Plutarch.Extra.Tagged (PTagged)
+import "plutarch-extra" Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Orphans ()
 import Plutarch.Positive (ptryPositive)
 import PlutusTx (fromData)
-import "plutarch-extra" Plutarch.Extra.TermCont (pmatchC)
 
 --------------------------------------------------------------------------------
 

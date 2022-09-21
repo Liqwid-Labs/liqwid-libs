@@ -96,10 +96,10 @@ import PlutusLedgerApi.V1.Value (CurrencySymbol, TokenName)
  @since 3.8.0
 -}
 data AssetClass (tag :: Symbol) = AssetClass
-    { -- | @since 3.8.0
-      symbol :: CurrencySymbol
-      -- | @since 3.8.0
+    { symbol :: CurrencySymbol
+    -- ^ @since 3.8.0
     , name :: TokenName
+    -- ^ @since 3.8.0
     }
     deriving stock
         ( -- | @since 3.8.0
@@ -126,10 +126,10 @@ data AssetClass (tag :: Symbol) = AssetClass
  @since 3.8.0
 -}
 data PAssetClass (unit :: Symbol) (s :: S) = PAssetClass
-    { -- | @since 3.8.0
-      psymbol :: Term s (PAsData PCurrencySymbol)
-      -- | @since 3.8.0
+    { psymbol :: Term s (PAsData PCurrencySymbol)
+    -- ^ @since 3.8.0
     , pname :: Term s (PAsData PTokenName)
+    -- ^ @since 3.8.0
     }
     deriving stock
         ( -- | @since 3.8.0
@@ -215,10 +215,10 @@ emptyTokenNameData = pconstantData ""
  | @since 3.8.0
 -}
 data AssetClassData = AssetClassData
-    { -- | @since 3.8.0
-      symbol :: CurrencySymbol
-      -- | @since 3.8.0
+    { symbol :: CurrencySymbol
+    -- ^ @since 3.8.0
     , name :: TokenName
+    -- ^ @since 3.8.0
     }
     deriving stock
         ( -- | @since 3.8.0
