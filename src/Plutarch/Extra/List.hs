@@ -161,8 +161,9 @@ precListLookahead whenContinuing whenOne whenDone =
             (whenContinuing self h)
             (whenOne h)
 
--- | Turn a Haskell-level list of "Term"s into a "PListLike"
--- @since 3.8.0
+{- | Turn a Haskell-level list of "Term"s into a "PListLike"
+ @since 3.8.0
+-}
 pfromList ::
     forall (list :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
     (PIsListLike list a) =>

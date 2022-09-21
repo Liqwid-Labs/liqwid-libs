@@ -9,7 +9,7 @@ module Plutarch.Extra.Rational (
     mulRational,
     divRational,
     pliftTaggedRational,
-    (#%)
+    (#%),
 ) where
 
 -------------------------------------------------------------------------------

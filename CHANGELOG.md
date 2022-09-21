@@ -10,7 +10,10 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   the type level.
 * `Plutarch.Extra.Rational`: arithmetic and lifting functions for rational types.
 * `ToData` and `FromData` instances for `Ratio Integer` to `Plutarch.Orphans`
-* `Plutarch.Extra.Value`: TODO: Fill me in
+* `Plutarch.Extra.Value`:
+  * `passetClassDataValue` for constructing singleton `PValue`s based on a
+    `PAssetClassData`.
+  * `pvalue` for generating a `PValue` from its underlying representation.
 * `Plutarch.Extra.List`: `pfromList`, to turn a Haskell-level list of terms
   into a `PListLike`
 
@@ -32,6 +35,8 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   * The following functions now used tagged `AssetClass`es:
     * `pgeqByClass'` 
     * `passetClassValueOf'`
+  * `mkSingleValue` renamed to `psingleValue`; its 'ticked' variant is renamed
+    analogously.
 * `Plutarch.Extra.FixedDecimal`: the removal 
   * The removal of `psingletonValue` changes the type signature to return a 
   `'Sorted`, `'Nonzero` `Value`. 

@@ -8,8 +8,8 @@
 module Plutarch.Extra.Value (
     -- * Value Creation
     passetClassDataValue,
-    mkSingleValue,
-    mkSingleValue',
+    psingleValue,
+    psingleValue',
     pvalue,
 
     -- * Value Querying, Extraction, and Matching
@@ -76,7 +76,7 @@ import Plutarch.Extra.AssetClass (
     PAssetClass (PAssetClass),
     PAssetClassData,
  )
-import Plutarch.Extra.List (plookupAssoc, pfromList)
+import Plutarch.Extra.List (pfromList, plookupAssoc)
 import Plutarch.Extra.Maybe (pexpectJustC)
 import Plutarch.Extra.Tagged (PTagged (PTagged))
 import Plutarch.Extra.TermCont (pletC, pmatchC)
@@ -86,8 +86,9 @@ import Plutarch.Extra.TermCont (pletC, pmatchC)
 ----------------------------------------
 -- Value Creation
 
-{- | Create a "PValue" that only contains specific amount tokens of the given
- "PAssetClassData".
+{- | Create a 'PValue' that only contains a specific amount of tokens, described
+ by a 'PAssetClassData'.
+
  @since 3.8.0
 -}
 passetClassDataValue ::
@@ -99,10 +100,11 @@ passetClassDataValue = phoistAcyclic $
         tn <- pletC (pfield @"name" # ac)
         pure $ Value.psingleton # pfromData cs # pfromData tn # i
 
-{- | Helper to construct the inner-mapping of a PValue
+{- | Helper to construct the \'inner mapping\' of a 'PValue'.
+
  @since 3.8.0
 -}
-mkSingleValue ::
+psingleValue ::
     forall (key :: KeyGuarantees) (tag :: Symbol) (s :: S).
     Term
         s
@@ -111,18 +113,17 @@ mkSingleValue ::
                     (PAsData PCurrencySymbol)
                     (PAsData (PMap key PTokenName PInteger))
         )
-mkSingleValue = phoistAcyclic $
+psingleValue = phoistAcyclic $
     plam $ \sym tk q ->
         ppairDataBuiltin
             # sym
             # pdata (pcon $ PMap $ pfromList [ppairDataBuiltin # tk # pdata (pto q)])
 
-{- | Version of mkSingleValue with a haskell-level constant, hoisting with the
- applied arguments
+{- | As 'psingleValue', but using a Haskell-level 'AssetClass'.
 
-@since 3.8.0
+ @since 3.8.0
 -}
-mkSingleValue' ::
+psingleValue' ::
     forall (tag :: Symbol) (k :: KeyGuarantees) (s :: S).
     AssetClass tag ->
     Term
@@ -132,14 +133,15 @@ mkSingleValue' ::
                     (PAsData PCurrencySymbol)
                     (PAsData (PMap k PTokenName PInteger))
         )
-mkSingleValue' (AssetClass sym tk) =
+psingleValue' (AssetClass sym tk) =
     phoistAcyclic $ mkSingleValue # pconstantData sym # pconstantData tk
 
-{- | Construct a PValue from a Builtin-list of Builtin Pairs
+{- | Construct a 'PValue' from its underlying representation.
+
  @since 3.8.0
 -}
 pvalue ::
-    forall (k :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
+    forall (k :: KeyGuarantees) (s :: S).
     Term
         s
         ( PBuiltinList
@@ -147,7 +149,7 @@ pvalue ::
                 (PAsData PCurrencySymbol)
                 (PAsData (PMap k PTokenName PInteger))
             )
-            :--> PAsData (PValue k amounts)
+            :--> PAsData (PValue k 'NoGuarantees)
         )
 pvalue = phoistAcyclic $ plam $ pdata . pcon . PValue . pcon . PMap
 
