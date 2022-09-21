@@ -86,7 +86,7 @@ import Plutarch.Extra.TermCont (pletC, pmatchC)
 ----------------------------------------
 -- Value Creation
 
-{- | Create a `PValue` that only contains specific amount tokens of the given
+{- | Create a "PValue" that only contains specific amount tokens of the given
  "PAssetClassData".
  @since 3.8.0
 -}
@@ -99,8 +99,9 @@ passetClassDataValue = phoistAcyclic $
         tn <- pletC (pfield @"name" # ac)
         pure $ Value.psingleton # pfromData cs # pfromData tn # i
 
--- | Helper to construct the inner-mapping of a PValue
--- @since 3.8.0
+{- | Helper to construct the inner-mapping of a PValue
+ @since 3.8.0
+-}
 mkSingleValue ::
     forall (key :: KeyGuarantees) (tag :: Symbol) (s :: S).
     Term
@@ -134,8 +135,9 @@ mkSingleValue' ::
 mkSingleValue' (AssetClass sym tk) =
     phoistAcyclic $ mkSingleValue # pconstantData sym # pconstantData tk
 
--- | Construct a PValue from a Builtin-list of Builtin Pairs
--- @since 3.8.0
+{- | Construct a PValue from a Builtin-list of Builtin Pairs
+ @since 3.8.0
+-}
 pvalue ::
     forall (k :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
     Term
@@ -187,7 +189,7 @@ padaOf = phoistAcyclic $ plam $ \v -> pvalueOf # v # pconstant "" # pconstant ""
 
 {- | Extract amount from "PValue" belonging to a Haskell-level "AssetClass".
 
-   @since 1.1.0
+   @since 3.8.0
 -}
 passetClassValueOf' ::
     forall (tag :: Symbol) (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
@@ -196,8 +198,9 @@ passetClassValueOf' ::
 passetClassValueOf' (AssetClass sym token) =
     phoistAcyclic $ plam $ \value -> pvalueOf # value # pconstant sym # pconstant token
 
--- | Lookup the quantity of an AssetClass in a Value
--- @since 3.8.0
+{- | Lookup the quantity of an AssetClass in a Value
+ @since 3.8.0
+-}
 passetClassValueOf ::
     forall
         (key :: KeyGuarantees)
@@ -210,8 +213,9 @@ passetClassValueOf = phoistAcyclic $
         (PAssetClass sym tk) <- pmatchC cls
         pure $ ppure #$ precList (findValue sym tk) (const 0) #$ pto $ pto val
 
--- | Matches ((tokenName, value) : []), or error
--- @since 3.8.0
+{- | Matches ((tokenName, value) : []), or error
+ @since 3.8.0
+-}
 matchSingle ::
     forall (s :: S).
     Term s (PAsData PTokenName) ->
@@ -339,10 +343,10 @@ plookup' = phoistAcyclic $
 
 {- |
   Gets the first entry in the first item of the `PValue` mapping & returns the
-  rest of the PValue.
+  rest of the "PValue".
 
-  Fails if the PValue is empty. In cases where we know that a PValue contains
-  Ada, such as in the ScriptContext, then this will function will split the
+  Fails if the "PValue" is empty. In cases where we know that a "PValue" contains
+  Ada, such as in the "PScriptContext", then this will function will split the
   Ada value - since the Ada entry comes first.
 
   NOTE: All properly normalized values will contain an Ada entry, even if
@@ -400,8 +404,9 @@ psymbolValueOf =
             PMap m <- pmatchC (pfromData m')
             pure $ pfoldr # plam (\x v -> pfromData (psndBuiltin # x) + v) # 0 # m
 
--- | Elimator for the inner type of a "PValue"
--- @since 3.8.0
+{- | Elimator for the inner type of a "PValue"
+ @since 3.8.0
+-}
 precValue ::
     forall r (k :: KeyGuarantees) s.
     ( Term
@@ -472,8 +477,9 @@ precValue mcons =
                 (pto $ pfromData $ psndBuiltin # symbolMap)
         )
 
--- | Elimator for the inner type of a "PValue"
--- @since 3.8.0
+{- | Elimator for the inner type of a "PValue"
+ @since 3.8.0
+-}
 pelimValue ::
     forall (r :: S -> Type) (k :: KeyGuarantees) (s :: S).
     ( Term s (PAsData PCurrencySymbol) ->
@@ -527,13 +533,19 @@ pelimValue mcons mnil =
 ----------------------------------------
 -- Value Comparison
 
-{- | Return '>=' on two values comparing by only a particular AssetClass.
+{- | Return '>=' on two values comparing by only a particular "PCurrencySymbol"
+and "PTokenName" pair.
 
-   @since 1.1.0
+   @since 3.8.0
 -}
 pgeqByClass ::
     forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
-    Term s (PCurrencySymbol :--> PTokenName :--> PValue keys amounts :--> PValue keys amounts :--> PBool)
+    Term
+        s
+        ( PCurrencySymbol :--> PTokenName :--> PValue keys amounts
+            :--> PValue keys amounts
+            :--> PBool
+        )
 pgeqByClass =
     phoistAcyclic $
         plam $ \cs tn a b ->
@@ -545,18 +557,29 @@ pgeqByClass =
 -}
 pgeqBySymbol ::
     forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
-    Term s (PCurrencySymbol :--> PValue keys amounts :--> PValue keys amounts :--> PBool)
+    Term
+        s
+        ( PCurrencySymbol
+            :--> PValue keys amounts
+            :--> PValue keys amounts
+            :--> PBool
+        )
 pgeqBySymbol =
     phoistAcyclic $
         plam $ \cs a b ->
             psymbolValueOf # cs # b #<= psymbolValueOf # cs # a
 
-{- | Return '>=' on two values comparing by only a particular Haskell-level AssetClass.
+{- | Return '>=' on two "PValue"s comparing by only a particular
+  Haskell-level "AssetClass".
 
    @since 1.1.0
 -}
 pgeqByClass' ::
-    forall (tag :: Symbol) (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
+    forall
+        (tag :: Symbol)
+        (keys :: KeyGuarantees)
+        (amounts :: AmountGuarantees)
+        (s :: S).
     AssetClass tag ->
     Term s (PValue keys amounts :--> PValue keys amounts :--> PBool)
 pgeqByClass' ac =
@@ -565,8 +588,8 @@ pgeqByClass' ac =
             passetClassValueOf' ac # b #<= passetClassValueOf' ac # a
 
 {- |
-  Returns True if the provided comparison function returns True for all
-    entries in the first map with the same key in the second.
+  Returns "PTrue" if the provided comparison function returns "PTrue" for all
+    entries in the first "PMap" with the same key in the second.
 
  @since 3.8.0
 -}
@@ -614,7 +637,7 @@ pcmpMap =
             )
 
 {- |
-  Returns True if all entries in the first Value present in the second Value
+  Returns "PTrue" if all entries in the first "PValue" present in the second "PValue"
   are >=.
 
   @since 3.8.0
@@ -633,7 +656,7 @@ pgeqValue = phoistAcyclic $
             #|| pcmpMap # pgeqValueEntry # pto (pfromData x) # pto (pfromData y)
 
 {- |
-  Returns True if all entries in the first Map are >= the values in the second.
+  Returns "PTrue" if all entries in the first "PMap" are >= the values in the second.
 
   @since 3.8.0
 -}
@@ -659,7 +682,7 @@ pgeqValueEntry = phoistAcyclic $
 -- haven't looked at yet. I don't know how many of these belong in this module vs
 -- should be factored out.
 
-{- | Compute the guarantees known after adding two values.
+{- | Compute the guarantees known after adding two "PValue"s.
 
    @since 1.1.0
 -}
@@ -667,7 +690,7 @@ type family AddGuarantees (a :: AmountGuarantees) (b :: AmountGuarantees) where
     AddGuarantees 'Positive 'Positive = 'Positive
     AddGuarantees _ _ = 'NoGuarantees
 
-{- | The entire value only contains one token of the given currency symbol.
+{- | The entire "PValue" only contains one token of the given "PCurrencySymbol".
      @since 1.3.0
 -}
 phasOnlyOneTokenOfCurrencySymbol ::
@@ -678,12 +701,13 @@ phasOnlyOneTokenOfCurrencySymbol = phoistAcyclic $
         psymbolValueOf # cs # vs #== 1
             #&& (plength #$ pto $ pto $ pto vs) #== 1
 
--- | Cons case for QTokenValue, with recursive fixpoint
--- TODO: Peter, 2022-09-21: This comment related to Liqwid;
--- I don't know the context, but more detail should be added or this
--- should be removed from the library.
---
--- @since 3.8.0
+{- | Cons case for QTokenValue, with recursive fixpoint
+ TODO: Peter, 2022-09-21: This comment related to Liqwid;
+ I don't know the context, but more detail should be added or this
+ should be removed from the library.
+
+ @since 3.8.0
+-}
 findValue ::
     forall (k :: KeyGuarantees) (s :: S).
     Term s (PAsData PCurrencySymbol) ->
@@ -718,10 +742,9 @@ findValue sym tk self x xs = plet x $ \pair ->
         (pelimList (matchSingle tk) perror $ pto $ pfromData (psndBuiltin # pair))
         (self # xs)
 
-
-
--- | TODO: this is supposedly internal. Should this even be here?
--- @since 3.8.0
+{- | TODO: this is supposedly internal. Should this even be here?
+ @since 3.8.0
+-}
 unsafeMatchValueAssetsInternal ::
     forall (k :: KeyGuarantees) (s :: S).
     Term
