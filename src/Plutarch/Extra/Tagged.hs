@@ -97,10 +97,10 @@ instance DerivePlutusType (PTagged k u) where type DPTStrat _ = PlutusTypeNewtyp
 -- | @since 1.0.0
 deriving anyclass instance (PIntegral underlying) => PIntegral (PTagged tag underlying)
 
--- -- | @since 1.0.0
+-- | @since 1.0.0
 deriving anyclass instance (PNum underlying) => PNum (PTagged tag underlying)
 
--- -- | @since 1.0.0
+-- | @since 1.0.0
 deriving anyclass instance (PShow underlying) => PShow (PTagged tag underlying)
 
 -- | @since 3.1.0
