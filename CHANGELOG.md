@@ -14,8 +14,19 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   * `passetClassDataValue` for constructing singleton `PValue`s based on a
     `PAssetClassData`.
   * `pvalue` for generating a `PValue` from its underlying representation.
-* `Plutarch.Extra.List`: `pfromList`, to turn a Haskell-level list of terms
-  into a `PListLike`
+  * `passetClassValueOf`, for finding the quantity of a particular `PAssetClass`
+    in a `PValue`. A 'ticked' version for working with a Haskell-level
+    `AssetClass` also added.
+  * `pmatchValueAssets`, for 'pattern-matching' on (underlying representations
+    of) `PValue`s.
+  * `psplitValue`, for 'separating' the first entry of a `PValue`.
+* `Plutarch.Extra.List`: 
+  * `pfromList`, to turn a Haskell-level list of terms into a `PListLike`.
+  * `ptryElimSingle`, which either eliminates a singleton list-like or errors if
+    given a non-singleton.
+* `Plutarch.Extra.Map`:
+  * `plookupGe`, which returns a submap with keys greater than the needle if the
+    search is successful.
 
 ### Modified
 
@@ -37,18 +48,22 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
     * `passetClassValueOf'`
   * `mkSingleValue` renamed to `psingleValue`; its 'ticked' variant is renamed
     analogously.
-* `Plutarch.Extra.FixedDecimal`: the removal 
+  * Type arguments for `pvalueOf` are now: `KeyGuarantees`, `AmountGuarantees`,
+    `S`, in that order.
+  * Type arguments for `padaOf` are now: `KeyGuarantees`, `AmountGuarantees`,
+    `S`, in that order.
+* `Plutarch.Extra.FixedDecimal`: 
   * The removal of `psingletonValue` changes the type signature to return a 
   `'Sorted`, `'Nonzero` `Value`. 
 
 ### Removed
 
 * `Plutarch.Extra.Value`:
- * `psingletonValue`: removed, because it exists as `psingleton` from 
-    `Plutarch.Api.V1.Value`. This changes type signatures to include a `'Sorted`,
+ * `psingletonValue`, as this is provided upstream by Plutarch in
+   `Plutarch.Api.V1.Value`. This changes type signatures to include a `'Sorted`,
      `NonZero` value (see "Modified" above).
- 
-
+ * `pvalueOf`, as this is provided upstream by Plutarch in
+   `Plutarch.Api.V1.Value`.
 
 ## 3.7.0 -- 2022-09-20
 

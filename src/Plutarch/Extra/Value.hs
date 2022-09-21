@@ -6,28 +6,25 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Plutarch.Extra.Value (
-    -- * Value Creation
+    -- * Creation
     passetClassDataValue,
     psingleValue,
     psingleValue',
     pvalue,
 
-    -- * Value Querying, Extraction, and Matching
-    pvalueOf,
+    -- * Queries
     padaOf,
     passetClassValueOf',
     passetClassValueOf,
-    matchSingle,
-    matchValueAssets,
-    plookup',
+    pmatchValueAssets,
     psplitValue,
 
-    -- * Value Aggregation and Elimination
+    -- * Aggregation and elimination
     psymbolValueOf,
     precValue,
     pelimValue,
 
-    -- * Value Comparison
+    -- * Comparison
     pgeqByClass,
     pgeqBySymbol,
     pgeqByClass',
@@ -42,16 +39,11 @@ module Plutarch.Extra.Value (
     unsafeMatchValueAssetsInternal,
 ) where
 
---------------------------------------------------------------------------------
-
 import Data.Coerce (coerce)
 import Data.List (nub, sort)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import GHC.TypeLits (Symbol)
-
---------------------------------------------------------------------------------
-
 import Plutarch.Api.V1 (
     AmountGuarantees (NonZero),
     PCurrencySymbol,
@@ -59,7 +51,6 @@ import Plutarch.Api.V1 (
     PTokenName,
     PValue (PValue),
  )
-import Plutarch.Api.V1.AssocMap (plookup)
 import qualified Plutarch.Api.V1.Value as Value
 import Plutarch.Api.V2 (
     AmountGuarantees (NoGuarantees, Positive),
@@ -67,16 +58,14 @@ import Plutarch.Api.V2 (
  )
 import Plutarch.Builtin (pforgetData, ppairDataBuiltin)
 import Plutarch.DataRepr.Internal.Field (HRec (HCons, HNil), Labeled (Labeled))
-
---------------------------------------------------------------------------------
-
 import Plutarch.Extra.Applicative (ppure)
 import Plutarch.Extra.AssetClass (
     AssetClass (AssetClass, name, symbol),
     PAssetClass (PAssetClass),
     PAssetClassData,
  )
-import Plutarch.Extra.List (pfromList, plookupAssoc)
+import Plutarch.Extra.List (pfromList, plookupAssoc, ptryElimSingle)
+import Plutarch.Extra.Map (plookupGe)
 import Plutarch.Extra.Maybe (pexpectJustC)
 import Plutarch.Extra.Tagged (PTagged (PTagged))
 import Plutarch.Extra.TermCont (pletC, pmatchC)
@@ -95,10 +84,14 @@ passetClassDataValue ::
     forall (s :: S).
     Term s (PAssetClassData :--> PInteger :--> PValue 'Sorted 'NonZero)
 passetClassDataValue = phoistAcyclic $
-    plam $ \ac i -> unTermCont $ do
-        cs <- pletC (pfield @"symbol" # ac)
-        tn <- pletC (pfield @"name" # ac)
-        pure $ Value.psingleton # pfromData cs # pfromData tn # i
+    plam $ \ac i ->
+        pif
+            (i #== 0)
+            (ptraceError "passetClassDataValue: given zero argument, expecting nonzero.")
+            ( let cs = pfield @"symbol" # ac
+                  tn = pfield @"name" # ac
+               in Value.psingleton # pfromData cs # pfromData tn # i
+            )
 
 {- | Helper to construct the \'inner mapping\' of a 'PValue'.
 
@@ -134,7 +127,7 @@ psingleValue' ::
                     (PAsData (PMap k PTokenName PInteger))
         )
 psingleValue' (AssetClass sym tk) =
-    phoistAcyclic $ mkSingleValue # pconstantData sym # pconstantData tk
+    phoistAcyclic $ psingleValue # pconstantData sym # pconstantData tk
 
 {- | Construct a 'PValue' from its underlying representation.
 
@@ -156,51 +149,33 @@ pvalue = phoistAcyclic $ plam $ pdata . pcon . PValue . pcon . PMap
 ----------------------------------------
 -- Value Querying, Extraction, and Matching
 
-{- | Get the amount of tokens which have the given symbol and name from a `PValue`.
-
-   @since 1.0.0
--}
-pvalueOf ::
-    forall (s :: S) (keys :: KeyGuarantees) (amounts :: AmountGuarantees).
-    Term
-        s
-        ( PValue keys amounts :--> PCurrencySymbol
-            :--> PTokenName
-            :--> PInteger
-        )
-pvalueOf = phoistAcyclic $
-    plam $ \val cs tn -> unTermCont $ do
-        PValue m <- pmatchC val
-        innerMay <- pmatchC (plookup # cs # m)
-        case innerMay of
-            PNothing -> pure 0
-            PJust inner -> do
-                resMay <- pmatchC (plookup # tn # inner)
-                pure $ case resMay of
-                    PNothing -> 0
-                    PJust res -> res
-
-{- | Get the amount of ada of a `PValue`.
-
-   @since 1.0.0
--}
-padaOf ::
-    forall (s :: S) (keys :: KeyGuarantees) (amounts :: AmountGuarantees).
-    Term s (PValue keys amounts :--> PInteger)
-padaOf = phoistAcyclic $ plam $ \v -> pvalueOf # v # pconstant "" # pconstant ""
-
-{- | Extract amount from "PValue" belonging to a Haskell-level "AssetClass".
+{- | Get the amount of ada of a 'PValue'.
 
    @since 3.8.0
+-}
+padaOf ::
+    forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
+    Term s (PValue keys amounts :--> PInteger)
+padaOf = phoistAcyclic $
+    plam $ \v ->
+        Value.pvalueOf # v # pconstant "" # pconstant ""
+
+{- | As 'passetClassValueOf', but using a Haskell-level 'AssetClass'.
+
+ @since 3.8.0
 -}
 passetClassValueOf' ::
     forall (tag :: Symbol) (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
     AssetClass tag ->
     Term s (PValue keys amounts :--> PInteger)
 passetClassValueOf' (AssetClass sym token) =
-    phoistAcyclic $ plam $ \value -> pvalueOf # value # pconstant sym # pconstant token
+    phoistAcyclic $
+        plam $ \value ->
+            Value.pvalueOf # value # pconstant sym # pconstant token
 
-{- | Lookup the quantity of an AssetClass in a Value
+{- | Given a 'PAssetClass' and a 'PValue', look up the amount corresponding to
+ that 'PAssetClass'.
+
  @since 3.8.0
 -}
 passetClassValueOf ::
@@ -214,21 +189,6 @@ passetClassValueOf = phoistAcyclic $
     plam $ \cls val -> unTermCont $ do
         (PAssetClass sym tk) <- pmatchC cls
         pure $ ppure #$ precList (findValue sym tk) (const 0) #$ pto $ pto val
-
-{- | Matches ((tokenName, value) : []), or error
- @since 3.8.0
--}
-matchSingle ::
-    forall (s :: S).
-    Term s (PAsData PTokenName) ->
-    Term s (PBuiltinPair (PAsData PTokenName) (PAsData PInteger)) ->
-    Term s (PBuiltinList (PBuiltinPair (PAsData PTokenName) (PAsData PInteger))) ->
-    Term s PInteger
-matchSingle tk x xs = plet x $ \pair ->
-    pif
-        (((pfstBuiltin # pair) #== tk) #&& (pnull # xs))
-        (pfromData $ psndBuiltin # pair)
-        perror
 
 {- |
   Extracts amount of given "PAssetClass" from "PValue". Behaves like a pattern
@@ -248,7 +208,31 @@ matchSingle tk x xs = plet x $ \pair ->
 
   @since 3.8.0
 -}
-matchValueAssets ::
+
+{- | Extracts the amount given by the 'PAssetClass' from (the internal
+ representation of) a 'PValue'.
+
+ Intuitively, this acts as a \'pattern match\' on 'PValue'. You don't have to
+ provide every asset class, only the ones you are interested in.
+
+ = Example
+
+ > example :: forall (s :: S) .
+ >    Term s (PBuiltinList (
+ >      PBuiltinPair (PAsData PCurrencySymbol)
+ >                   (PAsData (PMap 'Sorted PTokenName PInteger))
+ >      ) -> TermConst s ()
+ > example rep = do
+ >    rec <- matchValueAssets @'['("ada", AssetClass "Ada")]
+ >              rep
+ >              (HCons (Labeled adaClass) HNil)
+ >    -- Or using operators
+ >    rec2 <- matchValueAssets rep $ (Proxy @"ada" .|== adaClass) HNIl
+ >    let adaFromRep = rec.ada
+
+ @since 3.8.0
+-}
+pmatchValueAssets ::
     forall (input :: [(Symbol, Type)]) (s :: S).
     ( MatchValueAssetReferences input s
     , HRecToList input SomeAssetClass
@@ -263,7 +247,7 @@ matchValueAssets ::
         ) ->
     HRec input ->
     TermCont s (HRec (OutputMatchValueAssets input s))
-matchValueAssets pvaluemap inputs = do
+pmatchValueAssets pvaluemap inputs = do
     -- nub reduces case Underlying being Ada also
     let sortedInputs = sort . nub . hrecToList $ inputs
     -- perform actuall pattern match and save references to Haskell's Map
@@ -311,44 +295,12 @@ matchOrTryRec requiredAsset = phoistAcyclic $
             (const def)
             # inputpvalue
 
-{- | `plookup` but also returning the tail of the list, and relying on
- sorted order
-
-@since 3.8.0
--}
-plookup' ::
-    forall (k :: S -> Type) (v :: (S -> Type)) (s :: S).
-    ( POrd k
-    , PIsData k
-    ) =>
-    Term
-        s
-        ( k
-            :--> PMap 'Sorted k v
-            :--> PMaybe (PPair (PAsData v) (PMap 'Sorted k v))
-        )
-plookup' = phoistAcyclic $
-    plam $ \needle ->
-        pfix #$ plam $ \self (xs :: Term _ (PMap 'Sorted k b)) ->
-            pelimList
-                ( \y ys -> unTermCont $ do
-                    current <- pletC $ pfromData $ pfstBuiltin # y
-                    let ysMap = pcon $ PMap ys
-                    pure $
-                        pif
-                            (current #== needle)
-                            (pcon $ PJust $ pcon $ PPair (psndBuiltin # y) ysMap)
-                            (pif (needle #< current) (pcon PNothing) (self # ysMap))
-                )
-                (pcon PNothing)
-                (pto xs)
-
 {- |
-  Gets the first entry in the first item of the `PValue` mapping & returns the
-  rest of the "PValue".
+  Gets the first entry in the first item of the 'PValue' mapping & returns the
+  rest of the 'PValue'.
 
-  Fails if the "PValue" is empty. In cases where we know that a "PValue" contains
-  Ada, such as in the "PScriptContext", then this will function will split the
+  Fails if the 'PValue' is empty. In cases where we know that a 'PValue' contains
+  Ada, such as in a 'PScriptContext', then this will function will split the
   Ada value - since the Ada entry comes first.
 
   NOTE: All properly normalized values will contain an Ada entry, even if
@@ -551,7 +503,7 @@ pgeqByClass ::
 pgeqByClass =
     phoistAcyclic $
         plam $ \cs tn a b ->
-            pvalueOf # b # cs # tn #<= pvalueOf # a # cs # tn
+            Value.pvalueOf # b # cs # tn #<= Value.pvalueOf # a # cs # tn
 
 {- | Return '>=' on two values comparing by only a particular CurrencySymbol.
 
@@ -617,7 +569,7 @@ pcmpMap =
                             needle <- pletC $ pfstBuiltin # yHead
                             find <-
                                 pmatchC $
-                                    plookup'
+                                    plookupGe
                                         # pfromData needle
                                         # xs
                             case find of
@@ -741,8 +693,17 @@ findValue ::
 findValue sym tk self x xs = plet x $ \pair ->
     pif
         (pforgetData (pfstBuiltin # pair) #== pforgetData sym)
-        (pelimList (matchSingle tk) perror $ pto $ pfromData (psndBuiltin # pair))
+        (ptryElimSingle go . pto . pfromData $ psndBuiltin # pair)
         (self # xs)
+  where
+    go ::
+        Term s (PBuiltinPair (PAsData PTokenName) (PAsData PInteger)) ->
+        Term s PInteger
+    go kv =
+        pif
+            (pfstBuiltin # kv #== tk)
+            (pfromData $ psndBuiltin # kv)
+            (ptraceError "findValue: Unexpectedly missing result.")
 
 {- | TODO: this is supposedly internal. Should this even be here?
  @since 3.8.0

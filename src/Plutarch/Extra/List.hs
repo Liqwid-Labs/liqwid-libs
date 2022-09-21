@@ -23,7 +23,31 @@ module Plutarch.Extra.List (
 
     -- * Elimination
     precListLookahead,
+    ptryElimSingle,
 ) where
+
+{- | Similar to 'pelimList', but assumes the argument list-like is a singleton,
+ erroring otherwise.
+
+ @since 3.8.0
+-}
+ptryElimSingle ::
+    forall (ell :: (S -> Type) -> S -> Type) (a :: S -> Type) (r :: S -> Type) (s :: S).
+    (PElemConstraint ell a, PListLike ell) =>
+    (Term s a -> Term s r) ->
+    Term s (ell a) ->
+    Term s r
+ptryElimSingle f = pelimList go (ptraceError emptyErr)
+  where
+    go ::
+        Term s a ->
+        Term s (ell a) ->
+        Term s r
+    go h t = pif (pnull # t) (f h) (ptraceError nonSingleErr)
+    emptyErr :: Term s PString
+    emptyErr = "ptryElimSingle: Found empty list-like."
+    nonSingleErr :: Term s PString
+    nonSingleErr = "ptryElimSingle: Found non-singleton list-like."
 
 {- | Similar to 'pmap', but allows elements to be thrown out. More precisely,
  for elements where the function argument returns 'PNothing', the
