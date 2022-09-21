@@ -76,7 +76,7 @@ import Plutarch.Extra.AssetClass (
     PAssetClass (PAssetClass),
     PAssetClassData,
  )
-import Plutarch.Extra.List (plookupAssoc)
+import Plutarch.Extra.List (plookupAssoc, pfromList)
 import Plutarch.Extra.Maybe (pexpectJustC)
 import Plutarch.Extra.Tagged (PTagged (PTagged))
 import Plutarch.Extra.TermCont (pletC, pmatchC)
@@ -843,11 +843,3 @@ instance
                 )
             )
             (matchValueAssetReferences valueMap rest)
-
--- TODO: Remove me, once Seungheon's PR lands
-pfromList ::
-    forall (list :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
-    (PIsListLike list a) =>
-    [Term s a] ->
-    Term s (list a)
-pfromList = foldr (\x xs -> pcons # x # xs) pnil

@@ -12,6 +12,7 @@
 module Plutarch.Extra.List (
     -- * Construction
     preplicate,
+    pfromList,
 
     -- * Transformation
     pmapMaybe,
@@ -159,3 +160,12 @@ precListLookahead whenContinuing whenOne whenDone =
         pelimList
             (whenContinuing self h)
             (whenOne h)
+
+-- | Turn a Haskell-level list of "Term"s into a "PListLike"
+-- @since 3.8.0
+pfromList ::
+    forall (list :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
+    (PIsListLike list a) =>
+    [Term s a] ->
+    Term s (list a)
+pfromList = foldr (\x xs -> pcons # x # xs) pnil
