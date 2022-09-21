@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutarch-quickcheck
-version:            2.1.0
+version:            2.1.1
 synopsis:           Quickcheck for Plutarch.
 description:
   Bridge between QuickCheck and Plutarch. The interfaces provide
@@ -102,7 +102,7 @@ common common-tests
     TupleSections
     TypeOperators
 
-  default-language:   Haskell2010  
+  default-language:   Haskell2010
 
 -- Libraries
 
@@ -110,7 +110,6 @@ library
   import:          common-lang
   exposed-modules: Plutarch.Test.QuickCheck
   other-modules:
-    Plutarch.Extra.Maybe
     Plutarch.Test.QuickCheck.Function
     Plutarch.Test.QuickCheck.Helpers
     Plutarch.Test.QuickCheck.Instances

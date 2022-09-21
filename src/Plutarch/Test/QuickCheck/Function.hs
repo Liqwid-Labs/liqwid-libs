@@ -21,7 +21,7 @@ import Data.Kind (Type)
 import Data.List (intercalate, nubBy)
 import Data.Universe (Finite (universeF))
 import Plutarch (S, Term, plam, (#), (#$), type (:-->))
-import Plutarch.Extra.Maybe (pmaybe)
+import Plutarch.Extra.Maybe (pfromMaybe)
 import Plutarch.Lift (PLift, PUnsafeLiftDecl (PLifted), pconstant)
 import Plutarch.Maybe (pfromJust)
 import Plutarch.Prelude (
@@ -153,7 +153,7 @@ plamTable ::
   [(PLifted a, PLifted b)] ->
   PLifted b ->
   Term s (a :--> b)
-plamTable t d = plam $ \x -> pmaybe # pconstant d # (plookup # x # pconstant t)
+plamTable t d = plam $ \x -> pfromMaybe # pconstant d # (plookup # x # pconstant t)
 
 plamFinite ::
   forall (a :: S -> Type) (b :: S -> Type) (s :: S).
