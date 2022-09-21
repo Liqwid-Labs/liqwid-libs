@@ -14,7 +14,7 @@ import Plutarch.Extra.Applicative (ppure)
 import Plutarch.Extra.Rational (divRational, divTruncate, mulRational, mulTruncate)
 import Plutarch.Extra.Tagged (PTagged)
 
-{- | Represents an exchange from a to b.
+{- | Represents an exchange from @a@ to @b@.
      Let's say 1.00 ADA is worth 2.00 USD, then @ADA ':>' USD@ ought to be
      represented as 2.00.
 
@@ -53,7 +53,8 @@ exchangeToTruncate =
     phoistAcyclic $
         plam $ \ex x -> ppure #$ divTruncate # pto ex # pto x
 
-{- | Convert between quantities of currencies using a Rational conversion value
+{- | Convert between quantities of currencies using a "PRational" conversion
+  value
 
  @since 3.8.0
 -}

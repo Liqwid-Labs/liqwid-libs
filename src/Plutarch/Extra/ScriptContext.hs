@@ -147,7 +147,7 @@ pvalueSpent = phoistAcyclic $
      When using this as an authority check, you __MUST__ ensure the authority
      knows how to ensure its end of the contract.
 
-    @since 1.1.0
+    @since 3.8.0
 -}
 pisTokenSpent :: forall (tag :: Symbol) (s :: S). Term s (PAssetClass tag :--> PBuiltinList PTxInInfo :--> PBool)
 pisTokenSpent =

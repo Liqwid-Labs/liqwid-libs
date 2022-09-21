@@ -1,10 +1,6 @@
 {-# LANGUAGE PolyKinds #-}
--- TODO: Remove this and replace with TermCont.
-{-# LANGUAGE QualifiedDo #-}
 {-# LANGUAGE RankNTypes #-}
--- TODO: Either disable warning about orphans altogether or address the issue
--- requiring this unusual solution.
-{-# OPTIONS_GHC -Wwarn=orphans #-}
+{-# LANGUAGE PackageImports #-}
 
 module Plutarch.Extra.Rational (
     mulTruncate,
@@ -22,10 +18,10 @@ import Data.Tagged (Tagged)
 import GHC.Stack (HasCallStack)
 import Plutarch.Builtin (pforgetData)
 import Plutarch.Extra.Tagged (PTagged)
-import qualified Plutarch.Monadic as P
 import Plutarch.Orphans ()
 import Plutarch.Positive (ptryPositive)
 import PlutusTx (fromData)
+import "plutarch-extra" Plutarch.Extra.TermCont (pmatchC)
 
 --------------------------------------------------------------------------------
 
@@ -38,9 +34,9 @@ mulTruncate ::
     Term s (PRational :--> PInteger :--> PInteger)
 mulTruncate =
     phoistAcyclic $
-        plam $ \ex x -> P.do
-            (PRational num denom) <- pmatch ex
-            mulDivTruncate # x # num # pto denom
+        plam $ \ex x -> unTermCont $ do
+            (PRational num denom) <- pmatchC ex
+            pure $ mulDivTruncate # x # num # pto denom
 
 {- | Multiply the first argument by the second argument, divide by the third,
  truncating
@@ -52,7 +48,7 @@ mulDivTruncate ::
     Term s (PInteger :--> PInteger :--> PInteger :--> PInteger)
 mulDivTruncate =
     phoistAcyclic $
-        plam $ \x num denom -> P.do
+        plam $ \x num denom ->
             pdiv # (num * x) # denom
 
 {- | Combined divide-truncate
@@ -64,11 +60,13 @@ divTruncate ::
     Term s (PRational :--> PInteger :--> PInteger)
 divTruncate =
     phoistAcyclic $
-        plam $ \ex x -> P.do
-            (PRational num denom) <- pmatch ex
-            mulDivTruncate # x # pto denom # num
+        plam $ \ex x -> unTermCont $ do
+            (PRational num denom) <- pmatchC ex
+            pure $ mulDivTruncate # x # pto denom # num
 
-{- | Multiply a Rational by an Integer, without reducing the fraction
+{- | Multiply a "PInteger" by a "PInteger", without reducing the fraction
+
+ NOTE: this can cause performance issues if you're not careful.
 
  @since 3.8.0
 -}
@@ -77,22 +75,26 @@ mulRational ::
     Term s (PInteger :--> PRational :--> PRational)
 mulRational =
     phoistAcyclic $
-        plam $ \x r -> P.do
-            (PRational num denom) <- pmatch r
-            pcon $ PRational (num * x) denom
+        plam $ \x r -> unTermCont $ do
+            (PRational num denom) <- pmatchC r
+            pure $ pcon $ PRational (num * x) denom
 
-{- | Multiply a Rational by an Integer, without reducing the fraction
+{- | Divide a "PInteger" by a "PRational", without reducing the fraction
 
- @sinmce 3.8.0
+ NOTE: this can cause performance issues if you're not careful.
+
+ @since 3.8.0
 -}
 divRational ::
     forall (s :: S).
     Term s (PInteger :--> PRational :--> PRational)
 divRational =
     phoistAcyclic $
-        plam $ \x r -> P.do
-            (PRational num denom) <- pmatch r
-            (pto denom * x) #% num
+        plam $ \x r -> unTermCont $ do
+            (PRational num denom) <- pmatchC r
+            pure $ (pto denom * x) #% num
+
+infixl 7 #%
 
 {- | Create a `PRational` out of two `PIntegers`. Will error if the denominator
  is  non-positive.

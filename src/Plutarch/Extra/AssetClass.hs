@@ -87,7 +87,7 @@ import Plutarch.Orphans ()
 
 --------------------------------------------------------------------------------
 
-import qualified PlutusLedgerApi.V1.Value as Plutus
+import PlutusLedgerApi.V1.Value (CurrencySymbol, TokenName)
 
 --------------------------------------------------------------------------------
 -- AssetClass & Variants
@@ -96,8 +96,10 @@ import qualified PlutusLedgerApi.V1.Value as Plutus
  @since 3.8.0
 -}
 data AssetClass (tag :: Symbol) = AssetClass
-    { symbol :: Plutus.CurrencySymbol
-    , name :: Plutus.TokenName
+    { -- | @since 3.8.0
+      symbol :: CurrencySymbol
+      -- | @since 3.8.0
+    , name :: TokenName
     }
     deriving stock
         ( -- | @since 3.8.0
@@ -124,7 +126,9 @@ data AssetClass (tag :: Symbol) = AssetClass
  @since 3.8.0
 -}
 data PAssetClass (unit :: Symbol) (s :: S) = PAssetClass
-    { psymbol :: Term s (PAsData PCurrencySymbol)
+    { -- | @since 3.8.0
+      psymbol :: Term s (PAsData PCurrencySymbol)
+      -- | @since 3.8.0
     , pname :: Term s (PAsData PTokenName)
     }
     deriving stock
@@ -151,7 +155,7 @@ pconstantCls (AssetClass sym tk) =
     pcon $
         PAssetClass (pconstantData sym) (pconstantData tk)
 
-{- | Coerce the unit tag of a PAssetClass
+{- | Coerce the unit tag of a "PAssetClass"
  | @since 3.8.0
 -}
 pcoerceCls ::
@@ -160,7 +164,7 @@ pcoerceCls ::
     Term s (PAssetClass b)
 pcoerceCls = punsafeCoerce
 
-{- | Construct a PAssetClass with empty TokenName
+{- | Construct a "PAssetClass" with empty "pname".
  | @since 3.8.0
 -}
 psymbolAssetClass ::
@@ -172,7 +176,7 @@ psymbolAssetClass sym = PAssetClass sym emptyTokenNameData
 --------------------------------------------------------------------------------
 -- Simple Helpers
 
-{- | Check whether an AssetClass is the Ada Class
+{- | Check whether an "AssetClass" is the Ada Class
  | @since 3.8.0
 -}
 isAdaClass :: forall (tag :: Symbol). AssetClass tag -> Bool
@@ -180,19 +184,19 @@ isAdaClass (AssetClass s n) = s == s' && n == n'
   where
     (AssetClass s' n') = adaClass
 
-{- | Ada CurrencySymbol - ""
+{- | Ada "PCurrencySymbol" (empty byte string)
  | @since 3.8.0
 -}
 adaSymbolData :: forall (s :: S). Term s (PAsData PCurrencySymbol)
 adaSymbolData = pconstantData ""
 
-{- | Ada AssetClass - ("", "")
+{- | Ada "AssetClass" (empty byte string for currency symbol and token name)
  | @since 3.8.0
 -}
 adaClass :: AssetClass "Ada"
 adaClass = AssetClass "" ""
 
-{- | Ada AssetClass - Plutarch-level
+{- | Ada "AssetClass" - Plutarch-level
  | @since 3.8.0
 -}
 padaClass :: forall (s :: S). Term s (PAssetClass "Ada")
@@ -207,12 +211,14 @@ emptyTokenNameData = pconstantData ""
 ----------------------------------------
 -- Data-Encoded version
 
-{- | Data-encoded AssetClass without the phantom-tag
+{- | Data-encoded "AssetClass" without the phantom-tag
  | @since 3.8.0
 -}
 data AssetClassData = AssetClassData
-    { symbol :: Plutus.CurrencySymbol
-    , name :: Plutus.TokenName
+    { -- | @since 3.8.0
+      symbol :: CurrencySymbol
+      -- | @since 3.8.0
+    , name :: TokenName
     }
     deriving stock
         ( -- | @since 3.8.0
@@ -252,7 +258,7 @@ data AssetClassData = AssetClassData
                 PAssetClassData
             )
 
-{- | Tagless data-encoded AssetClass
+{- | Tagless data-encoded version of "PAssetClass"
  | @since 3.8.0
 -}
 newtype PAssetClassData (s :: S)
@@ -290,19 +296,19 @@ instance DerivePlutusType PAssetClassData where
 instance Plutarch.Lift.PUnsafeLiftDecl PAssetClassData where
     type PLifted PAssetClassData = AssetClassData
 
-{- | Convert from `AssetClassData` to `AssetClass`
+{- | Convert from "AssetClassData" to "AssetClass"
  | @since 3.8.0
 -}
 toScottEncoding :: forall (tag :: Symbol). AssetClassData -> AssetClass tag
 toScottEncoding (AssetClassData sym tk) = AssetClass sym tk
 
-{- | Convert from `AssetClass` to `AssetClassData`
+{- | Convert from "AssetClass" to "AssetClassData"
  | @since 3.8.0
 -}
 fromScottEncoding :: forall (tag :: Symbol). AssetClass tag -> AssetClassData
 fromScottEncoding (AssetClass sym tk) = AssetClassData sym tk
 
-{- | Convert from `PAssetClassData` to `PAssetClass`
+{- | Convert from "PAssetClassData" to "PAssetClass"
  @since 3.8.0
 -}
 ptoScottEncoding ::
@@ -317,7 +323,7 @@ ptoScottEncoding = phoistAcyclic $
         pletFields @["symbol", "name"] (pto cls) $
             \cls' -> pcon $ PAssetClass cls'.symbol cls'.name
 
-{- | Convert from `PAssetClass` to `PAssetClassData`
+{- | Convert from "PAssetClass" to "PAssetClassData"
  @since 3.8.0
 -}
 pfromScottEncoding ::
@@ -337,7 +343,7 @@ pfromScottEncoding = phoistAcyclic $
                         .& #name .= tk
                     )
 
-{- | Wrap a function using the Scott-encoded AssetClass to one using the
+{- | Wrap a function using the Scott-encoded "PAssetClass" to one using the
  Data-Encoded version
 
  @since 3.8.0
@@ -350,7 +356,7 @@ pviaScottEncoding fn = phoistAcyclic $
     plam $ \cls ->
         fn #$ ptoScottEncoding # cls
 
-{- | Version of assetClassValue for tagged AssetClass & Tagged
+{- | Version of assetClassValue for tagged "AssetClass" & "Tagged"
  @since 3.8.0
 -}
 assetClassValue ::
