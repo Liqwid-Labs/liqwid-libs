@@ -4,12 +4,12 @@
 module Plutarch.Test.Precompiled (
     Expectation (..),
     TestCase,
-    (&@),
+    (@&),
     withApplied,
     TestCompiled (..),
     testEvalCase,
-    (<--@),
-    (<-!@),
+    (@>),
+    (@!>),
     fromPTerm,
 ) where
 
@@ -102,8 +102,8 @@ newtype TestCompiled a = TestCompiled
 withApplied :: [Data] -> TestCompiled () -> TestCompiled ()
 withApplied args tests = local (flip applyDebuggableScript args) tests
 
-(&@) :: [Data] -> TestCompiled () -> TestCompiled ()
-args &@ tests = withApplied args tests
+(@&) :: [Data] -> TestCompiled () -> TestCompiled ()
+args @& tests = withApplied args tests
 
 testEvalCase :: String -> Expectation -> [Data] -> TestCompiled ()
 testEvalCase name e args = do
@@ -118,11 +118,11 @@ testEvalCase name e args = do
     tell $ pure testCase
     return ()
 
-(<--@) :: String -> [Data] -> TestCompiled ()
-name <--@ args = testEvalCase name Success args
+(@>) :: [Data] -> String -> TestCompiled ()
+args @> name = testEvalCase name Success args
 
-(<-!@) :: String -> [Data] -> TestCompiled ()
-name <-!@ args = testEvalCase name Failure args
+(@!>) :: [Data] -> String -> TestCompiled ()
+args @!> name = testEvalCase name Failure args
 
 fromPTerm ::
     forall (a :: S -> Type).
