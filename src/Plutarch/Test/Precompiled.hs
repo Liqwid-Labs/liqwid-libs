@@ -1,6 +1,14 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 
+{- | Module: Plutarch.Test.Precompiled
+ Copyright: (C) Liqwid Labs 2022
+ Maintainer: Seungheon Oh <seungheon@mlabs.city>
+ Portability: GHC only
+ Stability: Experimental
+
+ Helpers for building test tree that shares same precompiled script.
+-}
 module Plutarch.Test.Precompiled (
     Expectation (..),
     TestCase,
@@ -43,11 +51,16 @@ applyDebuggableScript (DebuggableScript script debugScript) d =
         , debugScript = applyArguments debugScript d
         }
 
+-- | @since 0.1.1.0
 data Expectation
     = Success
     | Failure
     deriving stock (Show)
 
+{- | Holds necessary information for each test cases.
+
+ @since 0.1.1.0
+-}
 data TestCase = TestCase
     { dScript :: DebuggableScript
     , caseName :: String
@@ -86,6 +99,10 @@ instance IsTest TestCase where
                 <> hang "Result" 4 (ppDoc result)
                 <> hang "Logs" 4 (ppLogs logs)
 
+{- | Allows monadically defining a test tree that uses same precompiled script.
+
+ @since 0.1.1.0
+-}
 newtype TestCompiled a = TestCompiled
     { unTestCompiled ::
         RWS DebuggableScript (Acc TestCase) () a
@@ -99,12 +116,24 @@ newtype TestCompiled a = TestCompiled
         )
         via (RWS DebuggableScript (Acc TestCase) ())
 
+{- | Stitches in arguments. It is helpful if there's shared arguments.
+
+ @since 0.1.1.0
+-}
 withApplied :: [Data] -> TestCompiled () -> TestCompiled ()
 withApplied args tests = local (flip applyDebuggableScript args) tests
 
+{- | An operator for 'withApplied'.
+
+ @since 0.1.1.0
+-}
 (@&) :: [Data] -> TestCompiled () -> TestCompiled ()
 args @& tests = withApplied args tests
 
+{- | Tests if script succeed or not given arguments.
+
+ @since 0.1.1.0
+-}
 testEvalCase :: String -> Expectation -> [Data] -> TestCompiled ()
 testEvalCase name e args = do
     ds <- ask
@@ -118,12 +147,24 @@ testEvalCase name e args = do
     tell $ pure testCase
     return ()
 
+{- | An operator for 'testEvalCase'.
+
+ @since 0.1.1.0
+-}
 (@>) :: [Data] -> String -> TestCompiled ()
 args @> name = testEvalCase name Success args
 
+{- | An operator for 'testEvalCase'.
+
+ @since 0.1.1.0
+-}
 (@!>) :: [Data] -> String -> TestCompiled ()
 args @!> name = testEvalCase name Failure args
 
+{- | Compiles Plutarch term and tests in 'TestCompiled'.
+
+ @since 0.1.1.0
+-}
 fromPTerm ::
     forall (a :: S -> Type).
     String ->

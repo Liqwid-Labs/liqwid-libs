@@ -3,7 +3,7 @@
 
 {- | Module: Plutarch.Test.Unit
  Copyright: (C) Liqwid Labs 2022
- Maintainer: Seungheon Oh <seungheon.ooh@gmail.com>
+ Maintainer: Seungheon Oh <seungheon@mlabs.city>
  Portability: GHC only
  Stability: Experimental
 
