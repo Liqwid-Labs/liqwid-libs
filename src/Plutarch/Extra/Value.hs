@@ -27,8 +27,6 @@ module Plutarch.Extra.Value (
     pbyClassComparator,
     pbySymbolComparator,
     pbyClassComparator',
-    pgeqValue,
-    pgeqValueEntry,
 
     -- * Miscellaneous
     AddGuarantees,
@@ -66,7 +64,7 @@ import Plutarch.Extra.AssetClass (
 import Plutarch.Extra.List (pfromList, plookupAssoc, ptryElimSingle)
 import Plutarch.Extra.Map (phandleMin, plookupGe)
 import Plutarch.Extra.Maybe (pexpectJustC)
-import Plutarch.Extra.Ord (PComparator, pfromOrdBy)
+import Plutarch.Extra.Ord (PComparator, pfromOrdBy, pleqMapBy)
 import Plutarch.Extra.Tagged (PTagged (PTagged))
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 
@@ -235,46 +233,6 @@ pmatchValueAssets pvaluemap inputs = do
     matchedMap <- unsafeMatchValueAssetsInternal pvaluemap sortedInputs
     -- reconstruct HRec with references saved on the matchedMap
     pure $ matchValueAssetReferences @input matchedMap inputs
-
-{- | Finds a first matching PAssetClass in PValueMap when also returning the
- rest of the PValueMap
-
-@since 3.8.0
--}
-matchOrTryRec ::
-    forall (unit :: Symbol) (k :: KeyGuarantees) (s :: S).
-    AssetClass unit ->
-    Term
-        s
-        ( PBuiltinList
-            ( PBuiltinPair
-                (PAsData PCurrencySymbol)
-                (PAsData (PMap k PTokenName PInteger))
-            )
-            :--> PPair
-                    (PAsData PInteger)
-                    ( PBuiltinList
-                        ( PBuiltinPair
-                            (PAsData PCurrencySymbol)
-                            (PAsData (PMap k PTokenName PInteger))
-                        )
-                    )
-        )
-matchOrTryRec requiredAsset = phoistAcyclic $
-    plam $ \inputpvalue -> plet (pcon $ PPair (pdata 0) inputpvalue) $ \def ->
-        precValue
-            ( \self pcurrencySymbol pTokenName pint rest ->
-                pif
-                    ( pconstantData requiredAsset.symbol #== pcurrencySymbol
-                        #&& pconstantData requiredAsset.name #== pTokenName
-                    )
-                    -- assetClass found - return its quantity and tail of PValueMap
-                    (pcon $ PPair pint rest)
-                    -- assetClass not found - skipping current position
-                    (self # rest)
-            )
-            (const def)
-            # inputpvalue
 
 {- |
   Gets the first entry in the first item of the 'PValue' mapping & returns the
@@ -480,46 +438,6 @@ pbyClassComparator' ::
     Term s (PComparator (PValue keys amounts))
 pbyClassComparator' ac = pfromOrdBy # plam (passetClassValueOf' ac #)
 
-{- |
-  Returns "PTrue" if all entries in the first "PValue" present in the second "PValue"
-  are >=.
-
-  @since 3.8.0
--}
-pgeqValue ::
-    forall (v :: AmountGuarantees) (s :: S).
-    Term
-        s
-        ( PAsData (PValue 'Sorted v)
-            :--> PAsData (PValue 'Sorted v)
-            :--> PBool
-        )
-pgeqValue = phoistAcyclic $
-    plam $ \x y ->
-        x #== y
-            #|| pcmpMap # pgeqValueEntry # pto (pfromData x) # pto (pfromData y)
-
-{- |
-  Returns "PTrue" if all entries in the first "PMap" are >= the values in the second.
-
-  @since 3.8.0
--}
-pgeqValueEntry ::
-    forall (s :: S).
-    Term
-        s
-        ( PAsData PCurrencySymbol
-            :--> PAsData (PMap 'Sorted PTokenName PInteger)
-            :--> PAsData (PMap 'Sorted PTokenName PInteger)
-            :--> PBool
-        )
-pgeqValueEntry = phoistAcyclic $
-    plam $ \_sym x y ->
-        x #== y
-            #|| (pcmpMap # plam (const pgeqIntegerData) # pfromData x # pfromData y)
-  where
-    pgeqIntegerData = phoistAcyclic $ plam $ \a b -> pfromData b #<= pfromData a
-
 ----------------------------------------
 -- Miscellaneous
 -- TODO: Peter, 2022-09-21: There's a lot of typeclasses and instances that I
@@ -696,3 +614,40 @@ instance
                 )
             )
             (matchValueAssetReferences valueMap rest)
+
+-- Helpers
+
+matchOrTryRec ::
+    forall (unit :: Symbol) (k :: KeyGuarantees) (s :: S).
+    AssetClass unit ->
+    Term
+        s
+        ( PBuiltinList
+            ( PBuiltinPair
+                (PAsData PCurrencySymbol)
+                (PAsData (PMap k PTokenName PInteger))
+            )
+            :--> PPair
+                    (PAsData PInteger)
+                    ( PBuiltinList
+                        ( PBuiltinPair
+                            (PAsData PCurrencySymbol)
+                            (PAsData (PMap k PTokenName PInteger))
+                        )
+                    )
+        )
+matchOrTryRec requiredAsset = phoistAcyclic $
+    plam $ \inputpvalue -> plet (pcon $ PPair (pdata 0) inputpvalue) $ \def ->
+        precValue
+            ( \self pcurrencySymbol pTokenName pint rest ->
+                pif
+                    ( pconstantData requiredAsset.symbol #== pcurrencySymbol
+                        #&& pconstantData requiredAsset.name #== pTokenName
+                    )
+                    -- assetClass found - return its quantity and tail of PValueMap
+                    (pcon $ PPair pint rest)
+                    -- assetClass not found - skipping current position
+                    (self # rest)
+            )
+            (const def)
+            # inputpvalue

@@ -46,6 +46,12 @@ module Plutarch.Extra.Ord (
     pgeqMapBy,
     pgreaterThanMapBy,
 
+    -- **** 'PValue'
+    pleqValueBy,
+    plessThanValueBy,
+    pgeqValueBy,
+    pgreaterThanValueBy,
+
     -- *** Sortedness checking
     pisSortedBy,
 
@@ -70,6 +76,12 @@ module Plutarch.Extra.Ord (
 
 import Data.Semigroup (Semigroup (stimes), stimesIdempotentMonoid)
 import Plutarch.Api.V1.AssocMap (KeyGuarantees (Sorted), PMap)
+import Plutarch.Api.V1.Value (
+    AmountGuarantees,
+    PCurrencySymbol,
+    PTokenName,
+    PValue,
+ )
 import Plutarch.Extra.List (phandleList, precListLookahead)
 import Plutarch.Extra.Map (phandleMin)
 import Plutarch.Extra.Maybe (ptraceIfNothing)
@@ -381,6 +393,63 @@ pgreaterThanMapBy = phoistAcyclic $
         phandleMin m1 (pcon PTrue) $ \k1 v1 kv1 ->
             phandleMin m2 (pcon PTrue) $ \k2 v2 kv2 ->
                 (pfix #$ plam pcmpMap) # pgreaterThanBy # cmp # k1 # k2 # v1 # v2 # kv1 # kv2
+
+{- | Compares two 'PValue's based on their \'inner map\' 'pleqThanMapBy'. More
+ precisely, this returns 'PTrue' if, for any 'PCurrencySymbol' with a mapping
+ in both 'PValue's, their corresponding \'inner maps\' all give 'PTrue' using
+ 'pleqMapBy' with the given comparator.
+
+ @since 3.8.0
+-}
+pleqValueBy ::
+    forall (amount :: AmountGuarantees) (s :: S).
+    Term s (PComparator PInteger :--> PValue 'Sorted amount :--> PValue 'Sorted amount :--> PBool)
+pleqValueBy = phoistAcyclic $
+    plam $ \cmp pval pval' ->
+        phandleMin (pto pval) (pcon PTrue) $ \k1 v1 kv1 ->
+            phandleMin (pto pval') (pcon PTrue) $ \k2 v2 kv2 ->
+                (pfix #$ plam pcmpValue) # pleqMapBy # cmp # k1 # k2 # v1 # v2 # kv1 # kv2
+
+{- | As 'pleqValueBy', except the \'comparison function\' used is
+ 'plessThanMapBy'.
+
+ @since 3.8.0
+-}
+plessThanValueBy ::
+    forall (amount :: AmountGuarantees) (s :: S).
+    Term s (PComparator PInteger :--> PValue 'Sorted amount :--> PValue 'Sorted amount :--> PBool)
+plessThanValueBy = phoistAcyclic $
+    plam $ \cmp pval pval' ->
+        phandleMin (pto pval) (pcon PTrue) $ \k1 v1 kv1 ->
+            phandleMin (pto pval') (pcon PTrue) $ \k2 v2 kv2 ->
+                (pfix #$ plam pcmpValue) # plessThanMapBy # cmp # k1 # k2 # v1 # v2 # kv1 # kv2
+
+{- | As 'pleqValueBy', except the \'comparison function\' used is 'pgeqMapBy'.
+
+ @since 3.8.0
+-}
+pgeqValueBy ::
+    forall (amount :: AmountGuarantees) (s :: S).
+    Term s (PComparator PInteger :--> PValue 'Sorted amount :--> PValue 'Sorted amount :--> PBool)
+pgeqValueBy = phoistAcyclic $
+    plam $ \cmp pval pval' ->
+        phandleMin (pto pval) (pcon PTrue) $ \k1 v1 kv1 ->
+            phandleMin (pto pval') (pcon PTrue) $ \k2 v2 kv2 ->
+                (pfix #$ plam pcmpValue) # pgeqMapBy # cmp # k1 # k2 # v1 # v2 # kv1 # kv2
+
+{- | As 'pleqValueBy', except the \'comparison function\' used is
+ 'pgreaterThanMapBy'.
+
+ @since 3.8.0
+-}
+pgreaterThanValueBy ::
+    forall (amount :: AmountGuarantees) (s :: S).
+    Term s (PComparator PInteger :--> PValue 'Sorted amount :--> PValue 'Sorted amount :--> PBool)
+pgreaterThanValueBy = phoistAcyclic $
+    plam $ \cmp pval pval' ->
+        phandleMin (pto pval) (pcon PTrue) $ \k1 v1 kv1 ->
+            phandleMin (pto pval') (pcon PTrue) $ \k2 v2 kv2 ->
+                (pfix #$ plam pcmpValue) # pgreaterThanMapBy # cmp # k1 # k2 # v1 # v2 # kv1 # kv2
 
 {- | Verifies that a list-like structure is ordered according to the
  'PComparator' argument.
@@ -897,6 +966,58 @@ pcmpMap self doCmp cmp k1 k2 v1 v2 kv1 kv2 = pmatch (pcompareBy # pfromOrd # k1 
     PLT -> phandleMin kv1 (pcon PTrue) $ \k1' v1' kv1' ->
         self # doCmp # cmp # k1' # k2 # v1' # v2 # kv1' # kv2
     -- Keys are equal, check our comparison.
+    PEQ ->
+        pif
+            (doCmp # cmp # v1 # v2)
+            ( phandleMin kv1 (pcon PTrue) $ \k1' v1' kv1' ->
+                phandleMin kv2 (pcon PTrue) $ \k2' v2' kv2' ->
+                    self # doCmp # cmp # k1' # k2' # v1' # v2' # kv1' # kv2'
+            )
+            (pcon PFalse)
+    -- Need to advance the second key.
+    PGT -> phandleMin kv2 (pcon PTrue) $ \k2' v2' kv2' ->
+        self # doCmp # cmp # k1 # k2' # v1 # v2' # kv1 # kv2'
+
+-- Helper for dragging a comparator through a PValue. We hide this away to
+-- ensure that people actually use the comparator as intended.
+pcmpValue ::
+    forall (s :: S).
+    Term
+        s
+        ( ( PComparator PInteger
+                :--> PMap 'Sorted PTokenName PInteger
+                :--> PMap 'Sorted PTokenName PInteger
+                :--> PBool
+          )
+            :--> PComparator PInteger
+            :--> PCurrencySymbol
+            :--> PCurrencySymbol
+            :--> PMap 'Sorted PTokenName PInteger
+            :--> PMap 'Sorted PTokenName PInteger
+            :--> PMap 'Sorted PCurrencySymbol (PMap 'Sorted PTokenName PInteger)
+            :--> PMap 'Sorted PCurrencySymbol (PMap 'Sorted PTokenName PInteger)
+            :--> PBool
+        ) ->
+    Term
+        s
+        ( PComparator PInteger
+            :--> PMap 'Sorted PTokenName PInteger
+            :--> PMap 'Sorted PTokenName PInteger
+            :--> PBool
+        ) ->
+    Term s (PComparator PInteger) ->
+    Term s PCurrencySymbol ->
+    Term s PCurrencySymbol ->
+    Term s (PMap 'Sorted PTokenName PInteger) ->
+    Term s (PMap 'Sorted PTokenName PInteger) ->
+    Term s (PMap 'Sorted PCurrencySymbol (PMap 'Sorted PTokenName PInteger)) ->
+    Term s (PMap 'Sorted PCurrencySymbol (PMap 'Sorted PTokenName PInteger)) ->
+    Term s PBool
+pcmpValue self doCmp cmp k1 k2 v1 v2 kv1 kv2 = pmatch (pcompareBy # pfromOrd # k1 # k2) $ \case
+    -- Need to advance the first key.
+    PLT -> phandleMin kv1 (pcon PTrue) $ \k1' v1' kv1' ->
+        self # doCmp # cmp # k1' # k2 # v1' # v2 # kv1' # kv2
+    -- Key are equal, do an inner map comparison using comparator.
     PEQ ->
         pif
             (doCmp # cmp # v1 # v2)

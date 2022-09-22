@@ -36,6 +36,9 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   * `plessThanMapBy` (and equivalents for the other comparisons), designed for
     comparing two `PMap`s based on a `PComparator` on values, used on shared
     keys.
+  * `plessThanValueBy` (and equivalents for the other comparisons), designed for
+    comparing two `PValue`s based on a `PComparator` for `PInteger`s, used on
+    shared keys.
 
 ### Modified
 
