@@ -71,7 +71,7 @@ import qualified PlutusTx
 
  @since 3.8.0
 -}
-data AssetClass (tag :: Symbol) = AssetClass
+data AssetClass (unit :: Symbol) = AssetClass
     { symbol :: CurrencySymbol
     -- ^ @since 3.8.0
     , name :: TokenName
@@ -309,7 +309,7 @@ ptoScottEncoding ::
         )
 ptoScottEncoding = phoistAcyclic $
     plam $ \cls ->
-        pletFields @["symbol", "name"] (pto cls) $
+        pletFields @["symbol", "name"] cls $
             \cls' ->
                 pcon $
                     PAssetClass

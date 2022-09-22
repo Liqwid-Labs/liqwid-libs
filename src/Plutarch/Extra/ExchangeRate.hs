@@ -10,6 +10,7 @@ module Plutarch.Extra.ExchangeRate (
 
 import GHC.TypeLits (Symbol)
 import Plutarch.Extra.Applicative (ppure)
+import Plutarch.Extra.Comonad (pextract)
 import Plutarch.Extra.Rational (divRational, divTruncate, mulRational, mulTruncate)
 import Plutarch.Extra.Tagged (PTagged)
 
@@ -51,7 +52,8 @@ exchangeToTruncate ::
         )
 exchangeToTruncate =
     phoistAcyclic $
-        plam $ \ex x -> ppure #$ divTruncate # pto ex # pto x
+        plam $ \ex x ->
+            ppure #$ divTruncate # (pextract # ex) # (pextract # x)
 
 {- | Convert between quantities of currencies using a 'PRational' conversion
   value.
@@ -67,7 +69,8 @@ exchangeFrom ::
         )
 exchangeFrom =
     phoistAcyclic $
-        plam $ \ex x -> ppure #$ mulRational # pto x # pto ex
+        plam $ \ex x ->
+            ppure #$ mulRational # (pextract # x) # (pextract # ex)
 
 {- | Convert between quantities of currencies, in the inverse direction.
 
@@ -83,4 +86,4 @@ exchangeTo ::
 exchangeTo =
     phoistAcyclic $
         plam $ \ex x ->
-            ppure #$ divRational # pto x # pto ex
+            ppure #$ divRational # (pextract # x) # (pextract # ex)

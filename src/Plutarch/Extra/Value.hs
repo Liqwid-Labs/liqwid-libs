@@ -180,9 +180,8 @@ passetClassValueOf ::
         (s :: S).
     Term s (PAssetClass unit :--> PValue key amount :--> PTagged unit PInteger)
 passetClassValueOf = phoistAcyclic $
-    plam $ \cls val -> unTermCont $ do
-        (PAssetClass sym tk) <- pmatchC cls
-        pure $ ppure #$ precList (findValue sym tk) (const 0) #$ pto $ pto val
+    plam $ \cls val -> pmatch cls $ \(PAssetClass sym tk) ->
+        ppure #$ precList (findValue sym tk) (const 0) #$ pto $ pto val
 
 {- | Extracts the amount given by the 'PAssetClass' from (the internal
  representation of) a 'PValue'.
