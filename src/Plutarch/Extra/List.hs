@@ -22,9 +22,24 @@ module Plutarch.Extra.List (
     plookupAssoc,
 
     -- * Elimination
+    phandleList,
     precListLookahead,
     ptryElimSingle,
 ) where
+
+{- | 'pelimList' with re-ordered arguments. Useful for cases when the \'nil
+ case\' is simple, but the \'cons case\' is complex.
+
+ @since 3.8.0
+-}
+phandleList ::
+    forall (a :: S -> Type) (r :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+    (PElemConstraint ell a, PListLike ell) =>
+    Term s (ell a) ->
+    Term s r ->
+    (Term s a -> Term s (ell a) -> Term s r) ->
+    Term s r
+phandleList xs whenNil whenCons = pelimList whenCons whenNil xs
 
 {- | Similar to 'pelimList', but assumes the argument list-like is a singleton,
  erroring otherwise.

@@ -59,7 +59,7 @@ module Plutarch.Extra.Ord (
 ) where
 
 import Data.Semigroup (Semigroup (stimes), stimesIdempotentMonoid)
-import Plutarch.Extra.List (precListLookahead)
+import Plutarch.Extra.List (phandleList, precListLookahead)
 import Plutarch.Extra.Maybe (ptraceIfNothing)
 import Plutarch.Internal.PlutusType (PlutusType (pcon', pmatch'))
 import Plutarch.Lift (
@@ -736,17 +736,6 @@ pswap ::
     (Term s a -> Term s a -> Term s r) ->
     Term s r
 pswap cmp x y cont = pif (pleqBy # cmp # x # y) (cont x y) (cont y x)
-
--- pelimList with the list-like first, and handles the 'nil case' before the
--- 'cons' case
-phandleList ::
-    forall (a :: S -> Type) (r :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
-    (PElemConstraint ell a, PListLike ell) =>
-    Term s (ell a) ->
-    Term s r ->
-    (Term s a -> Term s (ell a) -> Term s r) ->
-    Term s r
-phandleList xs whenNil whenCons = pelimList whenCons whenNil xs
 
 -- ensures the argument is sorted by the comparator, erroring if not
 passertSorted ::

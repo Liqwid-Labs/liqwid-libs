@@ -1,7 +1,6 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE OverloadedRecordDot #-}
-{-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -51,6 +50,7 @@ import Plutarch.Api.V1 (
     PTokenName,
     PValue (PValue),
  )
+import qualified Plutarch.Api.V1.AssocMap as AssocMap
 import qualified Plutarch.Api.V1.Value as Value
 import Plutarch.Api.V2 (
     AmountGuarantees (NoGuarantees, Positive),
@@ -65,7 +65,7 @@ import Plutarch.Extra.AssetClass (
     PAssetClassData,
  )
 import Plutarch.Extra.List (pfromList, plookupAssoc, ptryElimSingle)
-import Plutarch.Extra.Map (plookupGe)
+import Plutarch.Extra.Map (phandleMin, plookupGe)
 import Plutarch.Extra.Maybe (pexpectJustC)
 import Plutarch.Extra.Tagged (PTagged (PTagged))
 import Plutarch.Extra.TermCont (pletC, pmatchC)
@@ -190,25 +190,6 @@ passetClassValueOf = phoistAcyclic $
         (PAssetClass sym tk) <- pmatchC cls
         pure $ ppure #$ precList (findValue sym tk) (const 0) #$ pto $ pto val
 
-{- |
-  Extracts amount of given "PAssetClass" from "PValue". Behaves like a pattern
-  match on "PValue".  Not all AssetClasses need to be provided, only these that
-  you are interested in.
-  __Example__
-  @
-  example :: Term s PValueMap -> TermCont s ()
-  example pval = do
-    rec <- matchValueAssets @'['("ada", AssetClass "Ada")]
-             pval
-             (HCons (Labeled adaClass) HNil)
-    -- or using operators
-    rec2 <- matchValueAssets pval $ (Proxy @"ada" .|== adaClass) HNil
-    let adaFromRec = rec.ada
-  @
-
-  @since 3.8.0
--}
-
 {- | Extracts the amount given by the 'PAssetClass' from (the internal
  representation of) a 'PValue'.
 
@@ -319,17 +300,7 @@ psplitValue ::
         )
 psplitValue = phoistAcyclic $
     plam $ \v ->
-        let vList ::
-                Term
-                    _
-                    ( PBuiltinList
-                        ( PBuiltinPair
-                            (PAsData PCurrencySymbol)
-                            (PAsData (PMap 'Sorted PTokenName PInteger))
-                        )
-                    )
-
-            vList = pto $ pto v
+        let vList = pto $ pto v
          in pcon $
                 PPair
                     ( psndBuiltin #$ phead #$ pto $
@@ -358,7 +329,49 @@ psymbolValueOf =
             PMap m <- pmatchC (pfromData m')
             pure $ pfoldr # plam (\x v -> pfromData (psndBuiltin # x) + v) # 0 # m
 
-{- | Elimator for the inner type of a "PValue"
+{- | Eliminator for a sorted 'PValue'. The function argument will receive:
+
+ * The smallest 'PCurrencySymbol' for which we have a mapping;
+ * The smallest 'PTokenName' for which the corresponding \'inner map\' has a
+ mapping;
+ * The 'PInteger' associated with the above 'PTokenName'; and
+ * The \'rest\'.
+
+ If the \'inner map\' corresponding to the 'PCurrencySymbol' above contains
+ only a single mapping, the \'rest\' will not contain a mapping for that
+ 'PCurrencySymbol'; otherwise, it will contain the rest of the \'inner map\'.
+
+ = Note
+
+ The \'nil case\' will be invoked in two situations:
+
+ * When the 'PValue' has no entries; and
+ * When the \'inner map\' corresponding to the first 'PCurrencySymbol' key has
+ no entries.
+
+ @since 3.8.0
+-}
+pelimValue ::
+    forall (amounts :: AmountGuarantees) (r :: S -> Type) (s :: S).
+    ( Term s PCurrencySymbol ->
+      Term s PTokenName ->
+      Term s PInteger ->
+      Term s (PValue 'Sorted amounts) ->
+      Term s r
+    ) ->
+    Term s r ->
+    Term s (PValue 'Sorted amounts) ->
+    Term s r
+pelimValue whenCons whenNil xs = phandleMin (pto xs) whenNil $ \k v kvs ->
+    phandleMin v whenNil $ \vk vv rest ->
+        whenCons k vk vv . pcon . PValue $
+            pif
+                (AssocMap.pnull # rest)
+                kvs
+                (AssocMap.pinsert # k # rest # kvs)
+
+{- | Eliminator for the inner type of a 'PValue'.
+
  @since 3.8.0
 -}
 precValue ::
@@ -430,59 +443,6 @@ precValue mcons =
                 (self # symbolMaps)
                 (pto $ pfromData $ psndBuiltin # symbolMap)
         )
-
-{- | Elimator for the inner type of a "PValue"
- @since 3.8.0
--}
-pelimValue ::
-    forall (r :: S -> Type) (k :: KeyGuarantees) (s :: S).
-    ( Term s (PAsData PCurrencySymbol) ->
-      Term s (PAsData PTokenName) ->
-      Term s (PAsData PInteger) ->
-      Term
-        s
-        ( PBuiltinList
-            ( PBuiltinPair
-                (PAsData PCurrencySymbol)
-                (PAsData (PMap k PTokenName PInteger))
-            )
-        ) ->
-      Term s r
-    ) ->
-    Term s r ->
-    Term
-        s
-        ( PBuiltinList
-            ( PBuiltinPair
-                (PAsData PCurrencySymbol)
-                (PAsData (PMap k PTokenName PInteger))
-            )
-        ) ->
-    Term s r
-pelimValue mcons mnil =
-    pelimList
-        ( \symbolMap symbolMaps ->
-            pelimList
-                ( \tokenMap tokenMaps ->
-                    mcons
-                        (pfstBuiltin # symbolMap)
-                        (pfstBuiltin # tokenMap)
-                        (psndBuiltin # tokenMap)
-                        ( pif
-                            (pnull # tokenMaps)
-                            symbolMaps
-                            ( pcons
-                                # ( ppairDataBuiltin # (pfstBuiltin # symbolMap)
-                                        # pdata (pcon (PMap tokenMaps))
-                                  )
-                                # symbolMaps
-                            )
-                        )
-                )
-                mnil
-                (pto $ pfromData $ psndBuiltin # symbolMap)
-        )
-        mnil
 
 ----------------------------------------
 -- Value Comparison

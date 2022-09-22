@@ -24,9 +24,11 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   * `pfromList`, to turn a Haskell-level list of terms into a `PListLike`.
   * `ptryElimSingle`, which either eliminates a singleton list-like or errors if
     given a non-singleton.
+  * `phandleList`, a version of `pelimList` with the arguments re-ordered.
 * `Plutarch.Extra.Map`:
   * `plookupGe`, which returns a submap with keys greater than the needle if the
     search is successful.
+  * `phandleMin`, a version of `phandleList` for sorted `PMap`s.
 
 ### Modified
 

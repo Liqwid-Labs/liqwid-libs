@@ -28,6 +28,9 @@ module Plutarch.Extra.Map (
     pfoldMapWithKey,
     pfoldlWithKey,
 
+    -- * Elimination
+    phandleMin,
+
     -- * Conversion
     punsortedMapFromFoldable,
     psortedMapFromFoldable,
@@ -49,8 +52,28 @@ import Plutarch.Api.V1.AssocMap (
     plookup,
  )
 import Plutarch.Builtin (ppairDataBuiltin)
+import Plutarch.Extra.List (phandleList)
 import Plutarch.Extra.Maybe (passertPJust)
 import qualified Plutarch.List as PList
+
+{- | Eliminates a sorted 'PMap', similarly to 'pelimList'. The function
+ argument, if used, will be given the smallest key in the 'PMap', with its
+ corresponding value, as well as the \'rest\' of the 'PMap'.
+
+ @since 3.8.0
+-}
+phandleMin ::
+    forall (r :: S -> Type) (k :: S -> Type) (v :: S -> Type) (s :: S).
+    (PIsData k, PIsData v) =>
+    Term s (PMap 'Sorted k v) ->
+    Term s r ->
+    (Term s k -> Term s v -> Term s (PMap 'Sorted k v) -> Term s r) ->
+    Term s r
+phandleMin xs whenNil whenCons =
+    phandleList (pto xs) whenNil $ \kv kvs ->
+        let k = pfromData $ pfstBuiltin # kv
+            v = pfromData $ psndBuiltin # kv
+         in whenCons k v . pcon . PMap $ kvs
 
 {- | As 'plookup', but also yields the portion of the 'PMap' whose keys are
  greater than the target if the search is successful.
