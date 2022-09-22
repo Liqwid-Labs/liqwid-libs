@@ -24,22 +24,22 @@ module Plutarch.Test.Precompiled (
 
 import Acc (Acc)
 import Control.Monad.RWS (
-  MonadReader,
-  MonadWriter,
-  RWS,
-  ask,
-  execRWS,
-  local,
-  tell
+    MonadReader,
+    MonadWriter,
+    RWS,
+    ask,
+    execRWS,
+    local,
+    tell,
  )
 import Data.Foldable (toList)
 import Data.Tagged (Tagged (Tagged))
 import Data.Text (Text)
 import Plutarch.Evaluate (EvalError, evalScript)
 import Plutarch.Extra.DebuggableScript (
-  DebuggableScript (DebuggableScript, debugScript, script),
-  applyDebuggableScript,
-  mustCompileD,
+    DebuggableScript (DebuggableScript, debugScript, script),
+    applyDebuggableScript,
+    mustCompileD,
  )
 import Plutarch.Prelude (ClosedTerm, S, Type)
 import PlutusLedgerApi.V1.Scripts (Script)
@@ -61,8 +61,10 @@ import Text.Show.Pretty (ppDoc)
 data Expectation
     = Success
     | Failure
-    deriving stock ( -- | @since 1.1.0
-                     Show)
+    deriving stock
+        ( -- | @since 1.1.0
+          Show
+        )
 
 {- | Holds necessary information for each test cases.
 
@@ -139,11 +141,16 @@ newtype TestCompiled a = TestCompiled
         RWS DebuggableScript (Acc TestCase) () a
     }
     deriving
-        ( Functor
-        , Applicative
-        , Monad
-        , MonadReader DebuggableScript
-        , MonadWriter (Acc TestCase)
+        ( -- | @since 1.1.0
+          Functor
+        , -- | @since 1.1.0
+          Applicative
+        , -- | @since 1.1.0
+          Monad
+        , -- | @since 1.1.0
+          MonadReader DebuggableScript
+        , -- | @since 1.1.0
+          MonadWriter (Acc TestCase)
         )
         via (RWS DebuggableScript (Acc TestCase) ())
 
@@ -226,7 +233,7 @@ fromPTerm ::
     TestCompiled () ->
     TestTree
 fromPTerm name term ctests =
-  fromScript name s ds ctests
+    fromScript name s ds ctests
   where
     (DebuggableScript s ds) = mustCompileD term
 
@@ -235,11 +242,11 @@ fromPTerm name term ctests =
  @since 1.1.0
 -}
 fromScript ::
-  String ->
-  Script ->
-  Script ->
-  TestCompiled () ->
-  TestTree
+    String ->
+    Script ->
+    Script ->
+    TestCompiled () ->
+    TestTree
 fromScript name script debugScript ctests =
     testGroup name $ toList $ go <$> tests
   where
