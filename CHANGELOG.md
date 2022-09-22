@@ -9,6 +9,7 @@
 * `Expectation` defines if a test case should succeed or not.
 * `(@&)` and `withApplied` stitches in shared arguments.
 * `testEvalCase`, `@>`, and `@!>` tests if script fails or succeeds given arguments.
+* `testEqualityCase` tests if script is eqaul to expectation or not given arguments.
 * `fromPTerm` compiles Plutarch term and tests in `TestCompiled`.
 
 ## 0.1.0.0 -- 2022-07-26
