@@ -5,6 +5,7 @@
 module Plutarch.Extra.DebuggableScript (
     DebuggableScript (..),
     checkedCompileD,
+    applyDebuggableScript,
     mustCompileD,
     mustFinalEvalDebuggableScript,
     finalEvalDebuggableScript,
@@ -23,7 +24,8 @@ import Plutarch (
  )
 import Plutarch.Evaluate (EvalError, evalScript)
 import Plutarch.Extra.Compile (mustCompile)
-import PlutusLedgerApi.V1 (ExBudget, Script)
+import PlutusLedgerApi.V1 (Data, ExBudget, Script)
+import PlutusLedgerApi.V1.Scripts (applyArguments)
 import UntypedPlutusCore.Evaluation.Machine.Cek (
     CekUserError (CekEvaluationFailure, CekOutOfExError),
     ErrorWithCause (ErrorWithCause),
@@ -52,6 +54,17 @@ data DebuggableScript = DebuggableScript
         ( -- | @since 3.0.2
           NFData
         )
+
+{- | Apply given arguments to 'DebuggableScript'.
+
+ @since 3.7.1
+-}
+applyDebuggableScript :: DebuggableScript -> [Data] -> DebuggableScript
+applyDebuggableScript (DebuggableScript script debugScript) d =
+    DebuggableScript
+        { script = applyArguments script d
+        , debugScript = applyArguments debugScript d
+        }
 
 {- | For handling compilation errors right away.
 
