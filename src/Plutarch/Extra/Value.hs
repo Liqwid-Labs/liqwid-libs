@@ -1,6 +1,4 @@
-{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -31,8 +29,6 @@ module Plutarch.Extra.Value (
     -- * Miscellaneous
     AddGuarantees,
     phasOnlyOneTokenOfCurrencySymbol,
-    findValue,
-    unsafeMatchValueAssetsInternal,
 ) where
 
 import Data.Coerce (coerce)
@@ -62,11 +58,11 @@ import Plutarch.Extra.AssetClass (
     PAssetClassData,
  )
 import Plutarch.Extra.List (pfromList, plookupAssoc, ptryElimSingle)
-import Plutarch.Extra.Map (phandleMin, plookupGe)
+import Plutarch.Extra.Map (phandleMin)
 import Plutarch.Extra.Maybe (pexpectJustC)
-import Plutarch.Extra.Ord (PComparator, pfromOrdBy, pleqMapBy)
+import Plutarch.Extra.Ord (PComparator, pfromOrdBy)
 import Plutarch.Extra.Tagged (PTagged (PTagged))
-import Plutarch.Extra.TermCont (pletC, pmatchC)
+import Plutarch.Extra.TermCont (pmatchC)
 
 --------------------------------------------------------------------------------
 
@@ -444,7 +440,7 @@ pbyClassComparator' ac = pfromOrdBy # plam (passetClassValueOf' ac #)
 -- haven't looked at yet. I don't know how many of these belong in this module vs
 -- should be factored out.
 
-{- | Compute the guarantees known after adding two "PValue"s.
+{- | Compute the guarantees known after adding two 'PValue's.
 
    @since 1.1.0
 -}
@@ -452,8 +448,10 @@ type family AddGuarantees (a :: AmountGuarantees) (b :: AmountGuarantees) where
     AddGuarantees 'Positive 'Positive = 'Positive
     AddGuarantees _ _ = 'NoGuarantees
 
-{- | The entire "PValue" only contains one token of the given "PCurrencySymbol".
-     @since 1.3.0
+{- | Returns 'PTrue' if the entire argument 'PValue' contains /exactly/ one
+ token of the argument 'PCurrencySymbol'.
+
+ @since 1.3.0
 -}
 phasOnlyOneTokenOfCurrencySymbol ::
     forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
@@ -463,13 +461,9 @@ phasOnlyOneTokenOfCurrencySymbol = phoistAcyclic $
         psymbolValueOf # cs # vs #== 1
             #&& (plength #$ pto $ pto $ pto vs) #== 1
 
-{- | Cons case for QTokenValue, with recursive fixpoint
- TODO: Peter, 2022-09-21: This comment related to Liqwid;
- I don't know the context, but more detail should be added or this
- should be removed from the library.
+-- Helpers
 
- @since 3.8.0
--}
+-- Cons case for QTokenValue, with recursive fixpoint
 findValue ::
     forall (k :: KeyGuarantees) (s :: S).
     Term s (PAsData PCurrencySymbol) ->
@@ -513,9 +507,6 @@ findValue sym tk self x xs = plet x $ \pair ->
             (pfromData $ psndBuiltin # kv)
             (ptraceError "findValue: Unexpectedly missing result.")
 
-{- | TODO: this is supposedly internal. Should this even be here?
- @since 3.8.0
--}
 unsafeMatchValueAssetsInternal ::
     forall (k :: KeyGuarantees) (s :: S).
     Term
@@ -539,15 +530,13 @@ unsafeMatchValueAssetsInternal
         remaining <- unsafeMatchValueAssetsInternal newValueMap rest
         pure $ Map.insert sa pint remaining
 
-{- | This function does not check if keys are duplicated or are in different
- order
--}
+-- This function does not check if keys are duplicated or are in different
+-- order
 class HRecToList (xs :: [(Symbol, Type)]) (x :: Type) where
     hrecToList :: HRec xs -> [x]
 
-{- | Existential wrapper for `AssetClass`. Useful to use `AssetClass` as a key
- type in Map.
--}
+-- Existential wrapper for `AssetClass`. Useful to use `AssetClass` as a key
+-- type in Map.
 data SomeAssetClass = forall (unit :: Symbol). SomeAssetClass (AssetClass unit)
 
 instance Eq SomeAssetClass where
@@ -555,15 +544,15 @@ instance Eq SomeAssetClass where
 
 instance Ord SomeAssetClass where
     (SomeAssetClass a) `compare` (SomeAssetClass b) =
-        let symbolOrder = a.symbol `compare` b.symbol
+        let symbolOrder = symbol a `compare` symbol b
          in if symbolOrder /= EQ
                 then symbolOrder
-                else a.name `compare` b.name
+                else name a `compare` name b
 
 instance HRecToList '[] (x :: Type) where
     hrecToList _ = []
 
--- | Converts type level lists of tagged assets back to dynamic-typed assets
+-- Converts type level lists of tagged assets back to dynamic-typed assets
 instance
     forall (rest :: [(Symbol, Type)]) (name :: Symbol) (tag :: Symbol).
     HRecToList rest SomeAssetClass =>
@@ -615,8 +604,6 @@ instance
             )
             (matchValueAssetReferences valueMap rest)
 
--- Helpers
-
 matchOrTryRec ::
     forall (unit :: Symbol) (k :: KeyGuarantees) (s :: S).
     AssetClass unit ->
@@ -641,8 +628,8 @@ matchOrTryRec requiredAsset = phoistAcyclic $
         precValue
             ( \self pcurrencySymbol pTokenName pint rest ->
                 pif
-                    ( pconstantData requiredAsset.symbol #== pcurrencySymbol
-                        #&& pconstantData requiredAsset.name #== pTokenName
+                    ( pconstantData (symbol requiredAsset) #== pcurrencySymbol
+                        #&& pconstantData (name requiredAsset) #== pTokenName
                     )
                     -- assetClass found - return its quantity and tail of PValueMap
                     (pcon $ PPair pint rest)
