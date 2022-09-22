@@ -20,6 +20,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   * `pmatchValueAssets`, for 'pattern-matching' on (underlying representations
     of) `PValue`s.
   * `psplitValue`, for 'separating' the first entry of a `PValue`.
+  * A range of `PComparator`s for comparing `PValue`s.
 * `Plutarch.Extra.List`: 
   * `pfromList`, to turn a Haskell-level list of terms into a `PListLike`.
   * `ptryElimSingle`, which either eliminates a singleton list-like or errors if
@@ -29,6 +30,12 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   * `plookupGe`, which returns a submap with keys greater than the needle if the
     search is successful.
   * `phandleMin`, a version of `phandleList` for sorted `PMap`s.
+* `Plutarch.Extra.Ord`:
+  * `plessThanBy` and `pgreaterThanBy`, which are strict comparison versions of
+    `pleqBy` and `pgeqBy`.
+  * `plessThanMapBy` (and equivalents for the other comparisons), designed for
+    comparing two `PMap`s based on a `PComparator` on values, used on shared
+    keys.
 
 ### Modified
 

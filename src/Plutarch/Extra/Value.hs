@@ -24,10 +24,9 @@ module Plutarch.Extra.Value (
     pelimValue,
 
     -- * Comparison
-    pgeqByClass,
-    pgeqBySymbol,
-    pgeqByClass',
-    pcmpMap,
+    pbyClassComparator,
+    pbySymbolComparator,
+    pbyClassComparator',
     pgeqValue,
     pgeqValueEntry,
 
@@ -67,6 +66,7 @@ import Plutarch.Extra.AssetClass (
 import Plutarch.Extra.List (pfromList, plookupAssoc, ptryElimSingle)
 import Plutarch.Extra.Map (phandleMin, plookupGe)
 import Plutarch.Extra.Maybe (pexpectJustC)
+import Plutarch.Extra.Ord (PComparator, pfromOrdBy)
 import Plutarch.Extra.Tagged (PTagged (PTagged))
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 
@@ -447,108 +447,38 @@ precValue mcons =
 ----------------------------------------
 -- Value Comparison
 
-{- | Return '>=' on two values comparing by only a particular "PCurrencySymbol"
-and "PTokenName" pair.
-
-   @since 3.8.0
--}
-pgeqByClass ::
-    forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
-    Term
-        s
-        ( PCurrencySymbol :--> PTokenName :--> PValue keys amounts
-            :--> PValue keys amounts
-            :--> PBool
-        )
-pgeqByClass =
-    phoistAcyclic $
-        plam $ \cs tn a b ->
-            Value.pvalueOf # b # cs # tn #<= Value.pvalueOf # a # cs # tn
-
-{- | Return '>=' on two values comparing by only a particular CurrencySymbol.
-
-   @since 1.1.0
--}
-pgeqBySymbol ::
-    forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
-    Term
-        s
-        ( PCurrencySymbol
-            :--> PValue keys amounts
-            :--> PValue keys amounts
-            :--> PBool
-        )
-pgeqBySymbol =
-    phoistAcyclic $
-        plam $ \cs a b ->
-            psymbolValueOf # cs # b #<= psymbolValueOf # cs # a
-
-{- | Return '>=' on two "PValue"s comparing by only a particular
-  Haskell-level "AssetClass".
-
-   @since 1.1.0
--}
-pgeqByClass' ::
-    forall
-        (tag :: Symbol)
-        (keys :: KeyGuarantees)
-        (amounts :: AmountGuarantees)
-        (s :: S).
-    AssetClass tag ->
-    Term s (PValue keys amounts :--> PValue keys amounts :--> PBool)
-pgeqByClass' ac =
-    phoistAcyclic $
-        plam $ \a b ->
-            passetClassValueOf' ac # b #<= passetClassValueOf' ac # a
-
-{- |
-  Returns "PTrue" if the provided comparison function returns "PTrue" for all
-    entries in the first "PMap" with the same key in the second.
+{- | Compare only on the basis of a particular 'PCurrencySymbol' and
+ 'PTokenName' entry.
 
  @since 3.8.0
 -}
-pcmpMap ::
-    forall (k :: S -> Type) (v :: S -> Type) (s :: S).
-    ( POrd k
-    , PIsData k
-    ) =>
-    Term
-        s
-        ( (PAsData k :--> PAsData v :--> PAsData v :--> PBool)
-            :--> PMap 'Sorted k v
-            :--> PMap 'Sorted k v
-            :--> PBool
-        )
-pcmpMap =
-    pfix
-        # plam
-            ( \self comp xs ys -> unTermCont $ do
-                pure $
-                    pelimList
-                        ( \yHead yNext -> unTermCont $ do
-                            needle <- pletC $ pfstBuiltin # yHead
-                            find <-
-                                pmatchC $
-                                    plookupGe
-                                        # pfromData needle
-                                        # xs
-                            case find of
-                                (PJust pair) -> do
-                                    (PPair xEntry xNext) <- pmatchC pair
-                                    yEntry :: Term s (PAsData v) <-
-                                        pletC $
-                                            psndBuiltin
-                                                # yHead
-                                    pure $
-                                        pif
-                                            (comp # needle # xEntry # yEntry)
-                                            (self # comp # xNext # pcon (PMap yNext))
-                                            (pcon PFalse)
-                                PNothing -> pure $ pcon PFalse
-                        )
-                        (pcon PTrue)
-                        (pto ys)
-            )
+pbyClassComparator ::
+    forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
+    Term s (PCurrencySymbol :--> PTokenName :--> PComparator (PValue keys amounts))
+pbyClassComparator = phoistAcyclic $
+    plam $ \cs tn ->
+        pfromOrdBy # plam (\pval -> Value.pvalueOf # pval # cs # tn)
+
+{- | Compare only the entries corresponding to a particular 'PCurrencySymbol'.
+
+ @since 3.8.0
+-}
+pbySymbolComparator ::
+    forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
+    Term s (PCurrencySymbol :--> PComparator (PValue keys amounts))
+pbySymbolComparator = phoistAcyclic $
+    plam $ \cs ->
+        pfromOrdBy # plam (psymbolValueOf # cs #)
+
+{- | As 'pbyClassComparator', but using a Haskell-level 'AssetClass' instead.
+
+ @since 3.8.0
+-}
+pbyClassComparator' ::
+    forall (tag :: Symbol) (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
+    AssetClass tag ->
+    Term s (PComparator (PValue keys amounts))
+pbyClassComparator' ac = pfromOrdBy # plam (passetClassValueOf' ac #)
 
 {- |
   Returns "PTrue" if all entries in the first "PValue" present in the second "PValue"
