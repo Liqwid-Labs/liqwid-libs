@@ -1,5 +1,5 @@
 module Plutarch.Extra.ExchangeRate (
-    (:>),
+    type (:>),
 
     -- * Exchange-rate conversions
     exchangeFromTruncate,
@@ -9,20 +9,20 @@ module Plutarch.Extra.ExchangeRate (
 ) where
 
 import GHC.TypeLits (Symbol)
-
 import Plutarch.Extra.Applicative (ppure)
 import Plutarch.Extra.Rational (divRational, divTruncate, mulRational, mulTruncate)
 import Plutarch.Extra.Tagged (PTagged)
 
 {- | Represents an exchange from @a@ to @b@.
-     Let's say 1.00 ADA is worth 2.00 USD, then @ADA ':>' USD@ ought to be
-     represented as 2.00.
+
+     For example, suppose 1.00 ADA is worth 2.00 USD. Then @ADA ':>' USD@
+     represents scaling by 2.0.
 
    @since 3.8.0
 -}
 data (:>) (a :: Symbol) (b :: Symbol)
 
-{- | Exchange from one currency to another, truncating the result
+{- | Exchange from one currency to another, truncating the result.
 
  @since 3.8.0
 -}
@@ -38,7 +38,7 @@ exchangeFromTruncate =
         plam $ \ex x -> ppure #$ mulTruncate # pto ex # pto x
 
 {- | Exchange from  one currency to another, truncating the result
- (inverse direction)
+ (inverse direction).
 
  @since 3.8.0
 -}
@@ -53,8 +53,8 @@ exchangeToTruncate =
     phoistAcyclic $
         plam $ \ex x -> ppure #$ divTruncate # pto ex # pto x
 
-{- | Convert between quantities of currencies using a "PRational" conversion
-  value
+{- | Convert between quantities of currencies using a 'PRational' conversion
+  value.
 
  @since 3.8.0
 -}
@@ -69,7 +69,7 @@ exchangeFrom =
     phoistAcyclic $
         plam $ \ex x -> ppure #$ mulRational # pto x # pto ex
 
-{- | Convert between quantities of currencies, in the inverse direction
+{- | Convert between quantities of currencies, in the inverse direction.
 
  @since 3.8.0
 -}

@@ -26,7 +26,7 @@ import PlutusTx (fromData)
 
 --------------------------------------------------------------------------------
 
-{- | Combined multiply-truncate
+{- | Combined multiply-truncate.
 
  @since 3.8.0
 -}
@@ -40,7 +40,7 @@ mulTruncate =
             pure $ mulDivTruncate # x # num # pto denom
 
 {- | Multiply the first argument by the second argument, divide by the third,
- truncating
+ truncating.
 
  @since 3.8.0
 -}
@@ -52,7 +52,7 @@ mulDivTruncate =
         plam $ \x num denom ->
             pdiv # (num * x) # denom
 
-{- | Combined divide-truncate
+{- | Combined divide-truncate.
 
  @since 3.8.0
 -}
@@ -65,9 +65,14 @@ divTruncate =
             (PRational num denom) <- pmatchC ex
             pure $ mulDivTruncate # x # pto denom # num
 
-{- | Multiply a "PInteger" by a "PInteger", without reducing the fraction
+{- | Scale a 'PRational' up by a factor indicated by a 'PInteger',
+ without reducing the fraction.
 
- NOTE: this can cause performance issues if you're not careful.
+ = Note
+
+ This merely \'defers\' the reduction until later, with possibly a (very)
+ large numerator. Use this only in cases where you know that this won't
+ cause a performance blow-up later.
 
  @since 3.8.0
 -}
@@ -80,9 +85,12 @@ mulRational =
             (PRational num denom) <- pmatchC r
             pure $ pcon $ PRational (num * x) denom
 
-{- | Divide a "PInteger" by a "PRational", without reducing the fraction
+{- | Scale a 'PRational' down by a factor indicated by a 'PInteger', without
+ reducing the fraction.
 
- NOTE: this can cause performance issues if you're not careful.
+ = Note
+
+ This has the same performance caveats as 'mulRational'.
 
  @since 3.8.0
 -}
@@ -97,7 +105,7 @@ divRational =
 
 infixl 7 #%
 
-{- | Create a `PRational` out of two `PIntegers`. Will error if the denominator
+{- | Create a 'PRational' out of two 'PIntegers'. Will error if the denominator
  is  non-positive.
 
  @since 3.8.0
