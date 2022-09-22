@@ -26,7 +26,16 @@ import Plutarch.Prelude (
     (#==),
     (:-->),
  )
-import Plutarch.Test.Precompiled (fromPTerm, testEqualityCase, (@!>), (@&), (@>))
+import Plutarch.Test.Precompiled (
+  fromPTerm,
+  testEqualityCase,
+  (@!>),
+  (@&),
+  (@>),
+  Expectation(Success, Failure),
+  testEvalCase,
+  withApplied
+ )
 import Test.Tasty (TestTree, defaultMain, testGroup)
 
 import qualified PlutusTx as PlutusTx
@@ -58,9 +67,16 @@ sampleValidatorTest = fromPTerm "sample validator" sampleValidator $ do
     [PlutusTx.toData (), PlutusTx.toData (), PlutusTx.toData ()] @!> "It should fail when given non integer"
 
     [PlutusTx.toData ()] @& do
-        [PlutusTx.toData (1 :: Integer), PlutusTx.toData ()] @> "(Sharing first argument) It should succeed when given 1"
-        [PlutusTx.toData (10 :: Integer), PlutusTx.toData ()] @!> "(Sharing first argument) It should fail when given 10"
-        [PlutusTx.toData (), PlutusTx.toData ()] @!> "(Sharing first argument) It should fail when given non integer"
+        testEvalCase
+          "(Sharing first argument) It should succeed when given 1"
+          Success
+          [PlutusTx.toData (1 :: Integer), PlutusTx.toData ()]
+
+    withApplied [PlutusTx.toData ()] $ do
+        testEvalCase
+          "(Sharing first argument) It should fail when given 10"
+          Failure
+          [PlutusTx.toData (10 :: Integer), PlutusTx.toData ()]
 
 sampleFunction :: Term s (PAsData PInteger :--> PAsData PInteger :--> PAsData PInteger)
 sampleFunction = plam $ \x y -> pdata ((pfromData x) + (pfromData y) + 1)

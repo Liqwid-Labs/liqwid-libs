@@ -1,6 +1,6 @@
 # Revision history for `plutarch-unit`
 
-## 0.1.1.0 -- 2022-09-21
+## 1.1.0 -- 2022-09-21
 
 ### Added
 
@@ -12,7 +12,7 @@
 * `testEqualityCase` tests if script is eqaul to expectation or not given arguments.
 * `fromPTerm` compiles Plutarch term and tests in `TestCompiled`.
 
-## 0.1.0.0 -- 2022-07-26
+## 1.0.0 -- 2022-07-26
 
 ### Added
 

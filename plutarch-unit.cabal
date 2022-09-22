@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutarch-unit
-version:            0.1.1.0
+version:            1.1.0
 synopsis:           Unit checks for Plutarch
 description:
   An independent unitcheck library for constructing unit checks for Plutarch.

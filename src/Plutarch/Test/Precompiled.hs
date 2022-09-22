@@ -7,14 +7,14 @@
  Portability: GHC only
  Stability: Experimental
 
- Helpers for building test tree that shares same precompiled script.
+ A 'TestTree' whose tests make use of a shared precompiled script.
 -}
 module Plutarch.Test.Precompiled (
     Expectation (..),
     TestCase,
     (@&),
     withApplied,
-    TestCompiled (..),
+    TestCompiled,
     testEvalCase,
     (@>),
     (@!>),
@@ -52,15 +52,16 @@ applyDebuggableScript (DebuggableScript script debugScript) d =
         , debugScript = applyArguments debugScript d
         }
 
--- | @since 0.1.1.0
+-- | @since 1.1.0
 data Expectation
     = Success
     | Failure
-    deriving stock (Show)
+    deriving stock ( -- | @since 1.1.0
+                     Show)
 
 {- | Holds necessary information for each test cases.
 
- @since 0.1.1.0
+ @since 1.1.0
 -}
 data TestCase
     = EvalTestCase
@@ -94,8 +95,8 @@ instance IsTest TestCase where
             (Left err, Success) -> failWithStyle . unexpectedFailure err $ dt
             (Left _, Failure) -> testPassed ""
       where
-        (r, _, _) = evalScript $ script dScript
-        (_, _, dt) = evalScript $ debugScript dScript
+        ((r :: Either EvalError Script), _, _) = evalScript $ script dScript
+        (_, _, (dt :: [Text])) = evalScript $ debugScript dScript
         unexpectedFailure :: EvalError -> [Text] -> Doc
         unexpectedFailure err logs =
             "Expected a successful run, but failed instead.\n"
@@ -115,18 +116,18 @@ instance IsTest TestCase where
             (Left err, _) -> failWithStyle . failedToEvaluate err $ dt
             (_, Left err) -> failWithStyle . failedToEvaluate err $ mempty
       where
-        (r, _, _) = evalScript $ script dScript
-        (_, _, dt) = evalScript $ debugScript dScript
-        (e, _, _) = evalScript $ expectedScript
+        ((r :: Either EvalError Script), _, _) = evalScript $ script dScript
+        ((e :: Either EvalError Script), _, _) = evalScript $ expectedScript
+        (_, _, (dt :: [Text])) = evalScript $ debugScript dScript
         failedToEvaluate :: EvalError -> [Text] -> Doc
         failedToEvaluate result logs =
             "Script evaluation failed, both scripts need to suceed in order to check equality.\n"
                 <> hang "Result" 4 (ppDoc result)
                 <> hang "Logs" 4 (ppLogs logs)
 
-{- | Allows monadically defining a test tree that uses same precompiled script.
+{- | Allows monadically defining a 'TestTree' whose tests all use the same precompiled script.
 
- @since 0.1.1.0
+ @since 1.1.0
 -}
 newtype TestCompiled a = TestCompiled
     { unTestCompiled ::
@@ -141,23 +142,25 @@ newtype TestCompiled a = TestCompiled
         )
         via (RWS DebuggableScript (Acc TestCase) ())
 
-{- | Stitches in arguments. It is helpful if there's shared arguments.
+{- | Stitches in arguments. It is helpful if there are shared arguments.
 
- @since 0.1.1.0
+ @since 1.1.0
 -}
 withApplied :: [Data] -> TestCompiled () -> TestCompiled ()
 withApplied args tests = local (flip applyDebuggableScript args) tests
 
 {- | An operator for 'withApplied'.
 
- @since 0.1.1.0
+ @since 1.1.0
 -}
 (@&) :: [Data] -> TestCompiled () -> TestCompiled ()
 args @& tests = withApplied args tests
 
-{- | Tests if script is eqaul to expectation or not given arguments.
+infixr 1 @&
 
- @since 0.1.1.0
+{- | Tests if a script succeeded or not, given the specified arguments.
+
+ @since 1.1.0
 -}
 testEqualityCase :: String -> Script -> [Data] -> TestCompiled ()
 testEqualityCase name e args = do
@@ -174,7 +177,7 @@ testEqualityCase name e args = do
 
 {- | Tests if script succeed or not given arguments.
 
- @since 0.1.1.0
+ @since 1.1.0
 -}
 testEvalCase :: String -> Expectation -> [Data] -> TestCompiled ()
 testEvalCase name e args = do
@@ -191,21 +194,25 @@ testEvalCase name e args = do
 
 {- | An operator for 'testEvalCase'.
 
- @since 0.1.1.0
+ @since 1.1.0
 -}
 (@>) :: [Data] -> String -> TestCompiled ()
 args @> name = testEvalCase name Success args
 
+infixr 1 @>
+
 {- | An operator for 'testEvalCase'.
 
- @since 0.1.1.0
+ @since 1.1.0
 -}
 (@!>) :: [Data] -> String -> TestCompiled ()
 args @!> name = testEvalCase name Failure args
 
-{- | Compiles Plutarch term and tests in 'TestCompiled'.
+infixr 1 @!>
 
- @since 0.1.1.0
+{- | Compiles a Plutarch closed term, then runs some tests using it in 'TestCompiled'.
+
+ @since 1.1.0
 -}
 fromPTerm ::
     forall (a :: S -> Type).
@@ -214,8 +221,22 @@ fromPTerm ::
     TestCompiled () ->
     TestTree
 fromPTerm name term ctests =
+  fromScript name s ds ctests
+  where
+    (DebuggableScript s ds) = mustCompileD term
+
+{- | Run some tests using given script and debug script in 'TestCompiled'.
+
+ @since 1.1.0
+-}
+fromScript ::
+  String ->
+  Script ->
+  Script ->
+  TestCompiled () ->
+  TestTree
+fromScript name script debugScript ctests =
     testGroup name $ toList $ go <$> tests
   where
-    dScript = mustCompileD term
-    (_, tests) = execRWS (unTestCompiled ctests) dScript ()
+    (_, tests) = execRWS (unTestCompiled ctests) (DebuggableScript script debugScript) ()
     go ts = singleTest (caseName ts) ts
