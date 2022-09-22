@@ -23,14 +23,26 @@ module Plutarch.Test.Precompiled (
 ) where
 
 import Acc (Acc)
-import Control.Monad.RWS (MonadReader, MonadWriter, RWS, ask, execRWS, local, tell)
+import Control.Monad.RWS (
+  MonadReader,
+  MonadWriter,
+  RWS,
+  ask,
+  execRWS,
+  local,
+  tell
+ )
 import Data.Foldable (toList)
 import Data.Tagged (Tagged (Tagged))
 import Data.Text (Text)
 import Plutarch.Evaluate (EvalError, evalScript)
-import Plutarch.Extra.DebuggableScript (DebuggableScript (DebuggableScript, debugScript, script), mustCompileD)
+import Plutarch.Extra.DebuggableScript (
+  DebuggableScript (DebuggableScript, debugScript, script),
+  applyDebuggableScript,
+  mustCompileD,
+ )
 import Plutarch.Prelude (ClosedTerm, S, Type)
-import PlutusLedgerApi.V1.Scripts (Script, applyArguments)
+import PlutusLedgerApi.V1.Scripts (Script)
 import PlutusLedgerApi.V2 (Data)
 import Test.Tasty (testGroup)
 import Test.Tasty.Providers (IsTest, Result, TestTree, run, singleTest, testFailed, testOptions, testPassed)
@@ -44,13 +56,6 @@ import Text.PrettyPrint (
     vcat,
  )
 import Text.Show.Pretty (ppDoc)
-
-applyDebuggableScript :: DebuggableScript -> [Data] -> DebuggableScript
-applyDebuggableScript (DebuggableScript script debugScript) d =
-    DebuggableScript
-        { script = applyArguments script d
-        , debugScript = applyArguments debugScript d
-        }
 
 -- | @since 1.1.0
 data Expectation

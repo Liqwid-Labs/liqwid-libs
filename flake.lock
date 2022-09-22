@@ -2876,11 +2876,11 @@
         "plutarch-quickcheck": "plutarch-quickcheck"
       },
       "locked": {
-        "lastModified": 1663768725,
-        "narHash": "sha256-Wz1gerQdn5jE60yiah6v2U4ODjMS53HpY81UMtml43o=",
+        "lastModified": 1663888029,
+        "narHash": "sha256-jw+qwwwx/ID7rHDs74Ly3+hyNHTw8g1dmUGsmmNJ2n0=",
         "owner": "Liqwid-Labs",
         "repo": "liqwid-plutarch-extra",
-        "rev": "2bb728876b0e7f92636758f87608ad98a4b935b5",
+        "rev": "e443d277ea7ade35ab5af53bb688502fcea76628",
         "type": "github"
       },
       "original": {
