@@ -2,6 +2,12 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.7.1 -- 2022-09-22
+
+### Added
+
+* `applyDebuggableScript` applys `Data` arguments to `DebuggableScript`.
+
 ## 3.7.0 -- 2022-09-20
 
 ### Moved
