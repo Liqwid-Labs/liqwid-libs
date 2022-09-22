@@ -66,8 +66,11 @@ common common-tests
   ghc-options:   -O2 -threaded -rtsopts -with-rtsopts=-N
   build-depends:
     , bytestring
+    , liqwid-plutarch-extra
     , plutarch
+    , plutarch-unit
     , plutus-core
+    , plutus-tx
     , QuickCheck
     , tasty
     , tasty-hunit
@@ -75,10 +78,15 @@ common common-tests
 
 library
   import:          common-lang
-  exposed-modules: Plutarch.Test.Unit
+  exposed-modules:
+    Plutarch.Test.Precompiled
+    Plutarch.Test.Unit
+
   other-modules:
   build-depends:
+    , acc
     , liqwid-plutarch-extra
+    , mtl
     , plutus-ledger-api
     , plutus-tx
     , pretty
@@ -88,3 +96,9 @@ library
     , text
 
   hs-source-dirs:  src
+
+test-suite sample
+  import:         common-lang, common-tests
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  hs-source-dirs: sample
