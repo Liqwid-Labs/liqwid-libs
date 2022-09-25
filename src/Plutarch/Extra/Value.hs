@@ -8,6 +8,7 @@ module Plutarch.Extra.Value (
     psingleValue,
     psingleValue',
     pvalue,
+    pvaluePositive,
 
     -- * Queries
     padaOf,
@@ -124,6 +125,7 @@ psingleValue' (AssetClass sym tk) =
     phoistAcyclic $ psingleValue # pconstantData sym # pconstantData tk
 
 {- | Construct a 'PValue' from its underlying representation.
+ There are "NoGuarantees" on the amounts.
 
  @since 3.8.0
 -}
@@ -139,6 +141,30 @@ pvalue ::
             :--> PAsData (PValue k 'NoGuarantees)
         )
 pvalue = phoistAcyclic $ plam $ pdata . pcon . PValue . pcon . PMap
+
+{- | Construct a 'PValue' from its underlying representation.
+ The amounts are guaranteed to be "Positive", so this is suitable for
+ construction of "PTxOut"s.
+
+ @since 3.8.0
+-}
+pvaluePositive ::
+    forall (k :: KeyGuarantees) (s :: S).
+    Term
+        s
+        ( PBuiltinList
+            ( PBuiltinPair
+                (PAsData PCurrencySymbol)
+                (PAsData (PMap k PTokenName PInteger))
+            )
+            :--> PAsData (PValue k 'Positive)
+        )
+pvaluePositive =
+    phoistAcyclic $
+        plam $ \x ->
+            pdata $
+                Value.passertPositive
+                    # (pcon . PValue . pcon . PMap $ x)
 
 ----------------------------------------
 -- Value Querying, Extraction, and Matching

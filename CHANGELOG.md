@@ -13,7 +13,8 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 * `Plutarch.Extra.Value`:
   * `passetClassDataValue` for constructing singleton `PValue`s based on a
     `PAssetClassData`.
-  * `pvalue` for generating a `PValue` from its underlying representation.
+  * `pvalue` and `pvaluePositive` for generating a `PValue` from its underlying 
+    representation, with `NoGuarantees` and `Positive` guarantees, respectively. 
   * `passetClassValueOf`, for finding the quantity of a particular `PAssetClass`
     in a `PValue`. A 'ticked' version for working with a Haskell-level
     `AssetClass` also added.
