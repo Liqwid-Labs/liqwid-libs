@@ -42,7 +42,6 @@ build: requires_nix_shell
 dev: requires_nix_shell
 	cabal v2-build $(GHC_FLAGS) -f development
 
-
 watch: requires_nix_shell
 	while sleep 1;																				\
 	do	                                                  \

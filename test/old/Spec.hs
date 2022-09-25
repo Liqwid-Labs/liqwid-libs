@@ -13,11 +13,11 @@ import qualified Spec.Extra.Traversable as Traversable
 
 main :: IO ()
 main = do
-    setLocaleEncoding utf8
-    defaultMain $
-        testGroup
-            "test suite"
-            [ testGroup "list utilities" List.tests
-            , testGroup "map utilities" Map.tests
-            , testGroup "traversable" Traversable.tests
-            ]
+  setLocaleEncoding utf8
+  defaultMain $
+    testGroup
+      "test suite"
+      [ testGroup "list utilities" List.tests
+      , testGroup "map utilities" Map.tests
+      , testGroup "traversable" Traversable.tests
+      ]

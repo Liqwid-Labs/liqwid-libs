@@ -4,9 +4,9 @@ module Plutarch.Extra.Compile (mustCompile) where
 
 import qualified Data.Text as T
 import Plutarch (
-    Config (Config, tracingMode),
-    TracingMode (DetTracing),
-    compile,
+  Config (Config, tracingMode),
+  TracingMode (DetTracing),
+  compile,
  )
 import PlutusLedgerApi.V2 (Script)
 
@@ -16,7 +16,7 @@ import PlutusLedgerApi.V2 (Script)
 -}
 mustCompile :: forall (a :: S -> Type). ClosedTerm a -> Script
 mustCompile t = case compile conf t of
-    Left err -> error $ unwords ["Plutarch compilation error:", T.unpack err]
-    Right s -> s
+  Left err -> error $ unwords ["Plutarch compilation error:", T.unpack err]
+  Right s -> s
   where
-    conf = Config{tracingMode = DetTracing}
+    conf = Config {tracingMode = DetTracing}
