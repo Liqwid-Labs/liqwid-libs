@@ -157,7 +157,7 @@ psymbolAssetClass sym = PAssetClass sym emptyTokenNameData
 
  @since 3.8.0
 -}
-isAdaClass :: forall (tag :: Symbol). AssetClass tag -> Bool
+isAdaClass :: forall (unit :: Symbol). AssetClass unit -> Bool
 isAdaClass (AssetClass s n) = s == s' && n == n'
   where
     (AssetClass s' n') = adaClass
@@ -286,14 +286,14 @@ instance Plutarch.Lift.PUnsafeLiftDecl PAssetClassData where
 
  @since 3.8.0
 -}
-toScottEncoding :: forall (tag :: Symbol). AssetClassData -> AssetClass tag
+toScottEncoding :: forall (unit :: Symbol). AssetClassData -> AssetClass unit
 toScottEncoding (AssetClassData sym tk) = AssetClass sym tk
 
 {- | Convert from 'AssetClass' to 'AssetClassData'.
 
  @since 3.8.0
 -}
-fromScottEncoding :: forall (tag :: Symbol). AssetClass tag -> AssetClassData
+fromScottEncoding :: forall (unit :: Symbol). AssetClass unit -> AssetClassData
 fromScottEncoding (AssetClass sym tk) = AssetClassData sym tk
 
 {- | Convert from 'PAssetClassData' to 'PAssetClass'.
@@ -301,11 +301,11 @@ fromScottEncoding (AssetClass sym tk) = AssetClassData sym tk
  @since 3.8.0
 -}
 ptoScottEncoding ::
-    forall (tag :: Symbol) (s :: S).
+    forall (unit :: Symbol) (s :: S).
     Term
         s
         ( PAsData PAssetClassData
-            :--> PAssetClass tag
+            :--> PAssetClass unit
         )
 ptoScottEncoding = phoistAcyclic $
     plam $ \cls ->
@@ -321,10 +321,10 @@ ptoScottEncoding = phoistAcyclic $
  @since 3.8.0
 -}
 pfromScottEncoding ::
-    forall (tag :: Symbol) (s :: S).
+    forall (unit :: Symbol) (s :: S).
     Term
         s
-        ( PAssetClass tag
+        ( PAssetClass unit
             :--> PAsData PAssetClassData
         )
 pfromScottEncoding = phoistAcyclic $
@@ -343,8 +343,8 @@ pfromScottEncoding = phoistAcyclic $
  @since 3.8.0
 -}
 pviaScottEncoding ::
-    forall (tag :: Symbol) (a :: PType).
-    ClosedTerm (PAssetClass tag :--> a) ->
+    forall (unit :: Symbol) (a :: PType).
+    ClosedTerm (PAssetClass unit :--> a) ->
     ClosedTerm (PAsData PAssetClassData :--> a)
 pviaScottEncoding fn = phoistAcyclic $
     plam $ \cls ->

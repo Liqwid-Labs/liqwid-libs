@@ -92,10 +92,10 @@ passetClassDataValue = phoistAcyclic $
  @since 3.8.0
 -}
 psingleValue ::
-    forall (key :: KeyGuarantees) (tag :: Symbol) (s :: S).
+    forall (key :: KeyGuarantees) (unit :: Symbol) (s :: S).
     Term
         s
-        ( PAsData PCurrencySymbol :--> PAsData PTokenName :--> PTagged tag PInteger
+        ( PAsData PCurrencySymbol :--> PAsData PTokenName :--> PTagged unit PInteger
             :--> PBuiltinPair
                     (PAsData PCurrencySymbol)
                     (PAsData (PMap key PTokenName PInteger))
@@ -111,11 +111,11 @@ psingleValue = phoistAcyclic $
  @since 3.8.0
 -}
 psingleValue' ::
-    forall (tag :: Symbol) (k :: KeyGuarantees) (s :: S).
-    AssetClass tag ->
+    forall (unit :: Symbol) (k :: KeyGuarantees) (s :: S).
+    AssetClass unit ->
     Term
         s
-        ( PTagged tag PInteger
+        ( PTagged unit PInteger
             :--> PBuiltinPair
                     (PAsData PCurrencySymbol)
                     (PAsData (PMap k PTokenName PInteger))
@@ -159,8 +159,8 @@ padaOf = phoistAcyclic $
  @since 3.8.0
 -}
 passetClassValueOf' ::
-    forall (tag :: Symbol) (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
-    AssetClass tag ->
+    forall (unit :: Symbol) (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
+    AssetClass unit ->
     Term s (PValue keys amounts :--> PInteger)
 passetClassValueOf' (AssetClass sym token) =
     phoistAcyclic $
@@ -428,8 +428,8 @@ pbySymbolComparator = phoistAcyclic $
  @since 3.8.0
 -}
 pbyClassComparator' ::
-    forall (tag :: Symbol) (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
-    AssetClass tag ->
+    forall (unit :: Symbol) (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
+    AssetClass unit ->
     Term s (PComparator (PValue keys amounts))
 pbyClassComparator' ac = pfromOrdBy # plam (passetClassValueOf' ac #)
 
@@ -553,10 +553,10 @@ instance HRecToList '[] (x :: Type) where
 
 -- Converts type level lists of tagged assets back to dynamic-typed assets
 instance
-    forall (rest :: [(Symbol, Type)]) (name :: Symbol) (tag :: Symbol).
+    forall (rest :: [(Symbol, Type)]) (name :: Symbol) (unit :: Symbol).
     HRecToList rest SomeAssetClass =>
     HRecToList
-        ('(name, AssetClass tag) ': rest)
+        ('(name, AssetClass unit) ': rest)
         SomeAssetClass
     where
     hrecToList (HCons (Labeled x) xs) = SomeAssetClass x : hrecToList xs
@@ -564,11 +564,11 @@ instance
 -- | Associates given Symbol of AssetClass to PTagged tag PInteger
 type family OutputMatchValueAssets (ps :: [(Symbol, Type)]) (s :: S) where
     OutputMatchValueAssets '[] _ = '[]
-    OutputMatchValueAssets ('(name, AssetClass tag) ': rest) s =
+    OutputMatchValueAssets ('(name, AssetClass unit) ': rest) s =
         '( name
          , Term
             s
-            (PAsData (PTagged tag PInteger))
+            (PAsData (PTagged unit PInteger))
          )
             ': OutputMatchValueAssets rest s
 
