@@ -3,22 +3,22 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Plutarch.Extra.Time (
-    PCurrentTime (..),
-    pcurrentTime,
-    currentTime,
-    passertCurrentTime,
-    pisWithinCurrentTime,
-    pisCurrentTimeWithin,
+  PCurrentTime (..),
+  pcurrentTime,
+  currentTime,
+  passertCurrentTime,
+  pisWithinCurrentTime,
+  pisCurrentTimeWithin,
 ) where
 
 import Control.Composition ((.*))
 import GHC.Records (HasField)
 import Plutarch.Api.V1 (
-    PExtended (PFinite),
-    PInterval (PInterval),
-    PLowerBound (PLowerBound),
-    PPOSIXTime,
-    PUpperBound (PUpperBound),
+  PExtended (PFinite),
+  PInterval (PInterval),
+  PLowerBound (PLowerBound),
+  PPOSIXTime,
+  PUpperBound (PUpperBound),
  )
 import Plutarch.Api.V2 (PPOSIXTimeRange)
 import Plutarch.Extra.Applicative (pliftA2)
@@ -35,25 +35,25 @@ import Plutarch.Extra.TermCont (pmatchC)
      @since 3.3.0
 -}
 data PCurrentTime (s :: S)
-    = PCurrentTime
-        (Term s PPOSIXTime)
-        -- ^ The lower bound.
-        (Term s PPOSIXTime)
-        -- ^ The upper bound.
-    deriving stock
-        ( -- | @since 3.3.0
-          Generic
-        )
-    deriving anyclass
-        ( -- | @since 3.3.0
-          PlutusType
-        , -- | @since 3.3.0
-          PEq
-        )
+  = PCurrentTime
+      (Term s PPOSIXTime)
+      -- ^ The lower bound.
+      (Term s PPOSIXTime)
+      -- ^ The upper bound.
+  deriving stock
+    ( -- | @since 3.3.0
+      Generic
+    )
+  deriving anyclass
+    ( -- | @since 3.3.0
+      PlutusType
+    , -- | @since 3.3.0
+      PEq
+    )
 
 -- | @since 3.3.0
 instance DerivePlutusType PCurrentTime where
-    type DPTStrat _ = PlutusTypeScott
+  type DPTStrat _ = PlutusTypeScott
 
 {- | Get the current time, given a 'PPOSIXTimeRange'.
 
@@ -63,38 +63,38 @@ instance DerivePlutusType PCurrentTime where
      @since 3.3.0
 -}
 pcurrentTime ::
-    forall (s :: S).
-    Term
-        s
-        ( PPOSIXTimeRange
-            :--> PMaybe PCurrentTime
-        )
+  forall (s :: S).
+  Term
+    s
+    ( PPOSIXTimeRange
+        :--> PMaybe PCurrentTime
+    )
 pcurrentTime = phoistAcyclic $
-    plam $ \iv -> unTermCont $ do
-        PInterval iv' <- pmatchC iv
-        ivf <- pletAllC iv'
-        PLowerBound lb <- pmatchC ivf.from
-        PUpperBound ub <- pmatchC ivf.to
+  plam $ \iv -> unTermCont $ do
+    PInterval iv' <- pmatchC iv
+    ivf <- pletAllC iv'
+    PLowerBound lb <- pmatchC ivf.from
+    PUpperBound ub <- pmatchC ivf.to
 
-        let getBound = phoistAcyclic $
-                plam $
-                    flip pletAll $ \f ->
-                        pif
-                            f._1
-                            ( pmatch f._0 $ \case
-                                PFinite (pfromData . (pfield @"_0" #) -> d) -> pjust # d
-                                _ ->
-                                    ptrace
-                                        "pcurrentTime: time range should be bounded"
-                                        pnothing
-                            )
-                            (ptrace "pcurrentTime: time range should be inclusive" pnothing)
+    let getBound = phoistAcyclic $
+          plam $
+            flip pletAll $ \f ->
+              pif
+                f._1
+                ( pmatch f._0 $ \case
+                    PFinite (pfromData . (pfield @"_0" #) -> d) -> pjust # d
+                    _ ->
+                      ptrace
+                        "pcurrentTime: time range should be bounded"
+                        pnothing
+                )
+                (ptrace "pcurrentTime: time range should be inclusive" pnothing)
 
-            lb' = getBound # lb
-            ub' = getBound # ub
+        lb' = getBound # lb
+        ub' = getBound # ub
 
-            mkTime = phoistAcyclic $ plam $ pcon .* PCurrentTime
-        pure $ pliftA2 # mkTime # lb' # ub'
+        mkTime = phoistAcyclic $ plam $ pcon .* PCurrentTime
+    pure $ pliftA2 # mkTime # lb' # ub'
 
 {- | Calculate the current time by providing the @validRange@ field,
      which typically comes from 'PTxInfo'.
@@ -102,10 +102,10 @@ pcurrentTime = phoistAcyclic $
      @since 3.3.0
 -}
 currentTime ::
-    forall r (s :: S).
-    (HasField "validRange" r (Term s PPOSIXTimeRange)) =>
-    r ->
-    Term s (PMaybe PCurrentTime)
+  forall r (s :: S).
+  (HasField "validRange" r (Term s PPOSIXTimeRange)) =>
+  r ->
+  Term s (PMaybe PCurrentTime)
 currentTime x = pcurrentTime # x.validRange
 
 {- | Calculate the current time, and error out with the given message if we can't
@@ -114,33 +114,33 @@ currentTime x = pcurrentTime # x.validRange
      @since 3.3.0
 -}
 passertCurrentTime ::
-    forall (s :: S).
-    Term
-        s
-        ( PString
-            :--> PPOSIXTimeRange
-            :--> PCurrentTime
-        )
+  forall (s :: S).
+  Term
+    s
+    ( PString
+        :--> PPOSIXTimeRange
+        :--> PCurrentTime
+    )
 passertCurrentTime = phoistAcyclic $
-    plam $
-        \msg iv -> passertPJust # msg #$ pcurrentTime # iv
+  plam $
+    \msg iv -> passertPJust # msg #$ pcurrentTime # iv
 
 {- | Retutn 'PTrue' if a `PPOSIXTime` is in the current time range.
 
      @since 3.3.0
 -}
 pisWithinCurrentTime ::
-    forall (s :: S).
-    Term
-        s
-        ( PPOSIXTime
-            :--> PCurrentTime
-            :--> PBool
-        )
+  forall (s :: S).
+  Term
+    s
+    ( PPOSIXTime
+        :--> PCurrentTime
+        :--> PBool
+    )
 pisWithinCurrentTime = phoistAcyclic $
-    plam $ \time ctr ->
-        pmatch ctr $ \(PCurrentTime lb ub) ->
-            lb #<= time #&& time #<= ub
+  plam $ \time ctr ->
+    pmatch ctr $ \(PCurrentTime lb ub) ->
+      lb #<= time #&& time #<= ub
 
 {- | Return 'PTrue' if current time is within the given time range.
 
@@ -150,15 +150,15 @@ pisWithinCurrentTime = phoistAcyclic $
      @since 3.3.0
 -}
 pisCurrentTimeWithin ::
-    forall (s :: S).
-    Term
-        s
-        ( PPOSIXTime
-            :--> PPOSIXTime
-            :--> PCurrentTime
-            :--> PBool
-        )
+  forall (s :: S).
+  Term
+    s
+    ( PPOSIXTime
+        :--> PPOSIXTime
+        :--> PCurrentTime
+        :--> PBool
+    )
 pisCurrentTimeWithin = phoistAcyclic $
-    plam $ \lb' ub' ctr ->
-        pmatch ctr $ \(PCurrentTime lb ub) ->
-            lb' #<= lb #&& ub #<= ub'
+  plam $ \lb' ub' ctr ->
+    pmatch ctr $ \(PCurrentTime lb ub) ->
+      lb' #<= lb #&& ub #<= ub'

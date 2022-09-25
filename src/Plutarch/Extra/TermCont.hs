@@ -3,19 +3,19 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Plutarch.Extra.TermCont (
-    module Extra,
-    pguardWithC,
-    pguardShowC,
+  module Extra,
+  pguardWithC,
+  pguardShowC,
 ) where
 
 import "plutarch-extra" Plutarch.Extra.TermCont as Extra (
-    pguardC,
-    pguardC',
-    pletC,
-    pletFieldsC,
-    pmatchC,
-    ptraceC,
-    ptryFromC,
+  pguardC,
+  pguardC',
+  pletC,
+  pletFieldsC,
+  pmatchC,
+  ptraceC,
+  ptryFromC,
  )
 
 {- | 'pguardC' but with type threading for better traces.
@@ -34,16 +34,16 @@ import "plutarch-extra" Plutarch.Extra.TermCont as Extra (
   @since 1.1.0
 -}
 pguardWithC ::
-    forall (r :: S -> Type) (pt :: S -> Type) (s :: S).
-    -- | Function to print in case of guard failure.
-    --   Only gets included in binary when compiling with @development@ flag.
-    (Term s pt -> Term s PString) ->
-    -- | Function to check for validity of element. Always gets included in script binary.
-    (Term s pt -> Term s PBool) ->
-    Term s pt ->
-    TermCont @r s ()
+  forall (r :: S -> Type) (pt :: S -> Type) (s :: S).
+  -- | Function to print in case of guard failure.
+  --   Only gets included in binary when compiling with @development@ flag.
+  (Term s pt -> Term s PString) ->
+  -- | Function to check for validity of element. Always gets included in script binary.
+  (Term s pt -> Term s PBool) ->
+  Term s pt ->
+  TermCont @r s ()
 pguardWithC tracer checker object =
-    pguardC (tracer object) (checker object)
+  pguardC (tracer object) (checker object)
 
 {- | 'pguardWithC' but always uses 'PShow' instance to
      generate trace result. Appends to assertion message.
@@ -51,11 +51,11 @@ pguardWithC tracer checker object =
   @since 1.1.0
 -}
 pguardShowC ::
-    forall (r :: S -> Type) (pt :: S -> Type) (s :: S).
-    PShow pt =>
-    Term s PString ->
-    (Term s pt -> Term s PBool) ->
-    Term s pt ->
-    TermCont @r s ()
+  forall (r :: S -> Type) (pt :: S -> Type) (s :: S).
+  PShow pt =>
+  Term s PString ->
+  (Term s pt -> Term s PBool) ->
+  Term s pt ->
+  TermCont @r s ()
 pguardShowC message =
-    pguardWithC (\t -> message <> " Guarded object was: " <> pshow t)
+  pguardWithC (\t -> message <> " Guarded object was: " <> pshow t)

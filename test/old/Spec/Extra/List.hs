@@ -7,17 +7,17 @@ module Spec.Extra.List (tests) where
 --------------------------------------------------------------------------------
 
 import Test.QuickCheck (
-    Arbitrary (..),
-    Gen,
-    Property,
-    listOf1,
-    orderedList,
-    suchThat,
+  Arbitrary (..),
+  Gen,
+  Property,
+  listOf1,
+  orderedList,
+  suchThat,
  )
 import Test.Tasty (TestTree)
 import Test.Tasty.Plutarch.Property (classifiedPropertyNative, peqPropertyNative')
 import Test.Tasty.QuickCheck (
-    testProperty,
+  testProperty,
  )
 
 --------------------------------------------------------------------------------
@@ -37,12 +37,12 @@ import Plutarch.Extra.List (pisSorted, pisUniq, pmergeBy, pmsort, pnubSort)
 
 tests :: [TestTree]
 tests =
-    [ testProperty "'pmsort' sorts a list properly" prop_msortCorrect
-    , testProperty "'pmerge' merges two sorted lists into one sorted list" prop_mergeCorrect
-    , testProperty "'pnubSort' sorts a list and remove duplicate elements" prop_nubSortProperly
-    , testProperty "'pisUniq' can tell whether all elements in a list are unique" prop_determineIsUniqueListCorrect
-    , testProperty "'pisSorted' can distinguish sorted and unsorted list" prop_determineIsListSortedCorrect
-    ]
+  [ testProperty "'pmsort' sorts a list properly" prop_msortCorrect
+  , testProperty "'pmerge' merges two sorted lists into one sorted list" prop_mergeCorrect
+  , testProperty "'pnubSort' sorts a list and remove duplicate elements" prop_nubSortProperly
+  , testProperty "'pisUniq' can tell whether all elements in a list are unique" prop_determineIsUniqueListCorrect
+  , testProperty "'pisSorted' can distinguish sorted and unsorted list" prop_determineIsListSortedCorrect
+  ]
 
 --------------------------------------------------------------------------------
 
@@ -68,23 +68,23 @@ prop_mergeCorrect = peqPropertyNative' expected generator shrink definition
     merge xs [] = xs
     merge [] ys = ys
     merge sx@(x : xs) sy@(y : ys)
-        | x <= y = x : merge xs sy
-        | otherwise = y : merge sx ys
+      | x <= y = x : merge xs sy
+      | otherwise = y : merge sx ys
 
     definition ::
-        Term
-            _
-            ( PBuiltinPair
-                (PBuiltinList PInteger)
-                (PBuiltinList PInteger)
-                :--> PBuiltinList PInteger
-            )
+      Term
+        _
+        ( PBuiltinPair
+            (PBuiltinList PInteger)
+            (PBuiltinList PInteger)
+            :--> PBuiltinList PInteger
+        )
     definition = phoistAcyclic $
-        plam $ \pair ->
-            let a = pfstBuiltin # pair
-                b = psndBuiltin # pair
-                lt = phoistAcyclic $ plam (#<)
-             in pmergeBy # lt # a # b
+      plam $ \pair ->
+        let a = pfstBuiltin # pair
+            b = psndBuiltin # pair
+            lt = phoistAcyclic $ plam (#<)
+         in pmergeBy # lt # a # b
 
 -- | The property of 'pnubSort'to sort and removes duplicate elements from a given list.
 prop_nubSortProperly :: Property
@@ -106,26 +106,26 @@ prop_determineIsUniqueListCorrect = peqPropertyNative' expected arbitrary shrink
     expected l = S.size (S.fromList l) == length l
 
 data ListSortedCase
-    = SortedList
-    | UnsortedList
-    deriving stock (GHC.Generic)
-    deriving stock (Show, Enum, Bounded, Eq)
-    deriving anyclass (Universe, Finite)
+  = SortedList
+  | UnsortedList
+  deriving stock (GHC.Generic)
+  deriving stock (Show, Enum, Bounded, Eq)
+  deriving anyclass (Universe, Finite)
 
 prop_determineIsListSortedCorrect :: Property
 prop_determineIsListSortedCorrect =
-    classifiedPropertyNative generator shrink expected classifier pisSorted
+  classifiedPropertyNative generator shrink expected classifier pisSorted
   where
     genNotSorted :: (Ord a, Arbitrary a) => Gen [a]
     genNotSorted = join <$> listOf1 genUnorderedSeq
       where
         genUnorderedSeq = do
-            a <- arbitrary
-            b <- arbitrary `suchThat` (> a)
-            notMid <-
-                arbitrary
-                    `suchThat` (\x -> not $ a <= x && x <= b)
-            return [a, notMid, b]
+          a <- arbitrary
+          b <- arbitrary `suchThat` (> a)
+          notMid <-
+            arbitrary
+              `suchThat` (\x -> not $ a <= x && x <= b)
+          return [a, notMid, b]
 
     generator :: ListSortedCase -> Gen [Integer]
     generator SortedList = orderedList
@@ -136,6 +136,6 @@ prop_determineIsListSortedCorrect =
 
     classifier :: [Integer] -> ListSortedCase
     classifier l =
-        if sort l == l
-            then SortedList
-            else UnsortedList
+      if sort l == l
+        then SortedList
+        else UnsortedList

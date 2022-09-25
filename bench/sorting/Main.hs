@@ -8,290 +8,290 @@ import Data.Tagged (Tagged (Tagged))
 import Data.Text (unpack)
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
 import PComparator (
-    pcompareBy1,
-    pcompareBy2,
-    pcompareBy3,
-    pequateBy1,
-    pequateBy2,
-    pequateBy3,
-    pfromOrd1,
-    pfromOrd2,
-    pfromOrd3,
-    pgeqBy1,
-    pgeqBy2,
-    pgeqBy3,
-    pgreaterThanBy1,
-    pgreaterThanBy2,
-    pgreaterThanBy3,
-    pleqBy1,
-    pleqBy2,
-    pleqBy3,
-    plessThanBy1,
-    plessThanBy2,
-    plessThanBy3,
+  pcompareBy1,
+  pcompareBy2,
+  pcompareBy3,
+  pequateBy1,
+  pequateBy2,
+  pequateBy3,
+  pfromOrd1,
+  pfromOrd2,
+  pfromOrd3,
+  pgeqBy1,
+  pgeqBy2,
+  pgeqBy3,
+  pgreaterThanBy1,
+  pgreaterThanBy2,
+  pgreaterThanBy3,
+  pleqBy1,
+  pleqBy2,
+  pleqBy3,
+  plessThanBy1,
+  plessThanBy2,
+  plessThanBy3,
  )
 import POrdering (POrdering' (PEQ', PGT'), pdot)
 import Plutarch (compile)
 import Plutarch.Evaluate (evalScriptHuge, evalTerm)
 import Plutarch.Extra.Ord (
-    pfromOrd,
-    pnubSort,
-    pnubSortBy,
-    preverseComparator,
-    psort,
-    psortBy,
+  pfromOrd,
+  pnubSort,
+  pnubSortBy,
+  preverseComparator,
+  psort,
+  psortBy,
  )
 import PlutusCore.Evaluation.Machine.ExBudget (ExBudget (ExBudget))
 import PlutusCore.Evaluation.Machine.ExMemory (
-    CostingInteger,
-    ExCPU (ExCPU),
-    ExMemory (ExMemory),
+  CostingInteger,
+  ExCPU (ExCPU),
+  ExMemory (ExMemory),
  )
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.Providers (
-    IsTest (run, testOptions),
-    singleTest,
-    testFailed,
-    testPassed,
+  IsTest (run, testOptions),
+  singleTest,
+  testFailed,
+  testPassed,
  )
 import Type.Reflection (Typeable)
 
 main :: IO ()
 main = do
-    setLocaleEncoding utf8
-    defaultMain . testGroup "Sorting-related benchmarks" $
+  setLocaleEncoding utf8
+  defaultMain . testGroup "Sorting-related benchmarks" $
+    [ testGroup
+        "nub"
+        [ testGroup "PList PInteger" $ uncurry benchNub <$> lengthArgs
+        , testGroup "PList PInteger, custom comparator" $ uncurry benchNubCustom <$> lengthArgs
+        , testGroup "PBuiltinList PInteger" $ uncurry benchNub' <$> lengthArgs
+        ]
+    , testGroup
+        "sort"
+        [ testGroup "PList PInteger" $ uncurry benchSort <$> lengthArgs
+        , testGroup "PList PInteger, custom comparator" $ uncurry benchSortCustom <$> lengthArgs
+        , testGroup "PBuiltinList PInteger" $ uncurry benchSort' <$> lengthArgs
+        ]
+    , testGroup
+        "POrdering"
         [ testGroup
-            "nub"
-            [ testGroup "PList PInteger" $ uncurry benchNub <$> lengthArgs
-            , testGroup "PList PInteger, custom comparator" $ uncurry benchNubCustom <$> lengthArgs
-            , testGroup "PBuiltinList PInteger" $ uncurry benchNub' <$> lengthArgs
+            "PEq"
+            [ singleTest "native" $ ScriptBench3 (plam (#==), pcon PEQ', pcon PGT')
+            , singleTest "via PInner" $ ScriptBench3 (plam (#==), pconstant @PInteger 1, pconstant 2)
             ]
         , testGroup
-            "sort"
-            [ testGroup "PList PInteger" $ uncurry benchSort <$> lengthArgs
-            , testGroup "PList PInteger, custom comparator" $ uncurry benchSortCustom <$> lengthArgs
-            , testGroup "PBuiltinList PInteger" $ uncurry benchSort' <$> lengthArgs
+            "PPartialOrd"
+            [ singleTest "native (#<)" $ ScriptBench3 (plam (#<), pcon PEQ', pcon PGT')
+            , singleTest "via PInner (#<)" $ ScriptBench3 (plam (#<), pconstant @PInteger 1, pconstant 2)
+            , singleTest "native (#<=)" $ ScriptBench3 (plam (#<=), pcon PEQ', pcon PGT')
+            , singleTest "via PInner (#<=)" $ ScriptBench3 (plam (#<=), pconstant @PInteger 1, pconstant 2)
             ]
         , testGroup
-            "POrdering"
-            [ testGroup
-                "PEq"
-                [ singleTest "native" $ ScriptBench3 (plam (#==), pcon PEQ', pcon PGT')
-                , singleTest "via PInner" $ ScriptBench3 (plam (#==), pconstant @PInteger 1, pconstant 2)
-                ]
-            , testGroup
-                "PPartialOrd"
-                [ singleTest "native (#<)" $ ScriptBench3 (plam (#<), pcon PEQ', pcon PGT')
-                , singleTest "via PInner (#<)" $ ScriptBench3 (plam (#<), pconstant @PInteger 1, pconstant 2)
-                , singleTest "native (#<=)" $ ScriptBench3 (plam (#<=), pcon PEQ', pcon PGT')
-                , singleTest "via PInner (#<=)" $ ScriptBench3 (plam (#<=), pconstant @PInteger 1, pconstant 2)
-                ]
-            , testGroup
-                "Semigroup"
-                [ singleTest "native" $ ScriptBench3 (plam (<>), pcon PEQ', pcon PGT')
-                , singleTest "via PInner" $ ScriptBench3 (pdot, pconstant @PInteger 1, pconstant 2)
-                ]
-            ]
-        , testGroup
-            "PComparator"
-            [ testGroup
-                "Size"
-                [ singleTest "One function" (ScriptBench1 (pfromOrd1 @PInteger))
-                , singleTest "Two functions" (ScriptBench1 (pfromOrd2 @PInteger))
-                , singleTest "Three functions" (ScriptBench1 (pfromOrd3 @PInteger))
-                ]
-            , testGroup
-                "pcompareBy"
-                [ singleTest "One function" (ScriptBench4 (pcompareBy1, pfromOrd1 @PInteger, pconstant 1, pconstant 2))
-                , singleTest "Two functions" (ScriptBench4 (pcompareBy2, pfromOrd2 @PInteger, pconstant 1, pconstant 2))
-                , singleTest "Three functions" (ScriptBench4 (pcompareBy3, pfromOrd3 @PInteger, pconstant 1, pconstant 2))
-                ]
-            , testGroup
-                "pequateBy"
-                [ singleTest "One function" (ScriptBench4 (pequateBy1, pfromOrd1 @PInteger, pconstant 1, pconstant 2))
-                , singleTest "Two functions" (ScriptBench4 (pequateBy2, pfromOrd2 @PInteger, pconstant 1, pconstant 2))
-                , singleTest "Three functions" (ScriptBench4 (pequateBy3, pfromOrd3 @PInteger, pconstant 1, pconstant 2))
-                ]
-            , testGroup
-                "pleqBy"
-                [ singleTest "One function" (ScriptBench4 (pleqBy1, pfromOrd1 @PInteger, pconstant 1, pconstant 2))
-                , singleTest "Two functions" (ScriptBench4 (pleqBy2, pfromOrd2 @PInteger, pconstant 1, pconstant 2))
-                , singleTest "Three functions" (ScriptBench4 (pleqBy3, pfromOrd3 @PInteger, pconstant 1, pconstant 2))
-                ]
-            , testGroup
-                "plessThanBy"
-                [ singleTest "One function" (ScriptBench4 (plessThanBy1, pfromOrd1 @PInteger, pconstant 1, pconstant 2))
-                , singleTest "Two functions" (ScriptBench4 (plessThanBy2, pfromOrd2 @PInteger, pconstant 1, pconstant 2))
-                , singleTest "Three functions" (ScriptBench4 (plessThanBy3, pfromOrd3 @PInteger, pconstant 1, pconstant 2))
-                ]
-            , testGroup
-                "pgeqBy"
-                [ singleTest "One function" (ScriptBench4 (pgeqBy1, pfromOrd1 @PInteger, pconstant 1, pconstant 2))
-                , singleTest "Two functions" (ScriptBench4 (pgeqBy2, pfromOrd2 @PInteger, pconstant 1, pconstant 2))
-                , singleTest "Three functions" (ScriptBench4 (pgeqBy3, pfromOrd3 @PInteger, pconstant 1, pconstant 2))
-                ]
-            , testGroup
-                "pgreaterThanBy"
-                [ singleTest "One function" (ScriptBench4 (pgreaterThanBy1, pfromOrd1 @PInteger, pconstant 1, pconstant 2))
-                , singleTest "Two functions" (ScriptBench4 (pgreaterThanBy2, pfromOrd2 @PInteger, pconstant 1, pconstant 2))
-                , singleTest "Three functions" (ScriptBench4 (pgreaterThanBy3, pfromOrd3 @PInteger, pconstant 1, pconstant 2))
-                ]
+            "Semigroup"
+            [ singleTest "native" $ ScriptBench3 (plam (<>), pcon PEQ', pcon PGT')
+            , singleTest "via PInner" $ ScriptBench3 (pdot, pconstant @PInteger 1, pconstant 2)
             ]
         ]
+    , testGroup
+        "PComparator"
+        [ testGroup
+            "Size"
+            [ singleTest "One function" (ScriptBench1 (pfromOrd1 @PInteger))
+            , singleTest "Two functions" (ScriptBench1 (pfromOrd2 @PInteger))
+            , singleTest "Three functions" (ScriptBench1 (pfromOrd3 @PInteger))
+            ]
+        , testGroup
+            "pcompareBy"
+            [ singleTest "One function" (ScriptBench4 (pcompareBy1, pfromOrd1 @PInteger, pconstant 1, pconstant 2))
+            , singleTest "Two functions" (ScriptBench4 (pcompareBy2, pfromOrd2 @PInteger, pconstant 1, pconstant 2))
+            , singleTest "Three functions" (ScriptBench4 (pcompareBy3, pfromOrd3 @PInteger, pconstant 1, pconstant 2))
+            ]
+        , testGroup
+            "pequateBy"
+            [ singleTest "One function" (ScriptBench4 (pequateBy1, pfromOrd1 @PInteger, pconstant 1, pconstant 2))
+            , singleTest "Two functions" (ScriptBench4 (pequateBy2, pfromOrd2 @PInteger, pconstant 1, pconstant 2))
+            , singleTest "Three functions" (ScriptBench4 (pequateBy3, pfromOrd3 @PInteger, pconstant 1, pconstant 2))
+            ]
+        , testGroup
+            "pleqBy"
+            [ singleTest "One function" (ScriptBench4 (pleqBy1, pfromOrd1 @PInteger, pconstant 1, pconstant 2))
+            , singleTest "Two functions" (ScriptBench4 (pleqBy2, pfromOrd2 @PInteger, pconstant 1, pconstant 2))
+            , singleTest "Three functions" (ScriptBench4 (pleqBy3, pfromOrd3 @PInteger, pconstant 1, pconstant 2))
+            ]
+        , testGroup
+            "plessThanBy"
+            [ singleTest "One function" (ScriptBench4 (plessThanBy1, pfromOrd1 @PInteger, pconstant 1, pconstant 2))
+            , singleTest "Two functions" (ScriptBench4 (plessThanBy2, pfromOrd2 @PInteger, pconstant 1, pconstant 2))
+            , singleTest "Three functions" (ScriptBench4 (plessThanBy3, pfromOrd3 @PInteger, pconstant 1, pconstant 2))
+            ]
+        , testGroup
+            "pgeqBy"
+            [ singleTest "One function" (ScriptBench4 (pgeqBy1, pfromOrd1 @PInteger, pconstant 1, pconstant 2))
+            , singleTest "Two functions" (ScriptBench4 (pgeqBy2, pfromOrd2 @PInteger, pconstant 1, pconstant 2))
+            , singleTest "Three functions" (ScriptBench4 (pgeqBy3, pfromOrd3 @PInteger, pconstant 1, pconstant 2))
+            ]
+        , testGroup
+            "pgreaterThanBy"
+            [ singleTest "One function" (ScriptBench4 (pgreaterThanBy1, pfromOrd1 @PInteger, pconstant 1, pconstant 2))
+            , singleTest "Two functions" (ScriptBench4 (pgreaterThanBy2, pfromOrd2 @PInteger, pconstant 1, pconstant 2))
+            , singleTest "Three functions" (ScriptBench4 (pgreaterThanBy3, pfromOrd3 @PInteger, pconstant 1, pconstant 2))
+            ]
+        ]
+    ]
   where
     lengthArgs ::
-        forall (ell :: (S -> Type) -> S -> Type).
-        (PElemConstraint ell PInteger, PListLike ell) =>
-        [(forall (s :: S). Term s (ell PInteger), Int)]
+      forall (ell :: (S -> Type) -> S -> Type).
+      (PElemConstraint ell PInteger, PListLike ell) =>
+      [(forall (s :: S). Term s (ell PInteger), Int)]
     lengthArgs = [(piota # pconstant i, fromIntegral i) | i <- [5, 10 .. 40]]
 
 -- Benchmarks
 
 benchNub :: (forall (s :: S). Term s (PList PInteger)) -> Int -> TestTree
 benchNub dat len =
-    singleTest
-        ("pnubSort, length " <> show len)
-        (ScriptBench2 (pnubSort, dat))
+  singleTest
+    ("pnubSort, length " <> show len)
+    (ScriptBench2 (pnubSort, dat))
 
 benchSort :: (forall (s :: S). Term s (PList PInteger)) -> Int -> TestTree
 benchSort dat len =
-    singleTest
-        ("psort, length " <> show len)
-        (ScriptBench2 (psort, dat))
+  singleTest
+    ("psort, length " <> show len)
+    (ScriptBench2 (psort, dat))
 
 benchNub' :: (forall (s :: S). Term s (PBuiltinList PInteger)) -> Int -> TestTree
 benchNub' dat len =
-    singleTest
-        ("pnubSort, length " <> show len)
-        (ScriptBench2 (pnubSort, dat))
+  singleTest
+    ("pnubSort, length " <> show len)
+    (ScriptBench2 (pnubSort, dat))
 
 benchSort' :: (forall (s :: S). Term s (PBuiltinList PInteger)) -> Int -> TestTree
 benchSort' dat len =
-    singleTest
-        ("psort, length " <> show len)
-        (ScriptBench2 (psort, dat))
+  singleTest
+    ("psort, length " <> show len)
+    (ScriptBench2 (psort, dat))
 
 benchNubCustom :: (forall (s :: S). Term s (PList PInteger)) -> Int -> TestTree
 benchNubCustom dat len =
-    singleTest
-        ("pnubSortBy, custom comparator, length " <> show len)
-        ( ScriptBench3
-            ( pnubSortBy
-            , preverseComparator # pfromOrd
-            , dat
-            )
+  singleTest
+    ("pnubSortBy, custom comparator, length " <> show len)
+    ( ScriptBench3
+        ( pnubSortBy
+        , preverseComparator # pfromOrd
+        , dat
         )
+    )
 
 benchSortCustom :: (forall (s :: S). Term s (PList PInteger)) -> Int -> TestTree
 benchSortCustom dat len =
-    singleTest
-        ("psortBy, custom comparator, length " <> show len)
-        ( ScriptBench3
-            ( psortBy
-            , preverseComparator # pfromOrd
-            , dat
-            )
+  singleTest
+    ("psortBy, custom comparator, length " <> show len)
+    ( ScriptBench3
+        ( psortBy
+        , preverseComparator # pfromOrd
+        , dat
         )
+    )
 
 -- Scaffolding and helpers
 
 -- One argument
 newtype ScriptBench1 (a :: S -> Type)
-    = ScriptBench1 (ClosedTerm a)
+  = ScriptBench1 (ClosedTerm a)
 
 instance (Typeable a) => IsTest (ScriptBench1 a) where
-    run _ (ScriptBench1 t) _ =
-        pure $ case evalBench t of
-            Left err -> testFailed err
-            Right (cpu, mem) -> testPassed . prettyPrintBenchResult cpu $ mem
-    testOptions = Tagged []
+  run _ (ScriptBench1 t) _ =
+    pure $ case evalBench t of
+      Left err -> testFailed err
+      Right (cpu, mem) -> testPassed . prettyPrintBenchResult cpu $ mem
+  testOptions = Tagged []
 
 -- Two arguments
 newtype ScriptBench2 (a :: S -> Type) (b :: S -> Type)
-    = ScriptBench2 (ClosedTerm (a :--> b), ClosedTerm a)
+  = ScriptBench2 (ClosedTerm (a :--> b), ClosedTerm a)
 
 instance (Typeable a, Typeable b) => IsTest (ScriptBench2 a b) where
-    run _ (ScriptBench2 (f, arg)) _ =
-        pure . either testFailed testPassed $
-            -- Normally we would use do-notation here, but as we're dealing with
-            -- ClosedTerm (and thus, impredicative instantiation), and QuickLook can't
-            -- deal with do-notation, we have to use manual binds.
-            evalBenchTerm arg >>= \arg' ->
-                evalBench (f # arg') >>= \(cpu, mem) ->
-                    pure . prettyPrintBenchResult cpu $ mem
-    testOptions = Tagged []
+  run _ (ScriptBench2 (f, arg)) _ =
+    pure . either testFailed testPassed $
+      -- Normally we would use do-notation here, but as we're dealing with
+      -- ClosedTerm (and thus, impredicative instantiation), and QuickLook can't
+      -- deal with do-notation, we have to use manual binds.
+      evalBenchTerm arg >>= \arg' ->
+        evalBench (f # arg') >>= \(cpu, mem) ->
+          pure . prettyPrintBenchResult cpu $ mem
+  testOptions = Tagged []
 
 -- Three arguments
 newtype ScriptBench3 (a :: S -> Type) (b :: S -> Type) (c :: S -> Type)
-    = ScriptBench3 (ClosedTerm (a :--> b :--> c), ClosedTerm a, ClosedTerm b)
+  = ScriptBench3 (ClosedTerm (a :--> b :--> c), ClosedTerm a, ClosedTerm b)
 
 instance (Typeable a, Typeable b, Typeable c) => IsTest (ScriptBench3 a b c) where
-    run _ (ScriptBench3 (f, arg1, arg2)) _ =
-        pure . either testFailed testPassed $
-            -- Same as above
-            evalBenchTerm arg1 >>= \arg1' ->
-                evalBenchTerm arg2 >>= \arg2' ->
-                    evalBench (f # arg1' # arg2') >>= \(cpu, mem) ->
-                        pure . prettyPrintBenchResult cpu $ mem
-    testOptions = Tagged []
+  run _ (ScriptBench3 (f, arg1, arg2)) _ =
+    pure . either testFailed testPassed $
+      -- Same as above
+      evalBenchTerm arg1 >>= \arg1' ->
+        evalBenchTerm arg2 >>= \arg2' ->
+          evalBench (f # arg1' # arg2') >>= \(cpu, mem) ->
+            pure . prettyPrintBenchResult cpu $ mem
+  testOptions = Tagged []
 
 -- Four arguments
 newtype ScriptBench4 (a :: S -> Type) (b :: S -> Type) (c :: S -> Type) (d :: S -> Type)
-    = ScriptBench4 (ClosedTerm (a :--> b :--> c :--> d), ClosedTerm a, ClosedTerm b, ClosedTerm c)
+  = ScriptBench4 (ClosedTerm (a :--> b :--> c :--> d), ClosedTerm a, ClosedTerm b, ClosedTerm c)
 
 instance (Typeable a, Typeable b, Typeable c, Typeable d) => IsTest (ScriptBench4 a b c d) where
-    run _ (ScriptBench4 (f, arg1, arg2, arg3)) _ =
-        pure . either testFailed testPassed $
-            -- And again
-            evalBenchTerm arg1 >>= \arg1' ->
-                evalBenchTerm arg2 >>= \arg2' ->
-                    evalBenchTerm arg3 >>= \arg3' ->
-                        evalBench (f # arg1' # arg2' # arg3') >>= \(cpu, mem) ->
-                            pure . prettyPrintBenchResult cpu $ mem
-    testOptions = Tagged []
+  run _ (ScriptBench4 (f, arg1, arg2, arg3)) _ =
+    pure . either testFailed testPassed $
+      -- And again
+      evalBenchTerm arg1 >>= \arg1' ->
+        evalBenchTerm arg2 >>= \arg2' ->
+          evalBenchTerm arg3 >>= \arg3' ->
+            evalBench (f # arg1' # arg2' # arg3') >>= \(cpu, mem) ->
+              pure . prettyPrintBenchResult cpu $ mem
+  testOptions = Tagged []
 
 evalBenchTerm ::
-    forall (a :: S -> Type).
-    ClosedTerm a ->
-    Either String (ClosedTerm a)
+  forall (a :: S -> Type).
+  ClosedTerm a ->
+  Either String (ClosedTerm a)
 evalBenchTerm t = case evalTerm def t of
-    Left err -> Left $ "Argument unexpectedly failed to compile: \n" <> unpack err
-    Right (res, _, _) -> case res of
-        Left err -> Left $ "Argument unexpectedly failed to evaluate: \n" <> show err
-        Right t' -> pure t'
+  Left err -> Left $ "Argument unexpectedly failed to compile: \n" <> unpack err
+  Right (res, _, _) -> case res of
+    Left err -> Left $ "Argument unexpectedly failed to evaluate: \n" <> show err
+    Right t' -> pure t'
 
 evalBench ::
-    forall (a :: S -> Type).
-    ClosedTerm a ->
-    Either String (CostingInteger, CostingInteger)
+  forall (a :: S -> Type).
+  ClosedTerm a ->
+  Either String (CostingInteger, CostingInteger)
 evalBench t = case compile def t of
-    Left err -> Left $ "Function unexpectedly failed to compile: \n" <> unpack err
-    Right script -> case evalScriptHuge script of
-        (_, ExBudget (ExCPU cpu) (ExMemory mem), _) -> pure (cpu, mem)
+  Left err -> Left $ "Function unexpectedly failed to compile: \n" <> unpack err
+  Right script -> case evalScriptHuge script of
+    (_, ExBudget (ExCPU cpu) (ExMemory mem), _) -> pure (cpu, mem)
 
 prettyPrintBenchResult :: CostingInteger -> CostingInteger -> String
 prettyPrintBenchResult cpu mem =
-    "CPU used: "
-        <> commaSepThousands cpu
-        <> "\nMemory used: "
-        <> commaSepThousands mem
-        <> "\n"
+  "CPU used: "
+    <> commaSepThousands cpu
+    <> "\nMemory used: "
+    <> commaSepThousands mem
+    <> "\n"
 
 commaSepThousands :: CostingInteger -> String
 commaSepThousands i = case i `quotRem` 1000 of
-    (0, r) -> show r
-    (d, r) -> commaSepThousands d <> "," <> ensureThreeDigits r
+  (0, r) -> show r
+  (d, r) -> commaSepThousands d <> "," <> ensureThreeDigits r
 
 ensureThreeDigits :: CostingInteger -> String
 ensureThreeDigits i
-    | i < 10 = "00" <> show i
-    | i < 100 = "0" <> show i
-    | otherwise = show i
+  | i < 10 = "00" <> show i
+  | i < 100 = "0" <> show i
+  | otherwise = show i
 
 piota ::
-    forall (ell :: (S -> Type) -> S -> Type) (s :: S).
-    (PElemConstraint ell PInteger, PListLike ell) =>
-    Term s (PInteger :--> ell PInteger)
+  forall (ell :: (S -> Type) -> S -> Type) (s :: S).
+  (PElemConstraint ell PInteger, PListLike ell) =>
+  Term s (PInteger :--> ell PInteger)
 piota = phoistAcyclic $
-    pfix #$ plam $ \self i ->
-        pif (i #<= 0) pnil (pcons # i #$ self # (i - 1))
+  pfix #$ plam $ \self i ->
+    pif (i #<= 0) pnil (pcons # i #$ self # (i - 1))
