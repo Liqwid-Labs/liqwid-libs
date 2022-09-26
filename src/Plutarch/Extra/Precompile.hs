@@ -9,7 +9,7 @@ module Plutarch.Extra.Precompile (
   -- deserialize compiled terms.  If someone wants to subvert type safety using
   -- Scripts, they can do that regardless of this export.
   CompiledTerm (..),
-  CompiledTerm' (..),
+  debuggableScript,
   compile',
   toDebuggableScript,
   applyCompiledTerm,
@@ -60,18 +60,16 @@ import qualified UntypedPlutusCore as UPLC
 
 {- | Type-safe wrapper for compiled Plutarch functions.
 
- @since 3.0.2
+ @since 3.8.0
 -}
-newtype CompiledTerm (a :: S -> Type) = CompiledTerm {debuggableScript :: DebuggableScript}
+newtype CompiledTerm (a :: S -> Type) = CompiledTerm DebuggableScript
 
-{- | Like 'CompiledTerm', but with the internal 'Script's re-packaged into 'Term's.
-
- @since 3.0.2
--}
-data CompiledTerm' (a :: S -> Type) = CompiledTerm'
-  { term :: forall (s :: S). Term s a
-  , debugTerm :: forall (s :: S). Term s a
-  }
+-- | @since 3.8.0
+debuggableScript ::
+  forall (a :: S -> Type).
+  CompiledTerm a ->
+  DebuggableScript
+debuggableScript (CompiledTerm x) = x
 
 {- | Compile a closed Plutarch 'Term' to a 'CompiledTerm'.
 
@@ -268,8 +266,8 @@ pliftCompiled' ct =
             ]
         Left liftError -> handleOtherLiftError liftError
   where
-    (res, _, traces) = finalEvalDebuggableScript . getField @"debuggableScript" $ ct
-    (res', _, traces') = evalScript . view #debugScript . getField @"debuggableScript" $ ct
+    (res, _, traces) = finalEvalDebuggableScript . debuggableScript $ ct
+    (res', _, traces') = evalScript . view #debugScript . debuggableScript $ ct
     handleOtherLiftError liftError =
       case res' of
         Left evalError ->

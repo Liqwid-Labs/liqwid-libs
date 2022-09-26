@@ -73,14 +73,12 @@ instance PTryFrom PData (PAsData PDatumHash) where
   type PTryFromExcess PData (PAsData PDatumHash) = Flip Term PDatumHash
   ptryFrom' opq = runTermCont $ do
     unwrapped <- pfromData . fst <$> ptryFromC @(PAsData PByteString) opq
-
     tcont $ \f ->
       pif
         -- Blake2b_256 hash: 256 bits/32 bytes.
         (plengthBS # unwrapped #== 32)
         (f ())
         (ptraceError "ptryFrom(PDatumHash): must be 32 bytes long")
-
     pure (punsafeCoerce opq, pcon $ PDatumHash unwrapped)
 
 -- | @since 3.0.3
@@ -91,14 +89,12 @@ instance PTryFrom PData (PAsData PScriptHash) where
   type PTryFromExcess PData (PAsData PScriptHash) = Flip Term PScriptHash
   ptryFrom' opq = runTermCont $ do
     unwrapped <- pfromData . fst <$> ptryFromC @(PAsData PByteString) opq
-
     tcont $ \f ->
       pif
         -- Blake2b_224 hash: 224 bits/28 bytes.
         (plengthBS # unwrapped #== 28)
         (f ())
         (ptraceError "ptryFrom(PScriptHash): must be 28 bytes long")
-
     pure (punsafeCoerce opq, pcon $ PScriptHash unwrapped)
 
 ----------------------------------------

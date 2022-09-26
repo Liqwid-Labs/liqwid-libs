@@ -20,7 +20,6 @@ module Plutarch.Extra.DebuggableScript (
 
 import Control.DeepSeq (NFData)
 import Data.Text (Text)
-import qualified Data.Text as T
 import qualified Data.Text as Text
 import Optics.Getter (A_Getter, to, view)
 import Optics.Label (LabelOptic (labelOptic))
@@ -30,7 +29,7 @@ import Plutarch (
   compile,
  )
 import Plutarch.Evaluate (EvalError, evalScript)
-import Plutarch.Extra.Compile (mustCompile)
+import Plutarch.Extra.Compile (mustCompile, mustCompileTracing)
 import PlutusLedgerApi.V1 (Data, ExBudget, Script)
 import PlutusLedgerApi.V1.Scripts (Script (Script), applyArguments)
 import UntypedPlutusCore (
@@ -137,21 +136,6 @@ checkedCompileD term = do
   script <- compile Config {tracingMode = NoTracing} term
   debugScript <- compile Config {tracingMode = DetTracing} term
   pure $ DebuggableScript script debugScript
-
--- Like 'mustCompile', but with tracing turned on.
-mustCompileTracing ::
-  forall (a :: S -> Type).
-  (forall (s :: S). Term s a) ->
-  Script
-mustCompileTracing term =
-  case compile Config {tracingMode = DetTracing} term of
-    Left err ->
-      error $
-        unwords
-          [ "Plutarch compilation error: "
-          , T.unpack err
-          ]
-    Right script -> script
 
 {- | Compilation errors cause exceptions, but deferred by lazyness.
 

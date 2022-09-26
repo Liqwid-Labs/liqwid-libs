@@ -6,6 +6,8 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### Added
 
+* `Plutarch.Extra.Compile`:
+  * `mustCompileTracing`, a tracing-enabled equivalent to `mustCompile`.
 * `Plutarch.Extra.DebuggableScript`:
   * `DebuggableScript` has label optics for its previous field selectors, under
     the same names.
@@ -21,6 +23,8 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### Modified
 
+* `Plutarch.Extra.IsData`:
+  * `unProductIsData` is now a regular function, not a field accessor.
 * `Plutarch.Extra.DebuggableScript`:
   * `DebuggableScript` no longer exports its constructor.
   * `DebuggableScript` no longer has field selectors.
@@ -28,6 +32,8 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   * `MultiSig` no longer exports its constructor.
   * `MultiSig` no longer has field selectors.
   * `PMultiSig` no longer has field selectors.
+* `Plutarch.Extra.Precompile`:
+  * `debuggableScript` is now a regular function, not a field accessor.
 * `Plutarch.Extra.Record`:
   * `runRecordMorphism` is now a regular function, not a field accessor.
 
@@ -35,6 +41,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 * `Plutarch.Extra.Precompile`:
   * `applyScript`, now in `Plutarch.Extra.DebuggableScript`.
+  * `CompiledTerm'`, as it wasn't being used anywhere or by anything.
 
 ## 3.7.1 -- 2022-09-22
 
