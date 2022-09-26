@@ -1,5 +1,4 @@
 {-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 -- Needed for Tagged instances for PlutusTx stuff
 {-# OPTIONS_GHC -Wno-orphans #-}

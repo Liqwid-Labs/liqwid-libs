@@ -1,5 +1,4 @@
 {-# LANGUAGE ImpredicativeTypes #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Main (main) where
 

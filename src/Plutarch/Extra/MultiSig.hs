@@ -1,6 +1,4 @@
-{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {- |
@@ -14,12 +12,16 @@ module Plutarch.Extra.MultiSig (
   validatedByMultisig,
   pvalidatedByMultisig,
   PMultiSig (..),
-  MultiSig (..),
+  MultiSig,
+  mkMultiSig,
   PMultiSigContext,
   pmultiSigContext,
 ) where
 
 import GHC.Records (HasField)
+import Optics.Getter (A_Getter, to)
+import Optics.Label (LabelOptic (labelOptic))
+import Optics.Traversal (A_Traversal, traversalVL)
 import Plutarch.Api.V2 (PPubKeyHash)
 import Plutarch.DataRepr (
   DerivePConstantViaData (DerivePConstantViaData),
@@ -32,16 +34,12 @@ import Plutarch.Lift (PConstantDecl, PLifted, PUnsafeLiftDecl)
 import PlutusLedgerApi.V1.Crypto (PubKeyHash)
 import qualified PlutusTx (makeLift, unstableMakeIsData)
 
-{- | A MultiSig represents a proof that a particular set of signatures
+{- | A 'MultiSig' represents a proof that a particular set of signatures
      are present on a transaction.
 
-     @since 0.1.0
+     @since 3.8.0
 -}
-data MultiSig = MultiSig
-  { keys :: [PubKeyHash]
-  -- ^ List of PubKeyHashes that must be present in the list of signatories.
-  , minSigs :: Integer
-  }
+data MultiSig = MultiSig [PubKeyHash] Integer
   deriving stock
     ( -- | @since 0.1.0
       Generic
@@ -51,8 +49,36 @@ data MultiSig = MultiSig
       Show
     )
 
+{- | Allows traversing over the list of 'PubKeyHash'es that must be present in
+ the list of signatories.
+
+ @since 3.8.0
+-}
+instance LabelOptic "keys" A_Traversal MultiSig MultiSig PubKeyHash PubKeyHash where
+  labelOptic = traversalVL $
+    \f (MultiSig pkhs minSigs) -> MultiSig <$> traverse f pkhs <*> pure minSigs
+
+{- | Allows access to (but not changing) the minimum number of signatories that
+ must be present. Changing this field independently is forbidden, as it could
+ construct an invalid result.
+
+ @since 3.8.0
+-}
+instance LabelOptic "minSigs" A_Getter MultiSig MultiSig Integer Integer where
+  labelOptic = to $ \(MultiSig _ minSigs) -> minSigs
+
 PlutusTx.makeLift ''MultiSig
 PlutusTx.unstableMakeIsData ''MultiSig
+
+{- | Given a list of keys, and a minimum number of signatories, returns
+ 'Nothing' if given too few keys, or 'Just' a 'MultiSig' otherwise.
+
+ @since 3.8.0
+-}
+mkMultiSig :: [PubKeyHash] -> Integer -> Maybe MultiSig
+mkMultiSig pkhs minSigs
+  | length pkhs < fromIntegral minSigs = Nothing
+  | otherwise = Just . MultiSig pkhs $ minSigs
 
 {- | Plutarch-level MultiSig
 
@@ -102,11 +128,11 @@ instance PTryFrom PData PMultiSig
 
      Should be constructed with 'pmultiSigContext'.
 
-     @since 3.2.0
+     @since 3.8.0
 -}
-newtype PMultiSigContext (s :: S) = PMultiSigContext
-  { signatories :: Term s (PBuiltinList (PAsData PPubKeyHash))
-  }
+newtype PMultiSigContext (s :: S)
+  = PMultiSigContext
+      (Term s (PBuiltinList (PAsData PPubKeyHash)))
   deriving stock
     ( -- | @since 3.2.0
       Generic
@@ -122,6 +148,10 @@ newtype PMultiSigContext (s :: S) = PMultiSigContext
 instance DerivePlutusType PMultiSigContext where
   type DPTStrat _ = PlutusTypeNewtype
 
+-- | @since 3.8.0
+instance HasField "signatories" (PMultiSigContext s) (Term s (PBuiltinList (PAsData PPubKeyHash))) where
+  getField (PMultiSigContext t) = t
+
 --------------------------------------------------------------------------------
 
 {- | Construct 'PMultiSigContext' providing the @signatories@ field,
@@ -135,9 +165,9 @@ pmultiSigContext ::
   ) =>
   r ->
   Term s PMultiSigContext
-pmultiSigContext f = pcon (PMultiSigContext f.signatories)
+pmultiSigContext = pcon . PMultiSigContext . getField @"signatories"
 
-{- | Check if a Haskell-level MultiSig signs this transaction.
+{- | Check if a Haskell-level 'MultiSig' signs this transaction.
 
      @since 3.2.0
 -}
@@ -158,8 +188,8 @@ pvalidatedByMultisig =
       PMultiSigContext sigs <- pmatchC ctx
 
       pure $
-        multiF.minSigs
+        getField @"minSigs" multiF
           #<= ( plength #$ pfilter
                   # (pflip # pelem # sigs)
-                  # multiF.keys
+                  # getField @"keys" multiF
               )

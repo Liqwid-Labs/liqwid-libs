@@ -1,6 +1,5 @@
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Plutarch.Extra.TermCont (
   module Extra,

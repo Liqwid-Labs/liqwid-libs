@@ -1,5 +1,3 @@
-{-# LANGUAGE PartialTypeSignatures #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Plutarch.Extra.ScriptContext (
@@ -137,7 +135,7 @@ pvalueSpent = phoistAcyclic $
                   <> v
         )
       -- TODO: This should be possible without coercions, but I can't figure out the types atm.
-      # punsafeCoerce (pconstant mempty :: Term _ (PValue 'Unsorted 'NonZero))
+      # punsafeCoerce (pconstant mempty :: forall (s' :: S). Term s' (PValue 'Unsorted 'NonZero))
       # inputs
 
 {- | Check if a particular asset class has been spent in the input list.

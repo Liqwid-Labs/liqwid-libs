@@ -1,7 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Plutarch.Extra.Field (pletAll, pletAllC) where
 

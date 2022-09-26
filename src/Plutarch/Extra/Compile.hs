@@ -1,6 +1,9 @@
 {-# LANGUAGE RankNTypes #-}
 
-module Plutarch.Extra.Compile (mustCompile) where
+module Plutarch.Extra.Compile (
+  mustCompile,
+  mustCompileTracing,
+) where
 
 import qualified Data.Text as T
 import Plutarch (
@@ -10,7 +13,7 @@ import Plutarch (
  )
 import PlutusLedgerApi.V2 (Script)
 
-{- | Compile a ClosedTerm, throwing an error if unsuccessful.
+{- | Compile a 'ClosedTerm', throwing an error if unsuccessful.
 
      @since 2.0.0
 -}
@@ -20,3 +23,20 @@ mustCompile t = case compile conf t of
   Right s -> s
   where
     conf = Config {tracingMode = DetTracing}
+
+-- Like 'mustCompile', but with tracing turned on.
+--
+-- @since 3.8.0
+mustCompileTracing ::
+  forall (a :: S -> Type).
+  (forall (s :: S). Term s a) ->
+  Script
+mustCompileTracing term =
+  case compile Config {tracingMode = DetTracing} term of
+    Left err ->
+      error $
+        unwords
+          [ "Plutarch compilation error: "
+          , T.unpack err
+          ]
+    Right script -> script

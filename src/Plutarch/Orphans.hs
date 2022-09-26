@@ -1,9 +1,7 @@
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+-- The whole point of this module
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 {- | Module: Plutarch.Orphans
@@ -75,14 +73,12 @@ instance PTryFrom PData (PAsData PDatumHash) where
   type PTryFromExcess PData (PAsData PDatumHash) = Flip Term PDatumHash
   ptryFrom' opq = runTermCont $ do
     unwrapped <- pfromData . fst <$> ptryFromC @(PAsData PByteString) opq
-
     tcont $ \f ->
       pif
         -- Blake2b_256 hash: 256 bits/32 bytes.
         (plengthBS # unwrapped #== 32)
         (f ())
         (ptraceError "ptryFrom(PDatumHash): must be 32 bytes long")
-
     pure (punsafeCoerce opq, pcon $ PDatumHash unwrapped)
 
 -- | @since 3.0.3
@@ -93,14 +89,12 @@ instance PTryFrom PData (PAsData PScriptHash) where
   type PTryFromExcess PData (PAsData PScriptHash) = Flip Term PScriptHash
   ptryFrom' opq = runTermCont $ do
     unwrapped <- pfromData . fst <$> ptryFromC @(PAsData PByteString) opq
-
     tcont $ \f ->
       pif
         -- Blake2b_224 hash: 224 bits/28 bytes.
         (plengthBS # unwrapped #== 28)
         (f ())
         (ptraceError "ptryFrom(PScriptHash): must be 28 bytes long")
-
     pure (punsafeCoerce opq, pcon $ PScriptHash unwrapped)
 
 ----------------------------------------
@@ -112,7 +106,7 @@ newtype AsBase16Bytes (a :: Type) = AsBase16Bytes a
 {- | Represent any serializable value as a hex-encoded JSON String of its
  serialization
 -}
-newtype AsBase16Codec (a :: Type) = AsBase16Codec {unAsBase16Codec :: a}
+newtype AsBase16Codec (a :: Type) = AsBase16Codec a
 
 --------------------
 -- Instances for `deriving via`
@@ -146,12 +140,12 @@ instance
 
 -- @ since 3.6.1
 instance (Serialise a) => Aeson.ToJSON (AsBase16Codec a) where
-  toJSON =
+  toJSON (AsBase16Codec x) =
     Aeson.String
       . encodeByteString
       . toStrict
       . serialise @a
-      . unAsBase16Codec
+      $ x
 
 -- @ since 3.6.1
 instance (Serialise a) => Aeson.FromJSON (AsBase16Codec a) where

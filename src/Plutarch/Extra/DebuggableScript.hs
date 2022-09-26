@@ -1,12 +1,17 @@
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE RankNTypes #-}
 
 module Plutarch.Extra.DebuggableScript (
-  DebuggableScript (..),
+  -- * Type
+  DebuggableScript,
+
+  -- * Construction
   checkedCompileD,
-  applyDebuggableScript,
   mustCompileD,
+
+  -- * Use
+  applyScript,
+  applyDebuggableScript,
+  applyDebuggableArg,
   mustFinalEvalDebuggableScript,
   finalEvalDebuggableScript,
   mustEvalScript,
@@ -15,17 +20,27 @@ module Plutarch.Extra.DebuggableScript (
 
 import Control.DeepSeq (NFData)
 import Data.Text (Text)
-import qualified Data.Text as T
 import qualified Data.Text as Text
+import Optics.Getter (A_Getter, to, view)
+import Optics.Label (LabelOptic (labelOptic))
 import Plutarch (
   Config (Config, tracingMode),
   TracingMode (DetTracing, NoTracing),
   compile,
  )
 import Plutarch.Evaluate (EvalError, evalScript)
-import Plutarch.Extra.Compile (mustCompile)
+import Plutarch.Extra.Compile (mustCompile, mustCompileTracing)
 import PlutusLedgerApi.V1 (Data, ExBudget, Script)
-import PlutusLedgerApi.V1.Scripts (applyArguments)
+import PlutusLedgerApi.V1.Scripts (Script (Script), applyArguments)
+import UntypedPlutusCore (
+  Program (
+    Program,
+    _progAnn,
+    _progTerm,
+    _progVer
+  ),
+ )
+import qualified UntypedPlutusCore.Core.Type as UplcType
 import UntypedPlutusCore.Evaluation.Machine.Cek (
   CekUserError (CekEvaluationFailure, CekOutOfExError),
   ErrorWithCause (ErrorWithCause),
@@ -34,14 +49,9 @@ import UntypedPlutusCore.Evaluation.Machine.Cek (
 
 {- | A 'Script' with a debug fallback that has tracing turned on.
 
- @since 3.0.2
+ @since 3.8.0
 -}
-data DebuggableScript = DebuggableScript
-  { script :: Script
-  -- ^ @since 3.0.2
-  , debugScript :: Script
-  -- ^ @since 3.0.2
-  }
+data DebuggableScript = DebuggableScript Script Script
   deriving stock
     ( -- | @since 3.0.2
       Eq
@@ -55,16 +65,61 @@ data DebuggableScript = DebuggableScript
       NFData
     )
 
+{- | Retrieves the non-debugging 'Script'. This is read-only, as allowing it to
+ change could break invariants.
+
+ @since 3.8.0
+-}
+instance LabelOptic "script" A_Getter DebuggableScript DebuggableScript Script Script where
+  labelOptic = to $ \(DebuggableScript x _) -> x
+
+{- | Retrieves the debugging 'Script'. This is read-only, as allowing it to
+ change could break invariants.
+
+ @since 3.8.0
+-}
+instance LabelOptic "debugScript" A_Getter DebuggableScript DebuggableScript Script Script where
+  labelOptic = to $ \(DebuggableScript _ x) -> x
+
+{- | Apply a function to an argument on the compiled 'Script' level.
+
+ @since 3.8.0
+-}
+applyScript :: Script -> Script -> Script
+applyScript f a =
+  if fVer /= aVer
+    then error "apply: Plutus Core version mismatch"
+    else
+      Script
+        Program
+          { _progTerm = UplcType.Apply () fTerm aTerm
+          , _progVer = fVer
+          , _progAnn = ()
+          }
+  where
+    (Script Program {_progTerm = fTerm, _progVer = fVer}) = f
+    (Script Program {_progTerm = aTerm, _progVer = aVer}) = a
+
 {- | Apply given arguments to 'DebuggableScript'.
 
  @since 3.7.1
 -}
 applyDebuggableScript :: DebuggableScript -> [Data] -> DebuggableScript
-applyDebuggableScript (DebuggableScript script debugScript) d =
+applyDebuggableScript (DebuggableScript script debugScript) args =
+  DebuggableScript (applyArguments script args) (applyArguments debugScript args)
+
+{- | Apply a single argument, provided as a 'DebuggableScript'.
+
+ @since 3.8.0
+-}
+applyDebuggableArg ::
+  DebuggableScript ->
+  DebuggableScript ->
   DebuggableScript
-    { script = applyArguments script d
-    , debugScript = applyArguments debugScript d
-    }
+applyDebuggableArg f x =
+  DebuggableScript
+    (applyScript (view #script f) (view #script x))
+    (applyScript (view #debugScript f) (view #debugScript x))
 
 {- | For handling compilation errors right away.
 
@@ -80,22 +135,7 @@ checkedCompileD ::
 checkedCompileD term = do
   script <- compile Config {tracingMode = NoTracing} term
   debugScript <- compile Config {tracingMode = DetTracing} term
-  pure $ DebuggableScript {script, debugScript}
-
--- Like 'mustCompile', but with tracing turned on.
-mustCompileTracing ::
-  forall (a :: S -> Type).
-  (forall (s :: S). Term s a) ->
-  Script
-mustCompileTracing term =
-  case compile Config {tracingMode = DetTracing} term of
-    Left err ->
-      error $
-        unwords
-          [ "Plutarch compilation error: "
-          , T.unpack err
-          ]
-    Right script -> script
+  pure $ DebuggableScript script debugScript
 
 {- | Compilation errors cause exceptions, but deferred by lazyness.
 
@@ -108,10 +148,7 @@ mustCompileD ::
   (forall (s :: S). Term s a) ->
   DebuggableScript
 mustCompileD term =
-  DebuggableScript
-    { script = mustCompile term
-    , debugScript = mustCompileTracing term
-    }
+  DebuggableScript (mustCompile term) (mustCompileTracing term)
 
 {- | Final evaluation of a 'DebuggableScript' to a 'Script', with errors resulting in
  exceptions.
@@ -143,7 +180,7 @@ mustFinalEvalDebuggableScript s =
 finalEvalDebuggableScript ::
   DebuggableScript ->
   (Either EvalError Script, ExBudget, [Text])
-finalEvalDebuggableScript DebuggableScript {script, debugScript} =
+finalEvalDebuggableScript (DebuggableScript script debugScript) =
   case res of
     Right _ -> r
     Left (ErrorWithCause evalErr _) ->
@@ -240,6 +277,5 @@ mustEvalD :: DebuggableScript -> DebuggableScript
 --   back to, so we need only 'mustEvalScript'.
 mustEvalD ds =
   DebuggableScript
-    { script = mustFinalEvalDebuggableScript ds
-    , debugScript = mustEvalScript (ds.debugScript)
-    }
+    (mustFinalEvalDebuggableScript ds)
+    (mustEvalScript . view #debugScript $ ds)

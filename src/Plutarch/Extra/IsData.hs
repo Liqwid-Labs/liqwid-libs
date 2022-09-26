@@ -1,13 +1,12 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Plutarch.Extra.IsData (
   -- * PlutusTx ToData/FromData derive-wrappers
   ProductIsData (..),
   EnumIsData (..),
+  unProductIsData,
 
   -- * Plutarch PIsData/PlutusType derive-wrappers
   DerivePConstantViaDataList (..),
@@ -104,9 +103,9 @@ instance DerivePlutusType PFoo where
    type DPTStrat _ = PlutusTypeDataList
 @
 
-  @since 1.1.0
+  @since 3.8.0
 -}
-newtype ProductIsData (a :: Type) = ProductIsData {unProductIsData :: a}
+newtype ProductIsData (a :: Type) = ProductIsData a
 
 -- | Variant of 'PConstantViaData' using the List repr from 'ProductIsData'
 newtype DerivePConstantViaDataList (h :: Type) (p :: S -> Type) = DerivePConstantViaDataList h
@@ -186,6 +185,13 @@ instance PlutusTypeStrat PlutusTypeDataList where
     SOP.SOP (SOP.Z (x' SOP.:* SOP.Nil)) -> x'
     SOP.SOP (SOP.S x') -> case x' of {}
   derivedPMatch x f = f (gpto $ SOP.SOP $ SOP.Z $ x SOP.:* SOP.Nil)
+
+-- | @since 3.8.0
+unProductIsData ::
+  forall (a :: Type).
+  ProductIsData a ->
+  a
+unProductIsData = coerce
 
 {- |
   Generically convert a Product-Type to 'BuiltinData' with the 'List' repr.

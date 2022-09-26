@@ -1,19 +1,15 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TypeApplications #-}
 
 {- | Pre-compiling Plutarch functions and applying them.
 
  Speeds up benchmarking and testing.
 -}
 module Plutarch.Extra.Precompile (
-  applyScript,
   -- Exporting the data constructor on purpose, since users might want to
   -- deserialize compiled terms.  If someone wants to subvert type safety using
   -- Scripts, they can do that regardless of this export.
   CompiledTerm (..),
-  CompiledTerm' (..),
+  debuggableScript,
   compile',
   toDebuggableScript,
   applyCompiledTerm,
@@ -31,14 +27,14 @@ module Plutarch.Extra.Precompile (
 import Data.Text (Text)
 import qualified Data.Text as Text
 import GHC.Stack (HasCallStack)
+import Optics.Getter (view)
 import Plutarch.Evaluate (evalScript)
 import Plutarch.Extra.DebuggableScript (
-  DebuggableScript (DebuggableScript),
-  debugScript,
+  DebuggableScript,
+  applyDebuggableArg,
   finalEvalDebuggableScript,
   mustCompileD,
   mustEvalD,
-  script,
  )
 import Plutarch.Internal (
   Config (Config),
@@ -60,53 +56,20 @@ import Plutarch.Lift (
  )
 import PlutusCore.Builtin (KnownTypeError (KnownTypeEvaluationFailure, KnownTypeUnliftingError))
 import PlutusLedgerApi.V1.Scripts (Script (Script))
-import UntypedPlutusCore (Program (Program, _progAnn, _progTerm, _progVer))
 import qualified UntypedPlutusCore as UPLC
-import qualified UntypedPlutusCore.Core.Type as UplcType
-
-{- | Apply a function to an argument on the compiled 'Script' level.
-
- @since 3.0.2
--}
-applyScript :: Script -> Script -> Script
-applyScript f a =
-  if fVer /= aVer
-    then error "apply: Plutus Core version mismatch"
-    else
-      Script
-        Program
-          { _progTerm = UplcType.Apply () fTerm aTerm
-          , _progVer = fVer
-          , _progAnn = ()
-          }
-  where
-    (Script Program {_progTerm = fTerm, _progVer = fVer}) = f
-    (Script Program {_progTerm = aTerm, _progVer = aVer}) = a
-
-applyDebuggableScript ::
-  DebuggableScript ->
-  DebuggableScript ->
-  DebuggableScript
-applyDebuggableScript f a =
-  DebuggableScript
-    { script = applyScript f.script a.script
-    , debugScript = applyScript f.debugScript a.debugScript
-    }
 
 {- | Type-safe wrapper for compiled Plutarch functions.
 
- @since 3.0.2
+ @since 3.8.0
 -}
-newtype CompiledTerm (a :: S -> Type) = CompiledTerm {debuggableScript :: DebuggableScript}
+newtype CompiledTerm (a :: S -> Type) = CompiledTerm DebuggableScript
 
-{- | Like 'CompiledTerm', but with the internal 'Script's re-packaged into 'Term's.
-
- @since 3.0.2
--}
-data CompiledTerm' (a :: S -> Type) = CompiledTerm'
-  { term :: forall (s :: S). Term s a
-  , debugTerm :: forall (s :: S). Term s a
-  }
+-- | @since 3.8.0
+debuggableScript ::
+  forall (a :: S -> Type).
+  CompiledTerm a ->
+  DebuggableScript
+debuggableScript (CompiledTerm x) = x
 
 {- | Compile a closed Plutarch 'Term' to a 'CompiledTerm'.
 
@@ -146,7 +109,7 @@ applyCompiledTerm ::
   (forall (s :: S). Term s a) ->
   CompiledTerm b
 applyCompiledTerm (CompiledTerm sf) a =
-  CompiledTerm $ applyDebuggableScript sf (mustEvalD $ mustCompileD a)
+  CompiledTerm $ applyDebuggableArg sf (mustEvalD $ mustCompileD a)
 
 {- | Apply a 'CompiledTerm' to a closed Plutarch 'Term'.
 
@@ -162,7 +125,7 @@ applyCompiledTerm' ::
   (forall (s :: S). Term s a) ->
   CompiledTerm b
 applyCompiledTerm' (CompiledTerm sf) a =
-  CompiledTerm $ applyDebuggableScript sf (mustCompileD a)
+  CompiledTerm $ applyDebuggableArg sf (mustCompileD a)
 
 {- | Apply a 'CompiledTerm' to a 'CompiledTerm'.
 
@@ -178,7 +141,7 @@ applyCompiledTerm2 ::
   CompiledTerm a ->
   CompiledTerm b
 applyCompiledTerm2 (CompiledTerm sf) (CompiledTerm sa) =
-  CompiledTerm $ applyDebuggableScript sf (mustEvalD sa)
+  CompiledTerm $ applyDebuggableArg sf (mustEvalD sa)
 
 {- | Apply a 'CompiledTerm' to a 'CompiledTerm'.
 
@@ -194,7 +157,7 @@ applyCompiledTerm2' ::
   CompiledTerm a ->
   CompiledTerm b
 applyCompiledTerm2' (CompiledTerm sf) (CompiledTerm sa) =
-  CompiledTerm $ applyDebuggableScript sf sa
+  CompiledTerm $ applyDebuggableArg sf sa
 
 {- | Alias for 'applyCompiledTerm'.
 
@@ -303,8 +266,8 @@ pliftCompiled' ct =
             ]
         Left liftError -> handleOtherLiftError liftError
   where
-    (res, _, traces) = finalEvalDebuggableScript ct.debuggableScript
-    (res', _, traces') = evalScript ct.debuggableScript.debugScript
+    (res, _, traces) = finalEvalDebuggableScript . debuggableScript $ ct
+    (res', _, traces') = evalScript . view #debugScript . debuggableScript $ ct
     handleOtherLiftError liftError =
       case res' of
         Left evalError ->
