@@ -70,7 +70,7 @@ common common-lang
 
 common common-tests
   import:        common-lang
-  ghc-options:   -O2 -rtsopts -with-rtsopts=-N
+  ghc-options:   -O2 -threaded -rtsopts -with-rtsopts=-N
   build-depends:
     , bytestring
     , generics-sop
