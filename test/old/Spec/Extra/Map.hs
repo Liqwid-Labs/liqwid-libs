@@ -1,6 +1,3 @@
-{-# LANGUAGE PartialTypeSignatures #-}
-{-# LANGUAGE TypeApplications #-}
-
 module Spec.Extra.Map (tests) where
 
 --------------------------------------------------------------------------------

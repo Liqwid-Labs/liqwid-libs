@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedRecordDot #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Plutarch.Extra.Time (
@@ -73,15 +71,15 @@ pcurrentTime = phoistAcyclic $
   plam $ \iv -> unTermCont $ do
     PInterval iv' <- pmatchC iv
     ivf <- pletAllC iv'
-    PLowerBound lb <- pmatchC ivf.from
-    PUpperBound ub <- pmatchC ivf.to
+    PLowerBound lb <- pmatchC (getField @"from" ivf)
+    PUpperBound ub <- pmatchC (getField @"to" ivf)
 
     let getBound = phoistAcyclic $
           plam $
             flip pletAll $ \f ->
               pif
-                f._1
-                ( pmatch f._0 $ \case
+                (getField @"_1" f)
+                ( pmatch (getField @"_0" f) $ \case
                     PFinite (pfromData . (pfield @"_0" #) -> d) -> pjust # d
                     _ ->
                       ptrace
@@ -106,7 +104,7 @@ currentTime ::
   (HasField "validRange" r (Term s PPOSIXTimeRange)) =>
   r ->
   Term s (PMaybe PCurrentTime)
-currentTime x = pcurrentTime # x.validRange
+currentTime x = pcurrentTime # getField @"validRange" x
 
 {- | Calculate the current time, and error out with the given message if we can't
      get it.

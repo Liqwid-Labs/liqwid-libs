@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE RankNTypes #-}
 
 module Plutarch.Extra.Record (
@@ -46,7 +45,7 @@ instance
  @since 1.3.0
 -}
 mkRecord :: forall (r :: [PLabeledType]) (s :: S). RecordMorphism s '[] r -> Term s (PDataRecord r)
-mkRecord f = f.runRecordMorphism pdnil
+mkRecord f = runRecordMorphism f pdnil
 
 {- | 'mkRecord' but for known data-types.
 
@@ -84,16 +83,21 @@ mkRecordConstr ctr = pcon . ctr . mkRecord
 
  @since 1.3.0
 -}
-newtype RecordMorphism (s :: S) (as :: [PLabeledType]) (bs :: [PLabeledType]) = RecordMorphism
-  { runRecordMorphism ::
-      Term s (PDataRecord as) ->
-      Term s (PDataRecord bs)
-  }
+newtype RecordMorphism (s :: S) (as :: [PLabeledType]) (bs :: [PLabeledType])
+  = RecordMorphism (Term s (PDataRecord as) -> Term s (PDataRecord bs))
+
+-- | @since 3.8.0
+runRecordMorphism ::
+  forall (s :: S) (as :: [PLabeledType]) (bs :: [PLabeledType]).
+  RecordMorphism s as bs ->
+  Term s (PDataRecord as) ->
+  Term s (PDataRecord bs)
+runRecordMorphism (RecordMorphism f) = f
 
 -- | @since 1.3.0
 instance Category (RecordMorphism s) where
   id = RecordMorphism id
-  f . g = coerce $ f.runRecordMorphism . g.runRecordMorphism
+  f . g = coerce $ runRecordMorphism f . runRecordMorphism g
 
 infix 7 .=
 

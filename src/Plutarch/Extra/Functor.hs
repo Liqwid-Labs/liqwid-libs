@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Plutarch.Extra.Functor (
   -- * Type classes
   Plut,

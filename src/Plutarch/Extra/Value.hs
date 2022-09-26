@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Plutarch.Extra.Value (
   psingletonValue,
   passetClassValue,

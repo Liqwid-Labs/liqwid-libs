@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Plutarch.Extra.Tuple (pfstTuple, psndTuple) where
 
 import Plutarch.Api.V1.Tuple (PTuple)

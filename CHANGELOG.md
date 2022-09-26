@@ -2,6 +2,40 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.8.0 -- 2022-09-26
+
+### Added
+
+* `Plutarch.Extra.DebuggableScript`:
+  * `DebuggableScript` has label optics for its previous field selectors, under
+    the same names.
+  * `applyScript`, moved from `Plutarch.Extra.Precompile`.
+  * `applyDebuggableArg`, a function for applying an argument to a
+    `DebuggableScript` when said argument is provided as a `DebuggableScript.
+* `Plutarch.Extra.MultiSig`:
+  * `MultiSig` has label optics for its previous field selectors, under the same
+    names.
+  * `mkMultiSig` for constructing `MultiSig`, which ensures that the structure
+    is consistent.
+  * `HasField` instance for `"signatories"` in `PMultiSig`.
+
+### Modified
+
+* `Plutarch.Extra.DebuggableScript`:
+  * `DebuggableScript` no longer exports its constructor.
+  * `DebuggableScript` no longer has field selectors.
+* `Plutarch.Extra.MultiSig`:
+  * `MultiSig` no longer exports its constructor.
+  * `MultiSig` no longer has field selectors.
+  * `PMultiSig` no longer has field selectors.
+* `Plutarch.Extra.Record`:
+  * `runRecordMorphism` is now a regular function, not a field accessor.
+
+### Removed
+
+* `Plutarch.Extra.Precompile`:
+  * `applyScript`, now in `Plutarch.Extra.DebuggableScript`.
+
 ## 3.7.1 -- 2022-09-22
 
 ### Added

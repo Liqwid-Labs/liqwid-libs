@@ -1,5 +1,4 @@
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TypeApplications #-}
 -- Needed to 'link' Ordering and POrdering
 {-# OPTIONS_GHC -Wno-orphans #-}
 
