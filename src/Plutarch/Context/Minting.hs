@@ -1,5 +1,4 @@
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -16,7 +15,7 @@
 -}
 module Plutarch.Context.Minting (
   -- * Types
-  MintingBuilder (..),
+  MintingBuilder,
 
   -- * Input
   withMinting,
@@ -32,9 +31,9 @@ import Control.Arrow ((&&&))
 import Data.Foldable (Foldable (toList))
 import Data.Functor.Contravariant (contramap)
 import Data.Functor.Contravariant.Divisible (choose)
-import Optics (lens)
+import Optics (A_Lens, LabelOptic (labelOptic), lens, set, view)
 import Plutarch.Context.Base (
-  BaseBuilder (BB, bbDatums, bbInputs, bbMints, bbOutputs, bbRedeemers, bbReferenceInputs, bbSignatures),
+  BaseBuilder,
   Builder (pack, _bb),
   mintToValue,
   unpack,
@@ -46,13 +45,14 @@ import Plutarch.Context.Base (
   yieldRedeemerMap,
  )
 import Plutarch.Context.Check (
-  Checker (runChecker),
+  Checker,
   CheckerError,
   CheckerErrorType (OtherError),
   checkBool,
   checkFail,
   flattenValue,
   handleErrors,
+  runChecker,
  )
 import Plutarch.Context.Internal (Normalizer (mkNormalized'), mkNormalized)
 import PlutusLedgerApi.V2 (
@@ -76,16 +76,26 @@ import Prettyprinter qualified as P (Pretty (pretty))
 {- | A context builder for Minting. Corresponds to
  'Plutus.V1.Ledger.Contexts.Minting' specifically.
 
- @since 1.0.0
+ @since 2.5.0
 -}
-data MintingBuilder = MB
-  { mbInner :: BaseBuilder
-  , mbMintingCS :: Maybe CurrencySymbol
-  }
+data MintingBuilder = MB BaseBuilder (Maybe CurrencySymbol)
+  {-
+    { mbInner :: BaseBuilder
+    , mbMintingCS :: Maybe CurrencySymbol
+    }
+    -}
   deriving stock
     ( -- | @since 1.0.0
       Show
     )
+
+-- | @since 2.5.0
+instance LabelOptic "inner" A_Lens MintingBuilder MintingBuilder BaseBuilder BaseBuilder where
+  labelOptic = lens (\(MB x _) -> x) $ \(MB _ cs) inner' -> MB inner' cs
+
+-- | @since 2.5.0
+instance LabelOptic "mintingCS" A_Lens MintingBuilder MintingBuilder (Maybe CurrencySymbol) (Maybe CurrencySymbol) where
+  labelOptic = lens (\(MB _ x) -> x) $ \(MB inner _) cs' -> MB inner cs'
 
 -- | @since 1.1.0
 instance Semigroup MintingBuilder where
@@ -100,8 +110,8 @@ instance Monoid MintingBuilder where
 
 -- | @since 1.1.0
 instance Builder MintingBuilder where
-  _bb = lens mbInner (\x b -> x {mbInner = b})
-  pack x = mempty {mbInner = x}
+  _bb = #inner
+  pack x = set #inner x (mempty :: MintingBuilder)
 
 instance Normalizer MintingBuilder where
   mkNormalized' (MB bb cs) =
@@ -122,15 +132,14 @@ withMinting cs = MB mempty $ Just cs
 buildMinting' ::
   MintingBuilder ->
   ScriptContext
-buildMinting' builder@(unpack -> BB {..}) =
-  let (ins, inDat) = yieldInInfoDatums bbInputs
-      (refin, _) = yieldInInfoDatums bbReferenceInputs
-      (outs, outDat) = yieldOutDatums bbOutputs
-      mintedValue = yieldMint bbMints
-      extraDat = yieldExtraDatums bbDatums
+buildMinting' builder@(unpack -> bb) =
+  let (ins, inDat) = yieldInInfoDatums . view #inputs $ bb
+      (refin, _) = yieldInInfoDatums . view #referenceInputs $ bb
+      (outs, outDat) = yieldOutDatums . view #outputs $ bb
+      mintedValue = yieldMint . view #mints $ bb
+      extraDat = yieldExtraDatums . view #datums $ bb
       base = yieldBaseTxInfo builder
-      redeemerMap = yieldRedeemerMap bbInputs bbMints
-
+      redeemerMap = yieldRedeemerMap (view #inputs bb) (view #mints bb)
       txinfo =
         base
           { txInfoInputs = ins
@@ -138,11 +147,10 @@ buildMinting' builder@(unpack -> BB {..}) =
           , txInfoOutputs = outs
           , txInfoData = fromList $ inDat <> outDat <> extraDat
           , txInfoMint = mintedValue
-          , txInfoRedeemers = fromList $ toList bbRedeemers <> redeemerMap
-          , txInfoSignatories = toList bbSignatures
+          , txInfoRedeemers = fromList $ toList (view #redeemers bb) <> redeemerMap
+          , txInfoSignatories = toList . view #signatures $ bb
           }
-
-      mintcs = case mbMintingCS builder of
+      mintcs = case view #mintingCS builder of
         Just cs ->
           if hasCS mintedValue cs
             then Minting cs
@@ -181,7 +189,7 @@ instance P.Pretty MintingError where
 checkMinting :: Checker MintingError MintingBuilder
 checkMinting =
   contramap
-    ((foldMap mintToValue . toList . bbMints . unpack) &&& mbMintingCS)
+    ((foldMap mintToValue . toList . view #mints . unpack) &&& view #mintingCS)
     ( choose
         (\(mints, cs) -> maybe (Left ()) (Right . hasCS mints) cs)
         (checkFail $ OtherError MintingCurrencySymbolNotGiven)

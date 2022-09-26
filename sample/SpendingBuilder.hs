@@ -3,8 +3,8 @@
 module SpendingBuilder (specs) where
 
 import Data.Functor.Contravariant (Contravariant (contramap))
+import Optics (view)
 import Plutarch.Context (
-  BaseBuilder (bbInputs),
   CheckerPos (AtInput),
   SpendingBuilder,
   checkAt,
@@ -112,7 +112,7 @@ specs =
         case tryBuildSpending
           ( checkAt AtInput $
               contramap
-                (bbInputs . unpack)
+                (view #inputs . unpack)
                 (checkFoldable checkValidatorRedeemer)
           )
           ( sample

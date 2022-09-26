@@ -1,4 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ViewPatterns #-}
 
 {- | Module: Plutarch.Context.TxInfo
@@ -18,18 +17,9 @@ module Plutarch.Context.TxInfo (
 ) where
 
 import Data.Foldable (Foldable (toList))
-import Optics (lens)
+import Optics (lens, view)
 import Plutarch.Context.Base (
-  BaseBuilder (
-    BB,
-    bbDatums,
-    bbInputs,
-    bbMints,
-    bbOutputs,
-    bbRedeemers,
-    bbReferenceInputs,
-    bbSignatures
-  ),
+  BaseBuilder,
   Builder (pack, _bb),
   unpack,
   yieldBaseTxInfo,
@@ -77,15 +67,14 @@ instance Normalizer TxInfoBuilder where
  @since 2.0.0
 -}
 buildTxInfo :: TxInfoBuilder -> TxInfo
-buildTxInfo (unpack -> builder@BB {..}) =
-  let (ins, inDat) = yieldInInfoDatums bbInputs
-      (refin, _) = yieldInInfoDatums bbReferenceInputs
-      (outs, outDat) = yieldOutDatums bbOutputs
-      mintedValue = yieldMint bbMints
-      extraDat = yieldExtraDatums bbDatums
+buildTxInfo (unpack -> builder) =
+  let (ins, inDat) = yieldInInfoDatums . view #inputs $ builder
+      (refin, _) = yieldInInfoDatums . view #referenceInputs $ builder
+      (outs, outDat) = yieldOutDatums . view #outputs $ builder
+      mintedValue = yieldMint . view #mints $ builder
+      extraDat = yieldExtraDatums . view #datums $ builder
       base = yieldBaseTxInfo builder
-      redeemerMap = yieldRedeemerMap bbInputs bbMints
-
+      redeemerMap = yieldRedeemerMap (view #inputs builder) (view #mints builder)
       txinfo =
         base
           { txInfoInputs = ins
@@ -93,8 +82,8 @@ buildTxInfo (unpack -> builder@BB {..}) =
           , txInfoOutputs = outs
           , txInfoData = fromList $ inDat <> outDat <> extraDat
           , txInfoMint = mintedValue
-          , txInfoSignatories = toList bbSignatures
-          , txInfoRedeemers = fromList $ toList bbRedeemers <> redeemerMap
+          , txInfoSignatories = toList (view #signatures builder)
+          , txInfoRedeemers = fromList $ toList (view #redeemers builder) <> redeemerMap
           }
    in txinfo
 

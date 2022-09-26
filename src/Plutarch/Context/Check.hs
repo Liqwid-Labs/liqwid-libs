@@ -1,5 +1,4 @@
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Plutarch.Context.Check (
@@ -7,6 +6,7 @@ module Plutarch.Context.Check (
   CheckerErrorType (..),
   CheckerPos (..),
   CheckerError (..),
+  runChecker,
   flattenValue,
   renderErrors,
   handleErrors,
@@ -40,12 +40,13 @@ import Control.Arrow ((&&&))
 import Data.Foldable (toList)
 import Data.Functor.Contravariant (Contravariant (contramap))
 import Data.Functor.Contravariant.Divisible (Decidable (choose, lose), Divisible (conquer, divide))
+import Data.Kind (Type)
 import Data.Maybe (fromMaybe)
 import Data.Void (absurd)
+import Optics (view)
 import Plutarch.Context.Base (
-  BaseBuilder (..),
   Builder,
-  UTXO (..),
+  UTXO,
   mintToValue,
   normalizeMint,
   normalizeValue,
@@ -142,9 +143,9 @@ instance P.Pretty e => P.Pretty (CheckerError e) where
 
 {- | Checker that accumulates error.
 
- @since 2.1.0
+ @since 2.5.0
 -}
-newtype Checker e a = Checker {runChecker :: a -> Acc (CheckerError e)}
+newtype Checker (e :: Type) (a :: Type) = Checker (a -> Acc (CheckerError e))
 
 -- | @since 2.1.0
 instance Contravariant (Checker e) where
@@ -170,6 +171,14 @@ instance Semigroup (Checker e a) where
 -- | @since 2.1.0
 instance Monoid (Checker e a) where
   mempty = Checker $ const mempty
+
+-- | @since 2.5.0
+runChecker ::
+  forall (e :: Type) (a :: Type).
+  Checker e a ->
+  a ->
+  Acc (CheckerError e)
+runChecker (Checker f) = f
 
 {- | Render and prettified list of errors.
 
@@ -305,7 +314,7 @@ checkCredential = contramap classif checkByteString
 checkValidatorRedeemer :: Checker e UTXO
 checkValidatorRedeemer =
   contramap
-    ((fromMaybe (PubKeyCredential "") . utxoCredential) &&& utxoRedeemer)
+    ((fromMaybe (PubKeyCredential "") . view #credential) &&& view #redeemer)
     ( checkWith $ \case
         (ScriptCredential _, Just _) -> mempty
         (ScriptCredential h, Nothing) -> checkFail $ MissingRedeemer h
@@ -320,7 +329,7 @@ checkValidatorRedeemer =
 checkTxId :: Builder a => Checker e a
 checkTxId =
   checkAt AtTxId $
-    contramap (getTxId . bbTxId . unpack) checkByteString
+    contramap (getTxId . view #txId . unpack) checkByteString
 
 {- | Check if atleast one signature exists and all follows the format.
 
@@ -330,8 +339,8 @@ checkSignatures :: Builder a => Checker e a
 checkSignatures =
   checkAt AtSignatories $
     mconcat
-      [ contramap (fmap getPubKeyHash . bbSignatures . unpack) (checkFoldable checkByteString)
-      , contramap (length . bbSignatures . unpack) (checkIf (>= 1) NoSignature)
+      [ contramap (fmap getPubKeyHash . view #signatures . unpack) (checkFoldable checkByteString)
+      , contramap (length . view #signatures . unpack) (checkIf (>= 1) NoSignature)
       ]
 
 {- | Check if input, output, mint have zero sum.
@@ -340,14 +349,15 @@ checkSignatures =
 -}
 checkZeroSum :: Builder a => Checker e a
 checkZeroSum = Checker $
-  \(unpack -> BB {..}) ->
+  \(unpack -> bb) ->
     let diff x (Value y) = x <> Value (AssocMap.mapMaybe (Just . AssocMap.mapMaybe (Just . negate)) y)
-        -- TODO: This is quite wired, AssocMap doesn't implment Functor, but it does on haddock.
-        i = mconcat . toList $ utxoValue <$> bbInputs
-        o = mconcat . toList $ utxoValue <$> bbOutputs
-        m = foldMap mintToValue . toList $ bbMints
-     in if i <> m /= o <> bbFee
-          then basicError $ NoZeroSum (diff (i <> m <> bbFee) o)
+        -- TODO: This is quite wired, AssocMap doesn't implement Functor, but it
+        -- does on haddock.
+        i = mconcat . toList $ view #value <$> view #inputs bb
+        o = mconcat . toList $ view #value <$> view #outputs bb
+        m = foldMap mintToValue . toList . view #mints $ bb
+     in if i <> m /= o <> view #fee bb
+          then basicError $ NoZeroSum (diff (i <> m <> view #fee bb) o)
           else mempty
 
 {- | Check if all input UTXOs follow format and have TxOutRef.
@@ -360,22 +370,22 @@ checkInputs =
     [ checkAt AtInput $
         mconcat
           [ contramap
-              (fmap utxoValue . bbInputs . unpack)
+              (fmap (view #value) . view #inputs . unpack)
               (checkFoldable checkPositiveValue)
           , contramap
-              (fmap (fromMaybe (PubKeyCredential "") . utxoCredential) . bbInputs . unpack)
+              (fmap (fromMaybe (PubKeyCredential "") . view #credential) . view #inputs . unpack)
               (checkFoldable checkCredential)
           , contramap
-              (bbInputs . unpack)
+              (view #inputs . unpack)
               (checkFoldable checkValidatorRedeemer)
           ]
     , checkAt AtInputOutRef $
         mconcat
           [ contramap -- TODO: we should have `checkMaybe` here.
-              (fmap (getTxId . fromMaybe "" . utxoTxId) . bbInputs . unpack)
+              (fmap (getTxId . fromMaybe "" . view #txId) . view #inputs . unpack)
               (checkFoldable checkByteString)
           , contramap
-              (getDups . toList . fmap (fromMaybe 0 . utxoTxIdx) . bbInputs . unpack)
+              (getDups . toList . fmap (fromMaybe 0 . view #txIdx) . view #inputs . unpack)
               (checkWith $ const $ checkIfWith null DuplicateTxOutRefIndex)
           ]
     ]
@@ -397,10 +407,10 @@ checkReferenceInputs =
   checkAt AtReferenceInput $
     mconcat
       [ contramap
-          (fmap (fromMaybe (PubKeyCredential "") . utxoCredential) . bbReferenceInputs . unpack)
+          (fmap (fromMaybe (PubKeyCredential "") . view #credential) . view #referenceInputs . unpack)
           (checkFoldable checkCredential)
       , contramap
-          (fmap utxoValue . bbReferenceInputs . unpack)
+          (fmap (view #value) . view #referenceInputs . unpack)
           (checkFoldable checkPositiveValue)
       ]
 
@@ -411,7 +421,7 @@ checkReferenceInputs =
 checkMints :: Builder a => Checker e a
 checkMints =
   checkAt AtMint $
-    contramap (foldMap mintToValue . toList . bbMints . unpack) nullAda
+    contramap (foldMap mintToValue . toList . view #mints . unpack) nullAda
   where
     nullAda :: Checker e Value
     nullAda = checkWith $ \x ->
@@ -426,7 +436,7 @@ checkMints =
 checkFee :: Builder a => Checker e a
 checkFee =
   checkAt AtFee $
-    contramap (bbFee . unpack) onlyAda
+    contramap (view #fee . unpack) onlyAda
   where
     onlyAda :: Checker e Value
     onlyAda = checkWith $ \x ->
@@ -442,9 +452,9 @@ checkOutputs :: Builder a => Checker e a
 checkOutputs =
   checkAt AtOutput $
     mconcat
-      [ contramap (fmap utxoValue . bbOutputs . unpack) (checkFoldable checkPositiveValue)
+      [ contramap (fmap (view #value) . view #outputs . unpack) (checkFoldable checkPositiveValue)
       , contramap
-          (fmap (fromMaybe (PubKeyCredential "") . utxoCredential) . bbOutputs . unpack)
+          (fmap (fromMaybe (PubKeyCredential "") . view #credential) . view #outputs . unpack)
           (checkFoldable checkCredential)
       ]
 
@@ -455,7 +465,7 @@ checkOutputs =
 checkDatumPairs :: Builder a => Checker e a
 checkDatumPairs =
   checkAt AtData $
-    contramap (length . bbDatums . unpack) (checkIf (== 0) OrphanDatum)
+    contramap (length . view #datums . unpack) (checkIf (== 0) OrphanDatum)
 
 {- | Check if values in builder are normalized.
 
@@ -465,14 +475,14 @@ checkNormalized :: Builder a => Checker e a
 checkNormalized =
   mconcat
     [ checkAt AtOutput $
-        contramap (fmap utxoValue . bbOutputs . unpack) (checkFoldable checkValueNormalized)
+        contramap (fmap (view #value) . view #outputs . unpack) (checkFoldable checkValueNormalized)
     , checkAt AtInput $
-        contramap (fmap utxoValue . bbInputs . unpack) (checkFoldable checkValueNormalized)
+        contramap (fmap (view #value) . view #inputs . unpack) (checkFoldable checkValueNormalized)
     , checkAt AtReferenceInput $
-        contramap (fmap utxoValue . bbReferenceInputs . unpack) (checkFoldable checkValueNormalized)
+        contramap (fmap (view #value) . view #referenceInputs . unpack) (checkFoldable checkValueNormalized)
     , checkAt AtMint $
         contramap
-          (bbMints . unpack)
+          (view #mints . unpack)
           ( checkFoldable $
               checkWith $ \x ->
                 checkIf (\m -> m == normalizeMint m) $ NonNormalizedValue (mintToValue x)
