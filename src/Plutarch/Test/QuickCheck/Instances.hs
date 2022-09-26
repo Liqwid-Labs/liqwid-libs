@@ -3,13 +3,13 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Plutarch.Test.QuickCheck.Instances (
   TestableTerm (..),
+  unTestableTerm,
   PArbitrary (..),
   PCoArbitrary (..),
   pconstantT,
@@ -132,11 +132,18 @@ instance Testable (TestableTerm PBool) where
 
  @since 2.0.0
 -}
-data TestableTerm a = TestableTerm
-  { unTestableTerm :: forall s. Term s a
-  -- ^ Converts @TestableTerm@ back into Plutarch @ClosedTerm@
-  -- @since 2.0.0
-  }
+data TestableTerm (a :: S -> Type)
+  = TestableTerm (forall (s :: S). Term s a)
+
+{- | Converts a 'TestableTerm' into a 'ClosedTerm'.
+
+ @since 2.1.2
+-}
+unTestableTerm ::
+  forall (a :: S -> Type).
+  TestableTerm a ->
+  (forall (s :: S). Term s a)
+unTestableTerm (TestableTerm t) = t
 
 -- | @since 2.0.0
 instance (forall (s :: S). Num (Term s a)) => Num (TestableTerm a) where
@@ -799,14 +806,12 @@ pmatchT (TestableTerm p) f = TestableTerm $ pmatch p f
 
 ptFstT ::
   forall {a :: S -> Type} {b :: S -> Type}.
-  (PIsData a) =>
   TestableTerm (PTuple a b) ->
   TestableTerm (PAsData a)
 ptFstT = liftT (pfield @"_0" #)
 
 ptSndT ::
   forall {a :: S -> Type} {b :: S -> Type}.
-  (PIsData b) =>
   TestableTerm (PTuple a b) ->
   TestableTerm (PAsData b)
 ptSndT = liftT (pfield @"_1" #)

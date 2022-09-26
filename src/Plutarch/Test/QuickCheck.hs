@@ -1,12 +1,8 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -383,7 +379,7 @@ instance
           Nothing -> property True
       Right (Right p', _, t) ->
         case h of
-          Just h' -> haskEquiv @e @( 'ByComplete) h' (TestableTerm p') Nil
+          Just h' -> haskEquiv @e @'ByComplete h' (TestableTerm p') Nil
           Nothing -> failWith $ "Haskell expected failure, but Plutarch succeed.\n" <> show t
 
 -- | @since 2.1.0
@@ -413,7 +409,7 @@ instance
   HaskEquiv 'OnBoth 'ByComplete h p '[]
   where
   haskEquiv h p _ =
-    haskEquiv @( 'OnPEq) @( 'ByComplete) h p Nil .&&. haskEquiv @( 'OnPData) @( 'ByComplete) h p Nil
+    haskEquiv @'OnPEq  @'ByComplete h p Nil .&&. haskEquiv @'OnPData  @'ByComplete h p Nil
 
 {- | Simplified version of `haskEquiv`. It will use arbitrary instead of
      asking custom generators.
@@ -422,8 +418,7 @@ instance
 -}
 haskEquiv' ::
   forall (e :: Equality) (par :: Partiality) (h :: Type) (p :: S -> Type) (args :: [Type]).
-  ( PLamArgs p ~ args
-  , HaskEquiv e par h p args
+  ( HaskEquiv e par h p args
   , All Arbitrary args
   ) =>
   h ->

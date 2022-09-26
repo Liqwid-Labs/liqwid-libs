@@ -1,5 +1,4 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -39,10 +38,8 @@ import Plutarch.Prelude (
   (#==),
  )
 import Plutarch.Test.QuickCheck.Instances (
-  TestableTerm (
-    TestableTerm,
-    unTestableTerm
-  ),
+  TestableTerm (TestableTerm),
+  unTestableTerm,
  )
 import Test.QuickCheck (
   Arbitrary (arbitrary, shrink),
@@ -74,7 +71,6 @@ pattern PFn f <- (unTestableTerm . applyPFun -> f)
 
 applyPFun ::
   forall {a :: S -> Type} {b :: S -> Type}.
-  (PLift a, PLift b) =>
   PFun a b ->
   TestableTerm (a :--> b)
 applyPFun (PFun _ _ f) = f
@@ -126,9 +122,7 @@ instance
 
 showPFun ::
   forall (a :: S -> Type) (b :: S -> Type).
-  ( PLift a
-  , PLift b
-  , Show (PLifted a)
+  ( Show (PLifted a)
   , Show (PLifted b)
   ) =>
   PFun a b ->
