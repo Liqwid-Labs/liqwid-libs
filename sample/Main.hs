@@ -2,8 +2,34 @@ module Main (main) where
 
 import Data.Bifunctor (second)
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
-import Plutarch.Context
+import Plutarch.Context (
+  BaseBuilder,
+  Builder,
+  Checker (runChecker),
+  address,
+  buildMinting,
+  buildMinting',
+  buildSpending,
+  buildTxInfo,
+  buildTxOuts,
+  checkNormalized,
+  input,
+  mint,
+  mkNormalized,
+  normalizeValue,
+  output,
+  pubKey,
+  script,
+  withDatum,
+  withMinting,
+  withRefIndex,
+  withRefTxId,
+  withSpendingUTXO,
+  withStakingCredential,
+  withValue,
+ )
 import PlutusLedgerApi.V1 (getValue)
+import PlutusLedgerApi.V1.Value (AssetClass (AssetClass), assetClassValueOf)
 import PlutusLedgerApi.V2 (
   Address (Address),
   Credential (PubKeyCredential),
@@ -11,6 +37,7 @@ import PlutusLedgerApi.V2 (
   ScriptContext (scriptContextTxInfo),
   StakingCredential (StakingPtr),
   TxInfo (txInfoOutputs),
+  TxOut (txOutValue),
   Value (Value),
   adaSymbol,
   adaToken,
@@ -66,6 +93,11 @@ main = do
                     , ("cc", fromList [("token", 2)])
                     ]
               )
+    , testCase "mkNormalized retains ADA entry in output value" $
+        assetClassValueOf
+          (txOutValue . head . txInfoOutputs . scriptContextTxInfo $ adaOutput10000)
+          (AssetClass (adaSymbol, adaToken))
+          @?= 10000
     ]
   where
     a = buildMinting mempty (mkNormalized $ generalSample <> withMinting "aaaa")
@@ -85,6 +117,8 @@ main = do
     d = buildTxOuts $ mkNormalized generalSample
 
     zeroAdaTuple = (adaSymbol, fromList [(adaToken, 0)])
+
+    adaOutput10000 = buildMinting' $ mkNormalized $ output $ withValue (singleton adaSymbol adaToken 10000)
 
 generalSample :: (Monoid a, Builder a) => a
 generalSample =
