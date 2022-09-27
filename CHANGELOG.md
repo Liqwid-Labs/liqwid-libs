@@ -15,11 +15,18 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 * `BaseBuilder`, `MintingBuilder`, `SpendingBuilder`, `UTXO` and `Mint` no 
   longer export their constructors.
 * `runChecker` is now a regular function, not a field selector.
+* `checkBSLength` replaced old `checkByteString`. It checks if `ByteString` is
+  at given length.
 
 ### Removed
 
 * Field selectors for `BaseBuilder`, `MintingBuilder`, `SpendingBuilder`, 
   `UTXO` and `Mint`.
+
+### Fixed
+
+* `checkTxId` is fixed to follow the new ledger spec and will now look for 32
+  bytes long `ByteString`.
 
 ## 2.4.0 -- 2020-09-14
 

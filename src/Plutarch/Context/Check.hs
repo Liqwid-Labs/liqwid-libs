@@ -18,7 +18,7 @@ module Plutarch.Context.Check (
   checkFail,
   checkBool,
   checkWith,
-  checkByteString,
+  checkBSLength,
   checkPositiveValue,
   checkTxId,
   checkSignatures,
@@ -275,12 +275,12 @@ checkIfWith f err = Checker $ \y ->
     then mempty
     else basicError $ err y
 
-{- | Verify on-chain bytestring, which as to be 28 in length.
+{- | Verify on-chain bytestring if it matches the given length
 
  @since 2.1.0
 -}
-checkByteString :: Checker e BuiltinByteString
-checkByteString = checkWith $ \x -> contramap lengthOfByteString $ checkIf (== 28) (IncorrectByteString $ LedgerBytes x)
+checkBSLength :: Int -> Checker e BuiltinByteString
+checkBSLength len = checkWith $ \x -> contramap lengthOfByteString $ checkIf (== toInteger len) (IncorrectByteString $ LedgerBytes x)
 
 {- | Check if all tokens in `Value` are positive.
 
@@ -302,7 +302,7 @@ checkValueNormalized =
     isNormalized val = getValue (normalizeValue val) == getValue val
 
 checkCredential :: Checker e Credential
-checkCredential = contramap classif checkByteString
+checkCredential = contramap classif $ checkBSLength 28
   where
     classif (PubKeyCredential (PubKeyHash x)) = x
     classif (ScriptCredential (ValidatorHash x)) = x
@@ -329,7 +329,7 @@ checkValidatorRedeemer =
 checkTxId :: Builder a => Checker e a
 checkTxId =
   checkAt AtTxId $
-    contramap (getTxId . view #txId . unpack) checkByteString
+    contramap (getTxId . view #txId . unpack) (checkBSLength 32)
 
 {- | Check if atleast one signature exists and all follows the format.
 
@@ -339,7 +339,7 @@ checkSignatures :: Builder a => Checker e a
 checkSignatures =
   checkAt AtSignatories $
     mconcat
-      [ contramap (fmap getPubKeyHash . view #signatures . unpack) (checkFoldable checkByteString)
+      [ contramap (fmap getPubKeyHash . view #signatures . unpack) (checkFoldable $ checkBSLength 28)
       , contramap (length . view #signatures . unpack) (checkIf (>= 1) NoSignature)
       ]
 
@@ -383,7 +383,7 @@ checkInputs =
         mconcat
           [ contramap -- TODO: we should have `checkMaybe` here.
               (fmap (getTxId . fromMaybe "" . view #txId) . view #inputs . unpack)
-              (checkFoldable checkByteString)
+              (checkFoldable $ checkBSLength 28)
           , contramap
               (getDups . toList . fmap (fromMaybe 0 . view #txIdx) . view #inputs . unpack)
               (checkWith $ const $ checkIfWith null DuplicateTxOutRefIndex)

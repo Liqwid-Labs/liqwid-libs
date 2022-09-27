@@ -80,7 +80,7 @@ module Plutarch.Context (
   C.checkIfWith,
   C.checkBool,
   C.checkWith,
-  C.checkByteString,
+  C.checkBSLength,
   C.checkPositiveValue,
   C.checkTxId,
   C.handleErrors,
