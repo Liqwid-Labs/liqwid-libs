@@ -2,6 +2,18 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 2.5.0 -- 2020-09-26
+
+### Modified
+
+* `checkBSLength` replaced old `checkByteString`. It checks if `ByteString` is
+  at given length.
+
+### Fixed
+
+* `checkTxId` is fixed to follow the new ledger spec and will now look for 32
+  bytes long `ByteString`.
+
 ## 2.4.0 -- 2020-09-14
 
 ### Added
