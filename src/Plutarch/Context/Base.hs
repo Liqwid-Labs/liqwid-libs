@@ -79,7 +79,7 @@ import Control.Arrow (Arrow ((&&&)))
 import Data.Foldable (Foldable (toList))
 import Data.Kind (Type)
 import Data.List (sortBy)
-import Data.Maybe (fromMaybe, isNothing, mapMaybe)
+import Data.Maybe (fromMaybe, mapMaybe)
 import GHC.Exts (fromList)
 import Optics (Lens', lens, over, view)
 import Plutarch (S)
@@ -779,21 +779,42 @@ sortMap (AssocMap.toList -> m) =
 
 {- | Normalize and sort 'Value'.
 
+    NOTE: this function will silently drop values in the underlying
+    map. Read below for more info.
+
     - 'Value' entries that match on both the 'CurrencySymbol' and
       'TokenName' are combined, with their amounts added together
     - 'Value' entries in the outer map are sorted by currency symbol
     - 'Value' entries in the inner map are sorted by token name
     - Non-ADA zero-entries are dropped
     - If the `Value` is missing an ADA entry, as 0 ADA entries is added
+    - Non-Ada "TokenName"s under the Ada currency symbol are silently
+      stripped.
 
  @since 2.4.0
 -}
 normalizeValue :: Value -> Value
 normalizeValue (getValue -> val) =
-  let val' =
-        if isNothing $ AssocMap.lookup "" val
-          then AssocMap.insert adaSymbol (AssocMap.fromList [(adaToken, 0)]) val
-          else val
+  let valWith0Ada =
+        AssocMap.insert
+          adaSymbol
+          (AssocMap.fromList [(adaToken, 0)])
+          val
+      val' = case AssocMap.lookup adaSymbol val of
+        Nothing -> valWith0Ada -- No Ada symbol present, add the 0 entry
+        Just adaTokenEntries -> case AssocMap.lookup adaToken adaTokenEntries of
+          Nothing -> valWith0Ada -- No Ada token present, add the 0 entry
+          Just adaAmount ->
+            {- Ada symbol and token present, strip out ada symbol
+               entires (which may contain non-Ada tokens and/or duplicates),
+               and add back in only the correct Ada asset class amount
+            -}
+            AssocMap.insert
+              adaSymbol
+              (AssocMap.fromList [(adaToken, adaAmount)])
+              ( AssocMap.fromList $
+                  filter (\e -> fst e /= adaSymbol) (AssocMap.toList val)
+              )
    in Value.Value
         . AssocMap.filter (/= AssocMap.empty)
         . sortMap

@@ -98,6 +98,23 @@ main = do
           (txOutValue . head . txInfoOutputs . scriptContextTxInfo $ adaOutput10000)
           (AssetClass (adaSymbol, adaToken))
           @?= 10000
+    , testCase "non-Ada tokens are dropped by `normalizeValue`" $
+        ( normalizeValue . Value . AssocMap.fromList $
+            [
+              ( adaSymbol
+              , AssocMap.fromList [ (adaToken, 100)
+                  , ("nonAdaToken", 100)
+                  ]
+              )
+            ]
+        )
+          @?= ( Value . AssocMap.fromList $
+                  [
+                    ( adaSymbol
+                    , AssocMap.fromList [(adaToken, 100)]
+                    )
+                  ]
+              )
     ]
   where
     a = buildMinting mempty (mkNormalized $ generalSample <> withMinting "aaaa")
