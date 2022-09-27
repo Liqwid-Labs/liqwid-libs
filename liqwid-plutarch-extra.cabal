@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               liqwid-plutarch-extra
-version:            3.8.0
+version:            3.9.0
 synopsis:           A collection of Plutarch extras from Liqwid Labs
 description:        Several useful data types and functions for Plutarch.
 homepage:           https://github.com/Liqwid-Labs/liqwid-plutarch-extra
@@ -96,6 +96,7 @@ library
     Plutarch.Extra.Compile
     Plutarch.Extra.Const
     Plutarch.Extra.DebuggableScript
+    Plutarch.Extra.ExchangeRate
     Plutarch.Extra.Field
     Plutarch.Extra.FixedDecimal
     Plutarch.Extra.Function
@@ -110,6 +111,7 @@ library
     Plutarch.Extra.Ord
     Plutarch.Extra.Precompile
     Plutarch.Extra.Profunctor
+    Plutarch.Extra.Rational
     Plutarch.Extra.Record
     Plutarch.Extra.ScriptContext
     Plutarch.Extra.Star
@@ -128,11 +130,13 @@ library
     , aeson
     , bytestring
     , composition-prelude
+    , containers
     , data-default
     , deepseq
     , generics-sop
     , lens
     , optics-core
+    , optics-th
     , plutarch-extra
     , plutarch-numeric
     , plutus-core

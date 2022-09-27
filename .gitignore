@@ -66,5 +66,5 @@ TAGS
 *.warn
 haddock/
 
-# Other
+# Other weirdness
 clear\ /

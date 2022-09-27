@@ -14,10 +14,10 @@ import Control.Composition (on, (.*))
 import Data.Bifunctor (first)
 import Data.Proxy (Proxy (Proxy))
 import GHC.TypeLits (KnownNat, Nat, natVal)
-import Plutarch.Api.V1 (PValue)
-import Plutarch.Api.V2 (AmountGuarantees, KeyGuarantees)
+import Plutarch.Api.V1 (AmountGuarantees (NonZero), PValue)
+import qualified Plutarch.Api.V1.Value as Value
+import Plutarch.Api.V2 (KeyGuarantees (Sorted))
 import Plutarch.Extra.Function (pflip)
-import Plutarch.Extra.Value (psingletonValue)
 import Plutarch.Num (PNum (pfromInteger, (#*)))
 import qualified Plutarch.Numeric.Additive as A (
   AdditiveMonoid (zero),
@@ -95,17 +95,17 @@ instance KnownNat u => A.AdditiveMonoid (Term s (PFixedDecimal u)) where
 {- | Convert given decimal into Ada value. Input should be Ada value with decimals; outputs
  will be lovelace values in integer.
 
- @since 1.0.0
+ @since 3.9.0
 -}
 decimalToAdaValue ::
-  forall (s :: S) (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (unit :: Nat).
+  forall (s :: S) (unit :: Nat).
   KnownNat unit =>
-  Term s (PFixedDecimal unit :--> PValue keys amounts)
+  Term s (PFixedDecimal unit :--> PValue 'Sorted 'NonZero)
 decimalToAdaValue =
   phoistAcyclic $
     plam $ \(pto -> dec) ->
       let adaValue = (pdiv # dec # pconstant (natVal (Proxy @unit))) * pconstant 1000000
-       in psingletonValue # pconstant "" # pconstant "" #$ adaValue
+       in Value.psingleton # pconstant "" # pconstant "" #$ adaValue
 
 {- | Convert @PInteger@ to @PFixedDecimal@.
 

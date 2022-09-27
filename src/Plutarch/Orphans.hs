@@ -12,6 +12,8 @@ module Plutarch.Orphans () where
 
 import Control.Composition (on, (.*))
 import Data.Coerce (Coercible, coerce)
+import Data.Ratio (Ratio, denominator, numerator, (%))
+
 import Plutarch.Api.V2 (PDatumHash (PDatumHash), PScriptHash (PScriptHash))
 import Plutarch.Builtin (PIsData (pdataImpl, pfromDataImpl))
 import Plutarch.Extra.TermCont (ptryFromC)
@@ -30,7 +32,9 @@ import Data.Text.Encoding (encodeUtf8)
 import PlutusLedgerApi.V1.Bytes (bytes, encodeByteString, fromHex)
 import PlutusLedgerApi.V2 (
   BuiltinByteString,
+  BuiltinData (BuiltinData),
   CurrencySymbol (CurrencySymbol),
+  Data (I, List),
   LedgerBytes (LedgerBytes),
   MintingPolicy (MintingPolicy),
   POSIXTime (POSIXTime),
@@ -44,6 +48,7 @@ import PlutusLedgerApi.V2 (
   Validator (Validator),
   ValidatorHash (ValidatorHash),
  )
+import PlutusTx (FromData (fromBuiltinData), ToData (toBuiltinData))
 
 newtype Flip f a b = Flip (f b a) deriving stock (Generic)
 
@@ -96,6 +101,22 @@ instance PTryFrom PData (PAsData PScriptHash) where
         (f ())
         (ptraceError "ptryFrom(PScriptHash): must be 28 bytes long")
     pure (punsafeCoerce opq, pcon $ PScriptHash unwrapped)
+
+----------------------------------------
+-- Instances for Ratios
+
+instance ToData (Ratio Integer) where
+  toBuiltinData rat =
+    BuiltinData $
+      List
+        [ I $ numerator rat
+        , I $ denominator rat
+        ]
+
+instance FromData (Ratio Integer) where
+  fromBuiltinData (BuiltinData (List [I num, I denom])) =
+    pure $ num % if num == 0 then 1 else denom
+  fromBuiltinData _ = Nothing
 
 ----------------------------------------
 -- Aeson (JSON) instances

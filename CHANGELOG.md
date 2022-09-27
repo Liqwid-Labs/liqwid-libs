@@ -2,6 +2,82 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.9.0 -- 2022-09-23
+
+### Added
+
+* `Plutarch.Extra.ExchangeRate`: Utilities for working with ExchangeRates at 
+  the type level.
+* `Plutarch.Extra.Rational`: arithmetic and lifting functions for rational types.
+* `ToData` and `FromData` instances for `Ratio Integer` to `Plutarch.Orphans`
+* `Plutarch.Extra.Value`:
+  * `passetClassDataValue` for constructing singleton `PValue`s based on a
+    `PAssetClassData`.
+  * `pvalue` and `pvaluePositive` for generating a `PValue` from its underlying 
+    representation, with `NoGuarantees` and `Positive` guarantees, respectively. 
+  * `passetClassValueOf`, for finding the quantity of a particular `PAssetClass`
+    in a `PValue`. A 'ticked' version for working with a Haskell-level
+    `AssetClass` also added.
+  * `pmatchValueAssets`, for 'pattern-matching' on (underlying representations
+    of) `PValue`s.
+  * `psplitValue`, for 'separating' the first entry of a `PValue`.
+  * A range of `PComparator`s for comparing `PValue`s.
+* `Plutarch.Extra.List`: 
+  * `pfromList`, to turn a Haskell-level list of terms into a `PListLike`.
+  * `ptryElimSingle`, which either eliminates a singleton list-like or errors if
+    given a non-singleton.
+  * `phandleList`, a version of `pelimList` with the arguments re-ordered.
+* `Plutarch.Extra.Map`:
+  * `plookupGe`, which returns a submap with keys greater than the needle if the
+    search is successful.
+  * `phandleMin`, a version of `phandleList` for sorted `PMap`s.
+* `Plutarch.Extra.Ord`:
+  * `plessThanBy` and `pgreaterThanBy`, which are strict comparison versions of
+    `pleqBy` and `pgeqBy`.
+  * `plessThanMapBy` (and equivalents for the other comparisons), designed for
+    comparing two `PMap`s based on a `PComparator` on values, used on shared
+    keys.
+  * `plessThanValueBy` (and equivalents for the other comparisons), designed for
+    comparing two `PValue`s based on a `PComparator` for `PInteger`s, used on
+    shared keys.
+
+### Modified
+
+* `Plutarch.Extra.AssetClass`: Modified the old asset-class module to used tagged
+  variants. Provides Data and Scott-encoded versions of Assetclasses
+  (currency symbol and token name pairs), along with helper functions and
+  conversion functions.
+  * Field names have changed from `currencySymbol` and `tokenName` to `symbol`
+    and `name`, and labeled optics have been added.
+* `Plutarch.Extra.ScriptContext`: `pisTokenSpent` now tags a `tag :: Symbol` in
+  its type, reflecting the move towards tag AssetClasses
+* `Plutarch.Extra.Value`:
+  * Changed `passetClassValue` to become `passetClassDataValue`, since it uses
+  the data-encoded version.
+  * The removal of `psingletonValue` changes the type signature to return a 
+  `'Sorted`, `'Nonzero` `Value`.
+  * The following functions now used tagged `AssetClass`es:
+    * `pgeqByClass'` 
+    * `passetClassValueOf'`
+  * `mkSingleValue` renamed to `psingleValue`; its 'ticked' variant is renamed
+    analogously.
+  * Type arguments for `pvalueOf` are now: `KeyGuarantees`, `AmountGuarantees`,
+    `S`, in that order.
+  * Type arguments for `padaOf` are now: `KeyGuarantees`, `AmountGuarantees`,
+    `S`, in that order.
+* `Plutarch.Extra.FixedDecimal`: 
+  * The removal of `psingletonValue` changes the type signature to return a 
+  `'Sorted`, `'Nonzero` `Value`. 
+
+### Removed
+
+* `Plutarch.Extra.Value`:
+ * `psingletonValue`, as this is provided upstream by Plutarch in
+   `Plutarch.Api.V1.Value`. This changes type signatures to include a `'Sorted`,
+     `NonZero` value (see "Modified" above).
+ * `pvalueOf`, as this is provided upstream by Plutarch in
+   `Plutarch.Api.V1.Value`.
+
 ## 3.8.0 -- 2022-09-26
 
 ### Added

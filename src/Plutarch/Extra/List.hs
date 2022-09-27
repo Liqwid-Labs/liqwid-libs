@@ -12,6 +12,7 @@
 module Plutarch.Extra.List (
   -- * Construction
   preplicate,
+  pfromList,
 
   -- * Transformation
   pmapMaybe,
@@ -21,8 +22,47 @@ module Plutarch.Extra.List (
   plookupAssoc,
 
   -- * Elimination
+  phandleList,
   precListLookahead,
+  ptryElimSingle,
 ) where
+
+{- | 'pelimList' with re-ordered arguments. Useful for cases when the \'nil
+ case\' is simple, but the \'cons case\' is complex.
+
+ @since 3.9.0
+-}
+phandleList ::
+  forall (a :: S -> Type) (r :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+  (PElemConstraint ell a, PListLike ell) =>
+  Term s (ell a) ->
+  Term s r ->
+  (Term s a -> Term s (ell a) -> Term s r) ->
+  Term s r
+phandleList xs whenNil whenCons = pelimList whenCons whenNil xs
+
+{- | Similar to 'pelimList', but assumes the argument list-like is a singleton,
+ erroring otherwise.
+
+ @since 3.9.0
+-}
+ptryElimSingle ::
+  forall (ell :: (S -> Type) -> S -> Type) (a :: S -> Type) (r :: S -> Type) (s :: S).
+  (PElemConstraint ell a, PListLike ell) =>
+  (Term s a -> Term s r) ->
+  Term s (ell a) ->
+  Term s r
+ptryElimSingle f = pelimList go (ptraceError emptyErr)
+  where
+    go ::
+      Term s a ->
+      Term s (ell a) ->
+      Term s r
+    go h t = pif (pnull # t) (f h) (ptraceError nonSingleErr)
+    emptyErr :: Term s PString
+    emptyErr = "ptryElimSingle: Found empty list-like."
+    nonSingleErr :: Term s PString
+    nonSingleErr = "ptryElimSingle: Found non-singleton list-like."
 
 {- | Similar to 'pmap', but allows elements to be thrown out. More precisely,
  for elements where the function argument returns 'PNothing', the
@@ -159,3 +199,13 @@ precListLookahead whenContinuing whenOne whenDone =
       pelimList
         (whenContinuing self h)
         (whenOne h)
+
+{- | Turn a Haskell-level list of "Term"s into a "PListLike"
+ @since 3.9.0
+-}
+pfromList ::
+  forall (list :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
+  (PIsListLike list a) =>
+  [Term s a] ->
+  Term s (list a)
+pfromList = foldr (\x xs -> pcons # x # xs) pnil

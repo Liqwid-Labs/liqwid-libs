@@ -27,6 +27,7 @@ module Plutarch.Extra.ScriptContext (
   pfromInlineDatum,
 ) where
 
+import GHC.TypeLits (Symbol)
 import Plutarch.Api.V1 (
   AmountGuarantees (NoGuarantees, NonZero, Positive),
   PCredential (PPubKeyCredential, PScriptCredential),
@@ -51,12 +52,13 @@ import Plutarch.Api.V2 (
   PTxOut (PTxOut),
   PTxOutRef,
  )
-import Plutarch.Extra.AssetClass (PAssetClass, passetClassValueOf)
+import Plutarch.Extra.AssetClass (PAssetClass)
 import Plutarch.Extra.Function ((#.*))
 import Plutarch.Extra.Functor (PFunctor (pfmap))
 import Plutarch.Extra.List (pfindJust)
 import Plutarch.Extra.Maybe (pfromJust, pisJust, pjust, pnothing, ptraceIfNothing)
 import Plutarch.Extra.TermCont (pletC, pmatchC)
+import Plutarch.Extra.Value (passetClassValueOf)
 import Plutarch.Unsafe (punsafeCoerce)
 
 pownTxOutRef ::
@@ -143,9 +145,16 @@ pvalueSpent = phoistAcyclic $
      When using this as an authority check, you __MUST__ ensure the authority
      knows how to ensure its end of the contract.
 
-    @since 1.1.0
+    @since 3.9.0
 -}
-pisTokenSpent :: forall (s :: S). Term s (PAssetClass :--> PBuiltinList PTxInInfo :--> PBool)
+pisTokenSpent ::
+  forall (tag :: Symbol) (s :: S).
+  Term
+    s
+    ( PAssetClass tag
+        :--> PBuiltinList PTxInInfo
+        :--> PBool
+    )
 pisTokenSpent =
   plam $ \tokenClass inputs ->
     0
@@ -155,7 +164,7 @@ pisTokenSpent =
               PTxInInfo txInInfo <- pmatchC txInInfo'
               PTxOut txOut' <- pmatchC $ pfromData $ pfield @"resolved" # txInInfo
               let value = pfromData $ pfield @"value" # txOut'
-              pure $ acc + passetClassValueOf # value # tokenClass
+              pure $ acc + passetClassValueOf # tokenClass # value
           )
         # 0
         # inputs
