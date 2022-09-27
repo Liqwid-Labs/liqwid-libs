@@ -569,10 +569,10 @@ instance Eq SomeAssetClass where
 
 instance Ord SomeAssetClass where
   (SomeAssetClass a) `compare` (SomeAssetClass b) =
-    let symbolOrder = (view #symbol a) `compare` (view #symbol b)
+    let symbolOrder = view #symbol a `compare` view #symbol b
      in if symbolOrder /= EQ
           then symbolOrder
-          else (view #name a) `compare` (view #name b)
+          else view #name a `compare` view #name b
 
 instance HRecToList '[] (x :: Type) where
   hrecToList _ = []
