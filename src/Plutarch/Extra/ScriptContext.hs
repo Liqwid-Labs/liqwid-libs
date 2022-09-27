@@ -145,9 +145,11 @@ pvalueSpent = phoistAcyclic $
      When using this as an authority check, you __MUST__ ensure the authority
      knows how to ensure its end of the contract.
 
-    @since 3.8.0
+    @since 3.9.0
 -}
-pisTokenSpent :: forall (tag :: Symbol) (s :: S). Term s (PAssetClass tag :--> PBuiltinList PTxInInfo :--> PBool)
+pisTokenSpent :: forall (tag :: Symbol) (s :: S). Term s (PAssetClass tag
+                                                          :--> PBuiltinList PTxInInfo
+                                                          :--> PBool)
 pisTokenSpent =
   plam $ \tokenClass inputs ->
     0
@@ -157,7 +159,7 @@ pisTokenSpent =
               PTxInInfo txInInfo <- pmatchC txInInfo'
               PTxOut txOut' <- pmatchC $ pfromData $ pfield @"resolved" # txInInfo
               let value = pfromData $ pfield @"value" # txOut'
-              pure $ acc + passetClassValueOf # value # tokenClass
+              pure $ acc + passetClassValueOf # tokenClass # value
           )
         # 0
         # inputs

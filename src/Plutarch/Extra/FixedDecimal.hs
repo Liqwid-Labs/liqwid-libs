@@ -95,17 +95,17 @@ instance KnownNat u => A.AdditiveMonoid (Term s (PFixedDecimal u)) where
 {- | Convert given decimal into Ada value. Input should be Ada value with decimals; outputs
  will be lovelace values in integer.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 decimalToAdaValue ::
-  forall (s :: S) (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (unit :: Nat).
+  forall (s :: S) (unit :: Nat).
   KnownNat unit =>
-  Term s (PFixedDecimal unit :--> PValue keys amounts)
+  Term s (PFixedDecimal unit :--> PValue 'Sorted 'NonZero)
 decimalToAdaValue =
   phoistAcyclic $
     plam $ \(pto -> dec) ->
       let adaValue = (pdiv # dec # pconstant (natVal (Proxy @unit))) * pconstant 1000000
-       in psingletonValue # pconstant "" # pconstant "" #$ adaValue
+       in Value.psingleton # pconstant "" # pconstant "" #$ adaValue
 
 {- | Convert @PInteger@ to @PFixedDecimal@.
 

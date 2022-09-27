@@ -1,3 +1,6 @@
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE PolyKinds #-}
+
 module Plutarch.Extra.Value (
   -- * Creation
   passetClassDataValue,
@@ -29,6 +32,7 @@ module Plutarch.Extra.Value (
 
 ) where
 
+import Optics.Getter (view)
 import Data.Coerce (coerce)
 import Data.List (nub, sort)
 import Data.Map.Strict (Map)
@@ -51,7 +55,7 @@ import Plutarch.Builtin (pforgetData, ppairDataBuiltin)
 import Plutarch.DataRepr.Internal.Field (HRec (HCons, HNil), Labeled (Labeled))
 import Plutarch.Extra.Applicative (ppure)
 import Plutarch.Extra.AssetClass (
-    AssetClass (AssetClass, name, symbol),
+    AssetClass (AssetClass),
     PAssetClass (PAssetClass),
     PAssetClassData,
  )
@@ -70,7 +74,7 @@ import Plutarch.Extra.TermCont (pmatchC)
 {- | Create a 'PValue' that only contains a specific amount of tokens, described
  by a 'PAssetClassData'.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 passetClassDataValue ::
     forall (s :: S).
@@ -87,7 +91,7 @@ passetClassDataValue = phoistAcyclic $
 
 {- | Helper to construct the \'inner mapping\' of a 'PValue'.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 psingleValue ::
     forall (key :: KeyGuarantees) (unit :: Symbol) (s :: S).
@@ -106,7 +110,7 @@ psingleValue = phoistAcyclic $
 
 {- | As 'psingleValue', but using a Haskell-level 'AssetClass'.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 psingleValue' ::
     forall (unit :: Symbol) (k :: KeyGuarantees) (s :: S).
@@ -124,7 +128,7 @@ psingleValue' (AssetClass sym tk) =
 {- | Construct a 'PValue' from its underlying representation.
  There are "NoGuarantees" on the amounts.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 pvalue ::
     forall (k :: KeyGuarantees) (s :: S).
@@ -143,7 +147,7 @@ pvalue = phoistAcyclic $ plam $ pdata . pcon . PValue . pcon . PMap
  The amounts are guaranteed to be "Positive", so this is suitable for
  construction of "PTxOut"s.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 pvaluePositive ::
     forall (k :: KeyGuarantees) (s :: S).
@@ -168,7 +172,7 @@ pvaluePositive =
 
 {- | Get the amount of ada of a 'PValue'.
 
-   @since 3.8.0
+   @since 3.9.0
 -}
 padaOf ::
     forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
@@ -179,7 +183,7 @@ padaOf = phoistAcyclic $
 
 {- | As 'passetClassValueOf', but using a Haskell-level 'AssetClass'.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 passetClassValueOf' ::
     forall (unit :: Symbol) (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
@@ -193,7 +197,7 @@ passetClassValueOf' (AssetClass sym token) =
 {- | Given a 'PAssetClass' and a 'PValue', look up the amount corresponding to
  that 'PAssetClass'.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 passetClassValueOf ::
     forall
@@ -227,7 +231,7 @@ passetClassValueOf = phoistAcyclic $
  >    rec2 <- matchValueAssets rep $ (Proxy @"ada" .|== adaClass) HNIl
  >    let adaFromRep = rec.ada
 
- @since 3.8.0
+ @since 3.9.0
 -}
 pmatchValueAssets ::
     forall (input :: [(Symbol, Type)]) (s :: S).
@@ -263,7 +267,7 @@ pmatchValueAssets pvaluemap inputs = do
   NOTE: All properly normalized values will contain an Ada entry, even if
   that entry is 0.
 
-  @since 3.8.0
+  @since 3.9.0
 -}
 psplitValue ::
     forall (v :: AmountGuarantees) (s :: S).
@@ -325,7 +329,7 @@ psymbolValueOf =
  * When the \'inner map\' corresponding to the first 'PCurrencySymbol' key has
  no entries.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 pelimValue ::
     forall (amounts :: AmountGuarantees) (r :: S -> Type) (s :: S).
@@ -348,7 +352,7 @@ pelimValue whenCons whenNil xs = phandleMin (pto xs) whenNil $ \k v kvs ->
 
 {- | Eliminator for the inner type of a 'PValue'.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 precValue ::
     forall r (k :: KeyGuarantees) s.
@@ -426,7 +430,7 @@ precValue mcons =
 {- | Compare only on the basis of a particular 'PCurrencySymbol' and
  'PTokenName' entry.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 pbyClassComparator ::
     forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
@@ -437,7 +441,7 @@ pbyClassComparator = phoistAcyclic $
 
 {- | Compare only the entries corresponding to a particular 'PCurrencySymbol'.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 pbySymbolComparator ::
     forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
@@ -448,7 +452,7 @@ pbySymbolComparator = phoistAcyclic $
 
 {- | As 'pbyClassComparator', but using a Haskell-level 'AssetClass' instead.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 pbyClassComparator' ::
     forall (unit :: Symbol) (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
@@ -479,7 +483,6 @@ phasOnlyOneTokenOfCurrencySymbol ::
   forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
   Term s (PCurrencySymbol :--> PValue keys amounts :--> PBool)
 phasOnlyOneTokenOfCurrencySymbol = phoistAcyclic $
-<<<<<<< HEAD
     plam $ \cs vs ->
         psymbolValueOf # cs # vs #== 1
             #&& (plength #$ pto $ pto $ pto vs) #== 1
@@ -567,10 +570,10 @@ instance Eq SomeAssetClass where
 
 instance Ord SomeAssetClass where
     (SomeAssetClass a) `compare` (SomeAssetClass b) =
-        let symbolOrder = symbol a `compare` symbol b
+        let symbolOrder = (view #symbol a) `compare` (view #symbol b)
          in if symbolOrder /= EQ
                 then symbolOrder
-                else name a `compare` name b
+                else (view #name a) `compare` (view #name b)
 
 instance HRecToList '[] (x :: Type) where
     hrecToList _ = []
@@ -651,8 +654,8 @@ matchOrTryRec requiredAsset = phoistAcyclic $
         precValue
             ( \self pcurrencySymbol pTokenName pint rest ->
                 pif
-                    ( pconstantData (symbol requiredAsset) #== pcurrencySymbol
-                        #&& pconstantData (name requiredAsset) #== pTokenName
+                    ( pconstantData (view #symbol requiredAsset) #== pcurrencySymbol
+                        #&& pconstantData (view #name requiredAsset) #== pTokenName
                     )
                     -- assetClass found - return its quantity and tail of PValueMap
                     (pcon $ PPair pint rest)

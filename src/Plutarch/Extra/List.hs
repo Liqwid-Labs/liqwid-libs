@@ -31,7 +31,7 @@ module Plutarch.Extra.List (
 {- | 'pelimList' with re-ordered arguments. Useful for cases when the \'nil
  case\' is simple, but the \'cons case\' is complex.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 phandleList ::
     forall (a :: S -> Type) (r :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
@@ -45,7 +45,7 @@ phandleList xs whenNil whenCons = pelimList whenCons whenNil xs
 {- | Similar to 'pelimList', but assumes the argument list-like is a singleton,
  erroring otherwise.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 ptryElimSingle ::
     forall (ell :: (S -> Type) -> S -> Type) (a :: S -> Type) (r :: S -> Type) (s :: S).
@@ -202,7 +202,7 @@ precListLookahead whenContinuing whenOne whenDone =
             (whenOne h)
 
 {- | Turn a Haskell-level list of "Term"s into a "PListLike"
- @since 3.8.0
+ @since 3.9.0
 -}
 pfromList ::
     forall (list :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).

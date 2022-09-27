@@ -293,7 +293,7 @@ pleqBy = phoistAcyclic $
 
 {- | Uses a 'PComparator' for a less-than check.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 plessThanBy ::
     forall (a :: S -> Type) (s :: S).
@@ -320,7 +320,7 @@ pgeqBy = phoistAcyclic $
 
 {- | Uses a 'PComparator' for a greater-than check.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 pgreaterThanBy ::
     forall (a :: S -> Type) (s :: S).
@@ -336,7 +336,7 @@ pgreaterThanBy = phoistAcyclic $
  less-than-or-equal-to its corresponding value in the second 'PMap'; in any
  other case, this returns 'PFalse'.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 pleqMapBy ::
     forall (k :: S -> Type) (v :: S -> Type) (s :: S).
@@ -351,7 +351,7 @@ pleqMapBy = phoistAcyclic $
 {- | As 'pleqMapBy', but the \'expected comparison\' over values is strictly
  less than, rather than less-than-or-equal-to.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 plessThanMapBy ::
     forall (k :: S -> Type) (v :: S -> Type) (s :: S).
@@ -366,7 +366,7 @@ plessThanMapBy = phoistAcyclic $
 {- | As 'pleqMapBy', but the \'expected comparison\' over values is
  greater-than-or-equal-to, rather than less-than-or-equal-to.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 pgeqMapBy ::
     forall (k :: S -> Type) (v :: S -> Type) (s :: S).
@@ -381,7 +381,7 @@ pgeqMapBy = phoistAcyclic $
 {- | As 'pleqMapBy', but the \'expected comparison\' over values is strictly
  greater than, rather than less-than-or-equal-to.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 pgreaterThanMapBy ::
     forall (k :: S -> Type) (v :: S -> Type) (s :: S).
@@ -398,7 +398,7 @@ pgreaterThanMapBy = phoistAcyclic $
  in both 'PValue's, their corresponding \'inner maps\' all give 'PTrue' using
  'pleqMapBy' with the given comparator.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 pleqValueBy ::
     forall (amount :: AmountGuarantees) (s :: S).
@@ -412,7 +412,7 @@ pleqValueBy = phoistAcyclic $
 {- | As 'pleqValueBy', except the \'comparison function\' used is
  'plessThanMapBy'.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 plessThanValueBy ::
     forall (amount :: AmountGuarantees) (s :: S).
@@ -425,7 +425,7 @@ plessThanValueBy = phoistAcyclic $
 
 {- | As 'pleqValueBy', except the \'comparison function\' used is 'pgeqMapBy'.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 pgeqValueBy ::
     forall (amount :: AmountGuarantees) (s :: S).
@@ -439,7 +439,7 @@ pgeqValueBy = phoistAcyclic $
 {- | As 'pleqValueBy', except the \'comparison function\' used is
  'pgreaterThanMapBy'.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 pgreaterThanValueBy ::
     forall (amount :: AmountGuarantees) (s :: S).
@@ -903,18 +903,6 @@ pswap ::
   (Term s a -> Term s a -> Term s r) ->
   Term s r
 pswap cmp x y cont = pif (pleqBy # cmp # x # y) (cont x y) (cont y x)
-
--- pelimList with the list-like first, and handles the 'nil case' before the
--- 'cons' case
-phandleList ::
-  forall (a :: S -> Type) (r :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
-  (PElemConstraint ell a, PListLike ell) =>
-  Term s (ell a) ->
-  Term s r ->
-  (Term s a -> Term s (ell a) -> Term s r) ->
-  Term s r
-phandleList xs whenNil whenCons = pelimList whenCons whenNil xs
-
 
 -- ensures the argument is sorted by the comparator, erroring if not
 passertSorted ::

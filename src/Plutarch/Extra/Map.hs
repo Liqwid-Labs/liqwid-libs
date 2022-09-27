@@ -60,7 +60,7 @@ import qualified Plutarch.List as PList
  argument, if used, will be given the smallest key in the 'PMap', with its
  corresponding value, as well as the \'rest\' of the 'PMap'.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 phandleMin ::
     forall (r :: S -> Type) (k :: S -> Type) (v :: S -> Type) (s :: S).
@@ -78,7 +78,7 @@ phandleMin xs whenNil whenCons =
 {- | As 'plookup', but also yields the portion of the 'PMap' whose keys are
  greater than the target if the search is successful.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 plookupGe ::
     forall (k :: S -> Type) (v :: S -> Type) (s :: S).

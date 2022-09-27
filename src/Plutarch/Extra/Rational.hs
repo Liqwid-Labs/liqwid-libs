@@ -28,7 +28,7 @@ import PlutusTx (fromData)
 
 {- | Combined multiply-truncate.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 mulTruncate ::
     forall (s :: S).
@@ -42,7 +42,7 @@ mulTruncate =
 {- | Multiply the first argument by the second argument, divide by the third,
  truncating.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 mulDivTruncate ::
     forall (s :: S).
@@ -54,7 +54,7 @@ mulDivTruncate =
 
 {- | Combined divide-truncate.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 divTruncate ::
     forall (s :: S).
@@ -74,7 +74,7 @@ divTruncate =
  large numerator. Use this only in cases where you know that this won't
  cause a performance blow-up later.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 mulRational ::
     forall (s :: S).
@@ -92,7 +92,7 @@ mulRational =
 
  This has the same performance caveats as 'mulRational'.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 divRational ::
     forall (s :: S).
@@ -108,7 +108,7 @@ infixl 7 #%
 {- | Create a 'PRational' out of two 'PIntegers'. Will error if the denominator
  is  non-positive.
 
- @since 3.8.0
+ @since 3.9.0
 -}
 (#%) ::
     forall (s :: S).
