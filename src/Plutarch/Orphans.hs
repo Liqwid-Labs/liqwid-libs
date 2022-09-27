@@ -31,22 +31,22 @@ import Data.Text.Encoding (encodeUtf8)
 
 import PlutusLedgerApi.V1.Bytes (bytes, encodeByteString, fromHex)
 import PlutusLedgerApi.V2 (
-    BuiltinByteString,
-    BuiltinData (BuiltinData),
-    CurrencySymbol (CurrencySymbol),
-    Data (I, List),
-    LedgerBytes (LedgerBytes),
-    MintingPolicy (MintingPolicy),
-    POSIXTime (POSIXTime),
-    Script,
-    ScriptHash (ScriptHash),
-    StakeValidator (StakeValidator),
-    StakeValidatorHash (StakeValidatorHash),
-    TokenName (TokenName),
-    TxId (TxId),
-    TxOutRef,
-    Validator (Validator),
-    ValidatorHash (ValidatorHash),
+  BuiltinByteString,
+  BuiltinData (BuiltinData),
+  CurrencySymbol (CurrencySymbol),
+  Data (I, List),
+  LedgerBytes (LedgerBytes),
+  MintingPolicy (MintingPolicy),
+  POSIXTime (POSIXTime),
+  Script,
+  ScriptHash (ScriptHash),
+  StakeValidator (StakeValidator),
+  StakeValidatorHash (StakeValidatorHash),
+  TokenName (TokenName),
+  TxId (TxId),
+  TxOutRef,
+  Validator (Validator),
+  ValidatorHash (ValidatorHash),
  )
 import PlutusTx (FromData (fromBuiltinData), ToData (toBuiltinData))
 
@@ -106,17 +106,17 @@ instance PTryFrom PData (PAsData PScriptHash) where
 -- Instances for Ratios
 
 instance ToData (Ratio Integer) where
-    toBuiltinData rat =
-        BuiltinData $
-            List
-                [ I $ numerator rat
-                , I $ denominator rat
-                ]
+  toBuiltinData rat =
+    BuiltinData $
+      List
+        [ I $ numerator rat
+        , I $ denominator rat
+        ]
 
 instance FromData (Ratio Integer) where
-    fromBuiltinData (BuiltinData (List [I num, I denom])) =
-        pure $ num % if num == 0 then 1 else denom
-    fromBuiltinData _ = Nothing
+  fromBuiltinData (BuiltinData (List [I num, I denom])) =
+    pure $ num % if num == 0 then 1 else denom
+  fromBuiltinData _ = Nothing
 
 ----------------------------------------
 -- Aeson (JSON) instances

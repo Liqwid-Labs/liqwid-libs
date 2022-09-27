@@ -147,9 +147,14 @@ pvalueSpent = phoistAcyclic $
 
     @since 3.9.0
 -}
-pisTokenSpent :: forall (tag :: Symbol) (s :: S). Term s (PAssetClass tag
-                                                          :--> PBuiltinList PTxInInfo
-                                                          :--> PBool)
+pisTokenSpent ::
+  forall (tag :: Symbol) (s :: S).
+  Term
+    s
+    ( PAssetClass tag
+        :--> PBuiltinList PTxInInfo
+        :--> PBool
+    )
 pisTokenSpent =
   plam $ \tokenClass inputs ->
     0
@@ -163,7 +168,6 @@ pisTokenSpent =
           )
         # 0
         # inputs
-
 
 {- | Find the TxInInfo by a TxOutRef.
 

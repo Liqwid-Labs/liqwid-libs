@@ -3,13 +3,13 @@
 {-# LANGUAGE RankNTypes #-}
 
 module Plutarch.Extra.Rational (
-    mulTruncate,
-    mulDivTruncate,
-    divTruncate,
-    mulRational,
-    divRational,
-    pliftTaggedRational,
-    (#%),
+  mulTruncate,
+  mulDivTruncate,
+  divTruncate,
+  mulRational,
+  divRational,
+  pliftTaggedRational,
+  (#%),
 ) where
 
 -------------------------------------------------------------------------------
@@ -31,13 +31,13 @@ import PlutusTx (fromData)
  @since 3.9.0
 -}
 mulTruncate ::
-    forall (s :: S).
-    Term s (PRational :--> PInteger :--> PInteger)
+  forall (s :: S).
+  Term s (PRational :--> PInteger :--> PInteger)
 mulTruncate =
-    phoistAcyclic $
-        plam $ \ex x -> unTermCont $ do
-            (PRational num denom) <- pmatchC ex
-            pure $ mulDivTruncate # x # num # pto denom
+  phoistAcyclic $
+    plam $ \ex x -> unTermCont $ do
+      (PRational num denom) <- pmatchC ex
+      pure $ mulDivTruncate # x # num # pto denom
 
 {- | Multiply the first argument by the second argument, divide by the third,
  truncating.
@@ -45,25 +45,25 @@ mulTruncate =
  @since 3.9.0
 -}
 mulDivTruncate ::
-    forall (s :: S).
-    Term s (PInteger :--> PInteger :--> PInteger :--> PInteger)
+  forall (s :: S).
+  Term s (PInteger :--> PInteger :--> PInteger :--> PInteger)
 mulDivTruncate =
-    phoistAcyclic $
-        plam $ \x num denom ->
-            pdiv # (num * x) # denom
+  phoistAcyclic $
+    plam $ \x num denom ->
+      pdiv # (num * x) # denom
 
 {- | Combined divide-truncate.
 
  @since 3.9.0
 -}
 divTruncate ::
-    forall (s :: S).
-    Term s (PRational :--> PInteger :--> PInteger)
+  forall (s :: S).
+  Term s (PRational :--> PInteger :--> PInteger)
 divTruncate =
-    phoistAcyclic $
-        plam $ \ex x -> unTermCont $ do
-            (PRational num denom) <- pmatchC ex
-            pure $ mulDivTruncate # x # pto denom # num
+  phoistAcyclic $
+    plam $ \ex x -> unTermCont $ do
+      (PRational num denom) <- pmatchC ex
+      pure $ mulDivTruncate # x # pto denom # num
 
 {- | Scale a 'PRational' up by a factor indicated by a 'PInteger',
  without reducing the fraction.
@@ -77,13 +77,13 @@ divTruncate =
  @since 3.9.0
 -}
 mulRational ::
-    forall (s :: S).
-    Term s (PInteger :--> PRational :--> PRational)
+  forall (s :: S).
+  Term s (PInteger :--> PRational :--> PRational)
 mulRational =
-    phoistAcyclic $
-        plam $ \x r -> unTermCont $ do
-            (PRational num denom) <- pmatchC r
-            pure $ pcon $ PRational (num * x) denom
+  phoistAcyclic $
+    plam $ \x r -> unTermCont $ do
+      (PRational num denom) <- pmatchC r
+      pure $ pcon $ PRational (num * x) denom
 
 {- | Scale a 'PRational' down by a factor indicated by a 'PInteger', without
  reducing the fraction.
@@ -95,13 +95,13 @@ mulRational =
  @since 3.9.0
 -}
 divRational ::
-    forall (s :: S).
-    Term s (PInteger :--> PRational :--> PRational)
+  forall (s :: S).
+  Term s (PInteger :--> PRational :--> PRational)
 divRational =
-    phoistAcyclic $
-        plam $ \x r -> unTermCont $ do
-            (PRational num denom) <- pmatchC r
-            pure $ (pto denom * x) #% num
+  phoistAcyclic $
+    plam $ \x r -> unTermCont $ do
+      (PRational num denom) <- pmatchC r
+      pure $ (pto denom * x) #% num
 
 infixl 7 #%
 
@@ -111,23 +111,23 @@ infixl 7 #%
  @since 3.9.0
 -}
 (#%) ::
-    forall (s :: S).
-    Term s PInteger ->
-    Term s PInteger ->
-    Term s PRational
+  forall (s :: S).
+  Term s PInteger ->
+  Term s PInteger ->
+  Term s PRational
 x #% y =
-    pif
-        (y #< 0)
-        (pcon $ PRational (x * (-1)) (ptryPositive # (y * (-1))))
-        (pcon $ PRational x (ptryPositive # y))
+  pif
+    (y #< 0)
+    (pcon $ PRational (x * (-1)) (ptryPositive # (y * (-1))))
+    (pcon $ PRational x (ptryPositive # y))
 
 -- | `plift` for Tagged Rationals (kind polymorphic)
 pliftTaggedRational ::
-    forall k (tag :: k).
-    HasCallStack =>
-    ClosedTerm (PTagged tag PRational) ->
-    Tagged tag Rational
+  forall k (tag :: k).
+  HasCallStack =>
+  ClosedTerm (PTagged tag PRational) ->
+  Tagged tag Rational
 pliftTaggedRational term =
-    fromJust $
-        PlutusTx.fromData $
-            plift (pforgetData $ pdata term)
+  fromJust $
+    PlutusTx.fromData $
+      plift (pforgetData $ pdata term)

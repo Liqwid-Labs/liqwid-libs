@@ -16,7 +16,7 @@ module Plutarch.Extra.Map (
   ptryLookup,
   plookupGe,
 
-    -- * Comparisons
+  -- * Comparisons
   pkeysEqual,
   pkeysEqualUnsorted,
 
@@ -63,17 +63,17 @@ import qualified Plutarch.List as PList
  @since 3.9.0
 -}
 phandleMin ::
-    forall (r :: S -> Type) (k :: S -> Type) (v :: S -> Type) (s :: S).
-    (PIsData k, PIsData v) =>
-    Term s (PMap 'Sorted k v) ->
-    Term s r ->
-    (Term s k -> Term s v -> Term s (PMap 'Sorted k v) -> Term s r) ->
-    Term s r
+  forall (r :: S -> Type) (k :: S -> Type) (v :: S -> Type) (s :: S).
+  (PIsData k, PIsData v) =>
+  Term s (PMap 'Sorted k v) ->
+  Term s r ->
+  (Term s k -> Term s v -> Term s (PMap 'Sorted k v) -> Term s r) ->
+  Term s r
 phandleMin xs whenNil whenCons =
-    phandleList (pto xs) whenNil $ \kv kvs ->
-        let k = pfromData $ pfstBuiltin # kv
-            v = pfromData $ psndBuiltin # kv
-         in whenCons k v . pcon . PMap $ kvs
+  phandleList (pto xs) whenNil $ \kv kvs ->
+    let k = pfromData $ pfstBuiltin # kv
+        v = pfromData $ psndBuiltin # kv
+     in whenCons k v . pcon . PMap $ kvs
 
 {- | As 'plookup', but also yields the portion of the 'PMap' whose keys are
  greater than the target if the search is successful.
@@ -81,31 +81,31 @@ phandleMin xs whenNil whenCons =
  @since 3.9.0
 -}
 plookupGe ::
-    forall (k :: S -> Type) (v :: S -> Type) (s :: S).
-    (PIsData k, POrd k) =>
-    Term s (k :--> PMap 'Sorted k v :--> PMaybe (PPair (PAsData v) (PMap 'Sorted k v)))
+  forall (k :: S -> Type) (v :: S -> Type) (s :: S).
+  (PIsData k, POrd k) =>
+  Term s (k :--> PMap 'Sorted k v :--> PMaybe (PPair (PAsData v) (PMap 'Sorted k v)))
 plookupGe = phoistAcyclic $
-    plam $ \needle ->
-        pfix #$ plam $ \self xs ->
-            pelimList (go needle self) (pcon PNothing) . pto $ xs
+  plam $ \needle ->
+    pfix #$ plam $ \self xs ->
+      pelimList (go needle self) (pcon PNothing) . pto $ xs
   where
     go ::
-        forall (s' :: S).
-        Term s' k ->
-        Term s' (PMap 'Sorted k v :--> PMaybe (PPair (PAsData v) (PMap 'Sorted k v))) ->
-        Term s' (PBuiltinPair (PAsData k) (PAsData v)) ->
-        Term s' (PBuiltinList (PBuiltinPair (PAsData k) (PAsData v))) ->
-        Term s' (PMaybe (PPair (PAsData v) (PMap 'Sorted k v)))
+      forall (s' :: S).
+      Term s' k ->
+      Term s' (PMap 'Sorted k v :--> PMaybe (PPair (PAsData v) (PMap 'Sorted k v))) ->
+      Term s' (PBuiltinPair (PAsData k) (PAsData v)) ->
+      Term s' (PBuiltinList (PBuiltinPair (PAsData k) (PAsData v))) ->
+      Term s' (PMaybe (PPair (PAsData v) (PMap 'Sorted k v)))
     go needle self h t =
-        let current = pfromData $ pfstBuiltin # h
-         in pif
-                (needle #== current)
-                (pcon . PJust . pcon . PPair (psndBuiltin # h) . pcon . PMap $ t)
-                ( pif
-                    (needle #< current)
-                    (pcon PNothing)
-                    (self # (pcon . PMap $ t))
-                )
+      let current = pfromData $ pfstBuiltin # h
+       in pif
+            (needle #== current)
+            (pcon . PJust . pcon . PPair (psndBuiltin # h) . pcon . PMap $ t)
+            ( pif
+                (needle #< current)
+                (pcon PNothing)
+                (self # (pcon . PMap $ t))
+            )
 
 {- | If a value exists at the specified key, apply the function argument to it;
  otherwise, do nothing.

@@ -1,11 +1,11 @@
 module Plutarch.Extra.ExchangeRate (
-    type (:>),
+  type (:>),
 
-    -- * Exchange-rate conversions
-    exchangeFromTruncate,
-    exchangeToTruncate,
-    exchangeFrom,
-    exchangeTo,
+  -- * Exchange-rate conversions
+  exchangeFromTruncate,
+  exchangeToTruncate,
+  exchangeFrom,
+  exchangeTo,
 ) where
 
 import GHC.TypeLits (Symbol)
@@ -28,15 +28,15 @@ data (:>) (a :: Symbol) (b :: Symbol)
  @since 3.9.0
 -}
 exchangeFromTruncate ::
-    forall (a :: Symbol) (b :: Symbol) (s :: S).
-    Term
-        s
-        ( PTagged (a :> b) PRational :--> PTagged a PInteger
-            :--> PTagged b PInteger
-        )
+  forall (a :: Symbol) (b :: Symbol) (s :: S).
+  Term
+    s
+    ( PTagged (a :> b) PRational :--> PTagged a PInteger
+        :--> PTagged b PInteger
+    )
 exchangeFromTruncate =
-    phoistAcyclic $
-        plam $ \ex x -> ppure #$ mulTruncate # pto ex # pto x
+  phoistAcyclic $
+    plam $ \ex x -> ppure #$ mulTruncate # pto ex # pto x
 
 {- | Exchange from  one currency to another, truncating the result
  (inverse direction).
@@ -44,16 +44,16 @@ exchangeFromTruncate =
  @since 3.9.0
 -}
 exchangeToTruncate ::
-    forall (a :: Symbol) (b :: Symbol) (s :: S).
-    Term
-        s
-        ( PTagged (a :> b) PRational :--> PTagged b PInteger
-            :--> PTagged a PInteger
-        )
+  forall (a :: Symbol) (b :: Symbol) (s :: S).
+  Term
+    s
+    ( PTagged (a :> b) PRational :--> PTagged b PInteger
+        :--> PTagged a PInteger
+    )
 exchangeToTruncate =
-    phoistAcyclic $
-        plam $ \ex x ->
-            ppure #$ divTruncate # (pextract # ex) # (pextract # x)
+  phoistAcyclic $
+    plam $ \ex x ->
+      ppure #$ divTruncate # (pextract # ex) # (pextract # x)
 
 {- | Convert between quantities of currencies using a 'PRational' conversion
   value.
@@ -61,29 +61,29 @@ exchangeToTruncate =
  @since 3.9.0
 -}
 exchangeFrom ::
-    forall (a :: Symbol) (b :: Symbol) (s :: S).
-    Term
-        s
-        ( PTagged (a :> b) PRational :--> PTagged a PInteger
-            :--> PTagged b PRational
-        )
+  forall (a :: Symbol) (b :: Symbol) (s :: S).
+  Term
+    s
+    ( PTagged (a :> b) PRational :--> PTagged a PInteger
+        :--> PTagged b PRational
+    )
 exchangeFrom =
-    phoistAcyclic $
-        plam $ \ex x ->
-            ppure #$ mulRational # (pextract # x) # (pextract # ex)
+  phoistAcyclic $
+    plam $ \ex x ->
+      ppure #$ mulRational # (pextract # x) # (pextract # ex)
 
 {- | Convert between quantities of currencies, in the inverse direction.
 
  @since 3.9.0
 -}
 exchangeTo ::
-    forall (a :: Symbol) (b :: Symbol) (s :: S).
-    Term
-        s
-        ( PTagged (a :> b) PRational :--> PTagged b PInteger
-            :--> PTagged a PRational
-        )
+  forall (a :: Symbol) (b :: Symbol) (s :: S).
+  Term
+    s
+    ( PTagged (a :> b) PRational :--> PTagged b PInteger
+        :--> PTagged a PRational
+    )
 exchangeTo =
-    phoistAcyclic $
-        plam $ \ex x ->
-            ppure #$ divRational # (pextract # x) # (pextract # ex)
+  phoistAcyclic $
+    plam $ \ex x ->
+      ppure #$ divRational # (pextract # x) # (pextract # ex)

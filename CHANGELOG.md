@@ -48,7 +48,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   (currency symbol and token name pairs), along with helper functions and
   conversion functions.
   * Field names have changed from `currencySymbol` and `tokenName` to `symbol`
-    and `name`.
+    and `name`, and labeled optics have been added.
 * `Plutarch.Extra.ScriptContext`: `pisTokenSpent` now tags a `tag :: Symbol` in
   its type, reflecting the move towards tag AssetClasses
 * `Plutarch.Extra.Value`:

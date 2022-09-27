@@ -21,7 +21,6 @@ module Plutarch.Extra.List (
   pfindJust,
   plookupAssoc,
 
-
   -- * Elimination
   phandleList,
   precListLookahead,
@@ -34,12 +33,12 @@ module Plutarch.Extra.List (
  @since 3.9.0
 -}
 phandleList ::
-    forall (a :: S -> Type) (r :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
-    (PElemConstraint ell a, PListLike ell) =>
-    Term s (ell a) ->
-    Term s r ->
-    (Term s a -> Term s (ell a) -> Term s r) ->
-    Term s r
+  forall (a :: S -> Type) (r :: S -> Type) (ell :: (S -> Type) -> S -> Type) (s :: S).
+  (PElemConstraint ell a, PListLike ell) =>
+  Term s (ell a) ->
+  Term s r ->
+  (Term s a -> Term s (ell a) -> Term s r) ->
+  Term s r
 phandleList xs whenNil whenCons = pelimList whenCons whenNil xs
 
 {- | Similar to 'pelimList', but assumes the argument list-like is a singleton,
@@ -48,17 +47,17 @@ phandleList xs whenNil whenCons = pelimList whenCons whenNil xs
  @since 3.9.0
 -}
 ptryElimSingle ::
-    forall (ell :: (S -> Type) -> S -> Type) (a :: S -> Type) (r :: S -> Type) (s :: S).
-    (PElemConstraint ell a, PListLike ell) =>
-    (Term s a -> Term s r) ->
-    Term s (ell a) ->
-    Term s r
+  forall (ell :: (S -> Type) -> S -> Type) (a :: S -> Type) (r :: S -> Type) (s :: S).
+  (PElemConstraint ell a, PListLike ell) =>
+  (Term s a -> Term s r) ->
+  Term s (ell a) ->
+  Term s r
 ptryElimSingle f = pelimList go (ptraceError emptyErr)
   where
     go ::
-        Term s a ->
-        Term s (ell a) ->
-        Term s r
+      Term s a ->
+      Term s (ell a) ->
+      Term s r
     go h t = pif (pnull # t) (f h) (ptraceError nonSingleErr)
     emptyErr :: Term s PString
     emptyErr = "ptryElimSingle: Found empty list-like."
@@ -197,16 +196,16 @@ precListLookahead whenContinuing whenOne whenDone =
       Term s (ell a) ->
       Term s r
     go self h =
-        pelimList
-            (whenContinuing self h)
-            (whenOne h)
+      pelimList
+        (whenContinuing self h)
+        (whenOne h)
 
 {- | Turn a Haskell-level list of "Term"s into a "PListLike"
  @since 3.9.0
 -}
 pfromList ::
-    forall (list :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
-    (PIsListLike list a) =>
-    [Term s a] ->
-    Term s (list a)
+  forall (list :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
+  (PIsListLike list a) =>
+  [Term s a] ->
+  Term s (list a)
 pfromList = foldr (\x xs -> pcons # x # xs) pnil
