@@ -4,11 +4,11 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## 2.6.0 -- 2022-09-27
 
-### Fixed
+### Modified
 * `normalizeValue` now has the correct behavior of:
   * adding a 0 Ada entry to the underlying map if the 
     entry would otherwise be missing.
-  * removing entires with the Ada currency symbol, but a non-Ada
+  * removing entries with the Ada currency symbol, but a non-Ada
     token name
 
 ## 2.5.0 -- 2022-09-26
