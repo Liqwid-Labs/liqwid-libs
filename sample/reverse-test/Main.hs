@@ -63,7 +63,6 @@ preverseCorrect = phoistAcyclic $ pfoldl # plam (\ys y -> pcons # y # ys) # pnil
 -- return the input.
 preverseWrong ::
   forall (t :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
-  PIsListLike t a =>
   Term s (t a :--> t a)
 preverseWrong = plam id
 

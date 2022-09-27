@@ -2,6 +2,12 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 2.1.2 -- 2022-09-27
+
+### Modified
+
+* `unTestableTerm` is now a regular function, not a field selector.
+
 ## 2.1.1 -- 2022-09-20
 
 ### Removed

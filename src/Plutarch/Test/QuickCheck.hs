@@ -1,12 +1,8 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -422,8 +418,7 @@ instance
 -}
 haskEquiv' ::
   forall (e :: Equality) (par :: Partiality) (h :: Type) (p :: S -> Type) (args :: [Type]).
-  ( PLamArgs p ~ args
-  , HaskEquiv e par h p args
+  ( HaskEquiv e par h p args
   , All Arbitrary args
   ) =>
   h ->
