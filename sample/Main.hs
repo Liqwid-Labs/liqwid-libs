@@ -5,7 +5,6 @@ import GHC.IO.Encoding (setLocaleEncoding, utf8)
 import Plutarch.Context (
   BaseBuilder,
   Builder,
-  Checker (runChecker),
   address,
   buildMinting,
   buildMinting',
@@ -19,6 +18,7 @@ import Plutarch.Context (
   normalizeValue,
   output,
   pubKey,
+  runChecker,
   script,
   withDatum,
   withMinting,
@@ -102,7 +102,8 @@ main = do
         ( normalizeValue . Value . AssocMap.fromList $
             [
               ( adaSymbol
-              , AssocMap.fromList [ (adaToken, 100)
+              , AssocMap.fromList
+                  [ (adaToken, 100)
                   , ("nonAdaToken", 100)
                   ]
               )
