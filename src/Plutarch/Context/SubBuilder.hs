@@ -1,4 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Plutarch.Context.SubBuilder (
@@ -12,11 +11,11 @@ module Plutarch.Context.SubBuilder (
 
 import Data.Foldable (Foldable (toList))
 import Data.Maybe (mapMaybe)
-import Optics (lens)
+import Optics (lens, view)
 import Plutarch.Context.Base (
-  BaseBuilder (..),
+  BaseBuilder,
   Builder (..),
-  UTXO (..),
+  UTXO,
   datumWithHash,
   unpack,
   utxoDatumPair,
@@ -38,12 +37,20 @@ import PlutusLedgerApi.V2 (
 -}
 newtype SubBuilder
   = SubBuilder BaseBuilder
-  deriving (Semigroup, Monoid) via BaseBuilder
+  deriving
+    ( -- | @since 2.0.0
+      Semigroup
+    , -- | @since 2.0.0
+      Monoid
+    )
+    via BaseBuilder
 
+-- | @since 2.0.0
 instance Builder SubBuilder where
   _bb = lens (\(SubBuilder x) -> x) (\_ b -> SubBuilder b)
   pack = SubBuilder
 
+-- | @since 2.0.0
 instance Normalizer SubBuilder where
   mkNormalized' (SubBuilder x) = SubBuilder $ mkNormalized x
 
@@ -59,9 +66,9 @@ buildTxOut = utxoToTxOut
  @since 2.0.0
 -}
 buildTxInInfo :: UTXO -> Maybe TxInInfo
-buildTxInInfo u@(UTXO {..}) = do
-  txid <- utxoTxId
-  txidx <- utxoTxIdx
+buildTxInInfo u = do
+  txid <- view #txId u
+  txidx <- view #txIdx u
   return $ TxInInfo (TxOutRef txid txidx) (utxoToTxOut u)
 
 {- | Builds all TxOuts from given builder.
@@ -69,21 +76,21 @@ buildTxInInfo u@(UTXO {..}) = do
  @since 2.0.0
 -}
 buildTxOuts :: SubBuilder -> [TxOut]
-buildTxOuts (unpack -> BB {..}) = utxoToTxOut <$> toList bbOutputs
+buildTxOuts (unpack -> bb) = utxoToTxOut <$> toList (view #outputs bb)
 
 {- | Builds all TxInInfos from given builder. Returns reason when failed.
 
  @since 2.1.0
 -}
 buildTxInInfos :: SubBuilder -> [TxInInfo]
-buildTxInInfos (unpack -> BB {..}) =
-  fst $ yieldInInfoDatums bbInputs
+buildTxInInfos (unpack -> bb) =
+  fst $ yieldInInfoDatums (view #inputs bb)
 
 {- | Builds Datum-Hash pair from all inputs, outputs, extra data of given builder.
 
  @since 2.0.0
 -}
 buildDatumHashPairs :: SubBuilder -> [(DatumHash, Datum)]
-buildDatumHashPairs (unpack -> BB {..}) =
-  mapMaybe utxoDatumPair (toList (bbInputs <> bbOutputs))
-    <> (datumWithHash <$> toList bbDatums)
+buildDatumHashPairs (unpack -> bb) =
+  mapMaybe utxoDatumPair (toList (view #inputs bb <> view #outputs bb))
+    <> (datumWithHash <$> toList (view #datums bb))

@@ -44,6 +44,7 @@ common common-lang
     BinaryLiterals
     ConstraintKinds
     DataKinds
+    DeriveAnyClass
     DeriveFunctor
     DeriveGeneric
     DeriveTraversable
@@ -60,11 +61,14 @@ common common-lang
     LambdaCase
     MultiParamTypeClasses
     NumericUnderscores
+    OverloadedLabels
     OverloadedStrings
     ScopedTypeVariables
     StandaloneDeriving
     TupleSections
+    TypeApplications
     TypeOperators
+    NoFieldSelectors
 
   default-language:   Haskell2010
 
@@ -122,4 +126,5 @@ test-suite sample
     MintingBuilder
     SpendingBuilder
 
+  build-depends:  optics
   hs-source-dirs: sample/

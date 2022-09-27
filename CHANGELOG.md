@@ -2,12 +2,26 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-## 2.5.0 -- 2020-09-26
+## 2.5.0 -- 2020-09-27
+
+### Added
+
+* Labelled optics for `BaseBuilder`, `MintingBuilder`, `SpendingBuilder`, 
+  `UTXO` and `Mint`. These follow the names of the old field selectors, but 
+  without disambiguation prefixes: for example, `bbMints` is now `#mints`.
 
 ### Modified
 
+* `BaseBuilder`, `MintingBuilder`, `SpendingBuilder`, `UTXO` and `Mint` no 
+  longer export their constructors.
+* `runChecker` is now a regular function, not a field selector.
 * `checkBSLength` replaced old `checkByteString`. It checks if `ByteString` is
   at given length.
+
+### Removed
+
+* Field selectors for `BaseBuilder`, `MintingBuilder`, `SpendingBuilder`, 
+  `UTXO` and `Mint`.
 
 ### Fixed
 

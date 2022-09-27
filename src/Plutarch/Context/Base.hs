@@ -17,9 +17,9 @@
 module Plutarch.Context.Base (
   -- * Types
   Builder (..),
-  BaseBuilder (..),
-  UTXO (..),
-  Mint (..),
+  BaseBuilder,
+  UTXO,
+  Mint,
 
   -- * Modular constructors
   output,
@@ -38,6 +38,7 @@ module Plutarch.Context.Base (
   withRefIndex,
   withRef,
   withRedeemer,
+  mkMint,
 
   -- * Others
   unpack,
@@ -78,10 +79,19 @@ import Acc (Acc, fromReverseList)
 import Control.Arrow (Arrow ((&&&)))
 import Data.Foldable (Foldable (toList))
 import Data.Kind (Type)
-import Data.List (sortBy)
+import Data.List (sortBy, sortOn)
 import Data.Maybe (fromMaybe, mapMaybe)
-import GHC.Exts (fromList)
-import Optics (Lens', lens, over, view)
+import Data.Monoid (Last (Last))
+import GHC.Exts (coerce, fromList)
+import Optics (
+  A_Lens,
+  LabelOptic (labelOptic),
+  Lens',
+  lens,
+  over,
+  set,
+  view,
+ )
 import Plutarch (S)
 import Plutarch.Api.V2 (datumHash)
 import Plutarch.Builtin (PIsData, pdata, pforgetData)
@@ -141,13 +151,9 @@ data DatumType
 {- | Minted tokens that have the same symbol, and the redeemer used to mint
       those tokens.
 
-     @since 2.3.0
+     @since 2.5.0
 -}
-data Mint = Mint
-  { mintSymbol :: CurrencySymbol
-  , mintTokens :: [(TokenName, Integer)]
-  , mintRedeemer :: Data
-  }
+data Mint = Mint CurrencySymbol [(TokenName, Integer)] Data
   deriving stock
     ( -- | @since 2.3.0
       Show
@@ -155,71 +161,126 @@ data Mint = Mint
       Eq
     )
 
+-- | @since 2.5.0
+instance LabelOptic "symbol" A_Lens Mint Mint CurrencySymbol CurrencySymbol where
+  labelOptic = lens (\(Mint cs _ _) -> cs) $ \(Mint _ toks red) cs' ->
+    Mint cs' toks red
+
+-- | @since 2.5.0
+instance LabelOptic "tokens" A_Lens Mint Mint [(TokenName, Integer)] [(TokenName, Integer)] where
+  labelOptic = lens (\(Mint _ toks _) -> toks) $ \(Mint cs _ red) toks' ->
+    Mint cs toks' red
+
+-- | @since 2.5.0
+instance LabelOptic "redeemer" A_Lens Mint Mint Data Data where
+  labelOptic = lens (\(Mint _ _ red) -> red) $ \(Mint cs toks _) red' ->
+    Mint cs toks red'
+
+-- | @since 2.5.0
+mkMint :: CurrencySymbol -> [(TokenName, Integer)] -> Data -> Mint
+mkMint = Mint
+
 {- | Normalize mint amount.
 
  @since 2.4.0
 -}
 normalizeMint :: Mint -> Mint
-normalizeMint m =
-  m
-    { mintTokens =
-        sortBy (\(t, _) (t', _) -> compare t t') $
-          filter (\(_, v) -> v /= 0) $
-            foldr (combinePair (+)) [] $ mintTokens m
-    }
+normalizeMint =
+  over #tokens (sortOn fst . filter ((/= 0) . snd) . foldr (combinePair (+)) [])
 
 {- | 'UTXO' is used to represent any input or output of a transaction in the builders.
 
 A UTXO' contains:
 
   - A `Value` of one or more assets.
-  - An `Address` that it exists at.
+  - An 'Address' that it exists at.
   - Potentially some Plutus 'Data'.
 
-This is different from `TxOut`, in that we store the 'Data' fully instead of the 'DatumHash'.
+This is different from 'TxOut', in that we store the 'Data' fully instead of the 'DatumHash'.
 
- @since 2.0.0
+ @since 2.5.0
 -}
-data UTXO = UTXO
-  { utxoCredential :: Maybe Credential
-  , utxoStakingCredential :: Maybe StakingCredential
-  , utxoValue :: Value
-  , utxoData :: Maybe DatumType
-  , utxoReferenceScript :: Maybe ScriptHash
-  , utxoTxId :: Maybe TxId
-  , utxoTxIdx :: Maybe Integer
-  , utxoRedeemer :: Maybe Data
-  }
-  deriving stock (Show)
+data UTXO
+  = UTXO
+      (Last Credential)
+      (Last StakingCredential)
+      Value
+      (Last DatumType)
+      (Last ScriptHash)
+      (Last TxId)
+      (Last Integer)
+      (Last Data)
+  deriving stock
+    ( -- | @since 2.0.0
+      Show
+    )
+
+-- | @since 2.5.0
+instance LabelOptic "credential" A_Lens UTXO UTXO (Maybe Credential) (Maybe Credential) where
+  labelOptic = lens (\(UTXO x _ _ _ _ _ _ _) -> coerce x) $ \(UTXO _ scred val dat rs ti tix red) cred' ->
+    UTXO (coerce cred') scred val dat rs ti tix red
+
+-- | @since 2.5.0
+instance LabelOptic "stakingCredential" A_Lens UTXO UTXO (Maybe StakingCredential) (Maybe StakingCredential) where
+  labelOptic = lens (\(UTXO _ x _ _ _ _ _ _) -> coerce x) $ \(UTXO cred _ val dat rs ti tix red) scred' ->
+    UTXO cred (coerce scred') val dat rs ti tix red
+
+-- | @since 2.5.0
+instance LabelOptic "value" A_Lens UTXO UTXO Value Value where
+  labelOptic = lens (\(UTXO _ _ x _ _ _ _ _) -> x) $ \(UTXO cred scred _ dat rs ti tix red) val' ->
+    UTXO cred scred val' dat rs ti tix red
+
+-- | @since 2.5.0
+instance LabelOptic "data" A_Lens UTXO UTXO (Maybe DatumType) (Maybe DatumType) where
+  labelOptic = lens (\(UTXO _ _ _ x _ _ _ _) -> coerce x) $ \(UTXO cred scred val _ rs ti tix red) dat' ->
+    UTXO cred scred val (coerce dat') rs ti tix red
+
+-- | @since 2.5.0
+instance LabelOptic "referenceScript" A_Lens UTXO UTXO (Maybe ScriptHash) (Maybe ScriptHash) where
+  labelOptic = lens (\(UTXO _ _ _ _ x _ _ _) -> coerce x) $ \(UTXO cred scred val dat _ ti tix red) rs' ->
+    UTXO cred scred val dat (coerce rs') ti tix red
+
+-- | @since 2.5.0
+instance LabelOptic "txId" A_Lens UTXO UTXO (Maybe TxId) (Maybe TxId) where
+  labelOptic = lens (\(UTXO _ _ _ _ _ x _ _) -> coerce x) $ \(UTXO cred scred val dat rs _ tix red) ti' ->
+    UTXO cred scred val dat rs (coerce ti') tix red
+
+-- | @since 2.5.0
+instance LabelOptic "txIdx" A_Lens UTXO UTXO (Maybe Integer) (Maybe Integer) where
+  labelOptic = lens (\(UTXO _ _ _ _ _ _ x _) -> coerce x) $ \(UTXO cred scred val dat rs ti _ red) tix' ->
+    UTXO cred scred val dat rs ti (coerce tix') red
+
+-- | @since 2.5.0
+instance LabelOptic "redeemer" A_Lens UTXO UTXO (Maybe Data) (Maybe Data) where
+  labelOptic = lens (\(UTXO _ _ _ _ _ _ _ x) -> coerce x) $ \(UTXO cred scred val dat rs ti tix _) red' ->
+    UTXO cred scred val dat rs ti tix . coerce $ red'
 
 -- | @since 2.0.0
 instance Semigroup UTXO where
   (UTXO c stc v d rs t tidx r) <> (UTXO c' stc' v' d' rs' t' tidx' r') =
     UTXO
-      (choose c c')
-      (choose stc stc')
+      (c <> c')
+      (stc <> stc')
       (v <> v')
-      (choose d d')
-      (choose rs rs')
-      (choose t t')
-      (choose tidx tidx')
-      (choose r r')
-    where
-      choose _ (Just b) = Just b
-      choose a Nothing = a
+      (d <> d')
+      (rs <> rs')
+      (t <> t')
+      (tidx <> tidx')
+      (r <> r')
 
 -- | @since 2.0.0
 instance Monoid UTXO where
-  mempty = UTXO Nothing Nothing mempty Nothing Nothing Nothing Nothing Nothing
+  mempty = UTXO mempty mempty mempty mempty mempty mempty mempty mempty
 
 {- | Pulls address output of given UTXO'
 
  @since 1.1.0
 -}
 utxoAddress :: UTXO -> Address
-utxoAddress UTXO {..} =
-  let cred = fromMaybe (PubKeyCredential $ PubKeyHash "") utxoCredential
-   in Address cred utxoStakingCredential
+utxoAddress utxo =
+  Address (fromMaybe (PubKeyCredential . PubKeyHash $ "") . view #credential $ utxo)
+    . view #stakingCredential
+    $ utxo
 
 datumWithHash :: Data -> (DatumHash, Datum)
 datumWithHash d = (datumHash dt, dt)
@@ -228,26 +289,24 @@ datumWithHash d = (datumHash dt, dt)
     dt = Datum . BuiltinData $ d
 
 utxoOutputDatum :: UTXO -> OutputDatum
-utxoOutputDatum (utxoData -> d') = case d' of
+utxoOutputDatum utxo = case view #data utxo of
   Nothing -> NoOutputDatum
-  Just (InlineDatum d) -> OutputDatum (Datum . BuiltinData $ d)
-  Just (ContextDatum d) -> OutputDatumHash (datumHash . Datum . BuiltinData $ d)
+  Just (InlineDatum d) -> OutputDatum . Datum . BuiltinData $ d
+  Just (ContextDatum d) -> OutputDatumHash . datumHash . Datum . BuiltinData $ d
 
 utxoDatumPair :: UTXO -> Maybe (DatumHash, Datum)
-utxoDatumPair u =
-  utxoData u >>= \case
+utxoDatumPair utxo = do
+  dat <- view #data utxo
+  case dat of
     InlineDatum _ -> Nothing
-    ContextDatum d -> Just $ datumWithHash d
+    ContextDatum d -> Just . datumWithHash $ d
 
 {- | Normalize the value 'UTXO' holds.
 
  @since 2.4.0
 -}
 normalizeUTXO :: UTXO -> UTXO
-normalizeUTXO utxo =
-  utxo
-    { utxoValue = normalizeValue $ utxoValue utxo
-    }
+normalizeUTXO = over #value normalizeValue
 
 {- | Construct TxOut of given UTXO
 
@@ -256,8 +315,10 @@ normalizeUTXO utxo =
 utxoToTxOut ::
   UTXO ->
   TxOut
-utxoToTxOut utxo@(UTXO {..}) =
-  TxOut (utxoAddress utxo) utxoValue (utxoOutputDatum utxo) utxoReferenceScript
+utxoToTxOut utxo =
+  TxOut (utxoAddress utxo) (view #value utxo) (utxoOutputDatum utxo)
+    . view #referenceScript
+    $ utxo
 
 {- | Specify datum of a UTXO.
 
@@ -268,7 +329,8 @@ withDatum ::
   (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
   b ->
   UTXO
-withDatum dat = mempty {utxoData = Just . ContextDatum . datafy $ dat}
+withDatum dat =
+  set #data (pure . ContextDatum . datafy $ dat) (mempty :: UTXO)
 
 {- | Specify in-line datum of a UTXO.
 
@@ -279,42 +341,47 @@ withInlineDatum ::
   (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
   b ->
   UTXO
-withInlineDatum dat = mempty {utxoData = Just . InlineDatum . datafy $ dat}
+withInlineDatum dat =
+  set #data (pure . InlineDatum . datafy $ dat) (mempty :: UTXO)
 
 {- | Specify reference script of a UTXO.
 
  @since 2.0.0
 -}
 withReferenceScript :: ScriptHash -> UTXO
-withReferenceScript sh = mempty {utxoReferenceScript = Just sh}
+withReferenceScript sh =
+  set #referenceScript (pure sh) (mempty :: UTXO)
 
 {- | Associate a redeemer to a UTXO.
 
  Note that the redeemer is added to the final redeemer map only when it's in
   inputs and have both 'TxId' and 'TxIdx' explicitly provided by the user.
 
- @2.3.0
+ @since 2.3.0
 -}
 withRedeemer ::
   forall (b :: Type) (p :: S -> Type).
   (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
   b ->
   UTXO
-withRedeemer r = mempty {utxoRedeemer = Just $ datafy r}
+withRedeemer r =
+  set #redeemer (pure . datafy $ r) (mempty :: UTXO)
 
 {- | Specify reference `TxId` of a UTXO.
 
  @since 2.0.0
 -}
 withRefTxId :: TxId -> UTXO
-withRefTxId tid = mempty {utxoTxId = Just tid}
+withRefTxId tid =
+  set #txId (pure tid) (mempty :: UTXO)
 
 {- | Specify reference index of a UTXO.
 
  @since 2.0.0
 -}
 withRefIndex :: Integer -> UTXO
-withRefIndex tidx = mempty {utxoTxIdx = Just tidx}
+withRefIndex tidx =
+  set #txIdx (pure tidx) (mempty :: UTXO)
 
 {- | Specify `TxOutRef` of a UTXO.
 
@@ -329,14 +396,15 @@ withRef (TxOutRef tid idx) = withRefTxId tid <> withRefIndex idx
  @since 2.0.0
 -}
 withValue :: Value -> UTXO
-withValue val = mempty {utxoValue = val}
+withValue val = set #value val (mempty :: UTXO)
 
 {- | Specify `StakingCredential` to a UTXO.
 
  @since 2.2.0
 -}
 withStakingCredential :: StakingCredential -> UTXO
-withStakingCredential stak = mempty {utxoStakingCredential = Just stak}
+withStakingCredential stak =
+  set #stakingCredential (pure stak) (mempty :: UTXO)
 
 {- | Specify `Address` of a UTXO.
 
@@ -344,31 +412,32 @@ withStakingCredential stak = mempty {utxoStakingCredential = Just stak}
 -}
 address :: Address -> UTXO
 address Address {..} =
-  mempty
-    { utxoCredential = Just addressCredential
-    , utxoStakingCredential = addressStakingCredential
-    }
+  set #credential (Just addressCredential)
+    . set #stakingCredential addressStakingCredential
+    $ (mempty :: UTXO)
 
 {- | Specify `Credential` of a UTXO.
 
  @since 2.0.0
 -}
 credential :: Credential -> UTXO
-credential cred = mempty {utxoCredential = Just cred}
+credential cred = set #credential (pure cred) (mempty :: UTXO)
 
 {- | Specify `PubKeyHash` of a UTXO.
 
  @since 2.0.0
 -}
 pubKey :: PubKeyHash -> UTXO
-pubKey (PubKeyCredential -> cred) = mempty {utxoCredential = Just cred}
+pubKey (PubKeyCredential -> cred) =
+  set #credential (pure cred) (mempty :: UTXO)
 
 {- | Specify `ValidatorHash` of a UTXO.
 
  @since 2.0.0
 -}
 script :: ValidatorHash -> UTXO
-script (ScriptCredential -> cred) = mempty {utxoCredential = Just cred}
+script (ScriptCredential -> cred) =
+  set #credential (pure cred) (mempty :: UTXO)
 
 {- | Interface between specific builders to BaseBuilder.
  @pack@ will constrct specific builder that contains given BaseBuilder.
@@ -389,24 +458,74 @@ unpack = view _bb
 
 {- | Base builder. Handles basic input, output, signs, mints, and
  extra datums. BaseBuilder provides such basic functionalities for
- @ScriptContext@ creation, leaving specific builders only with
+ 'ScriptContext' creation, leaving specific builders only with
  minimal logical checkings.
 
- @since 1.1.0
+ @since 2.5.0
 -}
-data BaseBuilder = BB
-  { bbInputs :: Acc UTXO
-  , bbReferenceInputs :: Acc UTXO
-  , bbOutputs :: Acc UTXO
-  , bbSignatures :: Acc PubKeyHash
-  , bbDatums :: Acc Data
-  , bbMints :: Acc Mint
-  , bbFee :: Value
-  , bbTimeRange :: Interval POSIXTime
-  , bbTxId :: TxId
-  , bbRedeemers :: Acc (ScriptPurpose, Redeemer)
-  }
+data BaseBuilder
+  = BB
+      (Acc UTXO)
+      (Acc UTXO)
+      (Acc UTXO)
+      (Acc PubKeyHash)
+      (Acc Data)
+      (Acc Mint)
+      Value
+      (Interval POSIXTime)
+      TxId
+      (Acc (ScriptPurpose, Redeemer))
   deriving stock (Show)
+
+-- | @since 2.5.0
+instance LabelOptic "inputs" A_Lens BaseBuilder BaseBuilder (Acc UTXO) (Acc UTXO) where
+  labelOptic = lens (\(BB x _ _ _ _ _ _ _ _ _) -> x) $ \(BB _ rins outs sigs dats ms f tr txi reds) ins' ->
+    BB ins' rins outs sigs dats ms f tr txi reds
+
+-- | @since 2.5.0
+instance LabelOptic "referenceInputs" A_Lens BaseBuilder BaseBuilder (Acc UTXO) (Acc UTXO) where
+  labelOptic = lens (\(BB _ x _ _ _ _ _ _ _ _) -> x) $ \(BB ins _ outs sigs dats ms f tr txi reds) rins' ->
+    BB ins rins' outs sigs dats ms f tr txi reds
+
+-- | @since 2.5.0
+instance LabelOptic "outputs" A_Lens BaseBuilder BaseBuilder (Acc UTXO) (Acc UTXO) where
+  labelOptic = lens (\(BB _ _ x _ _ _ _ _ _ _) -> x) $ \(BB ins rins _ sigs dats ms f tr txi reds) outs' ->
+    BB ins rins outs' sigs dats ms f tr txi reds
+
+-- | @since 2.5.0
+instance LabelOptic "signatures" A_Lens BaseBuilder BaseBuilder (Acc PubKeyHash) (Acc PubKeyHash) where
+  labelOptic = lens (\(BB _ _ _ x _ _ _ _ _ _) -> x) $ \(BB ins rins outs _ dats ms f tr txi reds) sigs' ->
+    BB ins rins outs sigs' dats ms f tr txi reds
+
+-- | @since 2.5.0
+instance LabelOptic "datums" A_Lens BaseBuilder BaseBuilder (Acc Data) (Acc Data) where
+  labelOptic = lens (\(BB _ _ _ _ x _ _ _ _ _) -> x) $ \(BB ins rins outs sigs _ ms f tr txi reds) dats' ->
+    BB ins rins outs sigs dats' ms f tr txi reds
+
+-- | @since 2.5.0
+instance LabelOptic "mints" A_Lens BaseBuilder BaseBuilder (Acc Mint) (Acc Mint) where
+  labelOptic = lens (\(BB _ _ _ _ _ x _ _ _ _) -> x) $ \(BB ins rins outs sigs dats _ f tr txi reds) ms' ->
+    BB ins rins outs sigs dats ms' f tr txi reds
+
+-- | @since 2.5.0
+instance LabelOptic "fee" A_Lens BaseBuilder BaseBuilder Value Value where
+  labelOptic = lens (\(BB _ _ _ _ _ _ x _ _ _) -> x) $ \(BB ins rins outs sigs dats ms _ tr txi reds) f' ->
+    BB ins rins outs sigs dats ms f' tr txi reds
+
+-- | @since 2.5.0
+instance LabelOptic "timeRange" A_Lens BaseBuilder BaseBuilder (Interval POSIXTime) (Interval POSIXTime) where
+  labelOptic = lens (\(BB _ _ _ _ _ _ _ x _ _) -> x) $ \(BB ins rins outs sigs dats ms f _ txi reds) tr' ->
+    BB ins rins outs sigs dats ms f tr' txi reds
+
+-- | @since 2.5.0
+instance LabelOptic "txId" A_Lens BaseBuilder BaseBuilder TxId TxId where
+  labelOptic = lens (\(BB _ _ _ _ _ _ _ _ x _) -> x) $ \(BB ins rins outs sigs dats ms f tr _ reds) txi' ->
+    BB ins rins outs sigs dats ms f tr txi' reds
+
+-- | @since 2.5.0
+instance LabelOptic "redeemers" A_Lens BaseBuilder BaseBuilder (Acc (ScriptPurpose, Redeemer)) (Acc (ScriptPurpose, Redeemer)) where
+  labelOptic = lens (\(BB _ _ _ _ _ _ _ _ _ x) -> x) $ \(BB ins rins outs sigs dats ms f tr txi _) reds' ->
+    BB ins rins outs sigs dats ms f tr txi reds'
 
 -- | @since 1.1.0
 instance Semigroup BaseBuilder where
@@ -420,13 +539,20 @@ instance Semigroup BaseBuilder where
         (dats <> dats')
         (ms <> ms')
         (fval <> fval')
-        (choose bbTimeRange range range')
-        (choose bbTxId tid tid')
+        (choose #timeRange range range')
+        (choose #txId tid tid')
         (rs <> rs')
       where
-        choose f a b
-          | f mempty == b = a
-          | otherwise = b
+        choose ::
+          forall (a :: Type).
+          (Eq a) =>
+          Lens' BaseBuilder a ->
+          a ->
+          a ->
+          a
+        choose ell x y
+          | view ell mempty == y = x
+          | otherwise = y
 
 -- | @since 1.1.0
 instance Monoid BaseBuilder where
@@ -453,7 +579,7 @@ signedWith ::
   (Builder a) =>
   PubKeyHash ->
   a
-signedWith pkh = pack $ mempty {bbSignatures = pure pkh}
+signedWith pkh = pack . set #signatures (pure pkh) $ (mempty :: BaseBuilder)
 
 -- | @since 2.3.0
 valueToMints ::
@@ -475,7 +601,7 @@ mint ::
   (Builder a) =>
   Value ->
   a
-mint val = pack $ mempty {bbMints = fromReverseList $ valueToMints () val}
+mint = mintWith ()
 
 {- | Mint tokens with given redeemer.
 
@@ -487,7 +613,9 @@ mintWith ::
   r ->
   Value ->
   a
-mintWith r val = pack $ mempty {bbMints = fromReverseList $ valueToMints r val}
+mintWith r val =
+  pack . set #mints (fromReverseList . valueToMints r $ val) $
+    (mempty :: BaseBuilder)
 
 {- Mint singleton valuw with given redeemer.
 
@@ -512,7 +640,8 @@ extraData ::
   (Builder a, PUnsafeLiftDecl p, PLifted p ~ d, PIsData p) =>
   d ->
   a
-extraData x = pack $ mempty {bbDatums = pure . datafy $ x}
+extraData x =
+  pack . set #datums (pure . datafy $ x) $ (mempty :: BaseBuilder)
 
 extraRedeemer ::
   forall (a :: Type) (r :: Type) (p :: S -> Type).
@@ -520,7 +649,10 @@ extraRedeemer ::
   ScriptPurpose ->
   r ->
   a
-extraRedeemer p r = pack $ mempty {bbRedeemers = pure (p, Redeemer $ BuiltinData $ datafy r)}
+extraRedeemer p r =
+  pack
+    . set #redeemers (pure (p, Redeemer . BuiltinData . datafy $ r))
+    $ (mempty :: BaseBuilder)
 
 {- | Specify `TxId` of a script context.
 
@@ -531,7 +663,7 @@ txId ::
   (Builder a) =>
   TxId ->
   a
-txId tid = pack $ mempty {bbTxId = tid}
+txId tid = pack . set #txId tid $ (mempty :: BaseBuilder)
 
 {- | Specify transaction fee of a script context.
 
@@ -542,7 +674,7 @@ fee ::
   (Builder a) =>
   Value ->
   a
-fee val = pack $ mempty {bbFee = val}
+fee val = pack . set #fee val $ (mempty :: BaseBuilder)
 
 {- | Specify time range of a script context.
 
@@ -553,7 +685,7 @@ timeRange ::
   (Builder a) =>
   Interval POSIXTime ->
   a
-timeRange r = pack $ mempty {bbTimeRange = r}
+timeRange r = pack . set #timeRange r $ (mempty :: BaseBuilder)
 
 {- | Specify an output of a script context.
 
@@ -564,7 +696,7 @@ output ::
   (Builder a) =>
   UTXO ->
   a
-output x = pack mempty {bbOutputs = pure x}
+output x = pack . set #outputs (pure x) $ (mempty :: BaseBuilder)
 
 {- | Specify an input of a script context.
 
@@ -575,7 +707,7 @@ input ::
   (Builder a) =>
   UTXO ->
   a
-input x = pack mempty {bbInputs = pure x}
+input x = pack . set #inputs (pure x) $ (mempty :: BaseBuilder)
 
 {- | Specify a reference input of a script context.
 
@@ -586,29 +718,34 @@ referenceInput ::
   (Builder a) =>
   UTXO ->
   a
-referenceInput x = pack mempty {bbReferenceInputs = pure x}
+referenceInput x =
+  pack . set #referenceInputs (pure x) $ (mempty :: BaseBuilder)
 
 {- | Provide base @TxInfo@ to Continuation Monad.
 
  @since 1.1.0
 -}
 yieldBaseTxInfo ::
-  (Builder b) => b -> TxInfo
-yieldBaseTxInfo (unpack -> BB {..}) =
+  forall (b :: Type).
+  (Builder b) =>
+  b ->
   TxInfo
-    { txInfoInputs = mempty
-    , txInfoReferenceInputs = mempty
-    , txInfoOutputs = mempty
-    , txInfoFee = bbFee
-    , txInfoMint = mempty
-    , txInfoDCert = mempty
-    , txInfoWdrl = AssocMap.fromList []
-    , txInfoValidRange = bbTimeRange
-    , txInfoSignatories = mempty
-    , txInfoRedeemers = AssocMap.fromList []
-    , txInfoData = AssocMap.fromList []
-    , txInfoId = bbTxId
-    }
+yieldBaseTxInfo b = case unpack b of
+  bb ->
+    TxInfo
+      { txInfoInputs = mempty
+      , txInfoReferenceInputs = mempty
+      , txInfoOutputs = mempty
+      , txInfoFee = view #fee bb
+      , txInfoMint = mempty
+      , txInfoDCert = mempty
+      , txInfoWdrl = AssocMap.fromList []
+      , txInfoValidRange = view #timeRange bb
+      , txInfoSignatories = mempty
+      , txInfoRedeemers = AssocMap.fromList []
+      , txInfoData = AssocMap.fromList []
+      , txInfoId = view #txId bb
+      }
 
 {- | Provide total mints to Continuation Monad.
 
@@ -625,9 +762,10 @@ yieldMint = foldMap mintToValue . toList
 -}
 mintToValue :: Mint -> Value
 mintToValue m =
-  foldMap f (mintTokens m) <> Value.singleton adaSymbol adaToken 0
+  foldMap f (view #tokens m) <> Value.singleton adaSymbol adaToken 0
   where
-    f = uncurry $ Value.singleton $ mintSymbol m
+    f :: (TokenName, Integer) -> Value
+    f = uncurry $ Value.singleton $ view #symbol m
 
 {- | Provide DatumHash-Datum pair to Continuation Monad.
 
@@ -651,10 +789,14 @@ yieldInInfoDatums (toList -> inputs) =
   fmap mkTxInInfo &&& createDatumPairs $ inputs
   where
     mkTxInInfo :: UTXO -> TxInInfo
-    mkTxInInfo utxo@UTXO {..} = TxInInfo ref (utxoToTxOut utxo)
-      where
-        ref = TxOutRef (fromMaybe "" utxoTxId) (fromMaybe 0 utxoTxIdx)
-
+    mkTxInInfo utxo =
+      TxInInfo
+        ( TxOutRef
+            (fromMaybe "" . view #txId $ utxo)
+            (fromMaybe 0 . view #txIdx $ utxo)
+        )
+        . utxoToTxOut
+        $ utxo
     createDatumPairs :: [UTXO] -> [(DatumHash, Datum)]
     createDatumPairs = mapMaybe utxoDatumPair
 
@@ -687,19 +829,18 @@ yieldRedeemerMap au am = scriptInputs <> mints
   where
     utxoToRedeemerPair :: UTXO -> Maybe (ScriptPurpose, Redeemer)
     utxoToRedeemerPair u = do
-      refId <- utxoTxId u
-      refIdx <- utxoTxIdx u
+      refId <- view #txId u
+      refIdx <- view #txIdx u
       let txRef = TxOutRef refId refIdx
-      r <- utxoRedeemer u
+      r <- view #redeemer u
       pure (Spending txRef, Redeemer $ BuiltinData r)
-
     scriptInputs :: [(ScriptPurpose, Redeemer)]
     scriptInputs = mapMaybe utxoToRedeemerPair $ toList au
-
     mintToRedeemerPair :: Mint -> (ScriptPurpose, Redeemer)
     mintToRedeemerPair m =
-      (Minting $ mintSymbol m, Redeemer $ BuiltinData $ mintRedeemer m)
-
+      ( Minting $ view #symbol m
+      , Redeemer $ BuiltinData $ view #redeemer m
+      )
     mints :: [(ScriptPurpose, Redeemer)]
     mints = mintToRedeemerPair <$> toList am
 
@@ -718,17 +859,16 @@ mkOutRefIndices ::
   a
 mkOutRefIndices = over _bb go
   where
-    go bb@BB {..} = bb {bbInputs = grantIndex bbInputs}
-
+    go :: BaseBuilder -> BaseBuilder
+    go = over #inputs grantIndex
     grantIndex :: Acc UTXO -> Acc UTXO
     grantIndex (toList -> xs) = fromList $ grantIndex' 1 [] xs
-
     grantIndex' :: Integer -> [Integer] -> [UTXO] -> [UTXO]
-    grantIndex' top used (x@(UTXO _ _ _ _ _ _ Nothing _) : xs)
+    grantIndex' top used (x@(UTXO _ _ _ _ _ _ (Last Nothing) _) : xs)
       | top `elem` used = grantIndex' (top + 1) used (x : xs)
-      | otherwise = x {utxoTxIdx = Just top} : grantIndex' (top + 1) (top : used) xs
-    grantIndex' top used (x@(UTXO _ _ _ _ _ _ (Just i) _) : xs)
-      | i `elem` used = grantIndex' top used (x {utxoTxIdx = Nothing} : xs)
+      | otherwise = set #txIdx (pure top) x : grantIndex' (top + 1) (top : used) xs
+    grantIndex' top used (x@(UTXO _ _ _ _ _ _ (Last (Just i)) _) : xs)
+      | i `elem` used = grantIndex' top used (set #txIdx Nothing x : xs)
       | otherwise = x : grantIndex' top (i : used) xs
     grantIndex' _ _ [] = []
 
@@ -819,10 +959,9 @@ mkNormalizedBase ::
   a
 mkNormalizedBase = over _bb go
   where
-    go bb@BB {..} =
-      bb
-        { bbInputs = normalizeUTXO <$> bbInputs
-        , bbReferenceInputs = normalizeUTXO <$> bbReferenceInputs
-        , bbOutputs = normalizeUTXO <$> bbOutputs
-        , bbMints = normalizeMint <$> bbMints
-        }
+    go :: BaseBuilder -> BaseBuilder
+    go =
+      over #inputs (fmap normalizeUTXO)
+        . over #referenceInputs (fmap normalizeUTXO)
+        . over #outputs (fmap normalizeUTXO)
+        . over #mints (fmap normalizeMint)

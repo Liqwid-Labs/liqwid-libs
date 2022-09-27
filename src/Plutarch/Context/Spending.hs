@@ -1,5 +1,4 @@
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -16,7 +15,7 @@
 -}
 module Plutarch.Context.Spending (
   -- * Types
-  SpendingBuilder (..),
+  SpendingBuilder,
 
   -- * Inputs
   withSpendingUTXO,
@@ -36,9 +35,9 @@ import Data.Foldable (Foldable (toList))
 import Data.Functor.Contravariant (contramap)
 import Data.Functor.Contravariant.Divisible (choose)
 import Data.Maybe (isJust)
-import Optics (lens)
+import Optics (A_Lens, LabelOptic (labelOptic), lens, set, view)
 import Plutarch.Context.Base (
-  BaseBuilder (BB, bbDatums, bbInputs, bbMints, bbOutputs, bbRedeemers, bbReferenceInputs, bbSignatures),
+  BaseBuilder,
   Builder (pack, _bb),
   UTXO,
   normalizeUTXO,
@@ -82,17 +81,28 @@ data ValidatorInputIdentifier
 {- | A context builder for spending. Corresponds broadly to validators, and to
  'PlutusLedgerApi.V1.Contexts.Spending' specifically.
 
- @since 1.0.0
+ @since 2.5.0
 -}
-data SpendingBuilder = SB
+data SpendingBuilder = SB BaseBuilder (Maybe ValidatorInputIdentifier)
+
+{-
   { sbInner :: BaseBuilder
   , sbValidatorInput :: Maybe ValidatorInputIdentifier
   }
+  -}
+
+-- | @since 2.5.0
+instance LabelOptic "inner" A_Lens SpendingBuilder SpendingBuilder BaseBuilder BaseBuilder where
+  labelOptic = lens (\(SB x _) -> x) $ \(SB _ vi) inner' -> SB inner' vi
+
+-- | @since 2.5.0
+instance LabelOptic "validatorInput" A_Lens SpendingBuilder SpendingBuilder (Maybe ValidatorInputIdentifier) (Maybe ValidatorInputIdentifier) where
+  labelOptic = lens (\(SB _ x) -> x) $ \(SB inner _) vi' -> SB inner vi'
 
 -- | @since 1.1.0
 instance Builder SpendingBuilder where
-  _bb = lens sbInner (\x b -> x {sbInner = b})
-  pack x = mempty {sbInner = x}
+  _bb = #inner
+  pack x = set #inner x (mempty :: SpendingBuilder)
 
 -- | @since 1.0.0
 instance Semigroup SpendingBuilder where
@@ -123,10 +133,7 @@ withSpendingUTXO ::
   UTXO ->
   SpendingBuilder
 withSpendingUTXO u =
-  mempty
-    { sbValidatorInput =
-        Just $ ValidatorUTXO u
-    }
+  set #validatorInput (pure . ValidatorUTXO $ u) (mempty :: SpendingBuilder)
 
 {- | Set Validator Input with given TxOutRef. Note, input with given
    TxOutRef should exist, otherwise the builder would fail.
@@ -137,10 +144,7 @@ withSpendingOutRef ::
   TxOutRef ->
   SpendingBuilder
 withSpendingOutRef outref =
-  mempty
-    { sbValidatorInput =
-        Just . ValidatorOutRef $ outref
-    }
+  set #validatorInput (pure . ValidatorOutRef $ outref) (mempty :: SpendingBuilder)
 
 {- | Set Validator Input with given TxOutRefId. Note, input with given
    TxOutRefId should exist, otherwise the builder would fail.
@@ -151,10 +155,7 @@ withSpendingOutRefId ::
   TxId ->
   SpendingBuilder
 withSpendingOutRefId tid =
-  mempty
-    { sbValidatorInput =
-        Just . ValidatorOutRefId $ tid
-    }
+  set #validatorInput (pure . ValidatorOutRefId $ tid) (mempty :: SpendingBuilder)
 
 {- | Set Validator Input with given TxOutRefIdx. Note, input with given
    TxOutRefIdx should exist, otherwise the builder would fail.
@@ -165,10 +166,7 @@ withSpendingOutRefIdx ::
   Integer ->
   SpendingBuilder
 withSpendingOutRefIdx tidx =
-  mempty
-    { sbValidatorInput =
-        Just . ValidatorOutRefIdx $ tidx
-    }
+  set #validatorInput (pure . ValidatorOutRefIdx $ tidx) (mempty :: SpendingBuilder)
 
 yieldValidatorInput ::
   [TxInInfo] ->
@@ -194,14 +192,14 @@ yieldValidatorInput ins = \case
 buildSpending' ::
   SpendingBuilder ->
   ScriptContext
-buildSpending' builder@(unpack -> BB {..}) =
-  let (ins, inDat) = yieldInInfoDatums bbInputs
-      (refin, _) = yieldInInfoDatums bbReferenceInputs
-      (outs, outDat) = yieldOutDatums bbOutputs
-      mintedValue = yieldMint bbMints
-      extraDat = yieldExtraDatums bbDatums
+buildSpending' builder@(unpack -> bb) =
+  let (ins, inDat) = yieldInInfoDatums . view #inputs $ bb
+      (refin, _) = yieldInInfoDatums . view #referenceInputs $ bb
+      (outs, outDat) = yieldOutDatums . view #outputs $ bb
+      mintedValue = yieldMint . view #mints $ bb
+      extraDat = yieldExtraDatums . view #datums $ bb
       base = yieldBaseTxInfo builder
-      redeemerMap = yieldRedeemerMap bbInputs bbMints
+      redeemerMap = yieldRedeemerMap (view #inputs bb) (view #mints bb)
 
       txinfo =
         base
@@ -210,10 +208,10 @@ buildSpending' builder@(unpack -> BB {..}) =
           , txInfoOutputs = outs
           , txInfoData = fromList $ inDat <> outDat <> extraDat
           , txInfoMint = mintedValue
-          , txInfoSignatories = toList bbSignatures
-          , txInfoRedeemers = fromList $ toList bbRedeemers <> redeemerMap
+          , txInfoSignatories = toList . view #signatures $ bb
+          , txInfoRedeemers = fromList $ toList (view #redeemers bb) <> redeemerMap
           }
-      vInRef = case sbValidatorInput builder >>= yieldValidatorInput ins of
+      vInRef = case view #validatorInput builder >>= yieldValidatorInput ins of
         Nothing -> TxOutRef "" 0
         Just ref -> ref
    in ScriptContext txinfo (Spending vInRef)
@@ -253,7 +251,7 @@ checkSpending :: Checker SpendingError SpendingBuilder
 checkSpending =
   checkAt AtInput $
     contramap
-      ((fst . yieldInInfoDatums . bbInputs . unpack) &&& sbValidatorInput)
+      ((fst . yieldInInfoDatums . view #inputs . unpack) &&& view #validatorInput)
       ( choose
           (\(ins, vin) -> maybe (Left ()) (\x -> Right (x, yieldValidatorInput ins x)) vin)
           (checkFail $ OtherError ValidatorInputNotGiven)
