@@ -79,11 +79,6 @@ import Prettyprinter qualified as P (Pretty (pretty))
  @since 2.5.0
 -}
 data MintingBuilder = MB BaseBuilder (Maybe CurrencySymbol)
-  {-
-    { mbInner :: BaseBuilder
-    , mbMintingCS :: Maybe CurrencySymbol
-    }
-    -}
   deriving stock
     ( -- | @since 1.0.0
       Show
