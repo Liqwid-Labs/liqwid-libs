@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutarch-context-builder
-version:            2.4.0
+version:            2.5.0
 synopsis:           A builder for ScriptContexts
 description:
   Defines a builder for ScriptContexts, with helpers for commonly-needed uses.
@@ -14,7 +14,7 @@ license:
 -- license-file:       LICENSE
 author:             Koz Ross, Seungheon Oh
 maintainer:
-  Koz Ross <koz@mlabs.city>, Seungheon Oh <seungheon.ooh@gmail.com>  
+  Koz Ross <koz@mlabs.city>, Seungheon Oh <seungheon.ooh@gmail.com>
 
 copyright:          (C) 2022 Liqwid Labs
 category:           Plutarch

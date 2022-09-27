@@ -266,7 +266,7 @@ checkIfWith f err = Checker $ \y ->
     then mempty
     else basicError $ err y
 
-{- | Verify on-chain bytestring, which as to be 28 in length.
+{- | Verify on-chain bytestring if it matches the given length
 
  @since 2.1.0
 -}
