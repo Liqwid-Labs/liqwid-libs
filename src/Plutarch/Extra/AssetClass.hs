@@ -1,9 +1,3 @@
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {- | Provides Data and Scott encoded  asset class types and utility
@@ -45,8 +39,14 @@ import Data.Tagged (Tagged, untag)
 import GHC.TypeLits (Symbol)
 import qualified Generics.SOP as SOP
 import Plutarch.Api.V1 (
-    PCurrencySymbol,
-    PTokenName,
+  PCurrencySymbol,
+  PTokenName,
+  PValue (PValue),
+ )
+import Plutarch.Api.V1.AssocMap (PMap (PMap))
+import Plutarch.Api.V2 (
+  AmountGuarantees,
+  KeyGuarantees,
  )
 import Plutarch.DataRepr (PDataFields)
 import Plutarch.Extra.IsData (

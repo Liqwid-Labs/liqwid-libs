@@ -1,6 +1,4 @@
-{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {- |
@@ -11,19 +9,23 @@ Description: A basic N of M multisignature validation function.
 A basic N of M multisignature validation function.
 -}
 module Plutarch.Extra.MultiSig (
-    validatedByMultisig,
-    pvalidatedByMultisig,
-    PMultiSig (..),
-    MultiSig (..),
-    PMultiSigContext,
-    pmultiSigContext,
+  validatedByMultisig,
+  pvalidatedByMultisig,
+  PMultiSig (..),
+  MultiSig,
+  mkMultiSig,
+  PMultiSigContext,
+  pmultiSigContext,
 ) where
 
 import GHC.Records (HasField)
+import Optics.Getter (A_Getter, to)
+import Optics.Label (LabelOptic (labelOptic))
+import Optics.Traversal (A_Traversal, traversalVL)
 import Plutarch.Api.V2 (PPubKeyHash)
 import Plutarch.DataRepr (
-    DerivePConstantViaData (DerivePConstantViaData),
-    PDataFields,
+  DerivePConstantViaData (DerivePConstantViaData),
+  PDataFields,
  )
 import Plutarch.Extra.Field (pletAllC)
 import Plutarch.Extra.Function (pflip)
@@ -32,68 +34,92 @@ import Plutarch.Lift (PConstantDecl, PLifted, PUnsafeLiftDecl)
 import PlutusLedgerApi.V1.Crypto (PubKeyHash)
 import qualified PlutusTx (makeLift, unstableMakeIsData)
 
-{- | A MultiSig represents a proof that a particular set of signatures
+{- | A 'MultiSig' represents a proof that a particular set of signatures
      are present on a transaction.
 
-     @since 0.1.0
+     @since 3.8.0
 -}
-data MultiSig = MultiSig
-    { keys :: [PubKeyHash]
-    -- ^ List of PubKeyHashes that must be present in the list of signatories.
-    , minSigs :: Integer
-    }
-    deriving stock
-        ( -- | @since 0.1.0
-          Generic
-        , -- | @since 0.1.0
-          Eq
-        , -- | @since 0.1.0
-          Show
-        )
+data MultiSig = MultiSig [PubKeyHash] Integer
+  deriving stock
+    ( -- | @since 0.1.0
+      Generic
+    , -- | @since 0.1.0
+      Eq
+    , -- | @since 0.1.0
+      Show
+    )
+
+{- | Allows traversing over the list of 'PubKeyHash'es that must be present in
+ the list of signatories.
+
+ @since 3.8.0
+-}
+instance LabelOptic "keys" A_Traversal MultiSig MultiSig PubKeyHash PubKeyHash where
+  labelOptic = traversalVL $
+    \f (MultiSig pkhs minSigs) -> MultiSig <$> traverse f pkhs <*> pure minSigs
+
+{- | Allows access to (but not changing) the minimum number of signatories that
+ must be present. Changing this field independently is forbidden, as it could
+ construct an invalid result.
+
+ @since 3.8.0
+-}
+instance LabelOptic "minSigs" A_Getter MultiSig MultiSig Integer Integer where
+  labelOptic = to $ \(MultiSig _ minSigs) -> minSigs
 
 PlutusTx.makeLift ''MultiSig
 PlutusTx.unstableMakeIsData ''MultiSig
+
+{- | Given a list of keys, and a minimum number of signatories, returns
+ 'Nothing' if given too few keys, or 'Just' a 'MultiSig' otherwise.
+
+ @since 3.8.0
+-}
+mkMultiSig :: [PubKeyHash] -> Integer -> Maybe MultiSig
+mkMultiSig pkhs minSigs
+  | length pkhs < fromIntegral minSigs = Nothing
+  | otherwise = Just . MultiSig pkhs $ minSigs
 
 {- | Plutarch-level MultiSig
 
      @since 0.1.0
 -}
 newtype PMultiSig (s :: S) = PMultiSig
-    { getMultiSig ::
-        Term
-            s
-            ( PDataRecord
-                '[ "keys" ':= PBuiltinList (PAsData PPubKeyHash)
-                 , "minSigs" ':= PInteger
-                 ]
-            )
-    }
-    deriving stock
-        ( -- | @since 0.1.0
-          Generic
+  { getMultiSig ::
+      Term
+        s
+        ( PDataRecord
+            '[ "keys" ':= PBuiltinList (PAsData PPubKeyHash)
+             , "minSigs" ':= PInteger
+             ]
         )
-    deriving anyclass
-        ( -- | @since 0.1.0
-          PlutusType
-        , -- | @since 0.1.0
-          PIsData
-        , -- | @since 0.1.0
-          PDataFields
-        )
+  }
+  deriving stock
+    ( -- | @since 0.1.0
+      Generic
+    )
+  deriving anyclass
+    ( -- | @since 0.1.0
+      PlutusType
+    , -- | @since 0.1.0
+      PIsData
+    , -- | @since 0.1.0
+      PDataFields
+    )
 
 -- | @since 1.4.0
 instance DerivePlutusType PMultiSig where
-    type DPTStrat _ = PlutusTypeData
+  type DPTStrat _ = PlutusTypeData
 
 -- | @since 0.1.0
 instance PUnsafeLiftDecl PMultiSig where
-    type PLifted PMultiSig = MultiSig
+  type PLifted PMultiSig = MultiSig
 
 -- | @since 0.1.0
 deriving via
-    (DerivePConstantViaData MultiSig PMultiSig)
-    instance
-        (PConstantDecl MultiSig)
+  (DerivePConstantViaData MultiSig PMultiSig)
+  instance
+    (PConstantDecl MultiSig)
 
 -- | @since 3.2.0
 instance PTryFrom PData PMultiSig
@@ -102,25 +128,29 @@ instance PTryFrom PData PMultiSig
 
      Should be constructed with 'pmultiSigContext'.
 
-     @since 3.2.0
+     @since 3.8.0
 -}
-newtype PMultiSigContext (s :: S) = PMultiSigContext
-    { signatories :: Term s (PBuiltinList (PAsData PPubKeyHash))
-    }
-    deriving stock
-        ( -- | @since 3.2.0
-          Generic
-        )
-    deriving anyclass
-        ( -- | @since 3.2.0
-          PlutusType
-        , -- | @since 3.2.0
-          PEq
-        )
+newtype PMultiSigContext (s :: S)
+  = PMultiSigContext
+      (Term s (PBuiltinList (PAsData PPubKeyHash)))
+  deriving stock
+    ( -- | @since 3.2.0
+      Generic
+    )
+  deriving anyclass
+    ( -- | @since 3.2.0
+      PlutusType
+    , -- | @since 3.2.0
+      PEq
+    )
 
 -- | @since 3.2.0
 instance DerivePlutusType PMultiSigContext where
-    type DPTStrat _ = PlutusTypeNewtype
+  type DPTStrat _ = PlutusTypeNewtype
+
+-- | @since 3.8.0
+instance HasField "signatories" (PMultiSigContext s) (Term s (PBuiltinList (PAsData PPubKeyHash))) where
+  getField (PMultiSigContext t) = t
 
 --------------------------------------------------------------------------------
 
@@ -130,21 +160,21 @@ instance DerivePlutusType PMultiSigContext where
      @since 3.2.0
 -}
 pmultiSigContext ::
-    forall r (s :: S).
-    ( HasField "signatories" r (Term s (PBuiltinList (PAsData PPubKeyHash)))
-    ) =>
-    r ->
-    Term s PMultiSigContext
-pmultiSigContext f = pcon (PMultiSigContext f.signatories)
+  forall r (s :: S).
+  ( HasField "signatories" r (Term s (PBuiltinList (PAsData PPubKeyHash)))
+  ) =>
+  r ->
+  Term s PMultiSigContext
+pmultiSigContext = pcon . PMultiSigContext . getField @"signatories"
 
-{- | Check if a Haskell-level MultiSig signs this transaction.
+{- | Check if a Haskell-level 'MultiSig' signs this transaction.
 
      @since 3.2.0
 -}
 validatedByMultisig :: forall (s :: S). MultiSig -> Term s (PMultiSigContext :--> PBool)
 validatedByMultisig params =
-    phoistAcyclic $
-        pvalidatedByMultisig # pconstant params
+  phoistAcyclic $
+    pvalidatedByMultisig # pconstant params
 
 {- | Check if a Plutarch-level MultiSig signs this transaction.
 
@@ -152,14 +182,14 @@ validatedByMultisig params =
 -}
 pvalidatedByMultisig :: forall (s :: S). Term s (PMultiSig :--> PMultiSigContext :--> PBool)
 pvalidatedByMultisig =
-    phoistAcyclic $
-        plam $ \multi ctx -> unTermCont $ do
-            multiF <- pletAllC multi
-            PMultiSigContext sigs <- pmatchC ctx
+  phoistAcyclic $
+    plam $ \multi ctx -> unTermCont $ do
+      multiF <- pletAllC multi
+      PMultiSigContext sigs <- pmatchC ctx
 
-            pure $
-                multiF.minSigs
-                    #<= ( plength #$ pfilter
-                            # (pflip # pelem # sigs)
-                            # multiF.keys
-                        )
+      pure $
+        getField @"minSigs" multiF
+          #<= ( plength #$ pfilter
+                  # (pflip # pelem # sigs)
+                  # getField @"keys" multiF
+              )

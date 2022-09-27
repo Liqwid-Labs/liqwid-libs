@@ -1,35 +1,32 @@
-{-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE TypeApplications #-}
-
 module Plutarch.Extra.Value (
-    -- * Creation
-    passetClassDataValue,
-    psingleValue,
-    psingleValue',
-    pvalue,
-    pvaluePositive,
+  -- * Creation
+  passetClassDataValue,
+  psingleValue,
+  psingleValue',
+  pvalue,
+  pvaluePositive,
 
-    -- * Queries
-    padaOf,
-    passetClassValueOf',
-    passetClassValueOf,
-    pmatchValueAssets,
-    psplitValue,
+  -- * Queries
+  padaOf,
+  passetClassValueOf',
+  passetClassValueOf,
+  pmatchValueAssets,
+  psplitValue,
 
-    -- * Aggregation and elimination
-    psymbolValueOf,
-    precValue,
-    pelimValue,
+  -- * Aggregation and elimination
+  psymbolValueOf,
+  precValue,
+  pelimValue,
 
-    -- * Comparison
-    pbyClassComparator,
-    pbySymbolComparator,
-    pbyClassComparator',
+  -- * Comparison
+  pbyClassComparator,
+  pbySymbolComparator,
+  pbyClassComparator',
 
-    -- * Miscellaneous
-    AddGuarantees,
-    phasOnlyOneTokenOfCurrencySymbol,
+  -- * Miscellaneous
+  AddGuarantees,
+  phasOnlyOneTokenOfCurrencySymbol,
+
 ) where
 
 import Data.Coerce (coerce)
@@ -297,16 +294,16 @@ psplitValue = phoistAcyclic $
    @since 1.1.0
 -}
 psymbolValueOf ::
-    forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
-    Term s (PCurrencySymbol :--> PValue keys amounts :--> PInteger)
+  forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
+  Term s (PCurrencySymbol :--> PValue keys amounts :--> PInteger)
 psymbolValueOf =
-    phoistAcyclic $
-        plam $ \sym value'' -> unTermCont $ do
-            PValue value' <- pmatchC value''
-            PMap value <- pmatchC value'
-            m' <- pexpectJustC 0 (plookupAssoc # pfstBuiltin # psndBuiltin # pdata sym # value)
-            PMap m <- pmatchC (pfromData m')
-            pure $ pfoldr # plam (\x v -> pfromData (psndBuiltin # x) + v) # 0 # m
+  phoistAcyclic $
+    plam $ \sym value'' -> unTermCont $ do
+      PValue value' <- pmatchC value''
+      PMap value <- pmatchC value'
+      m' <- pexpectJustC 0 (plookupAssoc # pfstBuiltin # psndBuiltin # pdata sym # value)
+      PMap m <- pmatchC (pfromData m')
+      pure $ pfoldr # plam (\x v -> pfromData (psndBuiltin # x) + v) # 0 # m
 
 {- | Eliminator for a sorted 'PValue'. The function argument will receive:
 
@@ -470,8 +467,8 @@ pbyClassComparator' ac = pfromOrdBy # plam (passetClassValueOf' ac #)
    @since 1.1.0
 -}
 type family AddGuarantees (a :: AmountGuarantees) (b :: AmountGuarantees) where
-    AddGuarantees 'Positive 'Positive = 'Positive
-    AddGuarantees _ _ = 'NoGuarantees
+  AddGuarantees 'Positive 'Positive = 'Positive
+  AddGuarantees _ _ = 'NoGuarantees
 
 {- | Returns 'PTrue' if the entire argument 'PValue' contains /exactly/ one
  token of the argument 'PCurrencySymbol'.
@@ -479,9 +476,10 @@ type family AddGuarantees (a :: AmountGuarantees) (b :: AmountGuarantees) where
  @since 1.3.0
 -}
 phasOnlyOneTokenOfCurrencySymbol ::
-    forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
-    Term s (PCurrencySymbol :--> PValue keys amounts :--> PBool)
+  forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
+  Term s (PCurrencySymbol :--> PValue keys amounts :--> PBool)
 phasOnlyOneTokenOfCurrencySymbol = phoistAcyclic $
+<<<<<<< HEAD
     plam $ \cs vs ->
         psymbolValueOf # cs # vs #== 1
             #&& (plength #$ pto $ pto $ pto vs) #== 1

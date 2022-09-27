@@ -18,6 +18,6 @@ shouldMatch = sample #== trav
 
 tests :: [TestTree]
 tests =
-    [ testCase "ptraverse" $
-        assertBool "PListLike" (plift shouldMatch)
-    ]
+  [ testCase "ptraverse" $
+      assertBool "PListLike" (plift shouldMatch)
+  ]

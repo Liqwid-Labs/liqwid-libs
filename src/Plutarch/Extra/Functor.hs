@@ -1,17 +1,15 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Plutarch.Extra.Functor (
-    -- * Type classes
-    Plut,
-    PFunctor (..),
-    PBifunctor (..),
+  -- * Type classes
+  Plut,
+  PFunctor (..),
+  PBifunctor (..),
 
-    -- * Functions
-    (#<$),
-    (#$>),
-    (#<$>),
-    (#<&>),
-    pvoid,
+  -- * Functions
+  (#<$),
+  (#$>),
+  (#<$>),
+  (#<&>),
+  pvoid,
 ) where
 
 import Data.Kind (Constraint)
@@ -61,95 +59,95 @@ instance Plut a
  @since 1.0.0
 -}
 class PFunctor (f :: (S -> Type) -> S -> Type) where
-    {-# MINIMAL pfmap #-}
+  {-# MINIMAL pfmap #-}
 
-    -- | Describes the subcategory of @Plut@ that @f@ is an endofunctor on. Put
-    -- another way, this describes what kind of types @f@ is \'parametric
-    -- over\'.
-    --
-    -- Common choices for this are:
-    --
-    -- * 'Plut', which means \'parametric over anything of kind @'S' -> 'Type'@\'
-    -- * 'PIsData', which means \'parametric over things which are
-    -- @Data@-encodable\'
-    -- * 'PUnsafeLiftDecl', which means \'parametric over things that have a
-    -- Haskell-level equivalent\'
-    type PSubcategory f :: (S -> Type) -> Constraint
+  -- | Describes the subcategory of @Plut@ that @f@ is an endofunctor on. Put
+  -- another way, this describes what kind of types @f@ is \'parametric
+  -- over\'.
+  --
+  -- Common choices for this are:
+  --
+  -- * 'Plut', which means \'parametric over anything of kind @'S' -> 'Type'@\'
+  -- * 'PIsData', which means \'parametric over things which are
+  -- @Data@-encodable\'
+  -- * 'PUnsafeLiftDecl', which means \'parametric over things that have a
+  -- Haskell-level equivalent\'
+  type PSubcategory f :: (S -> Type) -> Constraint
 
-    pfmap ::
-        forall (a :: S -> Type) (b :: S -> Type) (s :: S).
-        (PSubcategory f a, PSubcategory f b) =>
-        Term s ((a :--> b) :--> f a :--> f b)
+  pfmap ::
+    forall (a :: S -> Type) (b :: S -> Type) (s :: S).
+    (PSubcategory f a, PSubcategory f b) =>
+    Term s ((a :--> b) :--> f a :--> f b)
 
-    -- | Replace all values to be computed with a fixed value. Defaults to
-    -- @'pfmap' 'pconst'@, but could be more efficient for some 'PFunctor's.
-    --
-    -- @since 1.2.0
-    {-# INLINEABLE pfconst #-}
-    pfconst ::
-        forall (a :: S -> Type) (b :: S -> Type) (s :: S).
-        (PSubcategory f a, PSubcategory f b) =>
-        Term s (a :--> f b :--> f a)
-    pfconst = phoistAcyclic $ plam $ \x ys -> pfmap # (pconst # x) # ys
+  -- | Replace all values to be computed with a fixed value. Defaults to
+  -- @'pfmap' 'pconst'@, but could be more efficient for some 'PFunctor's.
+  --
+  -- @since 1.2.0
+  {-# INLINEABLE pfconst #-}
+  pfconst ::
+    forall (a :: S -> Type) (b :: S -> Type) (s :: S).
+    (PSubcategory f a, PSubcategory f b) =>
+    Term s (a :--> f b :--> f a)
+  pfconst = phoistAcyclic $ plam $ \x ys -> pfmap # (pconst # x) # ys
 
 -- | @since 3.1.0
 instance PFunctor PMaybe where
-    type PSubcategory PMaybe = Plut
-    pfmap = phoistAcyclic $
-        plam $ \f t -> unTermCont $ do
-            t' <- pmatchC t
-            pure . pcon $ case t' of
-                PNothing -> PNothing
-                PJust t'' -> PJust $ f # t''
+  type PSubcategory PMaybe = Plut
+  pfmap = phoistAcyclic $
+    plam $ \f t -> unTermCont $ do
+      t' <- pmatchC t
+      pure . pcon $ case t' of
+        PNothing -> PNothing
+        PJust t'' -> PJust $ f # t''
 
 -- | @since 1.0.0
 instance PFunctor PMaybeData where
-    type PSubcategory PMaybeData = PIsData
-    pfmap = phoistAcyclic $
-        plam $ \f t -> unTermCont $ do
-            t' <- pmatchC t
-            case t' of
-                PDNothing _ -> pure . pcon . PDNothing $ pdnil
-                PDJust t'' -> do
-                    x <- pletC (pfromData $ pfield @"_0" # t'')
-                    res <- pletC (f # x)
-                    pure . pcon . PDJust $ pdcons # pdata res # pdnil
+  type PSubcategory PMaybeData = PIsData
+  pfmap = phoistAcyclic $
+    plam $ \f t -> unTermCont $ do
+      t' <- pmatchC t
+      case t' of
+        PDNothing _ -> pure . pcon . PDNothing $ pdnil
+        PDJust t'' -> do
+          x <- pletC (pfromData $ pfield @"_0" # t'')
+          res <- pletC (f # x)
+          pure . pcon . PDJust $ pdcons # pdata res # pdnil
 
 -- | @since 3.1.0
 instance PFunctor PList where
-    type PSubcategory PList = Plut
-    pfmap = phoistAcyclic $ plam $ \f t -> pmap # f # t
+  type PSubcategory PList = Plut
+  pfmap = phoistAcyclic $ plam $ \f t -> pmap # f # t
 
 -- | @since 1.0.0
 instance PFunctor PBuiltinList where
-    type PSubcategory PBuiltinList = PUnsafeLiftDecl
-    pfmap = phoistAcyclic $ plam $ \f t -> pmap # f # t
+  type PSubcategory PBuiltinList = PUnsafeLiftDecl
+  pfmap = phoistAcyclic $ plam $ \f t -> pmap # f # t
 
 -- | @since 1.0.0
 instance forall (s :: KeyGuarantees) (k :: S -> Type). (PIsData k) => PFunctor (PMap s k) where
-    type PSubcategory (PMap s k) = PIsData
-    pfmap = psecond
+  type PSubcategory (PMap s k) = PIsData
+  pfmap = psecond
 
 -- | @since 3.1.0
 instance PFunctor (PPair a) where
-    type PSubcategory (PPair a) = Plut
-    pfmap = psecond
+  type PSubcategory (PPair a) = Plut
+  pfmap = psecond
 
 -- | @since 3.1.0
 instance PFunctor (PEither e) where
-    type PSubcategory (PEither e) = Plut
-    pfmap = psecond
+  type PSubcategory (PEither e) = Plut
+  pfmap = psecond
 
 {- | Infix, 'Term'-lifted version of 'pfconst'.
 
  @since 1.0.0
 -}
 (#<$) ::
-    forall (f :: (S -> Type) -> S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S).
-    (PFunctor f, PSubcategory f a, PSubcategory f b) =>
-    Term s a ->
-    Term s (f b) ->
-    Term s (f a)
+  forall (f :: (S -> Type) -> S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S).
+  (PFunctor f, PSubcategory f a, PSubcategory f b) =>
+  Term s a ->
+  Term s (f b) ->
+  Term s (f a)
 x #<$ f = pfconst # x # f
 
 infixl 4 #<$
@@ -159,11 +157,11 @@ infixl 4 #<$
  @since 1.0.0
 -}
 (#$>) ::
-    forall (f :: (S -> Type) -> S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S).
-    (PFunctor f, PSubcategory f a, PSubcategory f b) =>
-    Term s (f a) ->
-    Term s b ->
-    Term s (f b)
+  forall (f :: (S -> Type) -> S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S).
+  (PFunctor f, PSubcategory f a, PSubcategory f b) =>
+  Term s (f a) ->
+  Term s b ->
+  Term s (f b)
 (#$>) = flip (#<$)
 
 infixl 4 #$>
@@ -173,11 +171,11 @@ infixl 4 #$>
  @since 1.0.0
 -}
 (#<$>) ::
-    forall (f :: (S -> Type) -> S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S).
-    (PFunctor f, PSubcategory f a, PSubcategory f b) =>
-    Term s (a :--> b) ->
-    Term s (f a) ->
-    Term s (f b)
+  forall (f :: (S -> Type) -> S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S).
+  (PFunctor f, PSubcategory f a, PSubcategory f b) =>
+  Term s (a :--> b) ->
+  Term s (f a) ->
+  Term s (f b)
 f #<$> t = pfmap # f # t
 
 infixl 4 #<$>
@@ -187,11 +185,11 @@ infixl 4 #<$>
  @since 1.0.0
 -}
 (#<&>) ::
-    forall (f :: (S -> Type) -> S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S).
-    (PFunctor f, PSubcategory f a, PSubcategory f b) =>
-    Term s (f a) ->
-    Term s (a :--> b) ->
-    Term s (f b)
+  forall (f :: (S -> Type) -> S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S).
+  (PFunctor f, PSubcategory f a, PSubcategory f b) =>
+  Term s (f a) ->
+  Term s (a :--> b) ->
+  Term s (f b)
 (#<&>) = flip (#<$>)
 
 infixl 1 #<&>
@@ -201,10 +199,10 @@ infixl 1 #<&>
  @since 1.2.0
 -}
 pvoid ::
-    forall (f :: (S -> Type) -> S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S).
-    (PFunctor f, PSubcategory f a, PSubcategory f b, PBoring b) =>
-    Term s (f a) ->
-    Term s (f b)
+  forall (f :: (S -> Type) -> S -> Type) (a :: S -> Type) (b :: S -> Type) (s :: S).
+  (PFunctor f, PSubcategory f a, PSubcategory f b, PBoring b) =>
+  Term s (f a) ->
+  Term s (f b)
 pvoid t = pfconst # pboring # t
 
 {- | Similar to 'PFunctor', but is covariant in /two/ parameters instead of one.
@@ -263,87 +261,87 @@ pvoid t = pfconst # pboring # t
  @since 1.0.0
 -}
 class PBifunctor (f :: (S -> Type) -> (S -> Type) -> S -> Type) where
-    -- | Similar to 'PSubcategory', but for only the first parameter of @f@. See
-    -- the documentation on 'PSubcategory' for common choices here.
-    type PSubcategoryLeft f :: (S -> Type) -> Constraint
+  -- | Similar to 'PSubcategory', but for only the first parameter of @f@. See
+  -- the documentation on 'PSubcategory' for common choices here.
+  type PSubcategoryLeft f :: (S -> Type) -> Constraint
 
-    -- | Similar to 'PSubcategory', but for only the second parameter of @f@.
-    -- See the documentation on 'PSubcategory' for common choices here.
-    type PSubcategoryRight f :: (S -> Type) -> Constraint
+  -- | Similar to 'PSubcategory', but for only the second parameter of @f@.
+  -- See the documentation on 'PSubcategory' for common choices here.
+  type PSubcategoryRight f :: (S -> Type) -> Constraint
 
-    {-# MINIMAL pbimap | pfirst, psecond #-}
-    pbimap ::
-        forall (a :: S -> Type) (b :: S -> Type) (c :: S -> Type) (d :: S -> Type) (s :: S).
-        ( PSubcategoryLeft f a
-        , PSubcategoryLeft f c
-        , PSubcategoryRight f b
-        , PSubcategoryRight f d
-        ) =>
-        Term s ((a :--> c) :--> (b :--> d) :--> f a b :--> f c d)
-    pbimap = phoistAcyclic $ plam $ \f g t -> pfirst # f # (psecond # g # t)
-    pfirst ::
-        forall (a :: S -> Type) (b :: S -> Type) (c :: S -> Type) (s :: S).
-        ( PSubcategoryLeft f a
-        , PSubcategoryLeft f c
-        , PSubcategoryRight f b
-        ) =>
-        Term s ((a :--> c) :--> f a b :--> f c b)
-    pfirst = phoistAcyclic $ plam $ \f t -> pbimap # f # pidentity # t
-    psecond ::
-        forall (a :: S -> Type) (b :: S -> Type) (d :: S -> Type) (s :: S).
-        ( PSubcategoryLeft f a
-        , PSubcategoryRight f b
-        , PSubcategoryRight f d
-        ) =>
-        Term s ((b :--> d) :--> f a b :--> f a d)
-    psecond = phoistAcyclic $ plam $ \g t -> pbimap # pidentity # g # t
+  {-# MINIMAL pbimap | pfirst, psecond #-}
+  pbimap ::
+    forall (a :: S -> Type) (b :: S -> Type) (c :: S -> Type) (d :: S -> Type) (s :: S).
+    ( PSubcategoryLeft f a
+    , PSubcategoryLeft f c
+    , PSubcategoryRight f b
+    , PSubcategoryRight f d
+    ) =>
+    Term s ((a :--> c) :--> (b :--> d) :--> f a b :--> f c d)
+  pbimap = phoistAcyclic $ plam $ \f g t -> pfirst # f # (psecond # g # t)
+  pfirst ::
+    forall (a :: S -> Type) (b :: S -> Type) (c :: S -> Type) (s :: S).
+    ( PSubcategoryLeft f a
+    , PSubcategoryLeft f c
+    , PSubcategoryRight f b
+    ) =>
+    Term s ((a :--> c) :--> f a b :--> f c b)
+  pfirst = phoistAcyclic $ plam $ \f t -> pbimap # f # pidentity # t
+  psecond ::
+    forall (a :: S -> Type) (b :: S -> Type) (d :: S -> Type) (s :: S).
+    ( PSubcategoryLeft f a
+    , PSubcategoryRight f b
+    , PSubcategoryRight f d
+    ) =>
+    Term s ((b :--> d) :--> f a b :--> f a d)
+  psecond = phoistAcyclic $ plam $ \g t -> pbimap # pidentity # g # t
 
 -- | @since 3.1.0
 instance PBifunctor PPair where
-    type PSubcategoryLeft PPair = Plut
-    type PSubcategoryRight PPair = Plut
-    pbimap = phoistAcyclic $
-        plam $ \f g t -> unTermCont $ do
-            PPair x y <- pmatchC t
-            pure . pcon . PPair (f # x) $ g # y
+  type PSubcategoryLeft PPair = Plut
+  type PSubcategoryRight PPair = Plut
+  pbimap = phoistAcyclic $
+    plam $ \f g t -> unTermCont $ do
+      PPair x y <- pmatchC t
+      pure . pcon . PPair (f # x) $ g # y
 
 -- | @since 3.1.0
 instance PBifunctor PEither where
-    type PSubcategoryLeft PEither = Plut
-    type PSubcategoryRight PEither = Plut
-    pbimap = phoistAcyclic $
-        plam $ \f g t -> unTermCont $ do
-            t' <- pmatchC t
-            pure . pcon $ case t' of
-                PLeft x -> PLeft $ f # x
-                PRight y -> PRight $ g # y
+  type PSubcategoryLeft PEither = Plut
+  type PSubcategoryRight PEither = Plut
+  pbimap = phoistAcyclic $
+    plam $ \f g t -> unTermCont $ do
+      t' <- pmatchC t
+      pure . pcon $ case t' of
+        PLeft x -> PLeft $ f # x
+        PRight y -> PRight $ g # y
 
 -- | @since 1.0.0
 instance forall (keys :: KeyGuarantees). PBifunctor (PMap keys) where
-    type PSubcategoryLeft (PMap keys) = PIsData
-    type PSubcategoryRight (PMap keys) = PIsData
-    pbimap ::
-        forall (a :: S -> Type) (b :: S -> Type) (c :: S -> Type) (d :: S -> Type) (s :: S).
-        (PIsData a, PIsData b, PIsData c, PIsData d) =>
-        Term s ((a :--> b) :--> (c :--> d) :--> PMap keys a c :--> PMap keys b d)
-    pbimap = phoistAcyclic $
-        plam $ \f g t -> unTermCont $ do
-            PMap t' <- pmatchC t
-            pure . pcon . PMap $ pfmap # (go # f # g) # t'
-      where
-        go ::
-            forall (s' :: S).
-            Term
-                s'
-                ( (a :--> b)
-                    :--> (c :--> d)
-                    :--> PBuiltinPair (PAsData a) (PAsData c)
-                    :--> PBuiltinPair (PAsData b) (PAsData d)
-                )
-        go = phoistAcyclic $
-            plam $ \f g p -> unTermCont $ do
-                k <- pletC (pfromData $ pfstBuiltin # p)
-                v <- pletC (pfromData $ psndBuiltin # p)
-                k' <- pletC (f # k)
-                v' <- pletC (g # v)
-                pure $ ppairDataBuiltin # pdata k' # pdata v'
+  type PSubcategoryLeft (PMap keys) = PIsData
+  type PSubcategoryRight (PMap keys) = PIsData
+  pbimap ::
+    forall (a :: S -> Type) (b :: S -> Type) (c :: S -> Type) (d :: S -> Type) (s :: S).
+    (PIsData a, PIsData b, PIsData c, PIsData d) =>
+    Term s ((a :--> b) :--> (c :--> d) :--> PMap keys a c :--> PMap keys b d)
+  pbimap = phoistAcyclic $
+    plam $ \f g t -> unTermCont $ do
+      PMap t' <- pmatchC t
+      pure . pcon . PMap $ pfmap # (go # f # g) # t'
+    where
+      go ::
+        forall (s' :: S).
+        Term
+          s'
+          ( (a :--> b)
+              :--> (c :--> d)
+              :--> PBuiltinPair (PAsData a) (PAsData c)
+              :--> PBuiltinPair (PAsData b) (PAsData d)
+          )
+      go = phoistAcyclic $
+        plam $ \f g p -> unTermCont $ do
+          k <- pletC (pfromData $ pfstBuiltin # p)
+          v <- pletC (pfromData $ psndBuiltin # p)
+          k' <- pletC (f # k)
+          v' <- pletC (g # v)
+          pure $ ppairDataBuiltin # pdata k' # pdata v'

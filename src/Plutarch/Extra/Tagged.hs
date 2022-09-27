@@ -1,12 +1,11 @@
 {-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 -- Needed for Tagged instances for PlutusTx stuff
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Plutarch.Extra.Tagged (
-    PTagged (..),
-    pretag,
+  PTagged (..),
+  pretag,
 ) where
 
 import Data.Bifunctor (first)
@@ -14,18 +13,18 @@ import Data.Tagged (Tagged (Tagged))
 import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
 import Plutarch.Extra.Boring (PBoring (pboring))
 import Plutarch.Extra.Comonad (
-    PComonad (pextract),
-    PExtend (pextend),
+  PComonad (pextract),
+  PExtend (pextend),
  )
 import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap), Plut)
 import Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Extra.Traversable (
-    PSemiTraversable (psemitraverse, psemitraverse_),
-    PTraversable (ptraverse, ptraverse_),
+  PSemiTraversable (psemitraverse, psemitraverse_),
+  PTraversable (ptraverse, ptraverse_),
  )
 import Plutarch.Lift (
-    PConstantDecl (PConstantRepr, PConstanted, pconstantFromRepr, pconstantToRepr),
-    PUnsafeLiftDecl (PLifted),
+  PConstantDecl (PConstantRepr, PConstanted, pconstantFromRepr, pconstantToRepr),
+  PUnsafeLiftDecl (PLifted),
  )
 import Plutarch.Num (PNum)
 import Plutarch.TryFrom (PTryFrom (PTryFromExcess, ptryFrom'))
@@ -88,9 +87,9 @@ tagged_b2 = pmatch b $ \case
  @since 1.0.0
 -}
 newtype PTagged (tag :: k) (underlying :: S -> Type) (s :: S)
-    = PTagged (Term s underlying)
-    deriving stock (Generic)
-    deriving anyclass (PlutusType, PIsData, PEq, PPartialOrd, POrd)
+  = PTagged (Term s underlying)
+  deriving stock (Generic)
+  deriving anyclass (PlutusType, PIsData, PEq, PPartialOrd, POrd)
 
 instance DerivePlutusType (PTagged k u) where type DPTStrat _ = PlutusTypeNewtype
 
@@ -105,103 +104,103 @@ deriving anyclass instance (PShow underlying) => PShow (PTagged tag underlying)
 
 -- | @since 3.1.0
 instance PFunctor (PTagged tag) where
-    type PSubcategory (PTagged tag) = Plut
-    pfmap = phoistAcyclic $
-        plam $ \f t -> unTermCont $ do
-            PTagged t' <- pmatchC t
-            pure . pcon . PTagged $ f # t'
+  type PSubcategory (PTagged tag) = Plut
+  pfmap = phoistAcyclic $
+    plam $ \f t -> unTermCont $ do
+      PTagged t' <- pmatchC t
+      pure . pcon . PTagged $ f # t'
 
 -- | @since 1.0.0
 instance PExtend (PTagged tag) where
-    pextend = phoistAcyclic $ plam $ \f t -> pcon . PTagged $ f # t
+  pextend = phoistAcyclic $ plam $ \f t -> pcon . PTagged $ f # t
 
 -- | @since 1.0.0
 instance PComonad (PTagged tag) where
-    pextract = phoistAcyclic $
-        plam $ \t -> unTermCont $ do
-            PTagged t' <- pmatchC t
-            pure t'
+  pextract = phoistAcyclic $
+    plam $ \t -> unTermCont $ do
+      PTagged t' <- pmatchC t
+      pure t'
 
 -- | @since 1.0.0
 instance PApply (PTagged tag) where
-    pliftA2 = phoistAcyclic $
-        plam $ \f xs ys -> unTermCont $ do
-            PTagged x <- pmatchC xs
-            PTagged y <- pmatchC ys
-            pure . pcon . PTagged $ f # x # y
+  pliftA2 = phoistAcyclic $
+    plam $ \f xs ys -> unTermCont $ do
+      PTagged x <- pmatchC xs
+      PTagged y <- pmatchC ys
+      pure . pcon . PTagged $ f # x # y
 
 -- | @since 1.0.0
 instance PApplicative (PTagged tag) where
-    ppure = phoistAcyclic $ plam $ pcon . PTagged
+  ppure = phoistAcyclic $ plam $ pcon . PTagged
 
 -- | @since 1.0.0
 instance PTraversable (PTagged tag) where
-    ptraverse = psemitraverse
-    ptraverse_ = psemitraverse_
+  ptraverse = psemitraverse
+  ptraverse_ = psemitraverse_
 
 -- | @since 1.2.0
 instance PSemiTraversable (PTagged tag) where
-    psemitraverse = phoistAcyclic $
-        plam $ \f t -> unTermCont $ do
-            PTagged t' <- pmatchC t
-            pure $ pfmap # plam (pcon . PTagged) # (f # t')
-    psemitraverse_ = phoistAcyclic $
-        plam $ \f t -> unTermCont $ do
-            PTagged t' <- pmatchC t
-            pure $ f # t'
+  psemitraverse = phoistAcyclic $
+    plam $ \f t -> unTermCont $ do
+      PTagged t' <- pmatchC t
+      pure $ pfmap # plam (pcon . PTagged) # (f # t')
+  psemitraverse_ = phoistAcyclic $
+    plam $ \f t -> unTermCont $ do
+      PTagged t' <- pmatchC t
+      pure $ f # t'
 
 -- | @since 1.0.0
 instance
-    (PUnsafeLiftDecl a) =>
-    PUnsafeLiftDecl (PTagged t a)
-    where
-    type PLifted (PTagged t a) = Tagged t (PLifted a)
+  (PUnsafeLiftDecl a) =>
+  PUnsafeLiftDecl (PTagged t a)
+  where
+  type PLifted (PTagged t a) = Tagged t (PLifted a)
 
 -- | @since 1.0.0
 instance (PConstantDecl a) => PConstantDecl (Tagged t a) where
-    type PConstantRepr (Tagged t a) = PConstantRepr a
-    type PConstanted (Tagged t a) = PTagged t (PConstanted a)
-    pconstantToRepr (Tagged x) = pconstantToRepr x
-    pconstantFromRepr x = Tagged <$> pconstantFromRepr x
+  type PConstantRepr (Tagged t a) = PConstantRepr a
+  type PConstanted (Tagged t a) = PTagged t (PConstanted a)
+  pconstantToRepr (Tagged x) = pconstantToRepr x
+  pconstantFromRepr x = Tagged <$> pconstantFromRepr x
 
 {- | Hint: it's @punsafeCoerce@. :D
 
  @since 1.0.0
 -}
 pretag ::
-    forall k' k.
-    forall (tag' :: k') (tag :: k) (a :: S -> Type) (s :: S).
-    Term s (PTagged tag a) ->
-    Term s (PTagged tag' a)
+  forall k' k.
+  forall (tag' :: k') (tag :: k) (a :: S -> Type) (s :: S).
+  Term s (PTagged tag a) ->
+  Term s (PTagged tag' a)
 pretag = punsafeCoerce
 
 -- | @since 1.0.0
 instance
-    (PTryFrom PData (PAsData underlying), PSubtype PData (PAsData (PTagged tag underlying))) =>
-    PTryFrom PData (PAsData (PTagged tag underlying))
-    where
-    type
-        PTryFromExcess PData (PAsData (PTagged tag underlying)) =
-            PTryFromExcess PData (PAsData underlying)
-    ptryFrom' d k = ptryFrom' @_ @(PAsData underlying) d $ k . first punsafeCoerce
+  (PTryFrom PData (PAsData underlying), PSubtype PData (PAsData (PTagged tag underlying))) =>
+  PTryFrom PData (PAsData (PTagged tag underlying))
+  where
+  type
+    PTryFromExcess PData (PAsData (PTagged tag underlying)) =
+      PTryFromExcess PData (PAsData underlying)
+  ptryFrom' d k = ptryFrom' @_ @(PAsData underlying) d $ k . first punsafeCoerce
 
 -- These are needed, because plutus-tx doesn't have them
 
 -- | @since 1.0.0
 deriving newtype instance
-    (PlutusTx.ToData underlying) =>
-    PlutusTx.ToData (Tagged tag underlying)
+  (PlutusTx.ToData underlying) =>
+  PlutusTx.ToData (Tagged tag underlying)
 
 -- | @since 1.0.0
 deriving newtype instance
-    (PlutusTx.FromData underlying) =>
-    PlutusTx.FromData (Tagged tag underlying)
+  (PlutusTx.FromData underlying) =>
+  PlutusTx.FromData (Tagged tag underlying)
 
 -- | @since 1.0.0
 deriving newtype instance
-    (PlutusTx.UnsafeFromData underlying) =>
-    PlutusTx.UnsafeFromData (Tagged tag underlying)
+  (PlutusTx.UnsafeFromData underlying) =>
+  PlutusTx.UnsafeFromData (Tagged tag underlying)
 
 -- | @since 1.2.0
 instance (PBoring underlying) => PBoring (PTagged tag underlying) where
-    pboring = ppure # pboring
+  pboring = ppure # pboring

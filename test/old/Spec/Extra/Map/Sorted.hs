@@ -9,14 +9,14 @@ module Spec.Extra.Map.Sorted (tests) where
 
 import Spec.Utils (genKeySet, genNonIdenticalKeySets, genSortedMapWithKeys)
 import Test.QuickCheck (
-    Gen,
-    Property,
-    shrinkNothing,
+  Gen,
+  Property,
+  shrinkNothing,
  )
 import Test.Tasty (TestTree)
 import Test.Tasty.Plutarch.Property (classifiedPropertyNative)
 import Test.Tasty.QuickCheck (
-    testProperty,
+  testProperty,
  )
 
 --------------------------------------------------------------------------------
@@ -38,60 +38,60 @@ import Plutarch.Extra.Map.Sorted (pkeysEqual)
 
 tests :: [TestTree]
 tests =
-    [ testProperty "'pkeysEquals' can tell whether two maps have the same key set or not" prop_keysEqualCorrect
-    -- , testProperty "'punionWith' merges two sorted map correctly" prop_unionMapsCorrect
-    ]
+  [ testProperty "'pkeysEquals' can tell whether two maps have the same key set or not" prop_keysEqualCorrect
+  -- , testProperty "'punionWith' merges two sorted map correctly" prop_unionMapsCorrect
+  ]
 
 --------------------------------------------------------------------------------
 
 data KeysEqualCase = KeysAreEqual | KeysAreNotEqual
-    deriving stock (GHC.Generic)
-    deriving stock (Show, Enum, Bounded, Eq)
-    deriving anyclass (Universe, Finite)
+  deriving stock (GHC.Generic)
+  deriving stock (Show, Enum, Bounded, Eq)
+  deriving anyclass (Universe, Finite)
 
 -- | The property of 'pkeysEqual' to determine whether two maps have the same keys or not.
 prop_keysEqualCorrect :: Property
 prop_keysEqualCorrect = classifiedPropertyNative generator shrinkNothing expected classifier definition
   where
     generator ::
-        KeysEqualCase ->
-        Gen (AssocMap.Map Integer Integer, AssocMap.Map Integer Integer)
+      KeysEqualCase ->
+      Gen (AssocMap.Map Integer Integer, AssocMap.Map Integer Integer)
     generator = \case
-        KeysAreEqual -> do
-            keys <- genKeySet
-            a <- genSortedMapWithKeys keys
-            b <- genSortedMapWithKeys keys
-            return (a, b)
-        KeysAreNotEqual -> do
-            (ka, kb) <- genNonIdenticalKeySets
-            (,)
-                <$> genSortedMapWithKeys ka
-                <*> genSortedMapWithKeys kb
+      KeysAreEqual -> do
+        keys <- genKeySet
+        a <- genSortedMapWithKeys keys
+        b <- genSortedMapWithKeys keys
+        return (a, b)
+      KeysAreNotEqual -> do
+        (ka, kb) <- genNonIdenticalKeySets
+        (,)
+          <$> genSortedMapWithKeys ka
+          <*> genSortedMapWithKeys kb
 
     expected :: (AssocMap.Map Integer Integer, AssocMap.Map Integer Integer) -> Maybe Bool
     expected (AssocMap.keys -> a, AssocMap.keys -> b) = Just $ a == b
 
     classifier :: (AssocMap.Map Integer Integer, AssocMap.Map Integer Integer) -> KeysEqualCase
     classifier (AssocMap.keys -> a, AssocMap.keys -> b)
-        | a == b = KeysAreEqual
-        | otherwise = KeysAreNotEqual
+      | a == b = KeysAreEqual
+      | otherwise = KeysAreNotEqual
 
     definition ::
-        Term
-            _
-            ( PBuiltinPair
-                (PMap 'Unsorted PInteger PInteger)
-                (PMap 'Unsorted PInteger PInteger)
-                :--> PBool
-            )
+      Term
+        _
+        ( PBuiltinPair
+            (PMap 'Unsorted PInteger PInteger)
+            (PMap 'Unsorted PInteger PInteger)
+            :--> PBool
+        )
     definition = phoistAcyclic $
-        plam $ \pair ->
-            let a :: Term _ (PMap 'Sorted PInteger PInteger)
-                a = punsafeCoerce $ pfstBuiltin # pair
+      plam $ \pair ->
+        let a :: Term _ (PMap 'Sorted PInteger PInteger)
+            a = punsafeCoerce $ pfstBuiltin # pair
 
-                b :: Term _ (PMap 'Sorted PInteger PInteger)
-                b = punsafeCoerce $ psndBuiltin # pair
-             in pkeysEqual # a # b
+            b :: Term _ (PMap 'Sorted PInteger PInteger)
+            b = punsafeCoerce $ psndBuiltin # pair
+         in pkeysEqual # a # b
 
 --------------------------------------------------------------------------------
 
