@@ -79,7 +79,7 @@ import Control.Arrow (Arrow ((&&&)))
 import Data.Foldable (Foldable (toList))
 import Data.Kind (Type)
 import Data.List (sortBy)
-import Data.Maybe (fromMaybe, mapMaybe)
+import Data.Maybe (fromMaybe, isNothing, mapMaybe)
 import GHC.Exts (fromList)
 import Optics (Lens', lens, over, view)
 import Plutarch (S)
@@ -789,8 +789,11 @@ sortMap (AssocMap.toList -> m) =
  @since 2.4.0
 -}
 normalizeValue :: Value -> Value
-normalizeValue (Value.getValue -> val) =
-  let val' = AssocMap.insert adaSymbol (AssocMap.fromList [(adaToken, 0)]) val
+normalizeValue (getValue -> val) =
+  let val' =
+        if isNothing $ AssocMap.lookup "" val
+          then AssocMap.insert adaSymbol (AssocMap.fromList [(adaToken, 0)]) val
+          else val
    in Value.Value
         . AssocMap.filter (/= AssocMap.empty)
         . sortMap

@@ -2,7 +2,14 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-## 2.5.0 -- 2020-09-26
+## 2.6.0 -- 2022-09-27
+
+### Fixed
+* `normalizeValue` was setting Ada entries to 0. It now has the correct
+  behavior of adding a 0 Ada entry to the underlying map if the entry would
+  otherwise be missing.
+
+## 2.5.0 -- 2022-09-26
 
 ### Modified
 
@@ -14,7 +21,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 * `checkTxId` is fixed to follow the new ledger spec and will now look for 32
   bytes long `ByteString`.
 
-## 2.4.0 -- 2020-09-14
+## 2.4.0 -- 2022-09-14
 
 ### Added
 
@@ -26,7 +33,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 * `checkNormalized` checks if values in the builder are normalized.
 * `checkValueNormalized` checks if the given value is normalized.
 
-## 2.3.0 -- 2020-09-13
+## 2.3.0 -- 2022-09-13
 
 ### Added
 
@@ -39,7 +46,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 * `mint` sets the redeemer used for minting to `()` by default.
 
-## 2.2.0 -- 2020-08-22
+## 2.2.0 -- 2022-08-22
 
 ### Added
 
@@ -47,11 +54,11 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   It will take `StakingCredential` if the address is provided with one.
 * `withStakeCredential` is for adding `StakingCredential` to an UTXO.
 
-## 2.1.0 -- 2020-08-09
+## 2.1.0 -- 2022-08-09
 
 ### Added
 
-* `Checker` is in charge of composing and construcing checks over `ScriptContext`.
+* `Checker` is in charge of composing and constructing checks over `ScriptContext`.
   It is composed with the `contravariant` typeclasses.
 * `referenceInput` is added for reference inputs in V2 `ScriptContext`. It act similarly
   to `input` and `output`.
@@ -59,7 +66,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   but it doesn't add datum to `ScriptContext`.
 * `mkOutRefIndices` modifies given builder to have "correct" indices.
 * `check[Spending|Minting]` are checkers for each context builder.
-* `build[Spending|Minting]'` are builder that never fails. If given information is insufficiant it will
+* `build[Spending|Minting]'` are builder that never fails. If given information is insufficient it will
   use dummy values. Thus, it is advisable to `build[Spending|Minting]` which comes with minimum checks
   to ensure not to use dummy values.
 * `tryBuild[Spending|Minting]` first run `check[Spending|Minting]` and checkers given in argument.
@@ -69,11 +76,11 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 * `CheckerErrorType` is possible errors from checkers.
 * `basicError` constructs most general error from given error type.
 * `checkAt` updates/overrides checker position.
-* `checkFoldable` applys checker of type `a` to foldable `t a`.
+* `checkFoldable` applies checker of type `a` to foldable `t a`.
 * `checkIf` makes checker from predicate and error. It returns given error if predicate is false.
 * `checkIfWith` is a combination of `checkIf` and `CheckWith`
 * `checkBool` checker for `Bool`. It returns given error when false.
-* `checkWith` builds checker via CPS compuation.
+* `checkWith` builds checker via CPS computation.
 * `checkByteString` checks if given `ByteString` is valid.
 * `checkPositiveValue` checks if given `Value` only contains Positive value.
 * `checkTxId` checks if given `TxId` is valid.
