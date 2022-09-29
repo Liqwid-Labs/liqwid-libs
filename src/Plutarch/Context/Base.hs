@@ -1,6 +1,6 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
 {- | Module: Plutarch.Context.Base
@@ -162,17 +162,26 @@ data Mint = Mint CurrencySymbol [(TokenName, Integer)] Data
     )
 
 -- | @since 2.5.0
-instance LabelOptic "symbol" A_Lens Mint Mint CurrencySymbol CurrencySymbol where
+instance
+  (k ~ A_Lens, a ~ CurrencySymbol, b ~ CurrencySymbol) =>
+  LabelOptic "symbol" k Mint Mint a b
+  where
   labelOptic = lens (\(Mint cs _ _) -> cs) $ \(Mint _ toks red) cs' ->
     Mint cs' toks red
 
 -- | @since 2.5.0
-instance LabelOptic "tokens" A_Lens Mint Mint [(TokenName, Integer)] [(TokenName, Integer)] where
+instance
+  (k ~ A_Lens, a ~ [(TokenName, Integer)], b ~ [(TokenName, Integer)]) =>
+  LabelOptic "tokens" k Mint Mint a b
+  where
   labelOptic = lens (\(Mint _ toks _) -> toks) $ \(Mint cs _ red) toks' ->
     Mint cs toks' red
 
 -- | @since 2.5.0
-instance LabelOptic "redeemer" A_Lens Mint Mint Data Data where
+instance
+  (k ~ A_Lens, a ~ Data, b ~ Data) =>
+  LabelOptic "redeemer" k Mint Mint a b
+  where
   labelOptic = lens (\(Mint _ _ red) -> red) $ \(Mint cs toks _) red' ->
     Mint cs toks red'
 
@@ -216,42 +225,66 @@ data UTXO
     )
 
 -- | @since 2.5.0
-instance LabelOptic "credential" A_Lens UTXO UTXO (Maybe Credential) (Maybe Credential) where
+instance
+  (k ~ A_Lens, a ~ Maybe Credential, b ~ Maybe Credential) =>
+  LabelOptic "credential" k UTXO UTXO a b
+  where
   labelOptic = lens (\(UTXO x _ _ _ _ _ _ _) -> coerce x) $ \(UTXO _ scred val dat rs ti tix red) cred' ->
     UTXO (coerce cred') scred val dat rs ti tix red
 
 -- | @since 2.5.0
-instance LabelOptic "stakingCredential" A_Lens UTXO UTXO (Maybe StakingCredential) (Maybe StakingCredential) where
+instance
+  (k ~ A_Lens, a ~ Maybe StakingCredential, b ~ Maybe StakingCredential) =>
+  LabelOptic "stakingCredential" k UTXO UTXO a b
+  where
   labelOptic = lens (\(UTXO _ x _ _ _ _ _ _) -> coerce x) $ \(UTXO cred _ val dat rs ti tix red) scred' ->
     UTXO cred (coerce scred') val dat rs ti tix red
 
 -- | @since 2.5.0
-instance LabelOptic "value" A_Lens UTXO UTXO Value Value where
+instance
+  (k ~ A_Lens, a ~ Value, b ~ Value) =>
+  LabelOptic "value" k UTXO UTXO a b
+  where
   labelOptic = lens (\(UTXO _ _ x _ _ _ _ _) -> x) $ \(UTXO cred scred _ dat rs ti tix red) val' ->
     UTXO cred scred val' dat rs ti tix red
 
 -- | @since 2.5.0
-instance LabelOptic "data" A_Lens UTXO UTXO (Maybe DatumType) (Maybe DatumType) where
+instance
+  (k ~ A_Lens, a ~ Maybe DatumType, b ~ Maybe DatumType) =>
+  LabelOptic "data" k UTXO UTXO a b
+  where
   labelOptic = lens (\(UTXO _ _ _ x _ _ _ _) -> coerce x) $ \(UTXO cred scred val _ rs ti tix red) dat' ->
     UTXO cred scred val (coerce dat') rs ti tix red
 
 -- | @since 2.5.0
-instance LabelOptic "referenceScript" A_Lens UTXO UTXO (Maybe ScriptHash) (Maybe ScriptHash) where
+instance
+  (k ~ A_Lens, a ~ Maybe ScriptHash, b ~ Maybe ScriptHash) =>
+  LabelOptic "referenceScript" k UTXO UTXO a b
+  where
   labelOptic = lens (\(UTXO _ _ _ _ x _ _ _) -> coerce x) $ \(UTXO cred scred val dat _ ti tix red) rs' ->
     UTXO cred scred val dat (coerce rs') ti tix red
 
 -- | @since 2.5.0
-instance LabelOptic "txId" A_Lens UTXO UTXO (Maybe TxId) (Maybe TxId) where
+instance
+  (k ~ A_Lens, a ~ Maybe TxId, b ~ Maybe TxId) =>
+  LabelOptic "txId" k UTXO UTXO a b
+  where
   labelOptic = lens (\(UTXO _ _ _ _ _ x _ _) -> coerce x) $ \(UTXO cred scred val dat rs _ tix red) ti' ->
     UTXO cred scred val dat rs (coerce ti') tix red
 
 -- | @since 2.5.0
-instance LabelOptic "txIdx" A_Lens UTXO UTXO (Maybe Integer) (Maybe Integer) where
+instance
+  (k ~ A_Lens, a ~ Maybe Integer, b ~ Maybe Integer) =>
+  LabelOptic "txIdx" k UTXO UTXO a b
+  where
   labelOptic = lens (\(UTXO _ _ _ _ _ _ x _) -> coerce x) $ \(UTXO cred scred val dat rs ti _ red) tix' ->
     UTXO cred scred val dat rs ti (coerce tix') red
 
 -- | @since 2.5.0
-instance LabelOptic "redeemer" A_Lens UTXO UTXO (Maybe Data) (Maybe Data) where
+instance
+  (k ~ A_Lens, a ~ Maybe Data, b ~ Maybe Data) =>
+  LabelOptic "redeemer" k UTXO UTXO a b
+  where
   labelOptic = lens (\(UTXO _ _ _ _ _ _ _ x) -> coerce x) $ \(UTXO cred scred val dat rs ti tix _) red' ->
     UTXO cred scred val dat rs ti tix . coerce $ red'
 
@@ -478,52 +511,82 @@ data BaseBuilder
   deriving stock (Show)
 
 -- | @since 2.5.0
-instance LabelOptic "inputs" A_Lens BaseBuilder BaseBuilder (Acc UTXO) (Acc UTXO) where
+instance
+  (k ~ A_Lens, a ~ Acc UTXO, b ~ Acc UTXO) =>
+  LabelOptic "inputs" k BaseBuilder BaseBuilder a b
+  where
   labelOptic = lens (\(BB x _ _ _ _ _ _ _ _ _) -> x) $ \(BB _ rins outs sigs dats ms f tr txi reds) ins' ->
     BB ins' rins outs sigs dats ms f tr txi reds
 
 -- | @since 2.5.0
-instance LabelOptic "referenceInputs" A_Lens BaseBuilder BaseBuilder (Acc UTXO) (Acc UTXO) where
+instance
+  (k ~ A_Lens, a ~ Acc UTXO, b ~ Acc UTXO) =>
+  LabelOptic "referenceInputs" k BaseBuilder BaseBuilder a b
+  where
   labelOptic = lens (\(BB _ x _ _ _ _ _ _ _ _) -> x) $ \(BB ins _ outs sigs dats ms f tr txi reds) rins' ->
     BB ins rins' outs sigs dats ms f tr txi reds
 
 -- | @since 2.5.0
-instance LabelOptic "outputs" A_Lens BaseBuilder BaseBuilder (Acc UTXO) (Acc UTXO) where
+instance
+  (k ~ A_Lens, a ~ Acc UTXO, b ~ Acc UTXO) =>
+  LabelOptic "outputs" k BaseBuilder BaseBuilder a b
+  where
   labelOptic = lens (\(BB _ _ x _ _ _ _ _ _ _) -> x) $ \(BB ins rins _ sigs dats ms f tr txi reds) outs' ->
     BB ins rins outs' sigs dats ms f tr txi reds
 
 -- | @since 2.5.0
-instance LabelOptic "signatures" A_Lens BaseBuilder BaseBuilder (Acc PubKeyHash) (Acc PubKeyHash) where
+instance
+  (k ~ A_Lens, a ~ Acc PubKeyHash, b ~ Acc PubKeyHash) =>
+  LabelOptic "signatures" k BaseBuilder BaseBuilder a b
+  where
   labelOptic = lens (\(BB _ _ _ x _ _ _ _ _ _) -> x) $ \(BB ins rins outs _ dats ms f tr txi reds) sigs' ->
     BB ins rins outs sigs' dats ms f tr txi reds
 
 -- | @since 2.5.0
-instance LabelOptic "datums" A_Lens BaseBuilder BaseBuilder (Acc Data) (Acc Data) where
+instance
+  (k ~ A_Lens, a ~ Acc Data, b ~ Acc Data) =>
+  LabelOptic "datums" k BaseBuilder BaseBuilder a b
+  where
   labelOptic = lens (\(BB _ _ _ _ x _ _ _ _ _) -> x) $ \(BB ins rins outs sigs _ ms f tr txi reds) dats' ->
     BB ins rins outs sigs dats' ms f tr txi reds
 
 -- | @since 2.5.0
-instance LabelOptic "mints" A_Lens BaseBuilder BaseBuilder (Acc Mint) (Acc Mint) where
+instance
+  (k ~ A_Lens, a ~ Acc Mint, b ~ Acc Mint) =>
+  LabelOptic "mints" k BaseBuilder BaseBuilder a b
+  where
   labelOptic = lens (\(BB _ _ _ _ _ x _ _ _ _) -> x) $ \(BB ins rins outs sigs dats _ f tr txi reds) ms' ->
     BB ins rins outs sigs dats ms' f tr txi reds
 
 -- | @since 2.5.0
-instance LabelOptic "fee" A_Lens BaseBuilder BaseBuilder Value Value where
+instance
+  (k ~ A_Lens, a ~ Value, b ~ Value) =>
+  LabelOptic "fee" k BaseBuilder BaseBuilder a b
+  where
   labelOptic = lens (\(BB _ _ _ _ _ _ x _ _ _) -> x) $ \(BB ins rins outs sigs dats ms _ tr txi reds) f' ->
     BB ins rins outs sigs dats ms f' tr txi reds
 
 -- | @since 2.5.0
-instance LabelOptic "timeRange" A_Lens BaseBuilder BaseBuilder (Interval POSIXTime) (Interval POSIXTime) where
+instance
+  (k ~ A_Lens, a ~ Interval POSIXTime, b ~ Interval POSIXTime) =>
+  LabelOptic "timeRange" k BaseBuilder BaseBuilder a b
+  where
   labelOptic = lens (\(BB _ _ _ _ _ _ _ x _ _) -> x) $ \(BB ins rins outs sigs dats ms f _ txi reds) tr' ->
     BB ins rins outs sigs dats ms f tr' txi reds
 
 -- | @since 2.5.0
-instance LabelOptic "txId" A_Lens BaseBuilder BaseBuilder TxId TxId where
+instance
+  (k ~ A_Lens, a ~ TxId, b ~ TxId) =>
+  LabelOptic "txId" k BaseBuilder BaseBuilder a b
+  where
   labelOptic = lens (\(BB _ _ _ _ _ _ _ _ x _) -> x) $ \(BB ins rins outs sigs dats ms f tr _ reds) txi' ->
     BB ins rins outs sigs dats ms f tr txi' reds
 
 -- | @since 2.5.0
-instance LabelOptic "redeemers" A_Lens BaseBuilder BaseBuilder (Acc (ScriptPurpose, Redeemer)) (Acc (ScriptPurpose, Redeemer)) where
+instance
+  (k ~ A_Lens, a ~ Acc (ScriptPurpose, Redeemer), b ~ Acc (ScriptPurpose, Redeemer)) =>
+  LabelOptic "redeemers" k BaseBuilder BaseBuilder a b
+  where
   labelOptic = lens (\(BB _ _ _ _ _ _ _ _ _ x) -> x) $ \(BB ins rins outs sigs dats ms f tr txi _) reds' ->
     BB ins rins outs sigs dats ms f tr txi reds'
 

@@ -1,6 +1,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RoleAnnotations #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
 {- | Module: Plutarch.Context.Minting
@@ -85,11 +85,17 @@ data MintingBuilder = MB BaseBuilder (Maybe CurrencySymbol)
     )
 
 -- | @since 2.5.0
-instance LabelOptic "inner" A_Lens MintingBuilder MintingBuilder BaseBuilder BaseBuilder where
+instance
+  (k ~ A_Lens, a ~ BaseBuilder, b ~ BaseBuilder) =>
+  LabelOptic "inner" k MintingBuilder MintingBuilder a b
+  where
   labelOptic = lens (\(MB x _) -> x) $ \(MB _ cs) inner' -> MB inner' cs
 
 -- | @since 2.5.0
-instance LabelOptic "mintingCS" A_Lens MintingBuilder MintingBuilder (Maybe CurrencySymbol) (Maybe CurrencySymbol) where
+instance
+  (k ~ A_Lens, a ~ Maybe CurrencySymbol, b ~ Maybe CurrencySymbol) =>
+  LabelOptic "mintingCS" k MintingBuilder MintingBuilder a b
+  where
   labelOptic = lens (\(MB _ x) -> x) $ \(MB inner _) cs' -> MB inner cs'
 
 -- | @since 1.1.0
