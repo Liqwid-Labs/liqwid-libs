@@ -491,6 +491,9 @@ phasOnlyOneTokenOfCurrencySymbol = phoistAcyclic $
 {- | Returns 'PTrue' if the argument 'PValue' contains /exactly/
   one token of the argument 'PAssetClass'.
 
+ Note: unlike `phasOnlyOneTokenOfCurrencySymbol` this may
+ still return 'PTrue' if there are other assets in the 'PValue'.
+
  @since 3.9.1
 -}
 phasOneTokenOfAssetClass ::
@@ -506,6 +509,9 @@ phasOneTokenOfAssetClass = phoistAcyclic $
 
 {- | Returns 'PTrue' if the argument 'PValue' contains /exactly/ one
  token of the argument 'PCurrencySymbol'.
+
+ Note: unlike `phasOnlyOneTokenOfCurrencySymbol` this may
+ still return 'PTrue' if there are other assets in the 'PValue'.
 
  @since 3.9.1
 -}
