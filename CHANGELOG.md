@@ -2,6 +2,15 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.9.1 -- 2022-09-29
+
+### Added
+
+* `Plutarch.Extra.Bool` : `pcond` function for lisp-like boolean 
+  conditional-chaining.
+* `Plutarch.Extra.Value` : `phasOnlyOneTokenOfAssetClass` function for checking 
+  that a `PValue` contains exactly one of a `PAssetClass`
+
 ## 3.9.0 -- 2022-09-23
 
 ### Added

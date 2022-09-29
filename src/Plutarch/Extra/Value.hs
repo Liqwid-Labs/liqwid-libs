@@ -29,6 +29,7 @@ module Plutarch.Extra.Value (
   -- * Miscellaneous
   AddGuarantees,
   phasOnlyOneTokenOfCurrencySymbol,
+  phasOnlyOneTokenOfAssetClass,
 ) where
 
 import Data.Coerce (coerce)
@@ -485,6 +486,22 @@ phasOnlyOneTokenOfCurrencySymbol = phoistAcyclic $
   plam $ \cs vs ->
     psymbolValueOf # cs # vs #== 1
       #&& (plength #$ pto $ pto $ pto vs) #== 1
+
+{- | Returns 'PTrue' if the entire argument 'PValue' contains /exactly/
+     one token of the argument 'PAssetClass'
+
+ @since 3.9.1
+-}
+phasOnlyOneTokenOfAssetClass ::
+  forall
+    (tag :: Symbol)
+    (keys :: KeyGuarantees)
+    (amounts :: AmountGuarantees)
+    (s :: S).
+  Term s (PAssetClass tag :--> PValue keys amounts :--> PBool)
+phasOnlyOneTokenOfAssetClass = phoistAcyclic $
+  plam $ \cls v ->
+    passetClassValueOf # cls # v #== 1
 
 -- Helpers
 
