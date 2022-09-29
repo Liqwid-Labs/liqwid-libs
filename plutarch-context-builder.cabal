@@ -67,6 +67,7 @@ common common-lang
     StandaloneDeriving
     TupleSections
     TypeApplications
+    TypeFamilies
     TypeOperators
     NoFieldSelectors
 

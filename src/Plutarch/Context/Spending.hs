@@ -1,6 +1,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RoleAnnotations #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
 {- | Module: Plutarch.Context.Spending
@@ -92,11 +92,17 @@ data SpendingBuilder = SB BaseBuilder (Maybe ValidatorInputIdentifier)
   -}
 
 -- | @since 2.5.0
-instance LabelOptic "inner" A_Lens SpendingBuilder SpendingBuilder BaseBuilder BaseBuilder where
+instance
+  (k ~ A_Lens, a ~ BaseBuilder, b ~ BaseBuilder) =>
+  LabelOptic "inner" k SpendingBuilder SpendingBuilder a b
+  where
   labelOptic = lens (\(SB x _) -> x) $ \(SB _ vi) inner' -> SB inner' vi
 
 -- | @since 2.5.0
-instance LabelOptic "validatorInput" A_Lens SpendingBuilder SpendingBuilder (Maybe ValidatorInputIdentifier) (Maybe ValidatorInputIdentifier) where
+instance
+  (k ~ A_Lens, a ~ Maybe ValidatorInputIdentifier, b ~ Maybe ValidatorInputIdentifier) =>
+  LabelOptic "validatorInput" k SpendingBuilder SpendingBuilder a b
+  where
   labelOptic = lens (\(SB _ x) -> x) $ \(SB inner _) vi' -> SB inner vi'
 
 -- | @since 1.1.0
