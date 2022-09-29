@@ -1,4 +1,5 @@
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Plutarch.Extra.DebuggableScript (
   -- * Type
@@ -70,7 +71,10 @@ data DebuggableScript = DebuggableScript Script Script
 
  @since 3.8.0
 -}
-instance LabelOptic "script" A_Getter DebuggableScript DebuggableScript Script Script where
+instance
+  (k ~ A_Getter, a ~ Script, b ~ Script) =>
+  LabelOptic "script" k DebuggableScript DebuggableScript a b
+  where
   labelOptic = to $ \(DebuggableScript x _) -> x
 
 {- | Retrieves the debugging 'Script'. This is read-only, as allowing it to
@@ -78,7 +82,10 @@ instance LabelOptic "script" A_Getter DebuggableScript DebuggableScript Script S
 
  @since 3.8.0
 -}
-instance LabelOptic "debugScript" A_Getter DebuggableScript DebuggableScript Script Script where
+instance
+  (k ~ A_Getter, a ~ Script, b ~ Script) =>
+  LabelOptic "debugScript" k DebuggableScript DebuggableScript a b
+  where
   labelOptic = to $ \(DebuggableScript _ x) -> x
 
 {- | Apply a function to an argument on the compiled 'Script' level.

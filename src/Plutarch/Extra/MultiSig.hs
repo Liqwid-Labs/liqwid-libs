@@ -54,7 +54,10 @@ data MultiSig = MultiSig [PubKeyHash] Integer
 
  @since 3.8.0
 -}
-instance LabelOptic "keys" A_Traversal MultiSig MultiSig PubKeyHash PubKeyHash where
+instance
+  (k ~ A_Traversal, a ~ PubKeyHash, b ~ PubKeyHash) =>
+  LabelOptic "keys" k MultiSig MultiSig a b
+  where
   labelOptic = traversalVL $
     \f (MultiSig pkhs minSigs) -> MultiSig <$> traverse f pkhs <*> pure minSigs
 
@@ -64,7 +67,10 @@ instance LabelOptic "keys" A_Traversal MultiSig MultiSig PubKeyHash PubKeyHash w
 
  @since 3.8.0
 -}
-instance LabelOptic "minSigs" A_Getter MultiSig MultiSig Integer Integer where
+instance
+  (k ~ A_Getter, a ~ Integer, b ~ Integer) =>
+  LabelOptic "minSigs" k MultiSig MultiSig a b
+  where
   labelOptic = to $ \(MultiSig _ minSigs) -> minSigs
 
 PlutusTx.makeLift ''MultiSig
