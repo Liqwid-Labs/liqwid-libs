@@ -29,6 +29,8 @@ module Plutarch.Extra.Value (
   -- * Miscellaneous
   AddGuarantees,
   phasOnlyOneTokenOfCurrencySymbol,
+  phasOneTokenOfCurrencySymbol,
+  phasOneTokenOfAssetClass,
 ) where
 
 import Data.Coerce (coerce)
@@ -474,7 +476,7 @@ type family AddGuarantees (a :: AmountGuarantees) (b :: AmountGuarantees) where
   AddGuarantees _ _ = 'NoGuarantees
 
 {- | Returns 'PTrue' if the entire argument 'PValue' contains /exactly/ one
- token of the argument 'PCurrencySymbol'.
+ token of the argument 'PCurrencySymbol' (and contains no other assets).
 
  @since 1.3.0
 -}
@@ -485,6 +487,40 @@ phasOnlyOneTokenOfCurrencySymbol = phoistAcyclic $
   plam $ \cs vs ->
     psymbolValueOf # cs # vs #== 1
       #&& (plength #$ pto $ pto $ pto vs) #== 1
+
+{- | Returns 'PTrue' if the argument 'PValue' contains /exactly/
+  one token of the argument 'PAssetClass'.
+
+ Note: unlike `phasOnlyOneTokenOfCurrencySymbol` this may
+ still return 'PTrue' if there are other assets in the 'PValue'.
+
+ @since 3.9.1
+-}
+phasOneTokenOfAssetClass ::
+  forall
+    (tag :: Symbol)
+    (keys :: KeyGuarantees)
+    (amounts :: AmountGuarantees)
+    (s :: S).
+  Term s (PAssetClass tag :--> PValue keys amounts :--> PBool)
+phasOneTokenOfAssetClass = phoistAcyclic $
+  plam $ \cls v ->
+    passetClassValueOf # cls # v #== 1
+
+{- | Returns 'PTrue' if the argument 'PValue' contains /exactly/ one
+ token of the argument 'PCurrencySymbol'.
+
+ Note: unlike `phasOnlyOneTokenOfCurrencySymbol` this may
+ still return 'PTrue' if there are other assets in the 'PValue'.
+
+ @since 3.9.1
+-}
+phasOneTokenOfCurrencySymbol ::
+  forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
+  Term s (PCurrencySymbol :--> PValue keys amounts :--> PBool)
+phasOneTokenOfCurrencySymbol = phoistAcyclic $
+  plam $ \cs vs ->
+    psymbolValueOf # cs # vs #== 1
 
 -- Helpers
 

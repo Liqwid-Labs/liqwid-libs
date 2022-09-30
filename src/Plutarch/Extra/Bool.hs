@@ -1,6 +1,13 @@
 module Plutarch.Extra.Bool (
   pcompare,
+  pcond,
 ) where
+
+--------------------------------------------------------------------------------
+
+import Data.Monoid (Endo (Endo, appEndo))
+
+--------------------------------------------------------------------------------
 
 {- | Perform a \'three-way\' comparison on two 'Term's, then return a result
  based on the outcome.
@@ -24,3 +31,12 @@ pcompare ::
   Term s b
 pcompare t1 t2 ifLT ifEQ ifGT =
   pif (t1 #< t2) ifLT (pif (t1 #== t2) ifEQ ifGT)
+
+{- |
+  Lisp-like cond:
+    chain together if conditions and the final else case
+
+  @since 3.9.1
+-}
+pcond :: forall (s :: S) (a :: S -> Type). [Term s a -> Term s a] -> Term s a -> Term s a
+pcond = appEndo . foldMap Endo
