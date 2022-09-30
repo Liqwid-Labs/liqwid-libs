@@ -426,7 +426,7 @@ checkMints =
     nullAda :: Checker e Value
     nullAda = checkWith $ \x ->
       contramap
-        (all (\(cs, tk, _) -> cs /= adaSymbol && tk /= adaToken) . flattenValue)
+        (all (\(cs, tk, a) -> cs /= adaSymbol || tk /= adaToken || a == 0) . flattenValue)
         (checkBool $ MintingAda x)
 
 {- | Check if fee amount is valid.
