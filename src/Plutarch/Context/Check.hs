@@ -383,7 +383,7 @@ checkInputs =
         mconcat
           [ contramap -- TODO: we should have `checkMaybe` here.
               (fmap (getTxId . fromMaybe "" . view #txId) . view #inputs . unpack)
-              (checkFoldable $ checkBSLength 28)
+              (checkFoldable $ checkBSLength 32)
           , contramap
               (getDups . toList . fmap (fromMaybe 0 . view #txIdx) . view #inputs . unpack)
               (checkWith $ const $ checkIfWith null DuplicateTxOutRefIndex)
