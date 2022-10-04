@@ -19,6 +19,16 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   - `phasOneTokenOfAssetClass`
   - `pmatchOrTryRec`
 
+## Added
+
+* Utilities for Tagged Assetclasses
+  - `pconstantClsT`
+  - `passetClassDataValueT`
+  - `psingleValueT'`
+  - `passetClassValueOfT`
+  - `passetClassValueOfT'`
+  - `psymbolAssetClassT`
+
 ## 3.9.1 -- 2022-09-29
 
 ### Added
@@ -30,6 +40,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   that a `PValue` contains exactly one of a `PAssetClass`.
   * `phasOneTokenOfSymbol` function for checking that a `PValue` contains exactly
   one token of an `AssetClass`.
+
 
 
 ## 3.9.0 -- 2022-09-23

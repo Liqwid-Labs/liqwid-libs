@@ -4,8 +4,10 @@
 module Plutarch.Extra.Value (
   -- * Creation
   passetClassDataValue,
+  passetClassDataValueT,
   psingleValue,
   psingleValue',
+  psingleValueT',
   pvalue,
   pvaluePositive,
 
@@ -13,6 +15,8 @@ module Plutarch.Extra.Value (
   padaOf,
   passetClassValueOf',
   passetClassValueOf,
+  passetClassValueOfT',
+  passetClassValueOfT,
   pmatchValueAssets,
   psplitValue,
 
@@ -54,11 +58,13 @@ import Plutarch.Api.V2 (
  )
 import Plutarch.Builtin (pforgetData, ppairDataBuiltin)
 import Plutarch.DataRepr.Internal.Field (HRec (HCons, HNil), Labeled (Labeled))
+import Plutarch.Extra.Applicative (ppure)
 import Plutarch.Extra.AssetClass (
   AssetClass (AssetClass),
   PAssetClass (PAssetClass),
   PAssetClassData,
  )
+import Plutarch.Extra.Comonad (pextract)
 import Plutarch.Extra.List (pfromList, plookupAssoc, ptryElimSingle)
 import Plutarch.Extra.Map (phandleMin)
 import Plutarch.Extra.Maybe (pexpectJustC)
@@ -88,6 +94,22 @@ passetClassDataValue = phoistAcyclic $
             tn = pfield @"name" # ac
          in Value.psingleton # pfromData cs # pfromData tn # i
       )
+
+{- | Tagged version of `passetClassDataValue`.
+
+ @since 3.10.0
+-}
+passetClassDataValueT ::
+  forall (unit :: Symbol) (s :: S).
+  Term
+    s
+    ( PTagged unit PAssetClassData
+        :--> PTagged unit PInteger
+        :--> PValue 'Sorted 'NonZero
+    )
+passetClassDataValueT = phoistAcyclic $
+  plam $ \ac i ->
+    passetClassDataValue # (pextract # ac) # (pextract # i)
 
 {- | Helper to construct the \'inner mapping\' of a 'PValue'.
 
@@ -124,6 +146,25 @@ psingleValue' ::
     )
 psingleValue' (AssetClass sym tk) =
   phoistAcyclic $ psingleValue # pconstantData sym # pconstantData tk
+
+{- | Tagged version of `psingleValue'`.
+
+ @since 3.10.0
+-}
+psingleValueT' ::
+  forall (k :: KeyGuarantees) (unit :: Symbol) (s :: S).
+  Tagged unit AssetClass ->
+  Term
+    s
+    ( PTagged unit PInteger
+        :--> PBuiltinPair
+              (PAsData PCurrencySymbol)
+              (PAsData (PMap k PTokenName PInteger))
+    )
+psingleValueT' (Tagged (AssetClass sym tk)) =
+  phoistAcyclic $
+    plam $ \q ->
+      psingleValue # pconstantData sym # pconstantData tk #$ pextract # q
 
 {- | Construct a 'PValue' from its underlying representation.
  There are "NoGuarantees" on the amounts.
@@ -194,6 +235,19 @@ passetClassValueOf' (AssetClass sym token) =
     plam $ \value ->
       Value.pvalueOf # value # pconstant sym # pconstant token
 
+{- | Tagged version of `passetClassValueOf'`.
+
+ @since 3.9.0
+-}
+passetClassValueOfT' ::
+  forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (unit :: Symbol) (s :: S).
+  Tagged unit AssetClass ->
+  Term s (PValue keys amounts :--> PTagged unit PInteger)
+passetClassValueOfT' (Tagged (AssetClass sym token)) =
+  phoistAcyclic $
+    plam $ \value ->
+      ppure #$ Value.pvalueOf # value # pconstant sym # pconstant token
+
 {- | Given a 'PAssetClass' and a 'PValue', look up the amount corresponding to
  that 'PAssetClass'.
 
@@ -208,6 +262,21 @@ passetClassValueOf ::
 passetClassValueOf = phoistAcyclic $
   plam $ \cls val -> pmatch cls $ \(PAssetClass sym tk) ->
     precList (findValue sym tk) (const 0) #$ pto $ pto val
+
+{- | Tagged version of `passetClassValueOf`.
+
+ @since 3.9.0
+-}
+passetClassValueOfT ::
+  forall
+    (key :: KeyGuarantees)
+    (amount :: AmountGuarantees)
+    (unit :: Symbol)
+    (s :: S).
+  Term s (PTagged unit PAssetClass :--> PValue key amount :--> PTagged unit PInteger)
+passetClassValueOfT = phoistAcyclic $
+  plam $ \cls val -> pmatch (pextract # cls) $ \(PAssetClass sym tk) ->
+    ppure #$ precList (findValue sym tk) (const 0) #$ pto $ pto val
 
 {- | Extracts the amount given by the 'PAssetClass' from (the internal
  representation of) a 'PValue'.
