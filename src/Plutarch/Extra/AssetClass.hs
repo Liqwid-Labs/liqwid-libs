@@ -30,8 +30,8 @@ module Plutarch.Extra.AssetClass (
   pviaScottEncoding,
 ) where
 
-import qualified Data.Aeson as Aeson
-import Data.Tagged (Tagged(Tagged), untag)
+import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
+import Data.Tagged (Tagged (Tagged), untag)
 import GHC.TypeLits (Symbol)
 import qualified Generics.SOP as SOP
 import Optics.TH (makeFieldLabelsNoPrefix)
@@ -39,14 +39,14 @@ import Plutarch.Api.V1 (
   PCurrencySymbol,
   PTokenName,
  )
-import Plutarch.Extra.Tagged (PTagged)
-import Plutarch.Extra.Applicative(ppure)
 import Plutarch.DataRepr (PDataFields)
+import Plutarch.Extra.Applicative (ppure)
 import Plutarch.Extra.IsData (
   DerivePConstantViaDataList (DerivePConstantViaDataList),
   ProductIsData (ProductIsData),
  )
 import Plutarch.Extra.Record (mkRecordConstr, (.&), (.=))
+import Plutarch.Extra.Tagged (PTagged)
 import Plutarch.Lift (
   PConstantDecl,
   PUnsafeLiftDecl (PLifted),
@@ -81,14 +81,14 @@ data AssetClass = AssetClass
     )
   deriving anyclass
     ( -- | @since 3.9.0
-      Aeson.ToJSON
+      ToJSON
     , -- | @since 3.9.0
-      Aeson.FromJSON
+      FromJSON
     , -- | @since 3.9.0
-      Aeson.FromJSONKey
+      FromJSONKey
     , -- | @since 3.9.0
-      Aeson.ToJSONKey
-    , -- | @since 3.9.0
+      ToJSONKey
+    , -- | @since 3.10.0
       SOP.Generic
     )
   deriving
@@ -194,9 +194,10 @@ emptyTokenNameData = pconstantData ""
 ----------------------------------------
 -- Data-Encoded version
 
-{- | Data-Plut equivalent of 'AssetClass'.
+{- | A 'PlutusTx.Data'-encoded version of 'AssetClass', without the currency
+ tag.
 
- @since 3.10.0
+ @since 3.9.0
 -}
 newtype PAssetClassData (s :: S)
   = PAssetClassData
@@ -235,11 +236,11 @@ instance Plutarch.Lift.PUnsafeLiftDecl PAssetClassData where
 
 {- | Convert from 'PAssetClassData' to 'PAssetClass'.
 
- @since 3.10.0
+ @since 3.9.0
 -}
 ptoScottEncoding ::
   forall (s :: S).
-  Term s ( PAsData PAssetClassData :--> PAssetClass)
+  Term s (PAsData PAssetClassData :--> PAssetClass)
 ptoScottEncoding = phoistAcyclic $
   plam $ \cls ->
     pletFields @["symbol", "name"] cls $
@@ -251,11 +252,11 @@ ptoScottEncoding = phoistAcyclic $
 
 {- | Convert from 'PAssetClass' to 'PAssetClassData'.
 
- @since 3.10.0
+ @since 3.9.0
 -}
 pfromScottEncoding ::
   forall (s :: S).
-  Term s ( PAssetClass :--> PAsData PAssetClassData)
+  Term s (PAssetClass :--> PAsData PAssetClassData)
 pfromScottEncoding = phoistAcyclic $
   plam $ \cls -> pmatch cls $
     \(PAssetClass sym tk) ->
@@ -269,7 +270,7 @@ pfromScottEncoding = phoistAcyclic $
 {- | Wrap a function using the Scott-encoded 'PAssetClass' to one using the
  'PlutusTx.Data'-encoded version.
 
- @since 3.10.0
+ @since 3.9.0
 -}
 pviaScottEncoding ::
   forall (a :: PType).

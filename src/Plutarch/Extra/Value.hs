@@ -1,6 +1,5 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE ViewPatterns #-}
 
 module Plutarch.Extra.Value (
   -- * Creation
@@ -37,6 +36,7 @@ module Plutarch.Extra.Value (
 import Data.List (nub, sort)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Tagged (Tagged (Tagged))
 import GHC.TypeLits (Symbol)
 import Optics.Getter (view)
 import Plutarch.Api.V1 (
@@ -65,7 +65,6 @@ import Plutarch.Extra.Maybe (pexpectJustC)
 import Plutarch.Extra.Ord (PComparator, pfromOrdBy)
 import Plutarch.Extra.Tagged (PTagged (PTagged))
 import Plutarch.Extra.TermCont (pmatchC)
-import Data.Tagged(Tagged(Tagged))
 
 --------------------------------------------------------------------------------
 
