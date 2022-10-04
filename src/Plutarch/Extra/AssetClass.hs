@@ -205,7 +205,7 @@ emptyTokenNameData = pconstantData ""
 
 {- | Data-Plut equivalent of 'AssetClass'.
 
- @since 3.9.0
+ @since 3.10.0
 -}
 newtype PAssetClassData (unit :: Symbol) (s :: S)
   = PAssetClassData
@@ -234,17 +234,17 @@ newtype PAssetClassData (unit :: Symbol) (s :: S)
       PShow
     )
 
--- | @since 3.9.0
+-- | @since 3.10.0
 instance forall (unit :: Symbol). DerivePlutusType (PAssetClassData unit) where
   type DPTStrat _ = PlutusTypeNewtype
 
--- | @since 3.9.0
+-- | @since 3.10.0
 instance forall (unit :: Symbol). Plutarch.Lift.PUnsafeLiftDecl (PAssetClassData unit) where
   type PLifted (PAssetClassData unit) = (AssetClass unit)
 
 {- | Convert from 'PAssetClassData' to 'PAssetClass'.
 
- @since 3.9.0
+ @since 3.10.0
 -}
 ptoScottEncoding ::
   forall (unit :: Symbol) (s :: S).
@@ -264,7 +264,7 @@ ptoScottEncoding = phoistAcyclic $
 
 {- | Convert from 'PAssetClass' to 'PAssetClassData'.
 
- @since 3.9.0
+ @since 3.10.0
 -}
 pfromScottEncoding ::
   forall (unit :: Symbol) (s :: S).
@@ -286,7 +286,7 @@ pfromScottEncoding = phoistAcyclic $
 {- | Wrap a function using the Scott-encoded 'PAssetClass' to one using the
  'PlutusTx.Data'-encoded version.
 
- @since 3.9.0
+ @since 3.10.0
 -}
 pviaScottEncoding ::
   forall (unit :: Symbol) (a :: PType).
