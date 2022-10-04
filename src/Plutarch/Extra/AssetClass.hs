@@ -22,21 +22,15 @@ module Plutarch.Extra.AssetClass (
   psymbolAssetClass,
   pconstantCls,
 
-  -- * AssetClassData - Hask
-  AssetClassData (AssetClassData, symbol, name),
-
   -- * AssetClassData - Plutarch
   PAssetClassData (PAssetClassData),
 
   -- * Scott <-> Data conversions
-  toScottEncoding,
   ptoScottEncoding,
-  fromScottEncoding,
   pfromScottEncoding,
   pviaScottEncoding,
 ) where
 
-import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
 import qualified Data.Aeson as Aeson
 import Data.Tagged (Tagged, untag)
 import GHC.TypeLits (Symbol)
@@ -87,14 +81,31 @@ data AssetClass (unit :: Symbol) = AssetClass
     )
   deriving anyclass
     ( -- | @since 3.9.0
-      ToJSON
+      Aeson.ToJSON
     , -- | @since 3.9.0
-      FromJSON
+      Aeson.FromJSON
     , -- | @since 3.9.0
-      FromJSONKey
+      Aeson.FromJSONKey
     , -- | @since 3.9.0
-      ToJSONKey
+      Aeson.ToJSONKey
+    , -- | @since 3.9.0
+      SOP.Generic
     )
+  deriving
+    ( -- | @since 3.9.0
+      PlutusTx.ToData
+    , -- | @since 3.9.0
+      PlutusTx.FromData
+    )
+    via Plutarch.Extra.IsData.ProductIsData (AssetClass unit)
+  deriving
+    ( -- | @since 3.9.0
+      Plutarch.Lift.PConstantDecl
+    )
+    via ( Plutarch.Extra.IsData.DerivePConstantViaDataList
+            (AssetClass unit)
+            (PAssetClassData unit)
+        )
 
 {- | A Scott-encoded Plutarch equivalent to 'AssetClass'.
 
@@ -192,60 +203,11 @@ emptyTokenNameData = pconstantData ""
 ----------------------------------------
 -- Data-Encoded version
 
-{- | A 'PlutusTx.Data'-encoded version of 'AssetClass', without the currency
- tag.
+{- | Data-Plut equivalent of 'AssetClass'.
 
  @since 3.9.0
 -}
-data AssetClassData = AssetClassData
-  { symbol :: CurrencySymbol
-  -- ^ @since 3.9.0
-  , name :: TokenName
-  -- ^ @since 3.9.0
-  }
-  deriving stock
-    ( -- | @since 3.9.0
-      Eq
-    , -- | @since 3.9.0
-      Ord
-    , -- | @since 3.9.0
-      Show
-    , -- | @since 3.9.0
-      Generic
-    )
-  deriving anyclass
-    ( -- | @since 3.9.0
-      Aeson.ToJSON
-    , -- | @since 3.9.0
-      Aeson.FromJSON
-    , -- | @since 3.9.0
-      Aeson.FromJSONKey
-    , -- | @since 3.9.0
-      Aeson.ToJSONKey
-    , -- | @since 3.9.0
-      SOP.Generic
-    )
-  deriving
-    ( -- | @since 3.9.0
-      PlutusTx.ToData
-    , -- | @since 3.9.0
-      PlutusTx.FromData
-    )
-    via Plutarch.Extra.IsData.ProductIsData AssetClassData
-  deriving
-    ( -- | @since 3.9.0
-      Plutarch.Lift.PConstantDecl
-    )
-    via ( Plutarch.Extra.IsData.DerivePConstantViaDataList
-            AssetClassData
-            PAssetClassData
-        )
-
-{- | Plutarch equivalent of 'AssetClassData'.
-
- @since 3.9.0
--}
-newtype PAssetClassData (s :: S)
+newtype PAssetClassData (unit :: Symbol) (s :: S)
   = PAssetClassData
       ( Term
           s
@@ -273,26 +235,12 @@ newtype PAssetClassData (s :: S)
     )
 
 -- | @since 3.9.0
-instance DerivePlutusType PAssetClassData where
+instance forall (unit :: Symbol). DerivePlutusType (PAssetClassData unit) where
   type DPTStrat _ = PlutusTypeNewtype
 
 -- | @since 3.9.0
-instance Plutarch.Lift.PUnsafeLiftDecl PAssetClassData where
-  type PLifted PAssetClassData = AssetClassData
-
-{- | Convert from 'AssetClassData' to 'AssetClass'.
-
- @since 3.9.0
--}
-toScottEncoding :: forall (unit :: Symbol). AssetClassData -> AssetClass unit
-toScottEncoding (AssetClassData sym tk) = AssetClass sym tk
-
-{- | Convert from 'AssetClass' to 'AssetClassData'.
-
- @since 3.9.0
--}
-fromScottEncoding :: forall (unit :: Symbol). AssetClass unit -> AssetClassData
-fromScottEncoding (AssetClass sym tk) = AssetClassData sym tk
+instance forall (unit :: Symbol). Plutarch.Lift.PUnsafeLiftDecl (PAssetClassData unit) where
+  type PLifted (PAssetClassData unit) = (AssetClass unit)
 
 {- | Convert from 'PAssetClassData' to 'PAssetClass'.
 
@@ -302,7 +250,7 @@ ptoScottEncoding ::
   forall (unit :: Symbol) (s :: S).
   Term
     s
-    ( PAsData PAssetClassData
+    ( PAsData (PAssetClassData unit)
         :--> PAssetClass unit
     )
 ptoScottEncoding = phoistAcyclic $
@@ -323,7 +271,7 @@ pfromScottEncoding ::
   Term
     s
     ( PAssetClass unit
-        :--> PAsData PAssetClassData
+        :--> PAsData (PAssetClassData unit)
     )
 pfromScottEncoding = phoistAcyclic $
   plam $ \cls -> pmatch cls $
@@ -343,7 +291,7 @@ pfromScottEncoding = phoistAcyclic $
 pviaScottEncoding ::
   forall (unit :: Symbol) (a :: PType).
   ClosedTerm (PAssetClass unit :--> a) ->
-  ClosedTerm (PAsData PAssetClassData :--> a)
+  ClosedTerm (PAsData (PAssetClassData unit) :--> a)
 pviaScottEncoding fn = phoistAcyclic $
   plam $ \cls ->
     fn #$ ptoScottEncoding # cls
@@ -364,9 +312,6 @@ assetClassValue (AssetClass sym tk) q = Value.singleton sym tk $ untag q
 
 -- | @since 3.9.0
 makeFieldLabelsNoPrefix ''PAssetClass
-
--- | @since 3.9.0
-makeFieldLabelsNoPrefix ''AssetClassData
 
 -- | @since 3.9.0
 makeFieldLabelsNoPrefix ''AssetClass
