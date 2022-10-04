@@ -78,8 +78,8 @@ import Plutarch.Extra.TermCont (pmatchC)
  @since 3.9.0
 -}
 passetClassDataValue ::
-  forall (s :: S).
-  Term s (PAssetClassData :--> PInteger :--> PValue 'Sorted 'NonZero)
+  forall (unit :: Symbol) (s :: S).
+  Term s (PAssetClassData unit :--> PInteger :--> PValue 'Sorted 'NonZero)
 passetClassDataValue = phoistAcyclic $
   plam $ \ac i ->
     pif
