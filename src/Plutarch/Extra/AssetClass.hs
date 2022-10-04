@@ -18,7 +18,6 @@ module Plutarch.Extra.AssetClass (
   adaClass,
   padaClass,
   emptyTokenNameData,
-  pcoerceCls,
   psymbolAssetClass,
   pconstantCls,
 
@@ -32,7 +31,7 @@ module Plutarch.Extra.AssetClass (
 ) where
 
 import qualified Data.Aeson as Aeson
-import Data.Tagged (Tagged, untag)
+import Data.Tagged (Tagged(Tagged), untag)
 import GHC.TypeLits (Symbol)
 import qualified Generics.SOP as SOP
 import Optics.TH (makeFieldLabelsNoPrefix)
@@ -40,6 +39,8 @@ import Plutarch.Api.V1 (
   PCurrencySymbol,
   PTokenName,
  )
+import Plutarch.Extra.Tagged (PTagged)
+import Plutarch.Extra.Applicative(ppure)
 import Plutarch.DataRepr (PDataFields)
 import Plutarch.Extra.IsData (
   DerivePConstantViaDataList (DerivePConstantViaDataList),
@@ -51,7 +52,6 @@ import Plutarch.Lift (
   PUnsafeLiftDecl (PLifted),
  )
 import Plutarch.Orphans ()
-import Plutarch.Unsafe (punsafeCoerce)
 import PlutusLedgerApi.V1.Value (CurrencySymbol, TokenName)
 import qualified PlutusLedgerApi.V1.Value as Value
 import qualified PlutusTx
@@ -63,7 +63,7 @@ import qualified PlutusTx
 
  @since 3.9.0
 -}
-data AssetClass (unit :: Symbol) = AssetClass
+data AssetClass = AssetClass
   { symbol :: CurrencySymbol
   -- ^ @since 3.9.0
   , name :: TokenName
@@ -97,21 +97,21 @@ data AssetClass (unit :: Symbol) = AssetClass
     , -- | @since 3.9.0
       PlutusTx.FromData
     )
-    via Plutarch.Extra.IsData.ProductIsData (AssetClass unit)
+    via Plutarch.Extra.IsData.ProductIsData AssetClass
   deriving
     ( -- | @since 3.9.0
       Plutarch.Lift.PConstantDecl
     )
     via ( Plutarch.Extra.IsData.DerivePConstantViaDataList
-            (AssetClass unit)
-            (PAssetClassData unit)
+            AssetClass
+            PAssetClassData
         )
 
 {- | A Scott-encoded Plutarch equivalent to 'AssetClass'.
 
  @since 3.9.0
 -}
-data PAssetClass (unit :: Symbol) (s :: S) = PAssetClass
+data PAssetClass (s :: S) = PAssetClass
   { psymbol :: Term s (PAsData PCurrencySymbol)
   -- ^ @since 3.9.0
   , pname :: Term s (PAsData PTokenName)
@@ -129,34 +129,25 @@ data PAssetClass (unit :: Symbol) (s :: S) = PAssetClass
     )
 
 -- | @since 3.9.0
-instance DerivePlutusType (PAssetClass unit) where
+instance DerivePlutusType PAssetClass where
   type DPTStrat _ = PlutusTypeScott
 
 -- | @since 3.9.0
 pconstantCls ::
-  forall (unit :: Symbol) (s :: S).
-  AssetClass unit ->
-  Term s (PAssetClass unit)
+  forall (s :: S).
+  AssetClass ->
+  Term s PAssetClass
 pconstantCls (AssetClass sym tk) =
   pcon $
     PAssetClass (pconstantData sym) (pconstantData tk)
-
-{- | Coerce the unit tag of a 'PAssetClass'.
- @since 3.9.0
--}
-pcoerceCls ::
-  forall (b :: Symbol) (a :: Symbol) (s :: S).
-  Term s (PAssetClass a) ->
-  Term s (PAssetClass b)
-pcoerceCls = punsafeCoerce
 
 {- | Construct a 'PAssetClass' with empty 'pname'.
  @since 3.9.0
 -}
 psymbolAssetClass ::
-  forall (unit :: Symbol) (s :: S).
+  forall (s :: S).
   Term s (PAsData PCurrencySymbol) ->
-  PAssetClass unit s
+  PAssetClass s
 psymbolAssetClass sym = PAssetClass sym emptyTokenNameData
 
 --------------------------------------------------------------------------------
@@ -166,10 +157,10 @@ psymbolAssetClass sym = PAssetClass sym emptyTokenNameData
 
  @since 3.9.0
 -}
-isAdaClass :: forall (unit :: Symbol). AssetClass unit -> Bool
+isAdaClass :: AssetClass -> Bool
 isAdaClass (AssetClass s n) = s == s' && n == n'
   where
-    (AssetClass s' n') = adaClass
+    (Tagged (AssetClass s' n')) = adaClass
 
 {- | The 'PCurrencySymbol' for Ada, corresponding to an empty string.
 
@@ -183,15 +174,15 @@ adaSymbolData = pconstantData ""
 
  @since 3.9.0
 -}
-adaClass :: AssetClass "Ada"
-adaClass = AssetClass "" ""
+adaClass :: Tagged "Ada" AssetClass
+adaClass = Tagged $ AssetClass "" ""
 
 {- | Plutarch equivalent for 'adaClass'.
 
  @since 3.9.0
 -}
-padaClass :: forall (s :: S). Term s (PAssetClass "Ada")
-padaClass = pconstantCls adaClass
+padaClass :: forall (s :: S). Term s (PTagged "Ada" PAssetClass)
+padaClass = ppure #$ pconstantCls $ untag adaClass
 
 {- | The empty 'PTokenName'
 
@@ -207,7 +198,7 @@ emptyTokenNameData = pconstantData ""
 
  @since 3.10.0
 -}
-newtype PAssetClassData (unit :: Symbol) (s :: S)
+newtype PAssetClassData (s :: S)
   = PAssetClassData
       ( Term
           s
@@ -235,24 +226,20 @@ newtype PAssetClassData (unit :: Symbol) (s :: S)
     )
 
 -- | @since 3.10.0
-instance forall (unit :: Symbol). DerivePlutusType (PAssetClassData unit) where
+instance DerivePlutusType PAssetClassData where
   type DPTStrat _ = PlutusTypeNewtype
 
 -- | @since 3.10.0
-instance forall (unit :: Symbol). Plutarch.Lift.PUnsafeLiftDecl (PAssetClassData unit) where
-  type PLifted (PAssetClassData unit) = (AssetClass unit)
+instance Plutarch.Lift.PUnsafeLiftDecl PAssetClassData where
+  type PLifted PAssetClassData = AssetClass
 
 {- | Convert from 'PAssetClassData' to 'PAssetClass'.
 
  @since 3.10.0
 -}
 ptoScottEncoding ::
-  forall (unit :: Symbol) (s :: S).
-  Term
-    s
-    ( PAsData (PAssetClassData unit)
-        :--> PAssetClass unit
-    )
+  forall (s :: S).
+  Term s ( PAsData PAssetClassData :--> PAssetClass)
 ptoScottEncoding = phoistAcyclic $
   plam $ \cls ->
     pletFields @["symbol", "name"] cls $
@@ -267,12 +254,8 @@ ptoScottEncoding = phoistAcyclic $
  @since 3.10.0
 -}
 pfromScottEncoding ::
-  forall (unit :: Symbol) (s :: S).
-  Term
-    s
-    ( PAssetClass unit
-        :--> PAsData (PAssetClassData unit)
-    )
+  forall (s :: S).
+  Term s ( PAssetClass :--> PAsData PAssetClassData)
 pfromScottEncoding = phoistAcyclic $
   plam $ \cls -> pmatch cls $
     \(PAssetClass sym tk) ->
@@ -289,9 +272,9 @@ pfromScottEncoding = phoistAcyclic $
  @since 3.10.0
 -}
 pviaScottEncoding ::
-  forall (unit :: Symbol) (a :: PType).
-  ClosedTerm (PAssetClass unit :--> a) ->
-  ClosedTerm (PAsData (PAssetClassData unit) :--> a)
+  forall (a :: PType).
+  ClosedTerm (PAssetClass :--> a) ->
+  ClosedTerm (PAsData PAssetClassData :--> a)
 pviaScottEncoding fn = phoistAcyclic $
   plam $ \cls ->
     fn #$ ptoScottEncoding # cls
@@ -302,10 +285,10 @@ pviaScottEncoding fn = phoistAcyclic $
 -}
 assetClassValue ::
   forall (unit :: Symbol).
-  AssetClass unit ->
+  Tagged unit AssetClass ->
   Tagged unit Integer ->
   Value.Value
-assetClassValue (AssetClass sym tk) q = Value.singleton sym tk $ untag q
+assetClassValue (Tagged (AssetClass sym tk)) q = Value.singleton sym tk $ untag q
 
 ----------------------------------------
 -- Field Labels

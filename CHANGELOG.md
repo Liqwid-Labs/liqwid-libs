@@ -6,14 +6,18 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### Modified
 
-* `PAssetClassData` now take unit type tag.
-* `PAssetClassData` now have Hask representation of `AssetClass`.
-* Utilties for `AssetClass`, `PAssetClass`, and `PAssetClassData` are modified to
-  work with new `PAssetClassData` type tags.
-
-### Deleted
-
-* `AssetClassData` is deprecated. Hask representation of `PAssetClassData` is now `AssetClass`.
+* `AssetClass`, `PAssetClass`, and `PAssetClassData` now don't have unit tag. Tags should be
+  provided with `Tagged` and `PTagged`.
+* Tag type tags have been removed from all `AssetClass` utilities.
+  - `pisTokenSpent`
+  - `passetClassDataValue`
+  - `psingleValue`
+  - `psingleValue'`
+  - `passetClassValueOf`
+  - `passetClassValueOf'`
+  - `pbyClassComparator'`
+  - `phasOneTokenOfAssetClass`
+  - `pmatchOrTryRec`
 
 ## 3.9.1 -- 2022-09-29
 
