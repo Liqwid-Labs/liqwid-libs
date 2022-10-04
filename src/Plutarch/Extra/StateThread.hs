@@ -1,4 +1,6 @@
-module Plutarch.Extra.StateThread (stateThread) where
+module Plutarch.Extra.StateThread (
+  withStateThread,
+) where
 
 import Plutarch.Api.V1 (PCurrencySymbol, PValue)
 import Plutarch.Api.V1.Value (pvalueOf)
@@ -12,33 +14,39 @@ import Plutarch.Api.V2 (
 import Plutarch.Extra.Field (pletAll)
 import PlutusLedgerApi.V2 (TxOutRef)
 
--- | @since 3.9.2
-stateThread ::
+{- | Adds a state thread to a minting policy.
+
+ @since 3.9.2
+-}
+withStateThread ::
   forall (s :: S).
+  -- | Initial spend
   TxOutRef ->
+  -- | Minting policy to wrap
+  Term s (PData :--> PScriptContext :--> POpaque) ->
   Term s (PData :--> PScriptContext :--> POpaque)
-stateThread ref = plam $ \_ ctx -> pletAll ctx $ \ctx' ->
+withStateThread ref mp = plam $ \red ctx -> pletAll ctx $ \ctx' ->
   pletFields @'["inputs", "mint"] (getField @"txInfo" ctx') $ \txInfo ->
     pmatch (getField @"purpose" ctx') $ \case
       PMinting thisPolicy ->
         pif
-          (validMint (pfield @"_0" # thisPolicy) . getField @"mint" $ txInfo)
+          (uniqueStateTokenMint (pfield @"_0" # thisPolicy) . getField @"mint" $ txInfo)
           ( pif
               (pany # hasUniqueInput ref # getField @"inputs" txInfo)
-              (popaque ctx)
+              (mp # red # ctx)
               (ptraceError "stateThread: Input not unique")
           )
-          (ptraceError "stateThread: Not a valid mint")
+          (ptraceError "stateThread: Not minting a unique state token")
       _ -> ptraceError "stateThread: Not a minting script purpose"
 
 -- Helpers
 
-validMint ::
+uniqueStateTokenMint ::
   forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
   Term s PCurrencySymbol ->
   Term s (PValue keys amounts) ->
   Term s PBool
-validMint thisPolicy mint =
+uniqueStateTokenMint thisPolicy mint =
   pvalueOf # mint # thisPolicy # pconstant "" #== pconstant 1
 
 hasUniqueInput ::
