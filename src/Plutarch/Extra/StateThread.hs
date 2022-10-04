@@ -34,7 +34,7 @@ withStateThread ref mp = plam $ \red ctx -> pletAll ctx $ \ctx' ->
           ( pif
               (pany # hasUniqueInput ref # getField @"inputs" txInfo)
               (mp # red # ctx)
-              (ptraceError "stateThread: Input not unique")
+              (ptraceError "stateThread: Unique input not found")
           )
           (ptraceError "stateThread: Not minting a unique state token")
       _ -> ptraceError "stateThread: Not a minting script purpose"
