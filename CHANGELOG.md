@@ -2,45 +2,32 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-## 3.10.0 -- 2022-10-3
-
-### Modified
-
-* `PAssetClassData` now take unit type tag.
-* `PAssetClassData` now have Hask representation of `AssetClass`.
-* Utilties for `AssetClass`, `PAssetClass`, and `PAssetClassData` are modified to
-  work with new `PAssetClassData` type tags.
-
-### Deleted
-
-* `AssetClassData` is deprecated. Hask representation of `PAssetClassData` is now `AssetClass`.
-
 ## 3.9.1 -- 2022-09-29
 
 ### Added
 
-* `Plutarch.Extra.Bool` : `pcond` function for lisp-like boolean
+* `Plutarch.Extra.Bool` : `pcond` function for lisp-like boolean 
   conditional-chaining.
-* `Plutarch.Extra.Value` :
-  * `phasOneTokenOfAssetClass` function for checking
+* `Plutarch.Extra.Value` : 
+  * `phasOneTokenOfAssetClass` function for checking 
   that a `PValue` contains exactly one of a `PAssetClass`.
   * `phasOneTokenOfSymbol` function for checking that a `PValue` contains exactly
   one token of an `AssetClass`.
-
+  
 
 ## 3.9.0 -- 2022-09-23
 
 ### Added
 
-* `Plutarch.Extra.ExchangeRate`: Utilities for working with ExchangeRates at
+* `Plutarch.Extra.ExchangeRate`: Utilities for working with ExchangeRates at 
   the type level.
 * `Plutarch.Extra.Rational`: arithmetic and lifting functions for rational types.
 * `ToData` and `FromData` instances for `Ratio Integer` to `Plutarch.Orphans`
 * `Plutarch.Extra.Value`:
   * `passetClassDataValue` for constructing singleton `PValue`s based on a
     `PAssetClassData`.
-  * `pvalue` and `pvaluePositive` for generating a `PValue` from its underlying
-    representation, with `NoGuarantees` and `Positive` guarantees, respectively.
+  * `pvalue` and `pvaluePositive` for generating a `PValue` from its underlying 
+    representation, with `NoGuarantees` and `Positive` guarantees, respectively. 
   * `passetClassValueOf`, for finding the quantity of a particular `PAssetClass`
     in a `PValue`. A 'ticked' version for working with a Haskell-level
     `AssetClass` also added.
@@ -48,7 +35,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
     of) `PValue`s.
   * `psplitValue`, for 'separating' the first entry of a `PValue`.
   * A range of `PComparator`s for comparing `PValue`s.
-* `Plutarch.Extra.List`:
+* `Plutarch.Extra.List`: 
   * `pfromList`, to turn a Haskell-level list of terms into a `PListLike`.
   * `ptryElimSingle`, which either eliminates a singleton list-like or errors if
     given a non-singleton.
@@ -80,10 +67,10 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 * `Plutarch.Extra.Value`:
   * Changed `passetClassValue` to become `passetClassDataValue`, since it uses
   the data-encoded version.
-  * The removal of `psingletonValue` changes the type signature to return a
+  * The removal of `psingletonValue` changes the type signature to return a 
   `'Sorted`, `'Nonzero` `Value`.
   * The following functions now used tagged `AssetClass`es:
-    * `pgeqByClass'`
+    * `pgeqByClass'` 
     * `passetClassValueOf'`
   * `mkSingleValue` renamed to `psingleValue`; its 'ticked' variant is renamed
     analogously.
@@ -91,9 +78,9 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
     `S`, in that order.
   * Type arguments for `padaOf` are now: `KeyGuarantees`, `AmountGuarantees`,
     `S`, in that order.
-* `Plutarch.Extra.FixedDecimal`:
-  * The removal of `psingletonValue` changes the type signature to return a
-  `'Sorted`, `'Nonzero` `Value`.
+* `Plutarch.Extra.FixedDecimal`: 
+  * The removal of `psingletonValue` changes the type signature to return a 
+  `'Sorted`, `'Nonzero` `Value`. 
 
 ### Removed
 
