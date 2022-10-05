@@ -28,6 +28,10 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   - `passetClassValueOfT`
   - `passetClassValueOfT'`
   - `psymbolAssetClassT`
+  - `passetClass`
+  - `passetClassData`
+  - `passetClassT`
+  - `passetClassDataT`
 
 ## 3.9.1 -- 2022-09-29
 

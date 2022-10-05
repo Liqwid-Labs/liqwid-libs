@@ -13,6 +13,8 @@ module Plutarch.Extra.AssetClass (
 
   -- * AssetClass - Plutarch
   PAssetClass (PAssetClass, psymbol, pname),
+  passetClass,
+  passetClassT,
   adaSymbolData,
   isAdaClass,
   adaClass,
@@ -25,6 +27,8 @@ module Plutarch.Extra.AssetClass (
 
   -- * AssetClassData - Plutarch
   PAssetClassData (PAssetClassData),
+  passetClassData,
+  passetClassDataT,
 
   -- * Scott <-> Data conversions
   ptoScottEncoding,
@@ -133,6 +137,22 @@ data PAssetClass (s :: S) = PAssetClass
 -- | @since 3.9.0
 instance DerivePlutusType PAssetClass where
   type DPTStrat _ = PlutusTypeScott
+
+-- | @since 3.10.0
+passetClass ::
+  forall (s :: S).
+  Term s (PCurrencySymbol :--> PTokenName :--> PAssetClass)
+passetClass = phoistAcyclic $
+  plam $ \sym tk ->
+    pcon $ PAssetClass (pdata sym) (pdata tk)
+
+-- | @since 3.10.0
+passetClassT ::
+  forall (unit :: Symbol) (s :: S).
+  Term s (PCurrencySymbol :--> PTokenName :--> PTagged unit PAssetClass)
+passetClassT = phoistAcyclic $
+  plam $ \sym tk ->
+    ppure #$ passetClass # sym # tk
 
 -- | @since 3.9.0
 pconstantCls ::
@@ -254,6 +274,26 @@ instance DerivePlutusType PAssetClassData where
 -- | @since 3.10.0
 instance Plutarch.Lift.PUnsafeLiftDecl PAssetClassData where
   type PLifted PAssetClassData = AssetClass
+
+-- | @since 3.10.0
+passetClassData ::
+  forall (s :: S).
+  Term s (PCurrencySymbol :--> PTokenName :--> PAssetClassData)
+passetClassData = phoistAcyclic $
+  plam $ \sym tk ->
+    mkRecordConstr
+      PAssetClassData
+      ( #symbol .= pdata sym
+          .& #name .= pdata tk
+      )
+
+-- | @since 3.10.0
+passetClassDataT ::
+  forall (unit :: Symbol) (s :: S).
+  Term s (PCurrencySymbol :--> PTokenName :--> PTagged unit PAssetClassData)
+passetClassDataT = phoistAcyclic $
+  plam $ \sym tk ->
+    ppure #$ passetClassData # sym # tk
 
 {- | Convert from 'PAssetClassData' to 'PAssetClass'.
 
