@@ -1,3 +1,6 @@
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE UndecidableInstances #-}
+
 {- |
 Module     : ScriptExport.Types
 Maintainer : emi@haskell.fyi
@@ -8,11 +11,17 @@ Param and script types for generation.
 module ScriptExport.Types (
   ScriptQuery (..),
   Builders,
+  getBuilders,
   runQuery,
   insertBuilder,
+  insertScriptExport,
+  insertScriptExportWithLinker,
   toList,
 ) where
 
+import ScriptExport.ScriptInfo
+
+import Control.Monad.Except
 import Data.Aeson qualified as Aeson
 import Data.ByteString.Lazy.Char8 qualified as LBS
 import Data.Coerce (coerce)
@@ -20,8 +29,9 @@ import Data.Default.Class (Default (def))
 import Data.Hashable (Hashable)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
-import Data.Text (Text)
+import Data.Text (Text, pack, unpack)
 import GHC.Generics qualified as GHC
+import Optics.TH (makeFieldLabelsNoPrefix)
 import Servant qualified
 
 {- | Query data for getting script info.
@@ -58,20 +68,27 @@ data ScriptQuery = ScriptQuery
      @since 1.0.0
 -}
 runQuery :: ScriptQuery -> Builders -> Servant.Handler Aeson.Value
-runQuery s =
+runQuery (ScriptQuery name param) =
   maybe
     (Servant.throwError Servant.err404 {Servant.errBody = "Builder not found"})
-    ($ s.paramsPayload)
-    . Map.lookup s.name
+    (toServantErr . runExcept . ($ param))
+    . Map.lookup name
     . getBuilders
+  where
+    toServantErr (Left err) = Servant.throwError Servant.err400 {Servant.errBody = (LBS.pack . unpack) err}
+    toServantErr (Right x) = pure x
 
 {- | Represents a list of named pure functions.
 
      @since 1.0.0
 -}
-newtype Builders = Builders
-  { getBuilders :: Map Text (Aeson.Value -> Servant.Handler Aeson.Value)
-  }
+newtype Builders
+  = Builders (Map Text (Aeson.Value -> Except Text Aeson.Value))
+
+getBuilders ::
+  Builders ->
+  Map Text (Aeson.Value -> Except Text Aeson.Value)
+getBuilders (Builders b) = b
 
 -- | @since 1.0.0
 instance Default Builders where
@@ -94,14 +111,11 @@ insertBuilder k = coerce . Map.insert k . throughJSON
       forall p s.
       (Aeson.FromJSON p, Aeson.ToJSON s) =>
       (p -> s) ->
-      (Aeson.Value -> Servant.Handler Aeson.Value)
+      (Aeson.Value -> Except Text Aeson.Value)
     throughJSON f v =
       case Aeson.fromJSON v of
         Aeson.Error e ->
-          Servant.throwError $
-            Servant.err400
-              { Servant.errBody = LBS.pack e
-              }
+          throwError $ pack e
         Aeson.Success v' -> pure . Aeson.toJSON $ f v'
 
 {- | Get a list of the available builders.
@@ -110,3 +124,40 @@ insertBuilder k = coerce . Map.insert k . throughJSON
 -}
 toList :: Builders -> [Text]
 toList = Map.keys . getBuilders
+
+{- | Insert a 'ScriptExport' to the Builders Map. It will not require a
+     parameter since 'ScriptExport' is ready-to-go script.
+
+     @since 2.0.0
+-}
+insertScriptExport ::
+  forall a.
+  (Aeson.ToJSON a) =>
+  Text ->
+  ScriptExport a ->
+  Builders ->
+  Builders
+insertScriptExport k scr =
+  insertBuilder @() k (const scr)
+
+{- | Insert a 'RawScriptExport' and 'ScriptLinker' to the Builders Map. The
+     builder will return applied `ScriptExport` with given parameter.
+
+     @since 2.0.0
+-}
+insertScriptExportWithLinker ::
+  forall param a.
+  (Aeson.FromJSON param, Aeson.ToJSON a) =>
+  Text ->
+  RawScriptExport ->
+  Linker param (ScriptExport a) ->
+  Builders ->
+  Builders
+insertScriptExportWithLinker k scr linker =
+  insertBuilder k (runLinker linker scr)
+
+----------------------------------------
+-- Field Labels
+
+-- | @since 2.0.0
+makeFieldLabelsNoPrefix ''ScriptQuery

@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 {- | Module     : Aeson.Orphans
@@ -6,11 +8,13 @@
 
      Aeson orphan instances for script export types.
 -}
-module Aeson.Orphans (AsBase16Bytes (..)) where
+module Aeson.Orphans (AsBase16Bytes (..), AsBase16Codec (..)) where
 
 --------------------------------------------------------------------------------
 
 import Data.Coerce (Coercible, coerce)
+import Optics (view)
+import Optics.TH (makeFieldLabelsNoPrefix)
 import Prelude
 
 --------------------------------------------------------------------------------
@@ -32,6 +36,9 @@ import PlutusLedgerApi.V2 qualified as Plutus
 
 newtype AsBase16Bytes a = AsBase16Bytes {unAsBase16Bytes :: a}
 newtype AsBase16Codec a = AsBase16Codec {unAsBase16Codec :: a}
+
+makeFieldLabelsNoPrefix ''AsBase16Bytes
+makeFieldLabelsNoPrefix ''AsBase16Codec
 
 deriving via
   (Plutus.CurrencySymbol, Plutus.TokenName)
@@ -73,7 +80,7 @@ instance (Codec.Serialise a) => Aeson.ToJSON (AsBase16Codec a) where
       . Plutus.encodeByteString
       . Lazy.toStrict
       . Codec.serialise @a
-      . (.unAsBase16Codec)
+      . view #unAsBase16Codec
 
 instance (Codec.Serialise a) => Aeson.FromJSON (AsBase16Codec a) where
   parseJSON v =
@@ -165,3 +172,6 @@ deriving via
   Integer
   instance
     (Aeson.FromJSON Plutus.POSIXTime)
+
+----------------------------------------
+-- Field Labels

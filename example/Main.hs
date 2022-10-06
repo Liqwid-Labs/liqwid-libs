@@ -10,24 +10,14 @@ module Main (main) where
 
 import Data.Default (def)
 import Data.Function ((&))
-import Data.Text (Text)
-import Development.GitRev (gitBranch, gitHash)
-import Plutarch (ClosedTerm, pcon, plam, popaque)
 import Plutarch.Api.V2 (PValidator)
-import Plutarch.Prelude (PUnit (PUnit))
-import ScriptExport.API (runServer)
-import ScriptExport.Options (parseOptions)
+import Plutarch.Prelude (ClosedTerm, PUnit (PUnit), pcon, plam, popaque)
+import ScriptExport.Export (exportMain)
 import ScriptExport.ScriptInfo (mkValidatorInfo)
 import ScriptExport.Types (Builders, insertBuilder)
 
 main :: IO ()
-main =
-  parseOptions >>= runServer revision builders
-  where
-    -- This encodes the git revision of the server. It's useful for the caller
-    -- to be able to ensure they are compatible with it.
-    revision :: Text
-    revision = $(gitBranch) <> "@" <> $(gitHash)
+main = exportMain builders
 
 builders :: Builders
 builders =

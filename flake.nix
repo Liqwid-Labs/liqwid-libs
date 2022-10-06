@@ -23,6 +23,8 @@
         "plutarch/haskell-nix/nixpkgs-unstable";
     };
 
+    ply.url = "github:seungheonoh/ply?ref=seungheonoh/directTypedScript";
+
     liqwid-nix.url = "github:Liqwid-Labs/liqwid-nix";
   };
 
@@ -35,6 +37,10 @@
       [
         liqwid-nix.haskellProject
         liqwid-nix.plutarchProject
+        (liqwid-nix.addDependencies [
+          "${inputs.ply}/ply-core"
+          "${inputs.ply}/ply-plutarch"
+        ])
         (liqwid-nix.enableFormatCheck [
           "-XQuasiQuotes"
           "-XTemplateHaskell"
