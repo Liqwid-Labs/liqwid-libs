@@ -18,9 +18,9 @@ module Plutarch.Extra.AssetClass (
   adaClass,
   padaClass,
   emptyTokenNameData,
-  pcoerceCls,
+  pcoerceClass,
   psymbolAssetClass,
-  pconstantCls,
+  pconstantClass,
 
   -- * AssetClassData - Hask
   AssetClassData (AssetClassData, symbol, name),
@@ -121,23 +121,23 @@ data PAssetClass (unit :: Symbol) (s :: S) = PAssetClass
 instance DerivePlutusType (PAssetClass unit) where
   type DPTStrat _ = PlutusTypeScott
 
--- | @since 3.9.0
-pconstantCls ::
+-- | @since 3.10.0
+pconstantClass ::
   forall (unit :: Symbol) (s :: S).
   AssetClass unit ->
   Term s (PAssetClass unit)
-pconstantCls (AssetClass sym tk) =
+pconstantClass (AssetClass sym tk) =
   pcon $
     PAssetClass (pconstantData sym) (pconstantData tk)
 
 {- | Coerce the unit tag of a 'PAssetClass'.
- @since 3.9.0
+ @since 3.10.0
 -}
-pcoerceCls ::
+pcoerceClass ::
   forall (b :: Symbol) (a :: Symbol) (s :: S).
   Term s (PAssetClass a) ->
   Term s (PAssetClass b)
-pcoerceCls = punsafeCoerce
+pcoerceClass = punsafeCoerce
 
 {- | Construct a 'PAssetClass' with empty 'pname'.
  @since 3.9.0
@@ -180,7 +180,7 @@ adaClass = AssetClass "" ""
  @since 3.9.0
 -}
 padaClass :: forall (s :: S). Term s (PAssetClass "Ada")
-padaClass = pconstantCls adaClass
+padaClass = pconstantClass adaClass
 
 {- | The empty 'PTokenName'
 
