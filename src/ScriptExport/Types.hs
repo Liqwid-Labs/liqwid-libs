@@ -154,7 +154,17 @@ insertScriptExportWithLinker ::
   Builders ->
   Builders
 insertScriptExportWithLinker k scr linker =
-  insertBuilder k (runLinker linker scr)
+  coerce . Map.insert k $ throughLinker
+  where
+    throughLinker :: Aeson.Value -> Except Text Aeson.Value
+    throughLinker arg =
+      case Aeson.fromJSON arg of
+        Aeson.Error e ->
+          throwError $ pack e
+        Aeson.Success v' ->
+            case runLinker linker scr v' of
+              Left e -> throwError . pack . show $ e
+              Right x -> pure . Aeson.toJSON $ x
 
 ----------------------------------------
 -- Field Labels

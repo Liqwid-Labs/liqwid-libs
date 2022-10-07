@@ -16,10 +16,13 @@ module ScriptExport.ScriptInfo (
   Linker (..),
   RawScriptExport (..),
   ScriptExport (..),
+  SerializedScript (..),
 
   -- * Linker utilities
   runLinker,
   fetchTS,
+  exportParam,
+  exportVersion,
 
   -- * Introduction functions
   mkScriptInfo,
@@ -32,9 +35,12 @@ import Aeson.Orphans ()
 import Cardano.Binary qualified as CBOR
 import Codec.Serialise qualified as Codec
 import Data.Aeson qualified as Aeson
+import Data.Aeson.Types qualified as Aeson
 import Data.ByteString.Base16 qualified as Base16
+import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
+import Data.Text.Encoding qualified as Text
 import Data.Text (Text, pack)
 import GHC.Generics qualified as GHC
 import Optics (view)
@@ -128,6 +134,7 @@ data RawScriptExport = RawScriptExport
       Aeson.FromJSON
     )
 
+-- | @since 2.0.0
 fetchTS ::
   forall (rl :: ScriptRole) (params :: [Type]) (lparam :: Type).
   TypedReader rl params =>
@@ -142,13 +149,21 @@ fetchTS t = do
         Left err -> throwError $ ScriptTypeMismatch $ pack $ show err
     Nothing -> throwError $ ScriptNotFound t
 
+-- | @since 2.0.0
+exportParam :: forall (lparam :: Type). Linker lparam lparam
+exportParam = snd <$> ask
+
+-- | @since 2.0.0
+exportVersion :: forall (lparam :: Type). Linker lparam String
+exportVersion = (view #version . fst) <$> ask
+
 {- | Type for holding ready-to-go scripts.
 
  @since 2.0.0
 -}
 data ScriptExport a = ScriptExport
   { version :: String
-  , scripts :: Map Text Script
+  , scripts :: Map Text SerializedScript
   , information :: a
   }
   deriving stock
@@ -165,6 +180,59 @@ data ScriptExport a = ScriptExport
     , -- | @since 2.0.0
       Aeson.FromJSON
     )
+
+-- | @since 2.0.0
+newtype SerializedScript = SerializedScript Script
+  deriving stock
+    ( -- | @since 2.0.0
+      Show
+    , -- | @since 2.0.0
+      Eq
+    , -- | @since 2.0.0
+      GHC.Generic
+    )
+
+-- Internal helper for CBOR deserialization
+newtype CBORSerializedScript = CBORSerializedScript SBS.ShortByteString
+
+instance CBOR.FromCBOR CBORSerializedScript where
+  fromCBOR = CBORSerializedScript . SBS.toShort <$> CBOR.fromCBOR
+
+cborToScript :: BS.ByteString -> Either CBOR.DecoderError Script
+cborToScript x =
+  Codec.deserialise
+  . LBS.fromStrict
+  . SBS.fromShort
+  . (\(CBORSerializedScript x) -> x)
+  <$> CBOR.decodeFull' x
+
+-- | @since 2.0.0
+instance Aeson.ToJSON SerializedScript where
+  toJSON (SerializedScript scr) =
+    Aeson.toJSON $
+      Aeson.object
+        [ "cborHex" Aeson..= Base16.encodeBase16 cbor
+        , "rawHex" Aeson..= Base16.encodeBase16 raw
+        ]
+    where
+      raw = LBS.toStrict $ Codec.serialise scr
+      cbor = CBOR.serialize' $ SBS.toShort raw
+
+-- | @since 2.0.0
+instance Aeson.FromJSON SerializedScript where
+  parseJSON (Aeson.Object v) =
+    SerializedScript
+      <$> (v Aeson..: "cborHex" >>= parseAndDeserialize)
+    where
+      parseAndDeserialize v =
+        Aeson.parseJSON v
+          >>= either (fail . show) (either (fail . show) pure . cborToScript)
+            . Base16.decodeBase16
+            . Text.encodeUtf8
+  parseJSON invalid =
+    Aeson.prependFailure
+      "parsing SerializedScript failed, "
+      (Aeson.typeMismatch "Object" invalid)
 
 {- | Bundle containing a 'Validator' and its hash.
 

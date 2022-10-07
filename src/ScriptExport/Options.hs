@@ -71,7 +71,7 @@ data ServerOptions = ServerOptions
 data FileOptions = FileOptions
   { out :: FilePath
   -- ^ Where to write files to.
-  , param :: Maybe FilePath
+  , param :: FilePath
   -- ^ Script parameter.
   }
   deriving stock (Show, Eq)
@@ -86,12 +86,11 @@ fileOpt =
           <> Opt.value "."
           <> Opt.help "Where to write files to."
       )
-    <*> Opt.option
-      Opt.auto
+    <*> Opt.strOption
       ( Opt.long "param"
           <> Opt.short 'p'
           <> Opt.metavar "PARAM"
-          <> Opt.value Nothing
+          <> Opt.value ""
           <> Opt.help "Parameters to apply"
       )
 
