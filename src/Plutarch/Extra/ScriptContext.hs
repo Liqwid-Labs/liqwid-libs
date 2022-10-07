@@ -18,6 +18,7 @@ module Plutarch.Extra.ScriptContext (
   pisScriptAddress,
   pisPubKey,
   pfindOutputsToAddress,
+  pfindOwnInput,
   pfromPDatum,
   presolveOutputDatum,
   ptryResolveOutputDatum,
@@ -382,3 +383,41 @@ pfindOutputsToAddress = phoistAcyclic $
     pure $
       pfilter # plam (\txOut -> pfield @"address" # txOut #== address)
         # outputs
+
+{- | Find the input being spent in the current transaction.
+
+  Takes as arguments the inputs, as well as the spending transaction referenced
+  from `PScriptPurpose`.
+
+  NOTE: this function is identical to the one in `Plutarch.Extra.Api` of the same
+  name, except it is updated to work on V2 types.
+
+  __Example:__
+
+  @
+  ctx <- tcont $ pletFields @["txInfo", "purpose"] sc
+  pmatchC (getField @"purpose" ctx) >>= \case
+    PSpending outRef' -> do
+      let outRef = pfield @"_0" # outRef'
+          inputs = pfield @"inputs" # (getField @"txInfo" ctx)
+      pure $ pfindOwnInput # inputs # outRef
+    _ ->
+      pure $ ptraceError "not a spending tx"
+  @
+
+ @since 3.9.3
+-}
+pfindOwnInput ::
+  Term
+    s
+    ( PBuiltinList PTxInInfo :--> PTxOutRef
+        :--> PMaybe PTxInInfo
+    )
+pfindOwnInput = phoistAcyclic $
+  plam $ \inputs outRef ->
+    pfind # (matches # outRef) # inputs
+  where
+    matches :: Term s (PTxOutRef :--> PTxInInfo :--> PBool)
+    matches = phoistAcyclic $
+      plam $ \outref txininfo ->
+        outref #== pfield @"outRef" # txininfo

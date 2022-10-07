@@ -9,6 +9,13 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 * `Plutarch.Extra.AssetClass`: renamed `pcoerceCls` and `pconstantClass`
   to `pcoerceClass` and `pconstantClass`, respectively. 
 
+## 3.9.3 -- 2022-10-06
+
+### Added
+
+* `Plutarch.Extra.ScriptContext`, `pfindOwnInput` with V2 types 
+
+
 ## 3.9.2 -- 2022-10-04
 
 ### Added
