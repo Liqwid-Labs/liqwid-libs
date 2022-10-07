@@ -36,12 +36,12 @@ common common-lang
     -Wmissing-export-lists -Wmissing-deriving-strategies
     -Wno-partial-type-signatures
 
--- TODO, 2022-10-07: We should rely on LPE's pprelude,
--- but I'm not totally sure how to make this happen
--- in nix.
---  mixins:
---    base hiding (Prelude),
---    pprelude (PPrelude as Prelude)
+  -- TODO, 2022-10-07: We should rely on LPE's pprelude,
+  -- but I'm not totally sure how to make this happen
+  -- in nix.
+  --  mixins:
+  --    base hiding (Prelude),
+  --    pprelude (PPrelude as Prelude)
 
   if !flag(development)
     ghc-options: -Werror
@@ -108,11 +108,11 @@ library
     , acc
     , liqwid-plutarch-extra
     , mtl
+    , optics-core
+    , optics-th
     , plutus-ledger-api
     , plutus-tx
     , pretty
-    , optics-core
-    , optics-th
     , pretty-show
     , tagged
     , tasty

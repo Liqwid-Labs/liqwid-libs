@@ -1,6 +1,6 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {- | Module: Plutarch.Test.Precompiled
@@ -22,11 +22,9 @@ module Plutarch.Test.Precompiled (
   (@!>),
   testEqualityCase,
   fromPTerm,
-  tryFromPTerm
+  tryFromPTerm,
 ) where
 
-import GHC.Generics (Generic)
-import Optics.Getter (view)
 import Acc (Acc)
 import Control.Monad.RWS (
   MonadReader,
@@ -40,12 +38,15 @@ import Control.Monad.RWS (
 import Data.Foldable (toList)
 import Data.Tagged (Tagged (Tagged))
 import Data.Text (Text)
+import GHC.Generics (Generic)
+import Optics.Getter (view)
+import Optics.TH (makeFieldLabelsNoPrefix)
 import Plutarch.Evaluate (EvalError, evalScript)
 import Plutarch.Extra.DebuggableScript (
   DebuggableScript,
   applyDebuggableScript,
-  mustCompileD,
   checkedCompileD,
+  mustCompileD,
  )
 import Plutarch.Prelude (ClosedTerm, S, Type)
 import PlutusLedgerApi.V1.Scripts (Script)
@@ -62,7 +63,6 @@ import Text.PrettyPrint (
   vcat,
  )
 import Text.Show.Pretty (ppDoc)
-import Optics.TH (makeFieldLabelsNoPrefix)
 
 -- | @since 1.1.0
 data Expectation
@@ -88,8 +88,8 @@ data TestCase
       , expectedScript :: Script
       , caseName :: String
       }
-      -- | @since 1.2.0
-      deriving stock (Generic)
+  -- @since 1.2.0
+  deriving stock (Generic)
 
 ourStyle :: Style
 ourStyle = style {lineLength = 80}
@@ -111,8 +111,8 @@ instance IsTest TestCase where
       (Left err, Success) -> failWithStyle . unexpectedFailure err $ dt
       (Left _, Failure) -> testPassed ""
     where
-      ((r :: Either EvalError Script), _, _) = evalScript $ view #script dScript
-      (_, _, (dt :: [Text])) = evalScript $ view #debugScript dScript
+      (r :: Either EvalError Script, _, _) = evalScript $ view #script dScript
+      (_, _, dt :: [Text]) = evalScript $ view #debugScript dScript
       unexpectedFailure :: EvalError -> [Text] -> Doc
       unexpectedFailure err logs =
         "Expected a successful run, but failed instead.\n"
@@ -132,9 +132,9 @@ instance IsTest TestCase where
       (Left err, _) -> failWithStyle . failedToEvaluate err $ dt
       (_, Left err) -> failWithStyle . failedToEvaluate err $ mempty
     where
-      ((r :: Either EvalError Script), _, _) = evalScript $ view #script dScript
-      ((e :: Either EvalError Script), _, _) = evalScript $ expectedScript
-      (_, _, (dt :: [Text])) = evalScript $ view #debugScript dScript
+      (r :: Either EvalError Script, _, _) = evalScript $ view #script dScript
+      (e :: Either EvalError Script, _, _) = evalScript expectedScript
+      (_, _, dt :: [Text]) = evalScript $ view #debugScript dScript
       failedToEvaluate :: EvalError -> [Text] -> Doc
       failedToEvaluate result logs =
         "Script evaluation failed, both scripts need to suceed in order to check equality.\n"
@@ -162,7 +162,7 @@ newtype TestCompiled a = TestCompiled
       MonadWriter (Acc TestCase)
     )
     via (RWS DebuggableScript (Acc TestCase) ())
-  -- | @since 1.2.0
+  -- @since 1.2.0
   deriving stock (Generic)
 
 {- | Stitches in arguments. It is helpful if there are shared arguments.
@@ -170,7 +170,7 @@ newtype TestCompiled a = TestCompiled
  @since 1.1.0
 -}
 withApplied :: [Data] -> TestCompiled () -> TestCompiled ()
-withApplied args tests = local (flip applyDebuggableScript args) tests
+withApplied args = local (flip applyDebuggableScript args)
 
 {- | An operator for 'withApplied'.
 
@@ -247,18 +247,15 @@ fromPTerm ::
 fromPTerm name term ctests = case checkedCompileD term of
   Left err -> Left err
   Right debuggableScript ->
-    let
-      (_, tests) = execRWS (view #unTestCompiled ctests) debuggableScript ()
-      go ts = singleTest (view #caseName ts) ts
-    in
-      Right $ testGroup name $ toList $ go <$> tests
+    let (_, tests) = execRWS (view #unTestCompiled ctests) debuggableScript ()
+        go ts = singleTest (view #caseName ts) ts
+     in Right $ testGroup name $ toList $ go <$> tests
 
 {- | Compiles a Plutarch closed term, then runs some tests using it in 'TestCompiled'.
 Errors if compilation fails
 
  @since 1.2.0
 -}
-
 tryFromPTerm ::
   forall (a :: S -> Type).
   String ->

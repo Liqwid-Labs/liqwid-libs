@@ -28,9 +28,9 @@ import Plutarch.Prelude (
  )
 import Plutarch.Test.Precompiled (
   Expectation (Failure, Success),
-  tryFromPTerm,
   testEqualityCase,
   testEvalCase,
+  tryFromPTerm,
   withApplied,
   (@!>),
   (@&),
@@ -38,7 +38,7 @@ import Plutarch.Test.Precompiled (
  )
 import Test.Tasty (TestTree, defaultMain, testGroup)
 
-import qualified PlutusTx as PlutusTx
+import qualified PlutusTx
 
 main :: IO ()
 main = do
@@ -58,7 +58,7 @@ sampleValidator = plam $ \_ x _ -> unTermCont $ do
       pif
         (x' #== 10)
         (ptraceError "x shouldn't be 10")
-        (x')
+        x'
 
 sampleValidatorTest :: TestTree
 sampleValidatorTest = tryFromPTerm "sample validator" sampleValidator $ do
@@ -79,7 +79,7 @@ sampleValidatorTest = tryFromPTerm "sample validator" sampleValidator $ do
       [PlutusTx.toData (10 :: Integer), PlutusTx.toData ()]
 
 sampleFunction :: Term s (PAsData PInteger :--> PAsData PInteger :--> PAsData PInteger)
-sampleFunction = plam $ \x y -> pdata ((pfromData x) + (pfromData y) + 1)
+sampleFunction = plam $ \x y -> pdata (pfromData x + pfromData y + 1)
 
 sampleFunctionTest :: TestTree
 sampleFunctionTest = tryFromPTerm "sample function" sampleFunction $ do
@@ -91,9 +91,9 @@ sampleFunctionTest = tryFromPTerm "sample function" sampleFunction $ do
     compiled1 =
       either (error . show) id $
         compile (Config {tracingMode = NoTracing}) $
-          sampleFunction # (pdata 1)
+          sampleFunction # pdata 1
 
     compiled11 =
       either (error . show) id $
         compile (Config {tracingMode = NoTracing}) $
-          sampleFunction # (pdata 1) # (pdata 1)
+          sampleFunction # pdata 1 # pdata 1
