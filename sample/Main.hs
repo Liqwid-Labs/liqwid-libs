@@ -28,7 +28,7 @@ import Plutarch.Prelude (
  )
 import Plutarch.Test.Precompiled (
   Expectation (Failure, Success),
-  fromPTerm,
+  tryFromPTerm,
   testEqualityCase,
   testEvalCase,
   withApplied,
@@ -61,7 +61,7 @@ sampleValidator = plam $ \_ x _ -> unTermCont $ do
         (x')
 
 sampleValidatorTest :: TestTree
-sampleValidatorTest = fromPTerm "sample validator" sampleValidator $ do
+sampleValidatorTest = tryFromPTerm "sample validator" sampleValidator $ do
   [PlutusTx.toData (), PlutusTx.toData (1 :: Integer), PlutusTx.toData ()] @> "It should succeed when given 1"
   [PlutusTx.toData (), PlutusTx.toData (10 :: Integer), PlutusTx.toData ()] @!> "It should fail when given 10"
   [PlutusTx.toData (), PlutusTx.toData (), PlutusTx.toData ()] @!> "It should fail when given non integer"
@@ -82,7 +82,7 @@ sampleFunction :: Term s (PAsData PInteger :--> PAsData PInteger :--> PAsData PI
 sampleFunction = plam $ \x y -> pdata ((pfromData x) + (pfromData y) + 1)
 
 sampleFunctionTest :: TestTree
-sampleFunctionTest = fromPTerm "sample function" sampleFunction $ do
+sampleFunctionTest = tryFromPTerm "sample function" sampleFunction $ do
   [PlutusTx.toData (1 :: Integer), PlutusTx.toData (1 :: Integer)] @> "It should not fail"
 
   testEqualityCase "1" compiled1 [PlutusTx.toData (1 :: Integer)]

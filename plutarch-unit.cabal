@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutarch-unit
-version:            1.1.0
+version:            1.2.0
 synopsis:           Unit checks for Plutarch
 description:
   An independent unitcheck library for constructing unit checks for Plutarch.
@@ -20,44 +20,65 @@ source-repository head
   type:     git
   location: https://github.com/Liqwid-Labs/plutrach-unit
 
+-- Flags
+
+flag development
+  description: Disable -Werror during development mode
+  default:     False
+  manual:      True
+
 -- Common sections
 
 common common-lang
   ghc-options:
     -Wall -Wcompat -Wincomplete-uni-patterns
     -Wincomplete-record-updates -Wredundant-constraints
-    -Wmissing-export-lists -Wmissing-deriving-strategies -Werror
+    -Wmissing-export-lists -Wmissing-deriving-strategies
+    -Wno-partial-type-signatures
+
+-- TODO, 2022-10-07: We should rely on LPE's pprelude,
+-- but I'm not totally sure how to make this happen
+-- in nix.
+--  mixins:
+--    base hiding (Prelude),
+--    pprelude (PPrelude as Prelude)
+
+  if !flag(development)
+    ghc-options: -Werror
 
   build-depends:
     , base      ^>=4.16
     , plutarch
 
   default-extensions:
+    NoStarIsType
     BangPatterns
     BinaryLiterals
     ConstraintKinds
     DataKinds
-    DeriveFunctor
+    DeriveAnyClass
     DeriveGeneric
     DeriveTraversable
-    DerivingStrategies
     DerivingVia
     EmptyCase
     FlexibleContexts
     FlexibleInstances
     GeneralisedNewtypeDeriving
     HexFloatLiterals
-    ImportQualifiedPost
     InstanceSigs
     KindSignatures
     LambdaCase
     MultiParamTypeClasses
     NumericUnderscores
+    OverloadedLabels
     OverloadedStrings
     ScopedTypeVariables
     StandaloneDeriving
     TupleSections
+    TypeApplications
+    TypeFamilies
     TypeOperators
+    NoFieldSelectors
 
   default-language:   Haskell2010
 
@@ -90,6 +111,8 @@ library
     , plutus-ledger-api
     , plutus-tx
     , pretty
+    , optics-core
+    , optics-th
     , pretty-show
     , tagged
     , tasty
