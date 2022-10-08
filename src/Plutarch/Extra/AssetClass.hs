@@ -67,7 +67,7 @@ import qualified PlutusTx
 
 {- | A version of 'PlutusTx.AssetClass', with a tag for currency.
 
- @since 3.9.0
+ @since 3.10.0
 -}
 data AssetClass = AssetClass
   { symbol :: CurrencySymbol
@@ -98,14 +98,14 @@ data AssetClass = AssetClass
       SOP.Generic
     )
   deriving
-    ( -- | @since 3.9.0
+    ( -- | @since 3.10.0
       PlutusTx.ToData
-    , -- | @since 3.9.0
+    , -- | @since 3.10.0
       PlutusTx.FromData
     )
     via Plutarch.Extra.IsData.ProductIsData AssetClass
   deriving
-    ( -- | @since 3.9.0
+    ( -- | @since 3.10.0
       Plutarch.Lift.PConstantDecl
     )
     via ( Plutarch.Extra.IsData.DerivePConstantViaDataList
@@ -115,7 +115,7 @@ data AssetClass = AssetClass
 
 {- | A Scott-encoded Plutarch equivalent to 'AssetClass'.
 
- @since 3.9.0
+ @since 3.10.0
 -}
 data PAssetClass (s :: S) = PAssetClass
   { psymbol :: Term s (PAsData PCurrencySymbol)
@@ -134,7 +134,7 @@ data PAssetClass (s :: S) = PAssetClass
       PlutusType
     )
 
--- | @since 3.9.0
+-- | @since 3.10.0
 instance DerivePlutusType PAssetClass where
   type DPTStrat _ = PlutusTypeScott
 
@@ -154,7 +154,7 @@ passetClassT = phoistAcyclic $
   plam $ \sym tk ->
     ppure #$ passetClass # sym # tk
 
--- | @since 3.9.0
+-- | @since 3.10.0
 pconstantCls ::
   forall (s :: S).
   AssetClass ->
@@ -238,7 +238,7 @@ emptyTokenNameData = pconstantData ""
 {- | A 'PlutusTx.Data'-encoded version of 'AssetClass', without the currency
  tag.
 
- @since 3.9.0
+ @since 3.10.0
 -}
 newtype PAssetClassData (s :: S)
   = PAssetClassData
