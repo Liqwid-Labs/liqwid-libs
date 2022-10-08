@@ -116,6 +116,7 @@ library
     Plutarch.Extra.ScriptContext
     Plutarch.Extra.Star
     Plutarch.Extra.State
+    Plutarch.Extra.StateThread
     Plutarch.Extra.Sum
     Plutarch.Extra.Tagged
     Plutarch.Extra.TermCont

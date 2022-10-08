@@ -2,12 +2,16 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-## 3.10.0 -- 2022-10-3
+## 3.10.0 -- 2022-10-06
 
 ### Modified
 
+* `Plutarch.Extra.AssetClass`: renamed `pcoerceCls` and `pconstantClass`
+  to `pcoerceClass` and `pconstantClass`, respectively.
+
 * `AssetClass`, `PAssetClass`, and `PAssetClassData` now don't have unit tag. Tags should be
   provided with `Tagged` and `PTagged`.
+
 * Tag type tags have been removed from all `AssetClass` utilities.
   - `pisTokenSpent`
   - `passetClassDataValue`
@@ -32,6 +36,19 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   - `passetClassData`
   - `passetClassT`
   - `passetClassDataT`
+
+## 3.9.3 -- 2022-10-06
+
+### Added
+
+* `Plutarch.Extra.ScriptContext`, `pfindOwnInput` with V2 types
+
+
+## 3.9.2 -- 2022-10-04
+
+### Added
+
+* `Plutarch.Extra.StateThread`, with a state thread implementation.
 
 ## 3.9.1 -- 2022-09-29
 

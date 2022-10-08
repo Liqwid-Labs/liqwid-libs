@@ -22,8 +22,8 @@ module Plutarch.Extra.AssetClass (
   emptyTokenNameData,
   psymbolAssetClass,
   psymbolAssetClassT,
-  pconstantCls,
-  pconstantClsT,
+  pconstantClass,
+  pconstantClassT,
 
   -- * AssetClassData - Plutarch
   PAssetClassData (PAssetClassData),
@@ -155,20 +155,20 @@ passetClassT = phoistAcyclic $
     ppure #$ passetClass # sym # tk
 
 -- | @since 3.10.0
-pconstantCls ::
+pconstantClass ::
   forall (s :: S).
   AssetClass ->
   Term s PAssetClass
-pconstantCls (AssetClass sym tk) =
+pconstantClass (AssetClass sym tk) =
   pcon $
     PAssetClass (pconstantData sym) (pconstantData tk)
 
 -- | @since 3.10.0
-pconstantClsT ::
+pconstantClassT ::
   forall (unit :: Symbol) (s :: S).
   Tagged unit AssetClass ->
   Term s (PTagged unit PAssetClass)
-pconstantClsT (Tagged (AssetClass sym tk)) =
+pconstantClassT (Tagged (AssetClass sym tk)) =
   ppure #$ pcon $ PAssetClass (pconstantData sym) (pconstantData tk)
 
 {- | Construct a 'PAssetClass' with empty 'pname'.
@@ -223,7 +223,7 @@ adaClass = Tagged $ AssetClass "" ""
  @since 3.9.0
 -}
 padaClass :: forall (s :: S). Term s (PTagged "Ada" PAssetClass)
-padaClass = ppure #$ pconstantCls $ untag adaClass
+padaClass = ppure #$ pconstantClass $ untag adaClass
 
 {- | The empty 'PTokenName'
 
