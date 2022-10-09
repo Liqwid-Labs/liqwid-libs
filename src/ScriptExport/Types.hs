@@ -162,9 +162,9 @@ insertScriptExportWithLinker k scr linker =
         Aeson.Error e ->
           throwError $ pack e
         Aeson.Success v' ->
-            case runLinker linker scr v' of
-              Left e -> throwError . pack . show $ e
-              Right x -> pure . Aeson.toJSON $ x
+          case runLinker linker scr v' of
+            Left e -> throwError . pack . show $ e
+            Right x -> pure . Aeson.toJSON $ x
 
 ----------------------------------------
 -- Field Labels
