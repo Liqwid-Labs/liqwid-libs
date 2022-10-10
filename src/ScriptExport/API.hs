@@ -79,7 +79,7 @@ runServer revision builders options = do
           , exposedBuilders = Builders.toList builders
           }
 
-  -- Scripts stay cached for five minutes
+  -- Scripts stay cached for the amount of time specified by the `cacheLifetime` option.
   query <- cachedForM (Just $ TimeSpec (view #cacheLifetime options) 0) (`runQuery` builders)
 
   let handler = (\name -> query . ScriptQuery name) :<|> pure serverInfo

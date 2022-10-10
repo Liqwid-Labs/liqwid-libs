@@ -23,7 +23,7 @@
         "plutarch/haskell-nix/nixpkgs-unstable";
     };
 
-    ply.url = "github:seungheonoh/ply?ref=seungheonoh/directTypedScript";
+    ply.url = "github:mlabs-haskell/ply?ref=master";
 
     liqwid-nix.url = "github:Liqwid-Labs/liqwid-nix";
   };

@@ -110,7 +110,7 @@ runLinker (Linker linker) rs p =
   runExcept $ runReaderT linker (rs, p)
 
 {- | Type for holding parameterized scripts. This type represents the
-     raw scriptst which needs to be linked in order to be deployed.
+     raw scripts which needs to be linked in order to be deployed.
 
  @since 2.0.0
 -}

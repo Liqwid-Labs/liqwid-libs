@@ -14,6 +14,7 @@ import Data.Map (insert)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Optics (view)
+import System.Exit (die)
 
 runFile :: Text -> Builders -> FileOptions -> IO ()
 runFile revision builders options = do
@@ -25,7 +26,7 @@ runFile revision builders options = do
           . getBuilders
           $ builders
   case applied of
-    Left err -> putStrLn $ "Builder failed : " <> show err
+    Left err -> die $ "Builder failed : " <> show err
     Right x ->
       LBS.writeFile (view #out options) . encodePretty $
         insert "rev" (Aeson.toJSON revision) x
