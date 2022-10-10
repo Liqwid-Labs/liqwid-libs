@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 {- | Module     : Main
      Maintainer : emi@haskell.fyi
      Description: Example usage of 'plutarch-script-export'.
