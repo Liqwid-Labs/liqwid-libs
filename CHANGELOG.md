@@ -2,6 +2,13 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.10.1 -- 2022-10-11
+
+### Added
+
+* Optics for Tagged AssetClasses: `symbolT` and `nameT`. Label optic instance did not work, so
+  these helpers were provided.
+
 ## 3.10.0 -- 2022-10-06
 
 ### Modified
