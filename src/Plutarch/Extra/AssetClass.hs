@@ -34,6 +34,8 @@ module Plutarch.Extra.AssetClass (
   ptoScottEncoding,
   pfromScottEncoding,
   pviaScottEncoding,
+
+  -- * Optics utilities
   symbolT,
   nameT,
 ) where
