@@ -1,4 +1,5 @@
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -34,18 +35,14 @@ module Plutarch.Extra.AssetClass (
   ptoScottEncoding,
   pfromScottEncoding,
   pviaScottEncoding,
-
-  -- * Optics utilities
-  symbolT,
-  nameT,
 ) where
 
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
 import Data.Tagged (Tagged (Tagged, unTagged), untag)
 import GHC.TypeLits (Symbol)
 import qualified Generics.SOP as SOP
-import Optics.Internal.Optic
-import Optics.Lens (Lens')
+import Optics.Internal.Optic (A_Lens, (%%))
+import Optics.Label (LabelOptic, labelOptic)
 import Optics.TH (makeFieldLabelsNoPrefix)
 import Plutarch.Api.V1 (
   PCurrencySymbol,
@@ -367,14 +364,16 @@ makeFieldLabelsNoPrefix ''PAssetClass
 -- | @since 3.9.0
 makeFieldLabelsNoPrefix ''AssetClass
 
--- | @since 3.10.1
-symbolT ::
-  forall (unit :: Symbol).
-  Lens' (Tagged unit AssetClass) CurrencySymbol
-symbolT = #unTagged %% #symbol
+-- | @since 3.10.2
+instance
+  (k ~ A_Lens, a ~ CurrencySymbol, b ~ CurrencySymbol, tag ~ tag') =>
+  LabelOptic "symbol" k (Tagged tag AssetClass) (Tagged tag' AssetClass) a b
+  where
+  labelOptic = #unTagged %% #symbol
 
--- | @since 3.10.1
-nameT ::
-  forall (unit :: Symbol).
-  Lens' (Tagged unit AssetClass) TokenName
-nameT = #unTagged %% #name
+-- | @since 3.10.2
+instance
+  (k ~ A_Lens, a ~ TokenName, b ~ TokenName, tag ~ tag') =>
+  LabelOptic "name" k (Tagged tag AssetClass) (Tagged tag' AssetClass) a b
+  where
+  labelOptic = #unTagged %% #name

@@ -2,6 +2,12 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.10.2 -- 2022-10-12
+
+### Modified
+
+* `symbolT` and `nameT` are replaced in favor of actual optics.
+
 ## 3.10.1 -- 2022-10-11
 
 ### Added
