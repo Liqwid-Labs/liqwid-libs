@@ -1,130 +1,209 @@
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ViewPatterns #-}
-
 module Plutarch.Extra.FixedDecimal (
-  PFixedDecimal (..),
-  DivideSemigroup (..),
-  DivideMonoid (..),
-  decimalToAdaValue,
-  fromPInteger,
-  toPInteger,
+  PFixedDecimal,
+  pconvertExp,
+  pfromFixedDecimal,
+  ptoFixedDecimal,
+  pfromRational,
+  ptoRational,
+  punsafeMkFixedDecimal,
 ) where
 
 import Control.Composition (on, (.*))
-import Data.Bifunctor (first)
 import Data.Proxy (Proxy (Proxy))
-import GHC.TypeLits (KnownNat, Nat, natVal)
-import Plutarch.Api.V1 (AmountGuarantees (NonZero), PValue)
-import qualified Plutarch.Api.V1.Value as Value
-import Plutarch.Api.V2 (KeyGuarantees (Sorted))
+import GHC.TypeLits (KnownNat, Natural, natVal)
 import Plutarch.Extra.Function (pflip)
-import Plutarch.Num (PNum (pfromInteger, (#*)))
-import qualified Plutarch.Numeric.Additive as A (
-  AdditiveMonoid (zero),
-  AdditiveSemigroup ((+)),
- )
-import Plutarch.TryFrom (PTryFrom (PTryFromExcess, ptryFrom'))
+import Plutarch.Extra.Rational ((#%))
+import Plutarch.Num (PNum, pabs, pfromInteger, (#*), (#-))
+import Plutarch.Show (pshow')
 import Plutarch.Unsafe (punsafeCoerce)
 
-{- | Fixed width decimal. Decimal point will be given through typelit.
- This would be used for representing Ada value with some Lovelace changes.
+{- | Fixed precision number. It behaves like scientific notation:
+     `exp` shows to what power of base 10 an integer is multiplied.
 
- @since 1.0.0
+     For example, Underlying value of 123456 with type `PFixedDecimal 3` is
+     `123.456 (123456 * 10 ^ -3)`. If it's coerced into `PFixedDecimal 5`, it will be
+     `1.23456 (123456 * 10 ^ -5)`. `PFixedDecimal 0` will be identical to `PInteger`.
+
+     Note, `exp` is the negative exponent to base 10. 'PFixed' does not support
+     positive expoent.
+
+     Compared to 'PRational', 'PFixed' gives addition and subtraction
+     as fast as regular 'PInteger', allows negative values, and does
+     not require simplifications.
+
+ @since 3.11.0
 -}
-newtype PFixedDecimal (unit :: Nat) (s :: S)
+newtype PFixedDecimal (exp :: Natural) (s :: S)
   = PFixedDecimal (Term s PInteger)
   deriving stock
-    ( -- | @since 1.0.0
+    ( -- | @since 3.11.0
       Generic
     )
   deriving anyclass
-    ( -- | @since 1.0.0
+    ( -- | @since 3.11.0
       PlutusType
-    , -- | @since 1.0.0
+    , -- | @since 3.11.0
       PIsData
-    , -- | @since 1.4.0
+    , -- | @since 3.11.0
       PEq
-    , -- | @since 1.4.0
+    , -- | @since 3.11.0
       PPartialOrd
-    , -- | @since 1.0.0
+    , -- | @since 3.11.0
       POrd
-    , -- | @since 1.0.0
-      PShow
     )
 
--- | @since 1.4.0
-instance DerivePlutusType (PFixedDecimal a) where
+-- | @since 3.11.0
+instance forall (exp :: Natural). DerivePlutusType (PFixedDecimal exp) where
   type DPTStrat _ = PlutusTypeNewtype
 
-instance KnownNat u => PNum (PFixedDecimal u) where
+-- | @since 3.11.0
+instance forall (exp :: Natural). KnownNat exp => PShow (PFixedDecimal exp) where
+  pshow' wrap z =
+    wrap' $
+      "PFixedDecimal "
+        <> pshow (pquot # pto z # base)
+        <> "."
+        <> (replicateStr # pconstant baseExp #- (places # decimal) # "0")
+        <> pshow decimal
+    where
+      baseExp = natVal (Proxy @exp)
+      base = pconstant (10 ^ baseExp)
+      decimal = prem # (pabs # pto z) # base
+      wrap' x = if wrap then "(" <> x <> ")" else x
+
+      places =
+        pfix #$ plam $ \self x ->
+          plet (pquot # x # 10) $ \q ->
+            pif (q #== 0) 1 (1 + self # q)
+
+      replicateStr :: Term s (PInteger :--> PString :--> PString)
+      replicateStr =
+        pfix #$ plam $ \self x str ->
+          pif (0 #< x) (str <> (self # (x #- 1) # str)) ""
+
+-- | @since 3.11.0
+instance forall (exp :: Natural). KnownNat exp => PNum (PFixedDecimal exp) where
   (#*) =
     (pcon . PFixedDecimal)
-      .* (pflip # pdiv # pconstant (natVal (Proxy @u)) #)
-      .* (#*) `on` punsafeCoerce
-  pfromInteger = pcon . PFixedDecimal . (* pconstant (natVal (Proxy @u))) . pconstant
+      .* (pflip # pdiv # pconstant (10 ^ natVal (Proxy @exp)) #)
+      .* (#*) `on` pto
+  pfromInteger =
+    pcon
+      . PFixedDecimal
+      . (* pconstant (10 ^ natVal (Proxy @exp)))
+      . pconstant
 
--- | @since 1.0.0
-instance PTryFrom PData (PAsData (PFixedDecimal unit)) where
-  type PTryFromExcess PData (PAsData (PFixedDecimal unit)) = PTryFromExcess PData (PAsData PInteger)
-  ptryFrom' d k = ptryFrom' @_ @(PAsData PInteger) d $ k . first punsafeCoerce
+-- | @since 3.11.0
+instance forall (exp :: Natural). KnownNat exp => PIntegral (PFixedDecimal exp) where
+  pdiv =
+    phoistAcyclic $
+      plam $ \x y ->
+        pcon . PFixedDecimal $
+          pdiv # (pto x * pconstant (10 ^ natVal (Proxy @exp))) # pto y
+  pmod = phoistAcyclic $ plam $ \x y -> pcon . PFixedDecimal $ pmod # pto x # pto y
+  pquot =
+    phoistAcyclic $
+      plam $ \x y ->
+        pcon . PFixedDecimal $
+          pquot # (pto x * pconstant (10 ^ natVal (Proxy @exp))) # pto y
+  prem =
+    phoistAcyclic $ plam $ \x y -> pcon . PFixedDecimal $ prem # pto x # pto y
 
--- TODO: This should be moved to either to plutarch-numeric or other module
-class DivideSemigroup a where
-  divide :: a -> a -> a
+{- | Change decimal point.
 
-class DivideSemigroup a => DivideMonoid a where
-  one :: a
+ *Caution* This function will drop precision when converting from more
+ decimal points to less decimal points.
 
--- | @since 1.0.0
-instance KnownNat u => DivideSemigroup (Term s (PFixedDecimal u)) where
-  divide (pto -> x) (pto -> y) =
-    pcon . PFixedDecimal $ pdiv # (x * pconstant (natVal (Proxy @u))) # y
+ For example, converting `1.234 :: Fixed 3` into `Fixed 1` will drop
+ hundredth and thousandth place value and will give `1.2 :: Fixed 1`.
 
--- | @since 1.0.0
-instance KnownNat u => DivideMonoid (Term s (PFixedDecimal u)) where
-  one = 1
+ There is not data loss going from small decimal points to big decimal points,
+ but they will take up more memory.
 
--- | @since 1.0.0
-instance KnownNat u => A.AdditiveSemigroup (Term s (PFixedDecimal u)) where
-  (+) = (+)
-
--- | @since 1.0.0
-instance KnownNat u => A.AdditiveMonoid (Term s (PFixedDecimal u)) where
-  zero = pcon . PFixedDecimal $ pconstant 0
-
-{- | Convert given decimal into Ada value. Input should be Ada value with decimals; outputs
- will be lovelace values in integer.
-
- @since 3.9.0
+ @since 3.11.0
 -}
-decimalToAdaValue ::
-  forall (s :: S) (unit :: Nat).
-  KnownNat unit =>
-  Term s (PFixedDecimal unit :--> PValue 'Sorted 'NonZero)
-decimalToAdaValue =
-  phoistAcyclic $
-    plam $ \(pto -> dec) ->
-      let adaValue = (pdiv # dec # pconstant (natVal (Proxy @unit))) * pconstant 1000000
-       in Value.psingleton # pconstant "" # pconstant "" #$ adaValue
+pconvertExp ::
+  forall (exp2 :: Natural) (exp1 :: Natural) (s :: S).
+  (KnownNat exp1, KnownNat exp2) =>
+  Term s (PFixedDecimal exp1 :--> PFixedDecimal exp2)
+pconvertExp = phoistAcyclic $
+  plam $ \z ->
+    let ediff = (natVal (Proxy @exp2) - natVal (Proxy @exp1))
+     in pcon . PFixedDecimal $
+          if ediff > 0
+            then pto z * pconstant (10 ^ abs ediff)
+            else pdiv # pto z #$ pconstant (10 ^ abs ediff)
 
-{- | Convert @PInteger@ to @PFixedDecimal@.
+{- | Convert 'PFixed' into 'PInteger'.
 
- @since 1.0.0
+ *Caution* This will drop all decimal point values. For example,
+ converting `12.345 :: Fixed 3` will give `12 :: Integer`. Pay close
+ attention using this function.
+
+ If one needs to retrive all decimal point values, use `pto` instead.
+
+ @since 3.11.0
 -}
-fromPInteger ::
-  forall (unit :: Nat) (s :: S).
-  KnownNat unit =>
-  Term s (PInteger :--> PFixedDecimal unit)
-fromPInteger =
-  phoistAcyclic $ plam $ \z -> pcon . PFixedDecimal $ pconstant (natVal (Proxy @unit)) * z
+pfromFixedDecimal ::
+  forall (exp :: Natural) (s :: S).
+  KnownNat exp =>
+  Term s (PFixedDecimal exp :--> PInteger)
+pfromFixedDecimal = phoistAcyclic $
+  plam $ \z -> pdiv # pto z #$ pconstant (10 ^ natVal (Proxy @exp))
 
-{- | Convert @PFixedDecimal@ to @Integer@. Values that are smaller than 1 will be lost.
+{- | Convert 'PInteger' into 'PFixed'.
 
- @since 1.0.0
+ There is no dataloss, but takes more memory.
+
+ @since 3.11.0
 -}
-toPInteger ::
-  forall (unit :: Nat) (s :: S).
-  KnownNat unit =>
-  Term s (PFixedDecimal unit :--> PInteger)
-toPInteger =
-  phoistAcyclic $ plam $ \d -> pdiv # pto d # pconstant (natVal (Proxy @unit))
+ptoFixedDecimal ::
+  forall (exp :: Natural) (s :: S).
+  KnownNat exp =>
+  Term s (PInteger :--> PFixedDecimal exp)
+ptoFixedDecimal = phoistAcyclic $
+  plam $ \z ->
+    pcon
+      . PFixedDecimal
+      $ z * pconstant (10 ^ natVal (Proxy @exp))
+
+{- | Convert 'PFixed' into 'PRational'.
+
+ Note, it will *not* simplify. There is no data loss.
+
+ @since 3.11.0
+-}
+ptoRational ::
+  forall (exp :: Natural) (s :: S).
+  KnownNat exp =>
+  Term s (PFixedDecimal exp :--> PRational)
+ptoRational = phoistAcyclic $
+  plam $ \z -> pto z #% pconstant (10 ^ natVal (Proxy @exp))
+
+{- | Convert 'PRational' into 'PFixed'.
+
+ Note, there can be data loss when decimal places are not enough to present
+ rational value in full.
+
+ @since 3.11.0
+-}
+pfromRational ::
+  forall (exp :: Natural) (s :: S).
+  KnownNat exp =>
+  Term s (PRational :--> PFixedDecimal exp)
+pfromRational = phoistAcyclic $
+  plam $
+    flip pmatch $ \(PRational num denom) ->
+      pcon . PFixedDecimal $ pdiv # (num * (10 ^ natVal (Proxy @exp))) # pto denom
+
+{- | Make 'PFixed' from 'PInteger'.
+
+ *Caution* 'PInteger' given will not be equal to returned 'PFixed'.
+ Input ignores decimal point: `1234 :: Integer` will return `12.34 :: Fixed 2`.
+
+ @since 3.11.0
+-}
+punsafeMkFixedDecimal ::
+  forall (exp :: Natural) (s :: S).
+  Term s (PInteger :--> PFixedDecimal exp)
+punsafeMkFixedDecimal = plam punsafeCoerce

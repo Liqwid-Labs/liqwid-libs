@@ -4,19 +4,20 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## 3.11.0 -- 2022-10-11
 
-### Added
+### Modified
 
-* `Plutarch.Extra.Fixed` is the replacement for `PFixedDecimal` that represents
-  decimal point range in exponential form.
+* `PFixedDecimal` is updated so that it represents decimal point range in exponential form.
 
   Following type and functions are added along with Plutarch numerical instances.
-  - `PFixed`
+  - `PFixedDecimal`
   - `pconvertExp`
-  - `pfromFixed`
-  - `ptoFixed`
+  - `pfromFixedDecimal`
+  - `ptoFixedDecimal`
   - `pfromRational`
   - `ptoRational`
-  - `punsafeMkFixed`
+  - `punsafeMkFixedDecimal`
+
+* old `PFixedDecimal` is renamed and relocated into `Plutarch.Extra.Fixed`.
 
 ## 3.10.1 -- 2022-10-11
 

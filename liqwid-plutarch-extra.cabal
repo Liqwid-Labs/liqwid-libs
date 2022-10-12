@@ -98,8 +98,8 @@ library
     Plutarch.Extra.DebuggableScript
     Plutarch.Extra.ExchangeRate
     Plutarch.Extra.Field
+    Plutarch.Extra.Fixed
     Plutarch.Extra.FixedDecimal
-    Plutarch.Extra.Float
     Plutarch.Extra.Function
     Plutarch.Extra.Functor
     Plutarch.Extra.Identity
