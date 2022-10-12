@@ -41,8 +41,9 @@ import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
 import Data.Tagged (Tagged (Tagged, unTagged), untag)
 import GHC.TypeLits (Symbol)
 import qualified Generics.SOP as SOP
-import Optics.Internal.Optic (A_Lens, (%%))
-import Optics.Label (LabelOptic, labelOptic)
+import Optics.Getter (A_Getter, view)
+import Optics.Internal.Optic (A_Lens, Is, (%%))
+import Optics.Label (LabelOptic, LabelOptic', labelOptic)
 import Optics.TH (makeFieldLabelsNoPrefix)
 import Plutarch.Api.V1 (
   PCurrencySymbol,
@@ -159,12 +160,18 @@ passetClassT = phoistAcyclic $
 
 -- | @since 3.10.0
 pconstantClass ::
-  forall (s :: S).
-  AssetClass ->
+  forall (a :: Type) (k :: Type) (s :: S).
+  ( Is k A_Getter
+  , LabelOptic' "symbol" k a CurrencySymbol
+  , LabelOptic' "name" k a TokenName
+  ) =>
+  a ->
   Term s PAssetClass
-pconstantClass (AssetClass sym tk) =
+pconstantClass ac =
   pcon $
-    PAssetClass (pconstantData sym) (pconstantData tk)
+    PAssetClass
+      (pconstantData $ view #symbol ac)
+      (pconstantData $ view #name ac)
 
 -- | @since 3.10.0
 pconstantClassT ::
@@ -201,8 +208,15 @@ psymbolAssetClassT = phoistAcyclic $
 
  @since 3.9.0
 -}
-isAdaClass :: AssetClass -> Bool
-isAdaClass (AssetClass s n) = s == s' && n == n'
+isAdaClass ::
+  forall (a :: Type) (k :: Type).
+  ( Is k A_Getter
+  , LabelOptic' "symbol" k a CurrencySymbol
+  , LabelOptic' "name" k a TokenName
+  ) =>
+  a ->
+  Bool
+isAdaClass ac = view #symbol ac == s' && view #name ac == n'
   where
     (Tagged (AssetClass s' n')) = adaClass
 
@@ -353,7 +367,8 @@ assetClassValue ::
   Tagged unit AssetClass ->
   Tagged unit Integer ->
   Value.Value
-assetClassValue (Tagged (AssetClass sym tk)) q = Value.singleton sym tk $ untag q
+assetClassValue (Tagged (AssetClass sym tk)) q =
+  Value.singleton sym tk $ untag q
 
 ----------------------------------------
 -- Field Labels
