@@ -5,7 +5,7 @@ module Plutarch.Extra.Fixed (
   PFixed (..),
   DivideSemigroup (..),
   DivideMonoid (..),
-  decimalToAdaValue,
+  fixedToAdaValue,
   fromPInteger,
   toPInteger,
 ) where
@@ -26,11 +26,12 @@ import qualified Plutarch.Numeric.Additive as A (
 import Plutarch.TryFrom (PTryFrom (PTryFromExcess, ptryFrom'))
 import Plutarch.Unsafe (punsafeCoerce)
 
-{- | Fixed width decimal. Decimal point will be given through typelit.
+{- | Fixed width decimal. Denominator will be given through typelit `unit`.
  This would be used for representing Ada value with some Lovelace changes.
 
  @since 3.11.0
 -}
+{-# DEPRECATED PFixed "Use PFixedDecimal instead" #-}
 newtype PFixed (unit :: Nat) (s :: S)
   = PFixed (Term s PInteger)
   deriving stock
@@ -56,6 +57,7 @@ newtype PFixed (unit :: Nat) (s :: S)
 instance DerivePlutusType (PFixed a) where
   type DPTStrat _ = PlutusTypeNewtype
 
+-- | @since 3.11.0
 instance KnownNat u => PNum (PFixed u) where
   (#*) =
     (pcon . PFixed)
@@ -92,16 +94,16 @@ instance KnownNat u => A.AdditiveSemigroup (Term s (PFixed u)) where
 instance KnownNat u => A.AdditiveMonoid (Term s (PFixed u)) where
   zero = pcon . PFixed $ pconstant 0
 
-{- | Convert given decimal into Ada value. Input should be Ada value with decimals; outputs
+{- | Convert given fixed into Ada value. Input should be Ada value with decimals; outputs
  will be lovelace values in integer.
 
  @since 3.9.0
 -}
-decimalToAdaValue ::
+fixedToAdaValue ::
   forall (s :: S) (unit :: Nat).
   KnownNat unit =>
   Term s (PFixed unit :--> PValue 'Sorted 'NonZero)
-decimalToAdaValue =
+fixedToAdaValue =
   phoistAcyclic $
     plam $ \(pto -> dec) ->
       let adaValue = (pdiv # dec # pconstant (natVal (Proxy @unit))) * pconstant 1000000
