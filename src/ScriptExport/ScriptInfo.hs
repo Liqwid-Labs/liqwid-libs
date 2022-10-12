@@ -48,9 +48,26 @@ import Data.Text.Encoding qualified as Text
 import GHC.Generics qualified as GHC
 import Optics (view)
 import Optics.TH (makeFieldLabelsNoPrefix)
-import Plutarch (ClosedTerm, Config (Config, tracingMode), TracingMode (NoTracing))
-import Plutarch.Api.V2 (PMintingPolicy, PStakeValidator, PValidator, mkMintingPolicy, mkStakeValidator, mkValidator)
-import PlutusLedgerApi.V2 (MintingPolicy (getMintingPolicy), Script, StakeValidator (getStakeValidator), Validator (getValidator))
+import Plutarch (
+  ClosedTerm,
+  Config (Config, tracingMode),
+  TracingMode (NoTracing),
+ )
+import Plutarch.Api.V2 (
+  PMintingPolicy,
+  PStakeValidator,
+  PValidator,
+  mkMintingPolicy,
+  mkStakeValidator,
+  mkValidator,
+  scriptHash,
+ )
+import PlutusLedgerApi.V2 (
+  MintingPolicy (getMintingPolicy),
+  Script,
+  StakeValidator (getStakeValidator),
+  Validator (getValidator),
+ )
 import Ply (ScriptRole, TypedScript, TypedScriptEnvelope)
 import Ply.Core.TypedReader (TypedReader, mkTypedScript)
 
@@ -156,7 +173,11 @@ exportParam = asks snd
 exportVersion :: forall (lparam :: Type). Linker lparam String
 exportVersion = asks (view #version . fst)
 
-{- | Type for holding ready-to-go scripts.
+{- | Type for holding ready-to-go scripts. Ready-to-go scripts are
+     scripts that can be used on-onchain without any extra
+     arguments. They are `MintingPolicy ~ StakingValidator ~ PData ->
+     PScriptContext -> POpaque` and `Validator ~ PData -> PData ->
+     PScriptContext -> POpaque`.
 
  @since 2.0.0
 -}
@@ -209,6 +230,7 @@ instance
               Aeson.object
                 [ "cborHex" Aeson..= Base16.encodeBase16 cbor
                 , "rawHex" Aeson..= Base16.encodeBase16 raw
+                , "hash" Aeson..= scriptHash scr
                 ]
 
 -- | @since 2.0.0

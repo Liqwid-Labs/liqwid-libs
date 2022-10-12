@@ -41,6 +41,10 @@ type API =
     :> Capture "name" Text
     :> ReqBody '[JSON] Aeson.Value
     :> Post '[JSON] Aeson.Value
+    -- GET /query-script/:name
+    :<|> "query-script"
+      :> Capture "name" Text
+      :> Get '[JSON] Aeson.Value
     -- GET /info
     :<|> "info"
       :> Get '[JSON] ExporterInfo
@@ -82,7 +86,10 @@ runServer revision builders options = do
   -- Scripts stay cached for the amount of time specified by the `cacheLifetime` option.
   query <- cachedForM (Just $ TimeSpec (view #cacheLifetime options) 0) (`runQuery` builders)
 
-  let handler = (\name -> query . ScriptQuery name) :<|> pure serverInfo
+  let handler =
+        (\name param -> query $ ScriptQuery name (Just param))
+        :<|> (\name -> query $ ScriptQuery name Nothing)
+        :<|> pure serverInfo
 
   liftIO $ printf "[info] Running script export server on :%d\n" (Warp.getPort settings)
 

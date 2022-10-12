@@ -54,7 +54,12 @@ data ExporterInfo = ExporterInfo
 data Options
   = ServerOption ServerOptions
   | FileOption FileOptions
-  deriving stock (Show, Eq)
+  deriving stock
+    ( -- | @since 1.0.0
+      Show
+    , -- | @since 1.0.0
+      Eq
+    )
 
 -- | @since 2.0.0
 data ServerOptions = ServerOptions
@@ -65,7 +70,12 @@ data ServerOptions = ServerOptions
   , cacheLifetime :: Int64
   -- ^ How long to keep cached items alive for.
   }
-  deriving stock (Show, Eq)
+  deriving stock
+    ( -- | @since 1.0.0
+      Show
+    , -- | @since 1.0.0
+      Eq
+    )
 
 -- | @since 2.0.0
 data FileOptions = FileOptions
@@ -74,7 +84,12 @@ data FileOptions = FileOptions
   , param :: FilePath
   -- ^ Script parameter.
   }
-  deriving stock (Show, Eq)
+  deriving stock
+    ( -- | @since 1.0.0
+      Show
+    , -- | @since 1.0.0
+      Eq
+    )
 
 fileOpt :: Opt.Parser FileOptions
 fileOpt =

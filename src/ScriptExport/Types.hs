@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {- |
@@ -9,17 +10,21 @@ Description: Param and script types for generation.
 Param and script types for generation.
 -}
 module ScriptExport.Types (
+  ServeElement (..),
   ScriptQuery (..),
   Builders,
+  handleServe,
   getBuilders,
   runQuery,
   insertBuilder,
   insertScriptExport,
+  insertStaticBuilder,
   insertScriptExportWithLinker,
   toList,
 ) where
 
 import ScriptExport.ScriptInfo
+import Data.Kind
 
 import Control.Monad.Except
 import Data.Aeson qualified as Aeson
@@ -40,7 +45,7 @@ import Servant qualified
 -}
 data ScriptQuery = ScriptQuery
   { name :: Text
-  , paramsPayload :: Aeson.Value
+  , param :: Maybe Aeson.Value
   }
   deriving anyclass
     ( -- | @since 1.0.0
@@ -71,23 +76,72 @@ runQuery :: ScriptQuery -> Builders -> Servant.Handler Aeson.Value
 runQuery (ScriptQuery name param) =
   maybe
     (Servant.throwError Servant.err404 {Servant.errBody = "Builder not found"})
-    (toServantErr . runExcept . ($ param))
+    (toServantErr . runExcept . handleServe param)
     . Map.lookup name
     . getBuilders
   where
-    toServantErr (Left err) = Servant.throwError Servant.err400 {Servant.errBody = (LBS.pack . unpack) err}
+    toServantErr (Left err) =
+      Servant.throwError
+        Servant.err400
+        {Servant.errBody = (LBS.pack . unpack) err}
     toServantErr (Right x) = pure x
+
+data ServeElement where
+  ServeScriptExport ::
+    forall (a :: Type).
+    (Aeson.ToJSON a) =>
+    ScriptExport a ->
+    ServeElement
+
+  ServeRawScriptExport ::
+    forall (a :: Type) (param :: Type).
+    (Aeson.FromJSON param , Aeson.ToJSON a) =>
+    RawScriptExport ->
+    Linker param (ScriptExport a) ->
+    ServeElement
+
+  ServeJSON ::
+    forall (s :: Type).
+    (Aeson.ToJSON s) =>
+    s ->
+    ServeElement
+
+  ServeJSONWithParam ::
+    forall (p :: Type) (s :: Type).
+    (Aeson.FromJSON p, Aeson.ToJSON s) =>
+    (p -> s) ->
+    ServeElement
+
+handleServe :: Maybe Aeson.Value -> ServeElement -> Except Text Aeson.Value
+handleServe _ (ServeJSON x) = pure $ Aeson.toJSON x
+handleServe _ (ServeScriptExport x) = pure $ Aeson.toJSON x
+handleServe (Just arg) (ServeJSONWithParam f) =
+  case Aeson.fromJSON arg of
+    Aeson.Error e ->
+      throwError $ pack e
+    Aeson.Success v' ->
+      pure . Aeson.toJSON $ f v'
+handleServe (Just arg) (ServeRawScriptExport scr linker) =
+  case Aeson.fromJSON arg of
+    Aeson.Error e ->
+      throwError $ pack e
+    Aeson.Success v' ->
+      case runLinker linker scr v' of
+        Left e -> throwError . pack . show $ e
+        Right x -> pure . Aeson.toJSON $ x
+handleServe Nothing (ServeRawScriptExport scr _) = pure $ Aeson.toJSON scr
+handleServe _ _ = throwError "Incorrect Parameter"
 
 {- | Represents a list of named pure functions.
 
      @since 1.0.0
 -}
 newtype Builders
-  = Builders (Map Text (Aeson.Value -> Except Text Aeson.Value))
+  = Builders (Map Text ServeElement)
 
 getBuilders ::
   Builders ->
-  Map Text (Aeson.Value -> Except Text Aeson.Value)
+  Map Text ServeElement
 getBuilders (Builders b) = b
 
 -- | @since 1.0.0
@@ -99,24 +153,24 @@ instance Default Builders where
      @since 1.0.0
 -}
 insertBuilder ::
-  forall p s.
+  forall (p :: Type) (s :: Type).
   (Aeson.FromJSON p, Aeson.ToJSON s) =>
   Text ->
   (p -> s) ->
   Builders ->
   Builders
-insertBuilder k = coerce . Map.insert k . throughJSON
-  where
-    throughJSON ::
-      forall p s.
-      (Aeson.FromJSON p, Aeson.ToJSON s) =>
-      (p -> s) ->
-      (Aeson.Value -> Except Text Aeson.Value)
-    throughJSON f v =
-      case Aeson.fromJSON v of
-        Aeson.Error e ->
-          throwError $ pack e
-        Aeson.Success v' -> pure . Aeson.toJSON $ f v'
+insertBuilder k f =
+  coerce $ Map.insert k (ServeJSONWithParam f)
+
+insertStaticBuilder ::
+  forall (a :: Type).
+  (Aeson.ToJSON a) =>
+  Text ->
+  a ->
+  Builders ->
+  Builders
+insertStaticBuilder k x =
+  coerce $ Map.insert k (ServeJSON x)
 
 {- | Get a list of the available builders.
 
@@ -138,7 +192,7 @@ insertScriptExport ::
   Builders ->
   Builders
 insertScriptExport k scr =
-  insertBuilder @() k (const scr)
+  coerce $ Map.insert k (ServeScriptExport scr)
 
 {- | Insert a 'RawScriptExport' and 'ScriptLinker' to the Builders Map. The
      builder will return applied `ScriptExport` with given parameter.
@@ -154,17 +208,7 @@ insertScriptExportWithLinker ::
   Builders ->
   Builders
 insertScriptExportWithLinker k scr linker =
-  coerce . Map.insert k $ throughLinker
-  where
-    throughLinker :: Aeson.Value -> Except Text Aeson.Value
-    throughLinker arg =
-      case Aeson.fromJSON arg of
-        Aeson.Error e ->
-          throwError $ pack e
-        Aeson.Success v' ->
-          case runLinker linker scr v' of
-            Left e -> throwError . pack . show $ e
-            Right x -> pure . Aeson.toJSON $ x
+  coerce $ Map.insert k (ServeRawScriptExport scr linker)
 
 ----------------------------------------
 -- Field Labels
