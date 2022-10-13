@@ -17,8 +17,8 @@ import ScriptExport.ScriptInfo (ScriptExport (ScriptExport), mkValidatorInfo)
 import ScriptExport.Types (
   Builders,
   insertBuilder,
+  insertScriptExport,
   insertStaticBuilder,
-  insertScriptExport
  )
 
 main :: IO ()

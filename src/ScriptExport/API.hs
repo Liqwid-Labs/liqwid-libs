@@ -19,9 +19,19 @@ import Data.Text (Text)
 import Network.HTTP.Types qualified as Http
 import Network.Wai qualified as Wai
 import Network.Wai.Handler.Warp qualified as Warp
-import Network.Wai.Middleware.Cors (CorsResourcePolicy (corsRequestHeaders), cors, simpleCorsResourcePolicy)
+import Network.Wai.Middleware.Cors (
+  CorsResourcePolicy (corsRequestHeaders),
+  cors,
+  simpleCorsResourcePolicy,
+ )
 import Optics (view)
-import Prettyprinter (Pretty (pretty), defaultLayoutOptions, hsep, layoutPretty, viaShow)
+import Prettyprinter (
+  Pretty (pretty),
+  defaultLayoutOptions,
+  hsep,
+  layoutPretty,
+  viaShow,
+ )
 import Prettyprinter.Render.String (renderString)
 import ScriptExport.Options (ExporterInfo (..), ServerOptions (..))
 import ScriptExport.Types (Builders, ScriptQuery (ScriptQuery), runQuery)
@@ -88,8 +98,8 @@ runServer revision builders options = do
 
   let handler =
         (\name param -> query $ ScriptQuery name (Just param))
-        :<|> (\name -> query $ ScriptQuery name Nothing)
-        :<|> pure serverInfo
+          :<|> (\name -> query $ ScriptQuery name Nothing)
+          :<|> pure serverInfo
 
   liftIO $ printf "[info] Running script export server on :%d\n" (Warp.getPort settings)
 

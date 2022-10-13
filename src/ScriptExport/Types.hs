@@ -1,5 +1,5 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {- |
@@ -23,20 +23,24 @@ module ScriptExport.Types (
   toList,
 ) where
 
-import ScriptExport.ScriptInfo
-import Data.Kind
-
 import Control.Monad.Except
 import Data.Aeson qualified as Aeson
 import Data.ByteString.Lazy.Char8 qualified as LBS
 import Data.Coerce (coerce)
 import Data.Default.Class (Default (def))
 import Data.Hashable (Hashable)
+import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Text (Text, pack, unpack)
 import GHC.Generics qualified as GHC
 import Optics.TH (makeFieldLabelsNoPrefix)
+import ScriptExport.ScriptInfo (
+  Linker,
+  RawScriptExport,
+  ScriptExport,
+  runLinker,
+ )
 import Servant qualified
 
 {- | Query data for getting script info.
@@ -83,7 +87,8 @@ runQuery (ScriptQuery name param) =
     toServantErr (Left err) =
       Servant.throwError
         Servant.err400
-        {Servant.errBody = (LBS.pack . unpack) err}
+          { Servant.errBody = (LBS.pack . unpack) err
+          }
     toServantErr (Right x) = pure x
 
 data ServeElement where
@@ -92,20 +97,17 @@ data ServeElement where
     (Aeson.ToJSON a) =>
     ScriptExport a ->
     ServeElement
-
   ServeRawScriptExport ::
     forall (a :: Type) (param :: Type).
-    (Aeson.FromJSON param , Aeson.ToJSON a) =>
+    (Aeson.FromJSON param, Aeson.ToJSON a) =>
     RawScriptExport ->
     Linker param (ScriptExport a) ->
     ServeElement
-
   ServeJSON ::
     forall (s :: Type).
     (Aeson.ToJSON s) =>
     s ->
     ServeElement
-
   ServeJSONWithParam ::
     forall (p :: Type) (s :: Type).
     (Aeson.FromJSON p, Aeson.ToJSON s) =>
