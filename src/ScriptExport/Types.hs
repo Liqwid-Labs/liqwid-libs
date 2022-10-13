@@ -90,6 +90,10 @@ runQuery (ScriptQuery name param) =
           }
     toServantErr (Right x) = pure x
 
+{- | Possible data to request.
+
+     @since 2.0.0
+-}
 data ServeElement where
   ServeRawScriptExport ::
     forall (a :: Type) (param :: Type).
@@ -108,6 +112,10 @@ data ServeElement where
     (p -> s) ->
     ServeElement
 
+{- | Handle `ServeElement` and returns JSON.
+
+     @since 2.0.0
+-}
 handleServe :: Maybe Aeson.Value -> ServeElement -> Except Text Aeson.Value
 handleServe _ (ServeJSON x) = pure $ Aeson.toJSON x
 handleServe (Just arg) (ServeJSONWithParam f) =
@@ -129,7 +137,7 @@ handleServe _ _ = throwError "Incorrect Parameter"
 
 {- | Represents a list of named pure functions.
 
-     @since 1.0.0
+     @since 2.0.0
 -}
 newtype Builders
   = Builders (Map Text ServeElement)
@@ -139,13 +147,13 @@ getBuilders ::
   Map Text ServeElement
 getBuilders (Builders b) = b
 
--- | @since 1.0.0
+-- | @since 2.0.0
 instance Default Builders where
   def = Builders Map.empty
 
 {- | Insert a pure function into the Builders map.
 
-     @since 1.0.0
+     @since 2.0.0
 -}
 insertBuilder ::
   forall (p :: Type) (s :: Type).
@@ -169,7 +177,7 @@ insertStaticBuilder k x =
 
 {- | Get a list of the available builders.
 
-     @since 1.0.0
+     @since 2.0.0
 -}
 toList :: Builders -> [Text]
 toList = Map.keys . getBuilders

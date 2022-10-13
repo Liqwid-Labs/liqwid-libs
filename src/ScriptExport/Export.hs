@@ -12,6 +12,10 @@ import ScriptExport.Types (Builders)
 import Data.Text (Text)
 import Development.GitRev (gitBranch, gitHash)
 
+{- | Program entry point. It provides both file and servant api.
+
+ @since 2.0.0
+-}
 exportMain :: Builders -> IO ()
 exportMain builders = do
   opts <- parseOptions

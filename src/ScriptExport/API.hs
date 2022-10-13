@@ -43,7 +43,7 @@ import Text.Printf (printf)
 
 {- | Servant API type for script generation.
 
-     @since 1.0.0
+     @since 2.0.0
 -}
 type API =
   -- POST /query-script/:name
@@ -61,7 +61,7 @@ type API =
 
 {- | Run a Warp server that exposes a script generation endpoint.
 
-     @since 1.0.0
+     @since 2.0.0
 -}
 runServer :: MonadIO m => Text -> Builders -> ServerOptions -> m ()
 runServer revision builders options = do

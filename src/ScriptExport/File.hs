@@ -16,6 +16,10 @@ import Data.Map (toList)
 import Data.Text (Text, unpack)
 import Optics (view)
 
+{- | Exports 'Builders' into file.
+
+ @since 2.0.0
+-}
 runFile :: Text -> Builders -> FileOptions -> IO ()
 runFile _revision builders options = do
   paramFile <- optional $ BS.readFile (view #param options)
