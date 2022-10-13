@@ -17,7 +17,6 @@ module ScriptExport.Types (
   getBuilders,
   runQuery,
   insertBuilder,
-  insertScriptExport,
   insertStaticBuilder,
   insertScriptExportWithLinker,
   toList,
@@ -92,11 +91,6 @@ runQuery (ScriptQuery name param) =
     toServantErr (Right x) = pure x
 
 data ServeElement where
-  ServeScriptExport ::
-    forall (a :: Type).
-    (Aeson.ToJSON a) =>
-    ScriptExport a ->
-    ServeElement
   ServeRawScriptExport ::
     forall (a :: Type) (param :: Type).
     (Aeson.FromJSON param, Aeson.ToJSON a) =>
@@ -116,7 +110,6 @@ data ServeElement where
 
 handleServe :: Maybe Aeson.Value -> ServeElement -> Except Text Aeson.Value
 handleServe _ (ServeJSON x) = pure $ Aeson.toJSON x
-handleServe _ (ServeScriptExport x) = pure $ Aeson.toJSON x
 handleServe (Just arg) (ServeJSONWithParam f) =
   case Aeson.fromJSON arg of
     Aeson.Error e ->
@@ -180,21 +173,6 @@ insertStaticBuilder k x =
 -}
 toList :: Builders -> [Text]
 toList = Map.keys . getBuilders
-
-{- | Insert a 'ScriptExport' to the Builders Map. It will not require a
-     parameter since 'ScriptExport' is ready-to-go script.
-
-     @since 2.0.0
--}
-insertScriptExport ::
-  forall a.
-  (Aeson.ToJSON a) =>
-  Text ->
-  ScriptExport a ->
-  Builders ->
-  Builders
-insertScriptExport k scr =
-  coerce $ Map.insert k (ServeScriptExport scr)
 
 {- | Insert a 'RawScriptExport' and 'ScriptLinker' to the Builders Map. The
      builder will return applied `ScriptExport` with given parameter.
