@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutarch-quickcheck
-version:            2.1.2
+version:            2.1.3
 synopsis:           Quickcheck for Plutarch.
 description:
   Bridge between QuickCheck and Plutarch. The interfaces provide
@@ -84,11 +84,14 @@ common common-tests
 
 library
   import:          common-lang
-  exposed-modules: Plutarch.Test.QuickCheck
+  exposed-modules:
+    Plutarch.Test.QuickCheck
+    Plutarch.Test.QuickCheck.Instances
+
   other-modules:
     Plutarch.Test.QuickCheck.Function
     Plutarch.Test.QuickCheck.Helpers
-    Plutarch.Test.QuickCheck.Instances
+    Plutarch.Test.QuickCheck.Internal
 
   build-depends:
     , bytestring

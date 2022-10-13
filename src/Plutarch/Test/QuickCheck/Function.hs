@@ -37,7 +37,7 @@ import Plutarch.Prelude (
   psndBuiltin,
   (#==),
  )
-import Plutarch.Test.QuickCheck.Instances (
+import Plutarch.Test.QuickCheck.Internal (
   TestableTerm (TestableTerm),
   unTestableTerm,
  )

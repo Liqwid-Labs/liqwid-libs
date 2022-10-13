@@ -2,6 +2,13 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 2.1.3 -- 2022-10-13
+
+### Added
+
+* `Plutarch.Test.QuickCheck.Instances` module, containing orphan instances for
+  QuickCheck type classes for many Plutus types.
+
 ## 2.1.2 -- 2022-09-27
 
 ### Modified
