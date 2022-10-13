@@ -409,7 +409,8 @@ instance
   HaskEquiv 'OnBoth 'ByComplete h p '[]
   where
   haskEquiv h p _ =
-    haskEquiv @'OnPEq  @'ByComplete h p Nil .&&. haskEquiv @'OnPData  @'ByComplete h p Nil
+    haskEquiv @'OnPEq  @'ByComplete h p Nil
+      .&&. haskEquiv @'OnPData  @'ByComplete h p Nil
 
 {- | Simplified version of `haskEquiv`. It will use arbitrary instead of
      asking custom generators.
