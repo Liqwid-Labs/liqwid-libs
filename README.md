@@ -3,6 +3,8 @@ Unit tests for Plutarch
 
 Public discussion and assistance can be found on [discord](https://discord.gg/yGkjxrYueB) @ #liqwid-libs
 
+Tickets and project management information can be found on [Notion](https://www.notion.so/liqwid).
+
 ## What is this?
 
 A helper library to write Plutarch-oriented unit tests using `tasty`. 
