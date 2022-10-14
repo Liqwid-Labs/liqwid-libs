@@ -9,7 +9,7 @@ module Plutarch.Test.QuickCheck.Instances () where
 import Data.ByteString (ByteString)
 import Data.Char (chr, ord)
 import Data.Kind (Type)
-import Data.List (sort, subsequences)
+import Data.List (sort, subsequences, nub)
 import Data.Word (Word8)
 import GHC.Exts (coerce, fromList, fromListN, toList)
 import PlutusLedgerApi.V1.Time (DiffMilliSeconds (DiffMilliSeconds))
@@ -49,7 +49,6 @@ import Test.QuickCheck (
   Gen,
   NonNegative (NonNegative),
   Positive (Positive),
-  SortedList (Sorted),
   functionMap,
   getNonNegative,
   orderedList,
@@ -520,7 +519,7 @@ instance Arbitrary Value where
   {-# INLINEABLE arbitrary #-}
   arbitrary =
     Value . AssocMap.fromList <$> do
-      (Sorted cs) <- arbitrary
+      (SortedUnique cs) <- arbitrary
       case cs of
         [] -> do
           adaEntry <- mkEntry ""
@@ -537,7 +536,7 @@ instance Arbitrary Value where
         CurrencySymbol ->
         Gen (CurrencySymbol, AssocMap.Map TokenName Integer)
       mkEntry sym = do
-        (SortedNonEmpty tns) <- arbitrary
+        (SortedUniqueNonEmpty tns) <- arbitrary
         kvs :: [(TokenName, Positive Integer)] <-
           traverse (\tn -> (tn,) <$> arbitrary) tns
         pure (sym, AssocMap.fromList . coerce $ kvs)
@@ -706,15 +705,31 @@ vectorOfUpTo lim gen = Gen.sized $ \size -> do
   len <- Gen.chooseInt (0, min size lim)
   Gen.vectorOf len gen
 
--- Modifier combining 'SortedList' and 'NonEmptyList'.
-newtype SortedNonEmpty (a :: Type) = SortedNonEmpty [a]
+-- Similar to 'Sorted', but also ensures uniqueness
+--
+-- TODO: This is quite inefficient.
+newtype SortedUnique (a :: Type) = SortedUnique [a]
 
-instance (Arbitrary a, Ord a) => Arbitrary (SortedNonEmpty a) where
+instance (Arbitrary a, Ord a) => Arbitrary (SortedUnique a) where
   {-# INLINEABLE arbitrary #-}
-  arbitrary = SortedNonEmpty <$> Gen.suchThat orderedList (not . null)
+  arbitrary = SortedUnique . nub <$> orderedList
   {-# INLINEABLE shrink #-}
-  shrink (SortedNonEmpty xs) =
-    [ SortedNonEmpty xs' | xs' <- shrink xs, sort xs' == xs', not . null $ xs'
+  shrink (SortedUnique xs) = [
+    SortedUnique xs' | xs' <- shrink xs, sort xs' == xs', nub xs' == xs'
+    ]
+
+-- Modifier combining 'SortedUnique' and 'NonEmptyList'.
+--
+-- TODO: This is quite inefficient.
+newtype SortedUniqueNonEmpty (a :: Type) = SortedUniqueNonEmpty [a]
+
+instance (Arbitrary a, Ord a) => Arbitrary (SortedUniqueNonEmpty a) where
+  {-# INLINEABLE arbitrary #-}
+  arbitrary = SortedUniqueNonEmpty . nub <$> 
+    Gen.suchThat orderedList (not . null)
+  {-# INLINEABLE shrink #-}
+  shrink (SortedUniqueNonEmpty xs) =
+    [ SortedUniqueNonEmpty xs' | xs' <- shrink xs, sort xs' == xs', not . null $ xs', nub xs' == xs'
     ]
 
 -- Shrinks structurally, to non-empty strict subsequences only
