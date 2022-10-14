@@ -1,5 +1,6 @@
 # `plutarch-quickcheck`
-Public discussion and assistance can be found on [discord](https://discord.gg/yGkjxrYueB) @ #liqwid-libs
+Public discussion and assistance can be found on [discord](https://discord.gg/yGkjxrYueB) @ #liqwid-libs.
+Issues and project-management-related information are tracked on [Notion](https://www.notion.so/liqwid).
 
 ## What is this?
 
@@ -55,8 +56,8 @@ define a Plutarch property.
 Users new to the library can read the examples as code, as well as execute the
 tests with `cabal test` to see what they do.
 
-We also have [a wiki
-article](https://github.com/Liqwid-Labs/plutarch-quickcheck/wiki/Testing-without-tears:-good-practices-and-tips)
+We also have [a Notion
+article](https://www.notion.so/liqwid/Testing-without-tears-0479a3532d5f4f0f89a6a158567d3d80)
 describing good practices for use of this library, as well as QuickCheck and
 `tasty-quickcheck` in general. We recommend reading this even for experienced
 QuickCheck hands, as there are a lot of useful, and less-known, bits of
