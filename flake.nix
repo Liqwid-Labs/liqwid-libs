@@ -26,6 +26,9 @@
     ply.url = "github:mlabs-haskell/ply?ref=master";
 
     liqwid-nix.url = "github:Liqwid-Labs/liqwid-nix";
+    liqwid-plutarch-extra.url = "github:Liqwid-Labs/liqwid-plutarch-extra";
+    plutarch-numeric.url =
+      "github:liqwid-labs/plutarch-numeric?ref=main";
   };
 
   outputs = inputs@{ liqwid-nix, ... }:
@@ -40,6 +43,8 @@
         (liqwid-nix.addDependencies [
           "${inputs.ply}/ply-core"
           "${inputs.ply}/ply-plutarch"
+          "${inputs.liqwid-plutarch-extra}"
+          "${inputs.plutarch-numeric}"
         ])
         (liqwid-nix.enableFormatCheck [
           "-XQuasiQuotes"

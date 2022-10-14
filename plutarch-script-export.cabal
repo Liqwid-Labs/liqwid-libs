@@ -92,6 +92,7 @@ common deps
     , wai
     , wai-cors
     , warp
+    , liqwid-plutarch-extra
 
   mixins:
 
@@ -107,7 +108,6 @@ library
     ScriptExport.Types
 
   other-modules:
-    Aeson.Orphans
     Codec.Serialise.Orphans
     Data.Cache.Cached
 

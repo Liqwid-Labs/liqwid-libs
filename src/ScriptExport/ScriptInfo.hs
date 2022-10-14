@@ -30,7 +30,7 @@ module ScriptExport.ScriptInfo (
   mkStakeValidatorInfo,
 ) where
 
-import Aeson.Orphans ()
+import Plutarch.Orphans ()
 import Cardano.Binary qualified as CBOR
 import Codec.Serialise qualified as Codec
 import Control.Monad.Except (Except, MonadError, runExcept, throwError)
