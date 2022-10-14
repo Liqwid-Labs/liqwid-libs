@@ -1,5 +1,6 @@
 # `plutarch-context-builder`
-Public discussion and assistance can be found on [discord](https://discord.gg/yGkjxrYueB) @ #liqwid-plutarch-extra
+Public discussion and assistance can be found on [discord](https://discord.gg/yGkjxrYueB) @ #liqwid-plutarch-extra.
+Issues and project-management-related information are tracked on [Notion](https://www.notion.so/liqwid/).
 
 ## What is this?
 
