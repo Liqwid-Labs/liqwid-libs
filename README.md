@@ -1,5 +1,6 @@
 # `plutarch-quickcheck`
 Public discussion and assistance can be found on [discord](https://discord.gg/yGkjxrYueB) @ #liqwid-libs.
+
 Issues and project-management-related information are tracked on [Notion](https://www.notion.so/liqwid).
 
 ## What is this?
