@@ -1,6 +1,8 @@
 # `plutarch-benchmark`
 Public discussion and assistance can be found on [discord](https://discord.gg/yGkjxrYueB) @ #liqwid-libs
 
+Tickets and project management can be found on [Notion](https://www.notion.so/liqwid)
+
 ## What is this?
 
 A helper library to compare algorithm implementations of Plutarch code.
