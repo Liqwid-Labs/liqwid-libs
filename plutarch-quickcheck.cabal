@@ -132,3 +132,17 @@ test-suite zip-test
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   hs-source-dirs: sample/zip-test
+
+test-suite instances
+  import:
+    common-tests,
+    common-lang
+
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  build-depends:
+    , plutus-ledger-api
+    , plutus-tx
+    , pretty-show
+
+  hs-source-dirs: test/instances

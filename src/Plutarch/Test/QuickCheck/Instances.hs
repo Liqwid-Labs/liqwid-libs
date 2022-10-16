@@ -6,7 +6,6 @@
 -}
 module Plutarch.Test.QuickCheck.Instances () where
 
-import Control.Applicative (empty)
 import Data.ByteString (ByteString)
 import Data.Char (chr, ord)
 import Data.Kind (Type)
@@ -538,27 +537,29 @@ instance Arbitrary Value where
         Gen (CurrencySymbol, AssocMap.Map TokenName Integer)
       go sym =
         (sym,) . AssocMap.fromList <$> do
-          tokNames <- sortedUniqueOf arbitrary
+          tokNames <- sortedUniqueNEOf arbitrary
           traverse (\tn -> (tn,) . getPositive <$> arbitrary) tokNames
   {-# INLINEABLE shrink #-}
   shrink (Value inner) = case PlutusTx.toList inner of
     -- This case is technically impossible, as we never 'shrink away' the ADA
-    -- entry. If we ever get here though, there's no sensible shrinks to give
-    -- in any case.
-    [] -> empty
+    -- entry.
+    [] -> error "Shrinker for Value: Empty 'outer map'."
     (adaEntry : otherEntries) ->
       Value . AssocMap.fromList <$> do
         -- Handle ADA entry shrinks by only shrinking the sole amount it has in
         -- it.
-        ("", adaInner) <- pure adaEntry
-        [("", adaAmount)] <- pure . PlutusTx.toList $ adaInner
-        adaAmount' <- getNonNegative <$> (shrink . NonNegative $ adaAmount)
-        let adaEntry' = ("", AssocMap.fromList [("", adaAmount')])
-        -- Shrink whatever remains according to the rules.
-        otherEntries' <-
-          shrinkList (traverse (go . PlutusTx.toList)) otherEntries
-        -- Mash everything together.
-        pure $ adaEntry' : otherEntries'
+        case adaEntry of
+          ("", adaInner) -> case PlutusTx.toList adaInner of
+            [("", adaAmount)] -> do
+              adaAmount' <- getNonNegative <$> (shrink . NonNegative $ adaAmount)
+              let adaEntry' = ("", AssocMap.fromList [("", adaAmount')])
+              -- Shrink whatever remains according to the rules.
+              otherEntries' <-
+                shrinkList (traverse (go . PlutusTx.toList)) otherEntries
+              -- Mash everything together.
+              pure $ adaEntry' : otherEntries'
+            _ -> error "Shrinker for Value: Malformed 'inner map' for ADA entry."
+          _ -> error "Shrinker for Value: Bad CurrencySymbol for ADA entry."
     where
       go :: [(TokenName, Integer)] -> [AssocMap.Map TokenName Integer]
       go =
@@ -711,7 +712,7 @@ vectorOfUpTo lim gen = Gen.sized $ \size -> do
   len <- Gen.chooseInt (0, min size lim)
   Gen.vectorOf len gen
 
--- Uses the given generator to produce a list that's both unique and sorted
+-- Uses the given generator to produce a list that's unique and sorted.
 --
 -- TODO: Use a combination nub-sort for speed.
 sortedUniqueOf ::
@@ -720,3 +721,17 @@ sortedUniqueOf ::
   Gen a ->
   Gen [a]
 sortedUniqueOf gen = sort . nub <$> Gen.listOf gen
+
+-- Uses the given generator to produce a list that's non-empty, unique and
+-- sorted.
+--
+-- TODO: Use a combination nub-sort for speed.
+sortedUniqueNEOf ::
+  forall (a :: Type).
+  (Ord a) =>
+  Gen a ->
+  Gen [a]
+sortedUniqueNEOf gen = do
+  x <- gen
+  xs <- Gen.listOf gen
+  pure . sort . nub $ x : xs
