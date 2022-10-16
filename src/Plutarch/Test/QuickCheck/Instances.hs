@@ -6,10 +6,11 @@
 -}
 module Plutarch.Test.QuickCheck.Instances () where
 
+import Control.Applicative (empty)
 import Data.ByteString (ByteString)
 import Data.Char (chr, ord)
 import Data.Kind (Type)
-import Data.List (sort, subsequences, nub)
+import Data.List (nub, sort)
 import Data.Word (Word8)
 import GHC.Exts (coerce, fromList, fromListN, toList)
 import PlutusLedgerApi.V1.Time (DiffMilliSeconds (DiffMilliSeconds))
@@ -51,7 +52,8 @@ import Test.QuickCheck (
   Positive (Positive),
   functionMap,
   getNonNegative,
-  orderedList,
+  getPositive,
+  shrinkList,
  )
 import qualified Test.QuickCheck.Gen as Gen
 
@@ -503,15 +505,19 @@ instance Function TokenName where
  - Entries whose 'CurrencySymbol' and 'TokenName' match are unique.
  - \'Outer\' map entries are sorted by 'CurrencySymbol'.
  - \'Inner\' map entries are sorted by 'TokenName'.
- - An ADA entry always exists.
- - All entries have positive amounts.
+ - An ADA entry always exists: this corresponds to a mapping from the
+ - 'CurrencySymbol' @""@, to the 'TokenName' @""@ and a non-negative number.
+ - ADA entries have singleton \'inner maps\'.
+ - Non-ADA entries have positive numbers.
 
- While it is possible to have a normalized 'Value' with a zero ADA entry, no
- such entries are currently generated.
+ In order to ensure all the invariants hold, the shrinker for 'Value' can only
+ do the following:
 
- 'Value's are shrunk only structurally: this means that we can \'drop\'
- entries, but not shrink existing ones in either their \'inner map\' keys or
- \'inner map\' values.
+ - Remove non-ADA \'outer map\' entries;
+ - Remove \'inner map\' entries; and
+ - Change the amounts associated with an entry.
+
+ More specifically, we do /not/ shrink the 'CurrencySymbol's or 'TokenName's.
 
  @since 2.1.3
 -}
@@ -519,45 +525,45 @@ instance Arbitrary Value where
   {-# INLINEABLE arbitrary #-}
   arbitrary =
     Value . AssocMap.fromList <$> do
-      (SortedUnique cs) <- arbitrary
-      case cs of
-        [] -> do
-          adaEntry <- mkEntry ""
-          pure [adaEntry]
-        (sym : _) ->
-          if sym == ""
-            then traverse mkEntry cs
-            else do
-              adaEntry <- mkEntry ""
-              entries <- traverse mkEntry cs
-              pure $ adaEntry : entries
+      -- First, make an ADA entry
+      adaEntry <-
+        ("",) . AssocMap.fromList . pure . ("",) . getNonNegative <$> arbitrary
+      -- Then, generate the rest, taking care not to accidentially use "" again as
+      -- a CurrencySymbol
+      syms <- sortedUniqueOf . Gen.suchThat arbitrary $ ("" /=)
+      (adaEntry :) <$> traverse go syms
     where
-      mkEntry ::
+      go ::
         CurrencySymbol ->
         Gen (CurrencySymbol, AssocMap.Map TokenName Integer)
-      mkEntry sym = do
-        (SortedUniqueNonEmpty tns) <- arbitrary
-        kvs :: [(TokenName, Positive Integer)] <-
-          traverse (\tn -> (tn,) <$> arbitrary) tns
-        pure (sym, AssocMap.fromList . coerce $ kvs)
+      go sym =
+        (sym,) . AssocMap.fromList <$> do
+          tokNames <- sortedUniqueOf arbitrary
+          traverse (\tn -> (tn,) . getPositive <$> arbitrary) tokNames
   {-# INLINEABLE shrink #-}
-  shrink (Value inner) =
-    Value <$> do
-      let inner' = fmap PlutusTx.toList <$> PlutusTx.toList inner
-      case inner' of
-        [] -> error "Shrinker for Value: impossible situation: given empty Value to shrink"
-        (x : xs) -> do
-          -- Shrink the 'inner map' of ADA entry structurally
-          -- We forbid empty shrinks here
-          x' :: (CurrencySymbol, [(TokenName, Integer)]) <- traverse shrinkSubseq x
-          -- Shrink the rest structurally, both outer and inner
-          -- For the outer shrink, we can allow empty prefixes
-          xs' :: [(CurrencySymbol, [(TokenName, Integer)])] <-
-            init . subsequences $ xs >>= \entry -> traverse shrinkSubseq entry
-          -- Glue these together, then rewrap
-          pure . PlutusTx.fromList . fmap (fmap PlutusTx.fromList) $ x' : xs'
-
--- TODO: Enable zero ADA 'Value' generation.
+  shrink (Value inner) = case PlutusTx.toList inner of
+    -- This case is technically impossible, as we never 'shrink away' the ADA
+    -- entry. If we ever get here though, there's no sensible shrinks to give
+    -- in any case.
+    [] -> empty
+    (adaEntry : otherEntries) ->
+      Value . AssocMap.fromList <$> do
+        -- Handle ADA entry shrinks by only shrinking the sole amount it has in
+        -- it.
+        ("", adaInner) <- pure adaEntry
+        [("", adaAmount)] <- pure . PlutusTx.toList $ adaInner
+        adaAmount' <- getNonNegative <$> (shrink . NonNegative $ adaAmount)
+        let adaEntry' = ("", AssocMap.fromList [("", adaAmount')])
+        -- Shrink whatever remains according to the rules.
+        otherEntries' <-
+          shrinkList (traverse (go . PlutusTx.toList)) otherEntries
+        -- Mash everything together.
+        pure $ adaEntry' : otherEntries'
+    where
+      go :: [(TokenName, Integer)] -> [AssocMap.Map TokenName Integer]
+      go =
+        fmap AssocMap.fromList
+          . shrinkList (traverse (fmap getPositive . shrink . Positive))
 
 -- | @since 2.1.3
 instance CoArbitrary Value where
@@ -705,38 +711,12 @@ vectorOfUpTo lim gen = Gen.sized $ \size -> do
   len <- Gen.chooseInt (0, min size lim)
   Gen.vectorOf len gen
 
--- Similar to 'Sorted', but also ensures uniqueness
+-- Uses the given generator to produce a list that's both unique and sorted
 --
--- TODO: This is quite inefficient.
-newtype SortedUnique (a :: Type) = SortedUnique [a]
-
-instance (Arbitrary a, Ord a) => Arbitrary (SortedUnique a) where
-  {-# INLINEABLE arbitrary #-}
-  arbitrary = SortedUnique . nub <$> orderedList
-  {-# INLINEABLE shrink #-}
-  shrink (SortedUnique xs) = [
-    SortedUnique xs' | xs' <- shrink xs, sort xs' == xs', nub xs' == xs'
-    ]
-
--- Modifier combining 'SortedUnique' and 'NonEmptyList'.
---
--- TODO: This is quite inefficient.
-newtype SortedUniqueNonEmpty (a :: Type) = SortedUniqueNonEmpty [a]
-
-instance (Arbitrary a, Ord a) => Arbitrary (SortedUniqueNonEmpty a) where
-  {-# INLINEABLE arbitrary #-}
-  arbitrary = SortedUniqueNonEmpty . nub <$> 
-    Gen.suchThat orderedList (not . null)
-  {-# INLINEABLE shrink #-}
-  shrink (SortedUniqueNonEmpty xs) =
-    [ SortedUniqueNonEmpty xs' | xs' <- shrink xs, sort xs' == xs', not . null $ xs', nub xs' == xs'
-    ]
-
--- Shrinks structurally, to non-empty strict subsequences only
-shrinkSubseq ::
+-- TODO: Use a combination nub-sort for speed.
+sortedUniqueOf ::
   forall (a :: Type).
-  [a] ->
-  [[a]]
-shrinkSubseq xs = case subsequences xs of
-  [_] -> []
-  xs' -> init . tail $ xs'
+  (Ord a) =>
+  Gen a ->
+  Gen [a]
+sortedUniqueOf gen = sort . nub <$> Gen.listOf gen
