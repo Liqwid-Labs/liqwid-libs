@@ -56,14 +56,10 @@ import Test.QuickCheck (
  )
 import qualified Test.QuickCheck.Gen as Gen
 
-{- | On-chain bytestrings aren't allowed to exceed 64 bytes.
-
- @since 2.1.3
--}
+-- | @since 2.1.3
 instance Arbitrary BuiltinByteString where
   {-# INLINEABLE arbitrary #-}
-  arbitrary =
-    toBuiltin @ByteString . fromList <$> vectorOfUpTo 64 arbitrary
+  arbitrary = toBuiltin @ByteString . fromList <$> arbitrary
   {-# INLINEABLE shrink #-}
   shrink =
     fmap (toBuiltin @ByteString . fromList)
