@@ -8,6 +8,8 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 * `Plutarch.Test.QuickCheck.Instances` module, containing orphan instances for
   QuickCheck type classes for many Plutus types.
+* Tests to ensure generators are behaving themselves. Currently only has tests
+  for `Value`.
 
 ## 2.1.2 -- 2022-09-27
 
