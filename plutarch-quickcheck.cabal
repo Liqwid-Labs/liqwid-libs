@@ -140,6 +140,11 @@ test-suite instances
 
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
+  other-modules:
+    Helpers
+    LedgerBytes
+    Value
+
   build-depends:
     , plutus-ledger-api
     , plutus-tx

@@ -1,3 +1,4 @@
+{-# LANGUAGE MultiWayIf #-}
 -- Whole module is just orphans
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -7,6 +8,7 @@
 module Plutarch.Test.QuickCheck.Instances () where
 
 import Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
 import Data.Char (chr, ord)
 import Data.Kind (Type)
 import Data.List (nub, sort)
@@ -173,8 +175,26 @@ instance Function DiffMilliSeconds where
   {-# INLINEABLE function #-}
   function = functionMap (coerce @_ @Integer) coerce
 
--- | @since 2.1.3
-deriving via BuiltinByteString instance Arbitrary LedgerBytes
+{- | This maintains 'LedgerBytes' invariants, as follows:
+
+ - Must have an even length in its representation.
+ - Each byte must be the ASCII code for a hexit: that is, 0-9, a-f, A-F.
+
+ @since 2.1.3
+-}
+instance Arbitrary LedgerBytes where
+  {-# INLINEABLE arbitrary #-}
+  arbitrary = do
+    veryInner <- fromList <$> Gen.listOf genHexit
+    LedgerBytes . toBuiltin
+      <$> if even (BS.length veryInner)
+        then pure veryInner
+        else BS.cons <$> genHexit <*> pure veryInner
+  {-# INLINEABLE shrink #-}
+  shrink (LedgerBytes inner) =
+    let veryInner = toList . fromBuiltin $ inner
+     in [ LedgerBytes . toBuiltin $ veryInner' | veryInner' <- fromList <$> shrink veryInner, even (BS.length veryInner'), BS.all isHexit veryInner'
+        ]
 
 -- | @since 2.1.3
 deriving via BuiltinByteString instance CoArbitrary LedgerBytes
@@ -246,8 +266,8 @@ instance Function Datum where
   {-# INLINEABLE function #-}
   function = functionMap (coerce @_ @BuiltinData) coerce
 
-{- | This is based on the assumption that a 'PubKeyHash' is a Blake2b hash, and
- is thus 28 bytes wide. This type does not shrink, as it wouldn't make much
+{- | This is based on the assumption that a 'PubKeyHash' is a Blake2b-224 hash,
+ and is thus 28 bytes wide. This type does not shrink, as it wouldn't make much
  sense to.
 
  @since 2.1.3
@@ -731,3 +751,25 @@ sortedUniqueNEOf gen = do
   x <- gen
   xs <- Gen.listOf gen
   pure . sort . nub $ x : xs
+
+-- Generates an ASCII hexit byte
+genHexit :: Gen Word8
+genHexit =
+  Gen.frequency
+    [ -- 0..9
+      (5, Gen.elements [48 .. 57])
+    , -- a..f
+      (3, Gen.elements [97 .. 102])
+    , -- A..F
+      (3, Gen.elements [65 .. 70])
+    ]
+
+-- Checks if we're an ASCII hexit byte
+isHexit :: Word8 -> Bool
+isHexit w8 =
+  if
+      | w8 < 48 -> False -- out of range
+      | w8 > 102 -> False -- out of range
+      | w8 > 57 && w8 < 65 -> False -- between 9 and A
+      | w8 > 70 && w8 < 97 -> False -- between F and a
+      | otherwise -> True
