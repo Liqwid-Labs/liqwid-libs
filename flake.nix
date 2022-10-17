@@ -1,5 +1,5 @@
 {
-  description = "plutarch-script-export";
+  description = "liqwid-script-export";
 
   inputs = {
     nixpkgs.follows = "plutarch/nixpkgs";

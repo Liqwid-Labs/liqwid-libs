@@ -3826,11 +3826,11 @@
         "plutarch-quickcheck": "plutarch-quickcheck"
       },
       "locked": {
-        "lastModified": 1665695734,
-        "narHash": "sha256-KxsSmyW6stYPdNXPYRMo5hInrvcBTHg2p2tk3VEZV1U=",
+        "lastModified": 1665779931,
+        "narHash": "sha256-TS9XdZwjm988d9+jPig174p7mS6ZzzqtTt68IVM4Jcs=",
         "owner": "Liqwid-Labs",
         "repo": "liqwid-plutarch-extra",
-        "rev": "512638c6b7851c6450e28d904eb8b60c4fe6f574",
+        "rev": "f80d631e71b91ff16f156488c25b334e6fdff5ce",
         "type": "github"
       },
       "original": {

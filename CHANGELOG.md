@@ -9,7 +9,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 - `ScriptExport`, `RawScriptExport`, and `Linker` provides new standardized data structure for script exportation.
 - Utility functions for new `ScriptExport` types.
 - `insertStaticBuilder`, and `insertScriptExportWithLinker` was added.
-- `exportMain` is new entree point for the script exporting program.
+- `exportMain` is new entry point for the script exporting program.
 - `exportFile` exports scripts to file.
 - Other internal data structure changed to better support new `ScriptExport` types.
 

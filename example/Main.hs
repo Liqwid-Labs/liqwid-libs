@@ -1,13 +1,12 @@
 {- | Module     : Main
      Maintainer : emi@haskell.fyi
-     Description: Example usage of 'plutarch-script-export'.
+     Description: Example usage of 'liqwid-script-export'.
 
-Example usage of 'plutarch-script-export'.
+Example usage of 'liqwid-script-export'.
 -}
 module Main (main) where
 
 import Data.Default (def)
-import Data.Function ((&))
 import Data.Map (fromList)
 import Data.Text (unpack)
 import Plutarch.Api.V2 (PValidator, mkValidator)
@@ -33,8 +32,8 @@ import ScriptExport.ScriptInfo (
   Linker,
   RawScriptExport (RawScriptExport),
   ScriptExport (ScriptExport),
-  exportParam,
   fetchTS,
+  getParam,
   mkValidatorInfo,
  )
 import ScriptExport.Types (
@@ -65,13 +64,14 @@ handle linker given parameter. Also, it will return serialized
 -}
 builders :: Builders
 builders =
-  def
-    & insertStaticBuilder "alwaysSucceeds" (mkValidatorInfo alwaysSucceeds)
-    & insertBuilder @Integer
-      "alwaysSucceedsParam"
-      (\x -> mkValidatorInfo (alwaysSucceedsParam Plutarch.Prelude.# pconstant x))
-    & insertStaticBuilder "my-onchain-project" myproject
-    & insertScriptExportWithLinker "my-onchain-project-param" myProjectParameterized myProjectLinker
+  mconcat
+    [ insertStaticBuilder "alwaysSucceeds" (mkValidatorInfo alwaysSucceeds)
+    , insertBuilder @Integer
+        "alwaysSucceedsParam"
+        (\x -> mkValidatorInfo (alwaysSucceedsParam Plutarch.Prelude.# pconstant x))
+    , insertStaticBuilder "my-onchain-project" myproject
+    , insertScriptExportWithLinker "my-onchain-project-param" myProjectParameterized myProjectLinker
+    ]
 
 -- This is our dummy validator.
 alwaysSucceeds :: ClosedTerm PValidator
@@ -87,7 +87,6 @@ alwaysSucceedsParam = plam $ \x _ _ _ -> unTermCont $ do
 myproject :: ScriptExport Int
 myproject =
   ScriptExport
-    "1.2.3"
     ( fromList
         [ ("alwaysSucceeds", getValidator $ mkValidator def alwaysSucceeds)
         ]
@@ -97,22 +96,19 @@ myproject =
 -- This is example `RawScriptExport`.
 myProjectParameterized :: RawScriptExport
 myProjectParameterized =
-  RawScriptExport
-    "1.2.3"
-    ( fromList
-        [ ("alwaysSucceeds", either (error . unpack) id $ mkEnvelope def "alwaysSucceedsParam" alwaysSucceedsParam)
-        ]
-    )
+  RawScriptExport $
+    fromList
+      [ ("alwaysSucceeds", either (error . unpack) id $ mkEnvelope def "alwaysSucceedsParam" alwaysSucceedsParam)
+      ]
 
 -- This is example script linker.
 myProjectLinker :: Linker Integer (ScriptExport ())
 myProjectLinker = do
   as <- fetchTS @( 'ValidatorRole) @'[Integer] "alwaysSucceeds"
-  arg <- exportParam
+  arg <- getParam
 
   return $
     ScriptExport
-      "1.2.3"
       ( fromList
           [ ("alwaysSucceeds", toScript $ as Ply.# arg)
           ]

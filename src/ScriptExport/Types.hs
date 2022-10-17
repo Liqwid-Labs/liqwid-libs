@@ -25,7 +25,6 @@ module ScriptExport.Types (
 import Control.Monad.Except
 import Data.Aeson qualified as Aeson
 import Data.ByteString.Lazy.Char8 qualified as LBS
-import Data.Coerce (coerce)
 import Data.Default.Class (Default (def))
 import Data.Hashable (Hashable)
 import Data.Kind (Type)
@@ -133,7 +132,7 @@ handleServe (Just arg) (ServeRawScriptExport scr linker) =
         Left e -> throwError . pack . show $ e
         Right x -> pure . Aeson.toJSON $ x
 handleServe Nothing (ServeRawScriptExport scr _) = pure $ Aeson.toJSON scr
-handleServe _ _ = throwError "Incorrect Parameter"
+handleServe Nothing (ServeJSONWithParam _) = throwError "Query expects an argument, but nothing is given"
 
 {- | Represents a list of named pure functions.
 
@@ -141,11 +140,26 @@ handleServe _ _ = throwError "Incorrect Parameter"
 -}
 newtype Builders
   = Builders (Map Text ServeElement)
+  deriving
+    ( -- | @since 1.0.0
+      Semigroup
+    , -- | @since 1.0.0
+      Monoid
+    )
+    via (Map Text ServeElement)
 
+-- | @since 2.0.0
 getBuilders ::
   Builders ->
   Map Text ServeElement
 getBuilders (Builders b) = b
+
+{- | Get a list of the available builders.
+
+ @since 2.0.0
+-}
+toList :: Builders -> [Text]
+toList = Map.keys . getBuilders
 
 -- | @since 2.0.0
 instance Default Builders where
@@ -160,27 +174,18 @@ insertBuilder ::
   (Aeson.FromJSON p, Aeson.ToJSON s) =>
   Text ->
   (p -> s) ->
-  Builders ->
   Builders
 insertBuilder k f =
-  coerce $ Map.insert k (ServeJSONWithParam f)
+  Builders $ Map.insert k (ServeJSONWithParam f) mempty
 
 insertStaticBuilder ::
   forall (a :: Type).
   (Aeson.ToJSON a) =>
   Text ->
   a ->
-  Builders ->
   Builders
 insertStaticBuilder k x =
-  coerce $ Map.insert k (ServeJSON x)
-
-{- | Get a list of the available builders.
-
-     @since 2.0.0
--}
-toList :: Builders -> [Text]
-toList = Map.keys . getBuilders
+  Builders $ Map.insert k (ServeJSON x) mempty
 
 {- | Insert a 'RawScriptExport' and 'ScriptLinker' to the Builders Map. The
      builder will return applied `ScriptExport` with given parameter.
@@ -188,15 +193,14 @@ toList = Map.keys . getBuilders
      @since 2.0.0
 -}
 insertScriptExportWithLinker ::
-  forall param a.
+  forall (param :: Type) (a :: Type).
   (Aeson.FromJSON param, Aeson.ToJSON a) =>
   Text ->
   RawScriptExport ->
   Linker param (ScriptExport a) ->
-  Builders ->
   Builders
 insertScriptExportWithLinker k scr linker =
-  coerce $ Map.insert k (ServeRawScriptExport scr linker)
+  Builders $ Map.insert k (ServeRawScriptExport scr linker) mempty
 
 ----------------------------------------
 -- Field Labels

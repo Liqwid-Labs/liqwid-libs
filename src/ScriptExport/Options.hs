@@ -3,9 +3,9 @@
 
 {- | Module     : ScriptExport.Options
      Maintainer : emi@haskell.fyi
-     Description: Command line options for 'plutarch-script-export'.
+     Description: Command line options for 'liqwid-script-export'.
 
-     Command line options for 'plutarch-script-export'.
+     Command line options for 'liqwid-script-export'.
 -}
 module ScriptExport.Options (
   Options (..),

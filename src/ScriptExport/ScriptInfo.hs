@@ -20,8 +20,8 @@ module ScriptExport.ScriptInfo (
   -- * Linker utilities
   runLinker,
   fetchTS,
-  exportParam,
-  exportVersion,
+  getParam,
+  getRawScripts,
 
   -- * Introduction functions
   mkScriptInfo,
@@ -30,7 +30,6 @@ module ScriptExport.ScriptInfo (
   mkStakeValidatorInfo,
 ) where
 
-import Plutarch.Orphans ()
 import Cardano.Binary qualified as CBOR
 import Codec.Serialise qualified as Codec
 import Control.Monad.Except (Except, MonadError, runExcept, throwError)
@@ -62,6 +61,7 @@ import Plutarch.Api.V2 (
   mkValidator,
   scriptHash,
  )
+import Plutarch.Orphans ()
 import PlutusLedgerApi.V2 (
   MintingPolicy (getMintingPolicy),
   Script,
@@ -70,6 +70,50 @@ import PlutusLedgerApi.V2 (
  )
 import Ply (ScriptRole, TypedScript, TypedScriptEnvelope)
 import Ply.Core.TypedReader (TypedReader, mkTypedScript)
+
+{- | Type for holding parameterized scripts. This type represents the
+     raw scripts which needs to be linked in order to be deployed.
+
+ @since 2.0.0
+-}
+newtype RawScriptExport = RawScriptExport
+  { scripts :: Map Text TypedScriptEnvelope
+  }
+  deriving stock
+    ( -- | @since 2.0.0
+      Show
+    , -- | @since 2.0.0
+      Eq
+    , -- | @since 2.0.0
+      GHC.Generic
+    )
+  deriving anyclass
+    ( -- | @since 2.0.0
+      Aeson.ToJSON
+    , -- | @since 2.0.0
+      Aeson.FromJSON
+    )
+
+{- | Type for holding ready-to-go scripts. Ready-to-go scripts are
+     scripts that can be used on-onchain without any extra
+     arguments. They are `MintingPolicy ~ StakingValidator ~ PData ->
+     PScriptContext -> POpaque` and `Validator ~ PData -> PData ->
+     PScriptContext -> POpaque`.
+
+ @since 2.0.0
+-}
+data ScriptExport a = ScriptExport
+  { scripts :: Map Text Script
+  , information :: a
+  }
+  deriving stock
+    ( -- | @since 2.0.0
+      Show
+    , -- | @since 2.0.0
+      Eq
+    , -- | @since 2.0.0
+      GHC.Generic
+    )
 
 -- | @since 2.0.0
 data LinkerError
@@ -126,30 +170,6 @@ runLinker ::
 runLinker (Linker linker) rs p =
   runExcept $ runReaderT linker (rs, p)
 
-{- | Type for holding parameterized scripts. This type represents the
-     raw scripts which needs to be linked in order to be deployed.
-
- @since 2.0.0
--}
-data RawScriptExport = RawScriptExport
-  { version :: String
-  , scripts :: Map Text TypedScriptEnvelope
-  }
-  deriving stock
-    ( -- | @since 2.0.0
-      Show
-    , -- | @since 2.0.0
-      Eq
-    , -- | @since 2.0.0
-      GHC.Generic
-    )
-  deriving anyclass
-    ( -- | @since 2.0.0
-      Aeson.ToJSON
-    , -- | @since 2.0.0
-      Aeson.FromJSON
-    )
-
 -- | @since 2.0.0
 fetchTS ::
   forall (rl :: ScriptRole) (params :: [Type]) (lparam :: Type).
@@ -166,34 +186,12 @@ fetchTS t = do
     Nothing -> throwError $ ScriptNotFound t
 
 -- | @since 2.0.0
-exportParam :: forall (lparam :: Type). Linker lparam lparam
-exportParam = asks snd
+getParam :: forall (lparam :: Type). Linker lparam lparam
+getParam = asks snd
 
 -- | @since 2.0.0
-exportVersion :: forall (lparam :: Type). Linker lparam String
-exportVersion = asks (view #version . fst)
-
-{- | Type for holding ready-to-go scripts. Ready-to-go scripts are
-     scripts that can be used on-onchain without any extra
-     arguments. They are `MintingPolicy ~ StakingValidator ~ PData ->
-     PScriptContext -> POpaque` and `Validator ~ PData -> PData ->
-     PScriptContext -> POpaque`.
-
- @since 2.0.0
--}
-data ScriptExport a = ScriptExport
-  { version :: String
-  , scripts :: Map Text Script
-  , information :: a
-  }
-  deriving stock
-    ( -- | @since 2.0.0
-      Show
-    , -- | @since 2.0.0
-      Eq
-    , -- | @since 2.0.0
-      GHC.Generic
-    )
+getRawScripts :: forall (lparam :: Type). Linker lparam RawScriptExport
+getRawScripts = asks fst
 
 -- Internal helper for CBOR deserialization
 newtype CBORSerializedScript = CBORSerializedScript SBS.ShortByteString
@@ -215,11 +213,10 @@ instance
   Aeson.ToJSON a =>
   Aeson.ToJSON (ScriptExport a)
   where
-  toJSON (ScriptExport version scripts info) =
+  toJSON (ScriptExport scripts info) =
     Aeson.toJSON $
       Aeson.object
-        [ "version" Aeson..= version
-        , "info" Aeson..= info
+        [ "info" Aeson..= info
         , "scripts" Aeson..= (toJSONScript <$> scripts)
         ]
     where
@@ -241,8 +238,7 @@ instance
   where
   parseJSON (Aeson.Object v) =
     ScriptExport
-      <$> v Aeson..: "version"
-      <*> (v Aeson..: "scripts" >>= Aeson.liftParseJSON parseJSONScriptMap Aeson.parseJSON)
+      <$> (v Aeson..: "scripts" >>= Aeson.liftParseJSON parseJSONScriptMap Aeson.parseJSON)
       <*> v Aeson..: "info"
     where
       parseAndDeserialize v =

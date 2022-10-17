@@ -1,5 +1,5 @@
 cabal-version:      3.0
-name:               plutarch-script-export
+name:               liqwid-script-export
 version:            1.1.1
 extra-source-files: CHANGELOG.md
 author:             Emily Martins <emi@haskell.fyi>
@@ -56,7 +56,7 @@ common deps
     , aeson
     , aeson-pretty
     , ansi-terminal
-    , base                  >=4.14 && <5
+    , base                   >=4.14 && <5
     , base-compat
     , base16
     , bytestring
@@ -71,6 +71,7 @@ common deps
     , gitrev
     , hashable
     , http-types
+    , liqwid-plutarch-extra
     , mtl
     , optics
     , optics-th
@@ -92,7 +93,6 @@ common deps
     , wai
     , wai-cors
     , warp
-    , liqwid-plutarch-extra
 
   mixins:
 
@@ -115,4 +115,4 @@ executable example
   import:         lang, deps
   hs-source-dirs: example
   main-is:        Main.hs
-  build-depends:  plutarch-script-export
+  build-depends:  liqwid-script-export
