@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
+
 {- | Module     : Main
      Maintainer : emi@haskell.fyi
      Description: Example usage of 'liqwid-script-export'.
@@ -104,7 +106,7 @@ myProjectParameterized =
 -- This is example script linker.
 myProjectLinker :: Linker Integer (ScriptExport ())
 myProjectLinker = do
-  as <- fetchTS @( 'ValidatorRole) @'[Integer] "alwaysSucceeds"
+  as <- fetchTS @ValidatorRole @'[Integer] "alwaysSucceeds"
   arg <- getParam
 
   return $

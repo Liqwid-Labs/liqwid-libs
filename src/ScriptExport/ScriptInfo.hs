@@ -77,7 +77,7 @@ import Ply.Core.TypedReader (TypedReader, mkTypedScript)
  @since 2.0.0
 -}
 newtype RawScriptExport = RawScriptExport
-  { scripts :: Map Text TypedScriptEnvelope
+  { rawScripts :: Map Text TypedScriptEnvelope
   }
   deriving stock
     ( -- | @since 2.0.0
@@ -178,7 +178,7 @@ fetchTS ::
   Linker lparam (TypedScript rl params)
 fetchTS t = do
   (scr, _) <- ask
-  case view #scripts scr !? t of
+  case view #rawScripts scr !? t of
     Just scr' ->
       case mkTypedScript @rl @params scr' of
         Right x -> return x
