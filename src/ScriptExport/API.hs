@@ -16,14 +16,24 @@ import Data.Cache.Cached (cachedForM)
 import Data.Function ((&))
 import Data.Proxy (Proxy (Proxy))
 import Data.Text (Text)
-import GHC.Generics qualified as GHC
 import Network.HTTP.Types qualified as Http
 import Network.Wai qualified as Wai
 import Network.Wai.Handler.Warp qualified as Warp
-import Network.Wai.Middleware.Cors (CorsResourcePolicy (corsRequestHeaders), cors, simpleCorsResourcePolicy)
-import Prettyprinter (Pretty (pretty), defaultLayoutOptions, hsep, layoutPretty, viaShow)
+import Network.Wai.Middleware.Cors (
+  CorsResourcePolicy (corsRequestHeaders),
+  cors,
+  simpleCorsResourcePolicy,
+ )
+import Optics (view)
+import Prettyprinter (
+  Pretty (pretty),
+  defaultLayoutOptions,
+  hsep,
+  layoutPretty,
+  viaShow,
+ )
 import Prettyprinter.Render.String (renderString)
-import ScriptExport.Options (Options (..))
+import ScriptExport.Options (ExporterInfo (..), ServerOptions (..))
 import ScriptExport.Types (Builders, ScriptQuery (ScriptQuery), runQuery)
 import ScriptExport.Types qualified as Builders
 import Servant.API (Capture, Get, JSON, Post, ReqBody, (:<|>) (..), type (:>))
@@ -33,7 +43,7 @@ import Text.Printf (printf)
 
 {- | Servant API type for script generation.
 
-     @since 1.0.0
+     @since 2.0.0
 -}
 type API =
   -- POST /query-script/:name
@@ -41,38 +51,19 @@ type API =
     :> Capture "name" Text
     :> ReqBody '[JSON] Aeson.Value
     :> Post '[JSON] Aeson.Value
+    -- GET /query-script/:name
+    :<|> "query-script"
+      :> Capture "name" Text
+      :> Get '[JSON] Aeson.Value
     -- GET /info
     :<|> "info"
-      :> Get '[JSON] ServerInfo
-
-{- | Information about the server.
-
-     @since 1.0.0
--}
-data ServerInfo = ServerInfo
-  { revision :: Text
-  , exposedBuilders :: [Text]
-  }
-  deriving anyclass
-    ( -- | @since 1.0.0
-      Aeson.ToJSON
-    , -- | @since 1.0.0
-      Aeson.FromJSON
-    )
-  deriving stock
-    ( -- | @since 1.0.0
-      Show
-    , -- | @since 1.0.0
-      Eq
-    , -- | @since 1.0.0
-      GHC.Generic
-    )
+      :> Get '[JSON] ExporterInfo
 
 {- | Run a Warp server that exposes a script generation endpoint.
 
-     @since 1.0.0
+     @since 2.0.0
 -}
-runServer :: MonadIO m => Text -> Builders -> Options -> m ()
+runServer :: MonadIO m => Text -> Builders -> ServerOptions -> m ()
 runServer revision builders options = do
   let logger req status _maybeFileSize =
         putStrLn . renderString . layoutPretty defaultLayoutOptions $
@@ -85,7 +76,7 @@ runServer revision builders options = do
 
       settings =
         Warp.defaultSettings
-          & Warp.setPort options.port
+          & Warp.setPort (view #port options)
           & Warp.setLogger logger
 
       corsPolicy =
@@ -97,19 +88,22 @@ runServer revision builders options = do
       corsMiddleware = cors . const $ Just corsPolicy
 
       serverInfo =
-        ServerInfo
+        ExporterInfo
           { revision = revision
           , exposedBuilders = Builders.toList builders
           }
 
-  -- Scripts stay cached for five minutes
-  query <- cachedForM (Just $ TimeSpec options.cacheLifetime 0) (`runQuery` builders)
+  -- Scripts stay cached for the amount of time specified by the `cacheLifetime` option.
+  query <- cachedForM (Just $ TimeSpec (view #cacheLifetime options) 0) (`runQuery` builders)
 
-  let handler = (\name -> query . ScriptQuery name) :<|> pure serverInfo
+  let handler =
+        (\name param -> query $ ScriptQuery name (Just param))
+          :<|> (\name -> query $ ScriptQuery name Nothing)
+          :<|> pure serverInfo
 
   liftIO $ printf "[info] Running script export server on :%d\n" (Warp.getPort settings)
 
   Servant.serve (Proxy @API) handler
-    & (if options.enableCorsMiddleware then corsMiddleware else id)
+    & (if view #enableCorsMiddleware options then corsMiddleware else id)
     & Warp.runSettings settings
     & liftIO

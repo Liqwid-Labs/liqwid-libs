@@ -1,4 +1,4 @@
-# `plutarch-script-export`
+# `liqwid-script-export`
 
 Export scripts for off-chain consumption through a HTTP server.
 

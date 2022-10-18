@@ -1,5 +1,5 @@
 cabal-version:      3.0
-name:               plutarch-script-export
+name:               liqwid-script-export
 version:            1.1.1
 extra-source-files: CHANGELOG.md
 author:             Emily Martins <emi@haskell.fyi>
@@ -22,70 +22,41 @@ common lang
     NoStarIsType
     BangPatterns
     BinaryLiterals
-    ConstrainedClassMethods
     ConstraintKinds
     DataKinds
     DeriveAnyClass
-    DeriveDataTypeable
-    DeriveFoldable
-    DeriveFunctor
     DeriveGeneric
-    DeriveLift
     DeriveTraversable
-    DerivingStrategies
     DerivingVia
-    DoAndIfThenElse
-    DuplicateRecordFields
     EmptyCase
-    EmptyDataDecls
-    EmptyDataDeriving
-    ExistentialQuantification
-    ExplicitForAll
     FlexibleContexts
     FlexibleInstances
-    ForeignFunctionInterface
-    GADTSyntax
     GeneralisedNewtypeDeriving
     HexFloatLiterals
-    ImplicitPrelude
     ImportQualifiedPost
     InstanceSigs
     KindSignatures
     LambdaCase
-    MonomorphismRestriction
     MultiParamTypeClasses
-    NamedFieldPuns
-    NamedWildCards
     NumericUnderscores
     OverloadedLabels
     OverloadedStrings
-    PackageImports
-    PartialTypeSignatures
-    PatternGuards
-    PolyKinds
-    PostfixOperators
-    QualifiedDo
-    RankNTypes
-    RelaxedPolyRec
     ScopedTypeVariables
     StandaloneDeriving
-    StandaloneKindSignatures
     TupleSections
     TypeApplications
     TypeFamilies
     TypeOperators
-    TypeSynonymInstances
-    UndecidableInstances
-    ViewPatterns
-    OverloadedRecordDot
+    NoFieldSelectors
 
   default-language:   Haskell2010
 
 common deps
   build-depends:
     , aeson
+    , aeson-pretty
     , ansi-terminal
-    , base                  >=4.14 && <5
+    , base                   >=4.14 && <5
     , base-compat
     , base16
     , bytestring
@@ -95,15 +66,22 @@ common deps
     , containers
     , data-default
     , data-default-class
+    , filepath
     , generics-sop
     , gitrev
     , hashable
     , http-types
+    , liqwid-plutarch-extra
+    , mtl
+    , optics
+    , optics-th
     , optparse-applicative
     , plutarch
     , plutus-core
     , plutus-ledger-api
     , plutus-tx
+    , ply-core
+    , ply-plutarch
     , prettyprinter
     , recursion-schemes
     , serialise
@@ -123,12 +101,13 @@ library
   hs-source-dirs:  src
   exposed-modules:
     ScriptExport.API
+    ScriptExport.Export
+    ScriptExport.File
     ScriptExport.Options
     ScriptExport.ScriptInfo
     ScriptExport.Types
 
   other-modules:
-    Aeson.Orphans
     Codec.Serialise.Orphans
     Data.Cache.Cached
 
@@ -136,4 +115,4 @@ executable example
   import:         lang, deps
   hs-source-dirs: example
   main-is:        Main.hs
-  build-depends:  plutarch-script-export
+  build-depends:  liqwid-script-export

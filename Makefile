@@ -25,10 +25,15 @@ hoogle:
 	hoogle server --local -p 8081 >> /dev/null &
 	hoogle server --local --database=hoo/local.hoo -p 8082 >> /dev/null &
 
-format: format_haskell format_nix
+format: format_haskell format_cabal format_nix
 
 format_nix:
 	git ls-tree -r HEAD --full-tree --name-only | grep -E '.*\.nix' | xargs nixpkgs-fmt
+
+format_cabal:
+	cabal-fmt -i $(CABAL_SOURCES)
+
+CABAL_SOURCES := $(shell fd -ecabal)
 
 FORMAT_EXTENSIONS := -o -XQuasiQuotes -o -XTemplateHaskell -o -XTypeApplications -o -XImportQualifiedPost -o -XPatternSynonyms -o -XOverloadedRecordDot
 format_haskell:
