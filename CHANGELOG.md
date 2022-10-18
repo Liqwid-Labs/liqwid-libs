@@ -1,5 +1,24 @@
 # Revision history for `plutarch-unit`
 
+## 1.2.0 -- 2022-10-07
+
+### Added
+
+* `Test.Unit.Precompiled`:
+  - Generic instances and labeled optics for `TestCase` and `TestCompiled`
+  - `tryFromPTerm`: a partial function generating a debuggable test
+    case from a `ClosedTerm`
+  
+### Modified
+* `Test.Unit.Precompiled`: `fromPTerm`'s type signature changed to 
+  return a `Either Text TestTree` and is now total. For the partial 
+  version, see `tryFromPTerm`
+   
+### Deleted
+
+* `Test.Unit.Precompiled`: `fromScript`, because invariants could
+  be broken. 
+
 ## 1.1.0 -- 2022-09-21
 
 ### Added

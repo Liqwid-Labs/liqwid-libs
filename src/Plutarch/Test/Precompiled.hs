@@ -1,5 +1,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {- | Module: Plutarch.Test.Precompiled
  Copyright: (C) Liqwid Labs 2022
@@ -20,6 +22,7 @@ module Plutarch.Test.Precompiled (
   (@!>),
   testEqualityCase,
   fromPTerm,
+  tryFromPTerm,
 ) where
 
 import Acc (Acc)
@@ -35,10 +38,14 @@ import Control.Monad.RWS (
 import Data.Foldable (toList)
 import Data.Tagged (Tagged (Tagged))
 import Data.Text (Text)
+import GHC.Generics (Generic)
+import Optics.Getter (view)
+import Optics.TH (makeFieldLabelsNoPrefix)
 import Plutarch.Evaluate (EvalError, evalScript)
 import Plutarch.Extra.DebuggableScript (
-  DebuggableScript (DebuggableScript, debugScript, script),
+  DebuggableScript,
   applyDebuggableScript,
+  checkedCompileD,
   mustCompileD,
  )
 import Plutarch.Prelude (ClosedTerm, S, Type)
@@ -81,6 +88,8 @@ data TestCase
       , expectedScript :: Script
       , caseName :: String
       }
+  -- @since 1.2.0
+  deriving stock (Generic)
 
 ourStyle :: Style
 ourStyle = style {lineLength = 80}
@@ -102,8 +111,8 @@ instance IsTest TestCase where
       (Left err, Success) -> failWithStyle . unexpectedFailure err $ dt
       (Left _, Failure) -> testPassed ""
     where
-      ((r :: Either EvalError Script), _, _) = evalScript $ script dScript
-      (_, _, (dt :: [Text])) = evalScript $ debugScript dScript
+      (r :: Either EvalError Script, _, _) = evalScript $ view #script dScript
+      (_, _, dt :: [Text]) = evalScript $ view #debugScript dScript
       unexpectedFailure :: EvalError -> [Text] -> Doc
       unexpectedFailure err logs =
         "Expected a successful run, but failed instead.\n"
@@ -123,9 +132,9 @@ instance IsTest TestCase where
       (Left err, _) -> failWithStyle . failedToEvaluate err $ dt
       (_, Left err) -> failWithStyle . failedToEvaluate err $ mempty
     where
-      ((r :: Either EvalError Script), _, _) = evalScript $ script dScript
-      ((e :: Either EvalError Script), _, _) = evalScript $ expectedScript
-      (_, _, (dt :: [Text])) = evalScript $ debugScript dScript
+      (r :: Either EvalError Script, _, _) = evalScript $ view #script dScript
+      (e :: Either EvalError Script, _, _) = evalScript expectedScript
+      (_, _, dt :: [Text]) = evalScript $ view #debugScript dScript
       failedToEvaluate :: EvalError -> [Text] -> Doc
       failedToEvaluate result logs =
         "Script evaluation failed, both scripts need to suceed in order to check equality.\n"
@@ -153,13 +162,15 @@ newtype TestCompiled a = TestCompiled
       MonadWriter (Acc TestCase)
     )
     via (RWS DebuggableScript (Acc TestCase) ())
+  -- @since 1.2.0
+  deriving stock (Generic)
 
 {- | Stitches in arguments. It is helpful if there are shared arguments.
 
  @since 1.1.0
 -}
 withApplied :: [Data] -> TestCompiled () -> TestCompiled ()
-withApplied args tests = local (flip applyDebuggableScript args) tests
+withApplied args = local (flip applyDebuggableScript args)
 
 {- | An operator for 'withApplied'.
 
@@ -223,32 +234,42 @@ args @!> name = testEvalCase name Failure args
 infixr 1 @!>
 
 {- | Compiles a Plutarch closed term, then runs some tests using it in 'TestCompiled'.
+Returns an error message if compilation fails
 
- @since 1.1.0
+ @since 1.2.0
 -}
 fromPTerm ::
   forall (a :: S -> Type).
   String ->
   ClosedTerm a ->
   TestCompiled () ->
-  TestTree
-fromPTerm name term ctests =
-  fromScript name s ds ctests
-  where
-    (DebuggableScript s ds) = mustCompileD term
+  Either Text TestTree
+fromPTerm name term ctests = case checkedCompileD term of
+  Left err -> Left err
+  Right debuggableScript ->
+    let (_, tests) = execRWS (view #unTestCompiled ctests) debuggableScript ()
+        go ts = singleTest (view #caseName ts) ts
+     in Right $ testGroup name $ toList $ go <$> tests
 
-{- | Run some tests using given script and debug script in 'TestCompiled'.
+{- | Compiles a Plutarch closed term, then runs some tests using it in 'TestCompiled'.
+Errors if compilation fails
 
- @since 1.1.0
+ @since 1.2.0
 -}
-fromScript ::
+tryFromPTerm ::
+  forall (a :: S -> Type).
   String ->
-  Script ->
-  Script ->
+  ClosedTerm a ->
   TestCompiled () ->
   TestTree
-fromScript name script debugScript ctests =
+tryFromPTerm name term ctests =
   testGroup name $ toList $ go <$> tests
   where
-    (_, tests) = execRWS (unTestCompiled ctests) (DebuggableScript script debugScript) ()
-    go ts = singleTest (caseName ts) ts
+    (_, tests) = execRWS (view #unTestCompiled ctests) (mustCompileD term) ()
+    go ts = singleTest (view #caseName ts) ts
+
+-- | @since 1.2.0
+makeFieldLabelsNoPrefix ''TestCase
+
+-- | @since 1.2.0
+makeFieldLabelsNoPrefix ''TestCompiled

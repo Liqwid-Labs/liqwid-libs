@@ -28,9 +28,9 @@ import Plutarch.Prelude (
  )
 import Plutarch.Test.Precompiled (
   Expectation (Failure, Success),
-  fromPTerm,
   testEqualityCase,
   testEvalCase,
+  tryFromPTerm,
   withApplied,
   (@!>),
   (@&),
@@ -38,7 +38,7 @@ import Plutarch.Test.Precompiled (
  )
 import Test.Tasty (TestTree, defaultMain, testGroup)
 
-import qualified PlutusTx as PlutusTx
+import qualified PlutusTx
 
 main :: IO ()
 main = do
@@ -58,10 +58,10 @@ sampleValidator = plam $ \_ x _ -> unTermCont $ do
       pif
         (x' #== 10)
         (ptraceError "x shouldn't be 10")
-        (x')
+        x'
 
 sampleValidatorTest :: TestTree
-sampleValidatorTest = fromPTerm "sample validator" sampleValidator $ do
+sampleValidatorTest = tryFromPTerm "sample validator" sampleValidator $ do
   [PlutusTx.toData (), PlutusTx.toData (1 :: Integer), PlutusTx.toData ()] @> "It should succeed when given 1"
   [PlutusTx.toData (), PlutusTx.toData (10 :: Integer), PlutusTx.toData ()] @!> "It should fail when given 10"
   [PlutusTx.toData (), PlutusTx.toData (), PlutusTx.toData ()] @!> "It should fail when given non integer"
@@ -79,10 +79,10 @@ sampleValidatorTest = fromPTerm "sample validator" sampleValidator $ do
       [PlutusTx.toData (10 :: Integer), PlutusTx.toData ()]
 
 sampleFunction :: Term s (PAsData PInteger :--> PAsData PInteger :--> PAsData PInteger)
-sampleFunction = plam $ \x y -> pdata ((pfromData x) + (pfromData y) + 1)
+sampleFunction = plam $ \x y -> pdata (pfromData x + pfromData y + 1)
 
 sampleFunctionTest :: TestTree
-sampleFunctionTest = fromPTerm "sample function" sampleFunction $ do
+sampleFunctionTest = tryFromPTerm "sample function" sampleFunction $ do
   [PlutusTx.toData (1 :: Integer), PlutusTx.toData (1 :: Integer)] @> "It should not fail"
 
   testEqualityCase "1" compiled1 [PlutusTx.toData (1 :: Integer)]
@@ -91,9 +91,9 @@ sampleFunctionTest = fromPTerm "sample function" sampleFunction $ do
     compiled1 =
       either (error . show) id $
         compile (Config {tracingMode = NoTracing}) $
-          sampleFunction # (pdata 1)
+          sampleFunction # pdata 1
 
     compiled11 =
       either (error . show) id $
         compile (Config {tracingMode = NoTracing}) $
-          sampleFunction # (pdata 1) # (pdata 1)
+          sampleFunction # pdata 1 # pdata 1
