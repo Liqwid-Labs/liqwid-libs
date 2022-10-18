@@ -2,7 +2,6 @@
 module Main (main) where
 
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
-import qualified LedgerBytes
 import Plutarch.Test.QuickCheck.Instances ()
 import Test.Tasty (adjustOption, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (QuickCheckTests)
@@ -13,7 +12,6 @@ main = do
   setLocaleEncoding utf8
   defaultMain . adjustOption go . testGroup "Arbitrary instances" $
     [ testGroup "Value" Value.properties
-    , testGroup "LedgerBytes" LedgerBytes.properties
     ]
   where
     go :: QuickCheckTests -> QuickCheckTests

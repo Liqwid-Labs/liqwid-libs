@@ -1,4 +1,3 @@
-{-# LANGUAGE MultiWayIf #-}
 -- Whole module is just orphans
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -8,19 +7,17 @@
 module Plutarch.Test.QuickCheck.Instances () where
 
 import Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
 import Data.Char (chr, ord)
 import Data.Kind (Type)
-import Data.List (nub, sort)
-import Data.Word (Word8)
+import Data.Word (Word64, Word8)
 import GHC.Exts (coerce, fromList, fromListN, toList)
+import Plutarch.Test.QuickCheck.Modifiers (GenValue (GenValue))
 import PlutusLedgerApi.V1.Time (DiffMilliSeconds (DiffMilliSeconds))
 import PlutusLedgerApi.V2 (
   Address (Address, addressCredential, addressStakingCredential),
   BuiltinByteString,
   BuiltinData,
   Credential (PubKeyCredential, ScriptCredential),
-  CurrencySymbol (CurrencySymbol),
   Data (B, Constr, I, List, Map),
   Datum (Datum),
   DatumHash (DatumHash),
@@ -35,14 +32,11 @@ import PlutusLedgerApi.V2 (
   TxOut (TxOut, txOutAddress, txOutDatum, txOutReferenceScript, txOutValue),
   TxOutRef (TxOutRef, txOutRefId, txOutRefIdx),
   ValidatorHash (ValidatorHash),
-  Value (Value),
   builtinDataToData,
   dataToBuiltinData,
   fromBuiltin,
   toBuiltin,
  )
-import qualified PlutusLedgerApi.V2 as AssocMap
-import qualified PlutusTx.AssocMap as PlutusTx
 import Test.QuickCheck (
   ASCIIString (ASCIIString),
   Arbitrary (arbitrary, shrink),
@@ -53,8 +47,6 @@ import Test.QuickCheck (
   Positive (Positive),
   functionMap,
   getNonNegative,
-  getPositive,
-  shrinkList,
  )
 import qualified Test.QuickCheck.Gen as Gen
 
@@ -175,26 +167,8 @@ instance Function DiffMilliSeconds where
   {-# INLINEABLE function #-}
   function = functionMap (coerce @_ @Integer) coerce
 
-{- | This maintains 'LedgerBytes' invariants, as follows:
-
- - Must have an even length in its representation.
- - Each byte must be the ASCII code for a hexit: that is, 0-9, a-f, A-F.
-
- @since 2.1.3
--}
-instance Arbitrary LedgerBytes where
-  {-# INLINEABLE arbitrary #-}
-  arbitrary = do
-    veryInner <- fromList <$> Gen.listOf genHexit
-    LedgerBytes . toBuiltin
-      <$> if even (BS.length veryInner)
-        then pure veryInner
-        else BS.cons <$> genHexit <*> pure veryInner
-  {-# INLINEABLE shrink #-}
-  shrink (LedgerBytes inner) =
-    let veryInner = toList . fromBuiltin $ inner
-     in [ LedgerBytes . toBuiltin $ veryInner' | veryInner' <- fromList <$> shrink veryInner, even (BS.length veryInner'), BS.all isHexit veryInner'
-        ]
+-- | @since 2.1.3
+deriving via BuiltinByteString instance Arbitrary LedgerBytes
 
 -- | @since 2.1.3
 deriving via BuiltinByteString instance CoArbitrary LedgerBytes
@@ -236,16 +210,16 @@ instance Function BuiltinData where
   {-# INLINEABLE function #-}
   function = functionMap builtinDataToData dataToBuiltinData
 
-{- | This is based on the documentation of 'DatumHash', specifically that it
- represents a SHA256 hash. In particular, this type does not shrink, as it
- wouldn't really make much sense to.
+{- | This is based on 'DatumHash' being a Blake2b-256 hash, which is 32 bytes
+ long. This type does not shrink, as it wouldn't really make much sense to.
 
  @since 2.1.3
 -}
 instance Arbitrary DatumHash where
   {-# INLINEABLE arbitrary #-}
-  arbitrary =
-    DatumHash . toBuiltin @ByteString . fromListN 32 <$> Gen.vectorOf 32 arbitrary
+  arbitrary = do
+    inner <- fromListN 32 <$> Gen.vectorOf 32 arbitrary
+    pure . DatumHash . toBuiltin @ByteString $ inner
 
 -- | @since 2.1.3
 deriving via BuiltinByteString instance CoArbitrary DatumHash
@@ -266,17 +240,16 @@ instance Function Datum where
   {-# INLINEABLE function #-}
   function = functionMap (coerce @_ @BuiltinData) coerce
 
-{- | This is based on the assumption that a 'PubKeyHash' is a Blake2b-224 hash,
- and is thus 28 bytes wide. This type does not shrink, as it wouldn't make much
- sense to.
+{- | This is based on 'PubKeyHash' being a Blake2b-224 hash, which is 28 bytes
+ long. This type does not shrink, as it wouldn't really make much sense to.
 
  @since 2.1.3
 -}
 instance Arbitrary PubKeyHash where
   {-# INLINEABLE arbitrary #-}
-  arbitrary =
-    PubKeyHash . toBuiltin @ByteString . fromListN 28
-      <$> Gen.vectorOf 28 arbitrary
+  arbitrary = do
+    inner <- fromListN 28 <$> Gen.vectorOf 28 arbitrary
+    pure . PubKeyHash . toBuiltin @ByteString $ inner
 
 -- | @since 2.1.3
 deriving via BuiltinByteString instance CoArbitrary PubKeyHash
@@ -319,24 +292,8 @@ instance Function Credential where
         PubKeyCredential pkh -> Left pkh
         ScriptCredential vh -> Right vh
 
-{- | This instance is based on the formation of a 'CurrencySymbol' as a
- hex-encoded bytestring.
-
- @since 2.1.3
--}
-deriving via BuiltinByteString instance Arbitrary CurrencySymbol
-
--- | @since 2.1.3
-deriving via BuiltinByteString instance CoArbitrary CurrencySymbol
-
--- | @since 2.1.3
-instance Function CurrencySymbol where
-  {-# INLINEABLE function #-}
-  function = functionMap (coerce @_ @BuiltinByteString) coerce
-
-{- | This is based on the documentation of 'TxId', specifically that it
- represents a SHA256 hash. In particular, this type does not shrink, as it
- wouldn't really make much sense to.
+{- | This is based on 'TxId' being a Blake2b-256 hash, which is 32 bytes
+ long. This type does not shrink, as it wouldn't really make much sense to.
 
  @since 2.1.3
 -}
@@ -350,16 +307,15 @@ instance Function TxId where
   {-# INLINEABLE function #-}
   function = functionMap (coerce @_ @BuiltinByteString) coerce
 
-{- | This is based on the documentation of 'ValidatorHash', specifically that it
- represents a SHA256 hash. In particular, this type does not shrink, as it
- wouldn't really make much sense to.
+{- | This is based on 'ValidatorHash' being a Blake2b-224 hash, which is 28 bytes
+ long. This type does not shrink, as it wouldn't really make much sense to.
 
  @since 2.1.3
 -}
-deriving via DatumHash instance Arbitrary ValidatorHash
+deriving via PubKeyHash instance Arbitrary ValidatorHash
 
 -- | @since 2.1.3
-deriving via DatumHash instance CoArbitrary ValidatorHash
+deriving via PubKeyHash instance CoArbitrary ValidatorHash
 
 -- | @since 2.1.3
 instance Function ValidatorHash where
@@ -409,10 +365,9 @@ instance Arbitrary StakingCredential where
       , StakingPtr <$> go <*> go <*> go
       ]
     where
+      -- Based on documentation bounding it to Word64
       go :: Gen Integer
-      go = do
-        NonNegative i <- arbitrary
-        pure i
+      go = fromIntegral <$> arbitrary @Word64
 
 -- | @since 2.1.3
 instance CoArbitrary StakingCredential where
@@ -513,91 +468,6 @@ instance Function TokenName where
   {-# INLINEABLE function #-}
   function = functionMap (coerce @_ @BuiltinByteString) coerce
 
-{- | This generates a phase-1 valid 'Value' meant to represent an /amount/,
- rather than a /delta/. Thus, all of the following will hold for all generated
- values and shrinks:
-
- - Entries whose 'CurrencySymbol' and 'TokenName' match are unique.
- - \'Outer\' map entries are sorted by 'CurrencySymbol'.
- - \'Inner\' map entries are sorted by 'TokenName'.
- - An ADA entry always exists: this corresponds to a mapping from the
- - 'CurrencySymbol' @""@, to the 'TokenName' @""@ and a non-negative number.
- - ADA entries have singleton \'inner maps\'.
- - Non-ADA entries have positive numbers.
-
- In order to ensure all the invariants hold, the shrinker for 'Value' can only
- do the following:
-
- - Remove non-ADA \'outer map\' entries;
- - Remove \'inner map\' entries; and
- - Change the amounts associated with an entry.
-
- More specifically, we do /not/ shrink the 'CurrencySymbol's or 'TokenName's.
-
- @since 2.1.3
--}
-instance Arbitrary Value where
-  {-# INLINEABLE arbitrary #-}
-  arbitrary =
-    Value . AssocMap.fromList <$> do
-      -- First, make an ADA entry
-      adaEntry <-
-        ("",) . AssocMap.fromList . pure . ("",) . getNonNegative <$> arbitrary
-      -- Then, generate the rest, taking care not to accidentially use "" again as
-      -- a CurrencySymbol
-      syms <- sortedUniqueOf . Gen.suchThat arbitrary $ ("" /=)
-      (adaEntry :) <$> traverse go syms
-    where
-      go ::
-        CurrencySymbol ->
-        Gen (CurrencySymbol, AssocMap.Map TokenName Integer)
-      go sym =
-        (sym,) . AssocMap.fromList <$> do
-          tokNames <- sortedUniqueNEOf arbitrary
-          traverse (\tn -> (tn,) . getPositive <$> arbitrary) tokNames
-  {-# INLINEABLE shrink #-}
-  shrink (Value inner) = case PlutusTx.toList inner of
-    -- This case is technically impossible, as we never 'shrink away' the ADA
-    -- entry.
-    [] -> error "Shrinker for Value: Empty 'outer map'."
-    (adaEntry : otherEntries) ->
-      Value . AssocMap.fromList <$> do
-        -- Handle ADA entry shrinks by only shrinking the sole amount it has in
-        -- it.
-        case adaEntry of
-          ("", adaInner) -> case PlutusTx.toList adaInner of
-            [("", adaAmount)] -> do
-              adaAmount' <- getNonNegative <$> (shrink . NonNegative $ adaAmount)
-              let adaEntry' = ("", AssocMap.fromList [("", adaAmount')])
-              -- Shrink whatever remains according to the rules.
-              otherEntries' <-
-                shrinkList (traverse (go . PlutusTx.toList)) otherEntries
-              -- Mash everything together.
-              pure $ adaEntry' : otherEntries'
-            _ -> error "Shrinker for Value: Malformed 'inner map' for ADA entry."
-          _ -> error "Shrinker for Value: Bad CurrencySymbol for ADA entry."
-    where
-      go :: [(TokenName, Integer)] -> [AssocMap.Map TokenName Integer]
-      go =
-        fmap AssocMap.fromList
-          . shrinkList (traverse (fmap getPositive . shrink . Positive))
-
--- | @since 2.1.3
-instance CoArbitrary Value where
-  {-# INLINEABLE coarbitrary #-}
-  coarbitrary (Value inner) =
-    coarbitrary (fmap (fmap PlutusTx.toList) . PlutusTx.toList $ inner)
-
--- | @since 2.1.3
-instance Function Value where
-  {-# INLINEABLE function #-}
-  function = functionMap into $ \inner ->
-    Value . AssocMap.fromList . fmap (fmap AssocMap.fromList) $ inner
-    where
-      into :: Value -> [(CurrencySymbol, [(TokenName, Integer)])]
-      into (Value inner) =
-        fmap (fmap PlutusTx.toList) . PlutusTx.toList $ inner
-
 {- | The shrinker for this type will not shrink \'out-of-arm\'. Effectively,
  this means 'NoOutputDatum' does not shrink, 'OutputDatumHash' also does not
  shrink (as 'DatumHash' doesn't), and 'OutputDatum' will shrink to other
@@ -641,16 +511,15 @@ instance Function OutputDatum where
         OutputDatumHash dh -> Just . Left $ dh
         OutputDatum dat -> Just . Right $ dat
 
-{- | This is based on the documentation of 'ScriptHash', specifically that it
- represents a SHA256 hash. In particular, this type does not shrink, as it
- wouldn't really make much sense to.
+{- | This is based on 'ScriptHash' being a Blake2b-224 hash, which is 28 bytes
+ long. This type does not shrink, as it wouldn't really make much sense to.
 
  @since 2.1.3
 -}
-deriving via DatumHash instance Arbitrary ScriptHash
+deriving via PubKeyHash instance Arbitrary ScriptHash
 
 -- | @since 2.1.3
-deriving via DatumHash instance CoArbitrary ScriptHash
+deriving via PubKeyHash instance CoArbitrary ScriptHash
 
 -- | @since 2.1.3
 instance Function ScriptHash where
@@ -662,7 +531,7 @@ instance Arbitrary TxOut where
   {-# INLINEABLE arbitrary #-}
   arbitrary = do
     addr <- arbitrary
-    val <- arbitrary
+    GenValue val <- arbitrary @(GenValue NonNegative Positive)
     outDatum <- arbitrary
     refScript <- arbitrary
     pure $
@@ -675,7 +544,7 @@ instance Arbitrary TxOut where
   {-# INLINEABLE shrink #-}
   shrink txOut = do
     -- We skip Address, as it doesn't shrink anyway
-    val' <- shrink . txOutValue $ txOut
+    GenValue val' <- shrink . GenValue @NonNegative @Positive . txOutValue $ txOut
     outDatum' <- shrink . txOutDatum $ txOut
     refScript' <- shrink . txOutReferenceScript $ txOut
     pure $
@@ -690,14 +559,14 @@ instance CoArbitrary TxOut where
   {-# INLINEABLE coarbitrary #-}
   coarbitrary txOut =
     coarbitrary (txOutAddress txOut)
-      . coarbitrary (txOutValue txOut)
+      . coarbitrary (GenValue @NonNegative @Positive . txOutValue $ txOut)
       . coarbitrary (txOutDatum txOut)
       . coarbitrary (txOutReferenceScript txOut)
 
 -- | @since 2.1.3
 instance Function TxOut where
   {-# INLINEABLE function #-}
-  function = functionMap into $ \(addr, val, outDatum, refScript) ->
+  function = functionMap into $ \(addr, GenValue val, outDatum, refScript) ->
     TxOut
       { txOutAddress = addr
       , txOutValue = val
@@ -707,10 +576,10 @@ instance Function TxOut where
     where
       into ::
         TxOut ->
-        (Address, Value, OutputDatum, Maybe ScriptHash)
+        (Address, GenValue NonNegative Positive, OutputDatum, Maybe ScriptHash)
       into txOut =
         ( txOutAddress txOut
-        , txOutValue txOut
+        , GenValue . txOutValue $ txOut
         , txOutDatum txOut
         , txOutReferenceScript txOut
         )
@@ -727,49 +596,3 @@ vectorOfUpTo ::
 vectorOfUpTo lim gen = Gen.sized $ \size -> do
   len <- Gen.chooseInt (0, min size lim)
   Gen.vectorOf len gen
-
--- Uses the given generator to produce a list that's unique and sorted.
---
--- TODO: Use a combination nub-sort for speed.
-sortedUniqueOf ::
-  forall (a :: Type).
-  (Ord a) =>
-  Gen a ->
-  Gen [a]
-sortedUniqueOf gen = sort . nub <$> Gen.listOf gen
-
--- Uses the given generator to produce a list that's non-empty, unique and
--- sorted.
---
--- TODO: Use a combination nub-sort for speed.
-sortedUniqueNEOf ::
-  forall (a :: Type).
-  (Ord a) =>
-  Gen a ->
-  Gen [a]
-sortedUniqueNEOf gen = do
-  x <- gen
-  xs <- Gen.listOf gen
-  pure . sort . nub $ x : xs
-
--- Generates an ASCII hexit byte
-genHexit :: Gen Word8
-genHexit =
-  Gen.frequency
-    [ -- 0..9
-      (5, Gen.elements [48 .. 57])
-    , -- a..f
-      (3, Gen.elements [97 .. 102])
-    , -- A..F
-      (3, Gen.elements [65 .. 70])
-    ]
-
--- Checks if we're an ASCII hexit byte
-isHexit :: Word8 -> Bool
-isHexit w8 =
-  if
-      | w8 < 48 -> False -- out of range
-      | w8 > 102 -> False -- out of range
-      | w8 > 57 && w8 < 65 -> False -- between 9 and A
-      | w8 > 70 && w8 < 97 -> False -- between F and a
-      | otherwise -> True

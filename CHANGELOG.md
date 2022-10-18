@@ -2,12 +2,16 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-## 2.1.3 -- 2022-10-17
+## 2.1.3 -- 2022-10-19
 
 ### Added
 
 * `Plutarch.Test.QuickCheck.Instances` module, containing orphan instances for
   QuickCheck type classes for many Plutus types.
+* `Plutarch.Test.QuickCheck.Modifiers` module, containing newtype wrappers to
+  aid QuickCheck use with types that can be generated in multiple ways:
+  * `CurrencySymbol`, with an option to include or exclude the ADA symbol
+  * `Value`, with the ability to control ADA and non-ADA entry amounts
 * Tests to ensure generators are behaving themselves. Currently only has tests
   for `Value`.
 

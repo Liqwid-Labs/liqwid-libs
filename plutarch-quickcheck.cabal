@@ -87,6 +87,7 @@ library
   exposed-modules:
     Plutarch.Test.QuickCheck
     Plutarch.Test.QuickCheck.Instances
+    Plutarch.Test.QuickCheck.Modifiers
 
   other-modules:
     Plutarch.Test.QuickCheck.Function
@@ -142,7 +143,6 @@ test-suite instances
   main-is:        Main.hs
   other-modules:
     Helpers
-    LedgerBytes
     Value
 
   build-depends:
