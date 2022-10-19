@@ -6,7 +6,9 @@ import PlutusLedgerApi.V2 (TokenName, Value (Value))
 import qualified PlutusTx.AssocMap as AssocMap
 import Test.QuickCheck (
   Arbitrary (arbitrary, shrink),
-  Property, NonNegative (NonNegative), Positive (Positive),
+  NonNegative (NonNegative),
+  Positive (Positive),
+  Property,
   conjoin,
   counterexample,
   discard,
@@ -34,35 +36,35 @@ properties =
 -- - Non-empty
 -- - First entry must be the ADA symbol
 propCSKeys :: Property
-propCSKeys = forAllShrinkShow arbitrary shrink ppShow $ 
-  \(GenValue @NonNegative @Positive (Value rep)) ->
+propCSKeys = forAllShrinkShow arbitrary shrink ppShow $
+  \((GenValue (Value rep)) :: GenValue NonNegative Positive) ->
     case fst <$> AssocMap.toList rep of
       [] -> counterexample "Empty 'outer map'." failProperty
       keys@(sym : _) -> sortedUnique keys .&&. (sym === "")
 
 -- The ADA entry should be a singleton map, with the ADA token name as a key
 propAdaInner :: Property
-propAdaInner = forAllShrinkShow arbitrary shrink ppShow $ 
-  \(GenValue @NonNegative @Positive (Value rep)) ->
-  case AssocMap.lookup "" rep of
-    Nothing -> counterexample "ADA entry not found." failProperty
-    Just inner -> case AssocMap.toList inner of
-      [] -> counterexample "ADA entry has empty 'inner map'." failProperty
-      [(tn, _)] -> tn === ""
-      _ -> counterexample "ADA entry is not a singleton." failProperty
+propAdaInner = forAllShrinkShow arbitrary shrink ppShow $
+  \((GenValue (Value rep)) :: GenValue NonNegative Positive) ->
+    case AssocMap.lookup "" rep of
+      Nothing -> counterexample "ADA entry not found." failProperty
+      Just inner -> case AssocMap.toList inner of
+        [] -> counterexample "ADA entry has empty 'inner map'." failProperty
+        [(tn, _)] -> tn === ""
+        _ -> counterexample "ADA entry is not a singleton." failProperty
 
 -- A non-ADA entry should:
 -- - Be non-empty
 -- - Have sorted, unique keys
 propOtherInner :: Property
-propOtherInner = forAllShrinkShow arbitrary shrink ppShow $ 
-  \(GenValue @NonNegative @Positive (Value rep)) ->
-  case AssocMap.toList rep of
-    [] -> counterexample "Empty 'outer map'." failProperty
-    [_] -> discard
-    (_ : rest) ->
-      let inners = AssocMap.toList . snd <$> rest
-       in conjoin $ go <$> inners
+propOtherInner = forAllShrinkShow arbitrary shrink ppShow $
+  \((GenValue (Value rep)) :: GenValue NonNegative Positive) ->
+    case AssocMap.toList rep of
+      [] -> counterexample "Empty 'outer map'." failProperty
+      [_] -> discard
+      (_ : rest) ->
+        let inners = AssocMap.toList . snd <$> rest
+         in conjoin $ go <$> inners
   where
     go :: [(TokenName, Integer)] -> Property
     go = \case

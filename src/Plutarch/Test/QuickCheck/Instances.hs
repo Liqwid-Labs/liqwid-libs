@@ -544,7 +544,8 @@ instance Arbitrary TxOut where
   {-# INLINEABLE shrink #-}
   shrink txOut = do
     -- We skip Address, as it doesn't shrink anyway
-    GenValue val' <- shrink . GenValue @NonNegative @Positive . txOutValue $ txOut
+    GenValue val' :: GenValue NonNegative Positive <-
+      shrink . GenValue . txOutValue $ txOut
     outDatum' <- shrink . txOutDatum $ txOut
     refScript' <- shrink . txOutReferenceScript $ txOut
     pure $
@@ -559,7 +560,7 @@ instance CoArbitrary TxOut where
   {-# INLINEABLE coarbitrary #-}
   coarbitrary txOut =
     coarbitrary (txOutAddress txOut)
-      . coarbitrary (GenValue @NonNegative @Positive . txOutValue $ txOut)
+      . coarbitrary ((GenValue . txOutValue $ txOut) :: GenValue NonNegative Positive)
       . coarbitrary (txOutDatum txOut)
       . coarbitrary (txOutReferenceScript txOut)
 
