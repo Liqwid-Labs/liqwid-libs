@@ -68,7 +68,7 @@ import Plutarch.Test.QuickCheck.Function (
   pattern PFn,
  )
 import Plutarch.Test.QuickCheck.Helpers (loudEval)
-import Plutarch.Test.QuickCheck.Instances (
+import Plutarch.Test.QuickCheck.Internal (
   PArbitrary (..),
   PCoArbitrary (..),
   TestableTerm (..),
@@ -409,7 +409,8 @@ instance
   HaskEquiv 'OnBoth 'ByComplete h p '[]
   where
   haskEquiv h p _ =
-    haskEquiv @( 'OnPEq) @( 'ByComplete) h p Nil .&&. haskEquiv @( 'OnPData) @( 'ByComplete) h p Nil
+    haskEquiv @( 'OnPEq) @( 'ByComplete) h p Nil
+      .&&. haskEquiv @( 'OnPData) @( 'ByComplete) h p Nil
 
 {- | Simplified version of `haskEquiv`. It will use arbitrary instead of
      asking custom generators.
