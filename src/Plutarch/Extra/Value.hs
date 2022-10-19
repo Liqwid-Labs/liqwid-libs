@@ -42,7 +42,9 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Tagged (Tagged (Tagged))
 import GHC.TypeLits (Symbol)
-import Optics.Getter (view)
+import Optics.Getter (A_Getter, view)
+import Optics.Internal.Optic (Is)
+import Optics.Label (LabelOptic')
 import Plutarch.Api.V1 (
   AmountGuarantees (NonZero),
   PCurrencySymbol,
@@ -71,6 +73,7 @@ import Plutarch.Extra.Maybe (pexpectJustC)
 import Plutarch.Extra.Ord (PComparator, pfromOrdBy)
 import Plutarch.Extra.Tagged (PTagged (PTagged))
 import Plutarch.Extra.TermCont (pmatchC)
+import PlutusLedgerApi.V2 (CurrencySymbol, TokenName)
 
 --------------------------------------------------------------------------------
 
@@ -135,17 +138,24 @@ psingleValue = phoistAcyclic $
  @since 3.10.0
 -}
 psingleValue' ::
-  forall (k :: KeyGuarantees) (s :: S).
-  AssetClass ->
+  forall (keys :: KeyGuarantees) (a :: Type) (k :: Type) (s :: S).
+  ( Is k A_Getter
+  , LabelOptic' "symbol" k a CurrencySymbol
+  , LabelOptic' "name" k a TokenName
+  ) =>
+  a ->
   Term
     s
     ( PInteger
         :--> PBuiltinPair
               (PAsData PCurrencySymbol)
-              (PAsData (PMap k PTokenName PInteger))
+              (PAsData (PMap keys PTokenName PInteger))
     )
-psingleValue' (AssetClass sym tk) =
-  phoistAcyclic $ psingleValue # pconstantData sym # pconstantData tk
+psingleValue' ac =
+  phoistAcyclic $
+    psingleValue
+      # pconstantData (view #symbol ac)
+      # pconstantData (view #name ac)
 
 {- | Tagged version of `psingleValue'`.
 
@@ -227,13 +237,22 @@ padaOf = phoistAcyclic $
  @since 3.9.0
 -}
 passetClassValueOf' ::
-  forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
-  AssetClass ->
+  forall
+    (keys :: KeyGuarantees)
+    (amounts :: AmountGuarantees)
+    (a :: Type)
+    (k :: Type)
+    (s :: S).
+  ( Is k A_Getter
+  , LabelOptic' "symbol" k a CurrencySymbol
+  , LabelOptic' "name" k a TokenName
+  ) =>
+  a ->
   Term s (PValue keys amounts :--> PInteger)
-passetClassValueOf' (AssetClass sym token) =
+passetClassValueOf' ac =
   phoistAcyclic $
     plam $ \value ->
-      Value.pvalueOf # value # pconstant sym # pconstant token
+      Value.pvalueOf # value # pconstant (view #symbol ac) # pconstant (view #name ac)
 
 {- | Tagged version of `passetClassValueOf'`.
 
