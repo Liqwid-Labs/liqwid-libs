@@ -39,7 +39,6 @@ module Plutarch.Extra.AssetClass (
 
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
 import Data.Tagged (Tagged (Tagged, unTagged), untag)
-import GHC.TypeLits (Symbol)
 import qualified Generics.SOP as SOP
 import Optics.Getter (A_Getter, view)
 import Optics.Internal.Optic (A_Lens, Is, (%%))
@@ -150,9 +149,9 @@ passetClass = phoistAcyclic $
   plam $ \sym tk ->
     pcon $ PAssetClass (pdata sym) (pdata tk)
 
--- | @since 3.10.0
+-- | @since 3.10.4
 passetClassT ::
-  forall (unit :: Symbol) (s :: S).
+  forall {k :: Type} (unit :: k) (s :: S).
   Term s (PCurrencySymbol :--> PTokenName :--> PTagged unit PAssetClass)
 passetClassT = phoistAcyclic $
   plam $ \sym tk ->
@@ -173,9 +172,9 @@ pconstantClass ac =
       (pconstantData $ view #symbol ac)
       (pconstantData $ view #name ac)
 
--- | @since 3.10.0
+-- | @since 3.10.4
 pconstantClassT ::
-  forall (unit :: Symbol) (s :: S).
+  forall {k :: Type} (unit :: k) (s :: S).
   Tagged unit AssetClass ->
   Term s (PTagged unit PAssetClass)
 pconstantClassT (Tagged (AssetClass sym tk)) =
@@ -192,10 +191,10 @@ psymbolAssetClass = phoistAcyclic $
     pcon $ PAssetClass (pdata sym) emptyTokenNameData
 
 {- | Tagged version of `psymbolAssetClass`
- @since 3.10.0
+ @since 3.10.4
 -}
 psymbolAssetClassT ::
-  forall (unit :: Symbol) (s :: S).
+  forall {k :: Type} (unit :: k) (s :: S).
   Term s (PCurrencySymbol :--> PTagged unit PAssetClass)
 psymbolAssetClassT = phoistAcyclic $
   plam $ \sym ->
@@ -304,9 +303,9 @@ passetClassData = phoistAcyclic $
           .& #name .= pdata tk
       )
 
--- | @since 3.10.0
+-- | @since 3.10.4
 passetClassDataT ::
-  forall (unit :: Symbol) (s :: S).
+  forall {k :: Type} (unit :: k) (s :: S).
   Term s (PCurrencySymbol :--> PTokenName :--> PTagged unit PAssetClassData)
 passetClassDataT = phoistAcyclic $
   plam $ \sym tk ->
@@ -314,7 +313,7 @@ passetClassDataT = phoistAcyclic $
 
 {- | Convert from 'PAssetClassData' to 'PAssetClass'.
 
- @since 3.10.3
+ @since 3.10.4
 -}
 ptoScottEncoding ::
   forall (s :: S).
@@ -330,7 +329,7 @@ ptoScottEncoding = phoistAcyclic $
 
 {- | Convert from 'PAssetClass' to 'PAssetClassData'.
 
- @since 3.10.3
+ @since 3.10.4
 -}
 pfromScottEncoding ::
   forall (s :: S).
@@ -347,7 +346,7 @@ pfromScottEncoding = phoistAcyclic $
 {- | Wrap a function using the Scott-encoded 'PAssetClass' to one using the
  'PlutusTx.Data'-encoded version.
 
- @since 3.10.3
+ @since 3.10.4
 -}
 pviaScottEncoding ::
   forall (a :: PType).
@@ -359,10 +358,10 @@ pviaScottEncoding fn = phoistAcyclic $
 
 {- | Version of 'assetClassValue' for tagged 'AssetClass' and 'Tagged'.
 
- @since 3.9.0
+ @since 3.10.4
 -}
 assetClassValue ::
-  forall (unit :: Symbol).
+  forall {k :: Type} (unit :: k).
   Tagged unit AssetClass ->
   Tagged unit Integer ->
   Value.Value
