@@ -2,6 +2,12 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 2.6.1 -- 2022-10-20
+
+### Added
+
+* `continuing` and `continuingWith`, allowing easy continuing of 'Value'.
+
 ## 2.6.0 -- 2022-09-27
 
 ### Modified
