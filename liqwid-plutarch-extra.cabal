@@ -142,6 +142,8 @@ library
     , plutarch-extra
     , plutarch-numeric
     , plutus-core
+    , ply-core
+    , ply-plutarch
     , serialise
     , tagged
     , text
