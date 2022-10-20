@@ -24,6 +24,8 @@ module Plutarch.Context.Base (
   -- * Modular constructors
   output,
   input,
+  continuing,
+  continuingWith,
   referenceInput,
   address,
   credential,
@@ -783,6 +785,58 @@ referenceInput ::
   a
 referenceInput x =
   pack . set #referenceInputs (pure x) $ (mempty :: BaseBuilder)
+
+{- | As 'continuingWith', but assumes the \'continued\' 'Value' does not change.
+ Useful for state tokens.
+
+ @since 2.6.1
+-}
+continuing ::
+  forall (a :: Type).
+  (Builder a, Semigroup a) =>
+  -- | How the continued 'UTXO' should transform from input to output
+  (UTXO -> UTXO) ->
+  -- | Input 'UTXO'
+  UTXO ->
+  -- | 'Value' to continue through
+  Value ->
+  a
+continuing = continuingWith id
+
+{- | Specify that a 'UTXO' 'Value' should \'continue\'. More precisely, this
+ acts as a combination of 'input' and 'output', where a \'Value\' is supposed
+ to \'continue through\', possibly with modifications along the way. This also
+ assumes that the input itself continues through, again, possibly with
+ modifications.
+
+ This function is designed to be maximally general. If you don't need the
+ continued 'Value' to change, use 'continuing'; if you don't need the rest
+ of the UTXO to change in the output, pass 'id'.
+
+ = Note
+
+ The 'Value' transformation function will affect only the continued 'Value';
+ thus, if the UTXO was built with additional 'withValue's, those will not be
+ affected by the application of the 'Value' transformation function between
+ input and output.
+
+ @since 2.6.1
+-}
+continuingWith ::
+  forall (a :: Type).
+  (Builder a, Semigroup a) =>
+  -- | How the continued 'Value' should transform from input to output
+  (Value -> Value) ->
+  -- | How the continued 'UTXO' should transform from input to output
+  (UTXO -> UTXO) ->
+  -- | Input 'UTXO'
+  UTXO ->
+  -- | 'Value' to continue through
+  Value ->
+  a
+continuingWith deltaV deltaU inUTXO val =
+  input (withValue val <> inUTXO)
+    <> output (withValue (deltaV val) <> deltaU inUTXO)
 
 {- | Provide base @TxInfo@ to Continuation Monad.
 

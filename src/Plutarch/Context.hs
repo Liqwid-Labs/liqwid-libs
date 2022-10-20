@@ -15,6 +15,8 @@ module Plutarch.Context (
   B.address,
   B.input,
   B.referenceInput,
+  B.continuing,
+  B.continuingWith,
   B.credential,
   B.pubKey,
   B.script,
