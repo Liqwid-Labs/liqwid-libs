@@ -64,6 +64,14 @@ import Plutarch.Orphans ()
 import PlutusLedgerApi.V1.Value (CurrencySymbol, TokenName)
 import qualified PlutusLedgerApi.V1.Value as Value
 import qualified PlutusTx
+import Ply.Core.Class (
+  PlyArg (
+    UPLCRep,
+    toBuiltinArg,
+    toBuiltinArgData
+  ),
+ )
+import Ply.Plutarch (PlyArgOf)
 
 --------------------------------------------------------------------------------
 -- AssetClass & Variants
@@ -390,3 +398,18 @@ instance
   LabelOptic "name" k (Tagged tag AssetClass) (Tagged tag' AssetClass) a b
   where
   labelOptic = #unTagged %% #name
+
+----------------------------------------
+-- Ply instances
+
+-- | @since 3.10.4
+instance PlyArg AssetClass where
+  type UPLCRep AssetClass = [PlutusTx.Data]
+  toBuiltinArg ac =
+    case PlutusTx.toData @AssetClass ac of
+      PlutusTx.List x -> x
+      _ -> error "unreachable"
+  toBuiltinArgData = PlutusTx.toData
+
+-- | @since 3.10.4
+type instance PlyArgOf PAssetClassData = AssetClass
