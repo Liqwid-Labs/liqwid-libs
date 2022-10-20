@@ -314,11 +314,11 @@ passetClassDataT = phoistAcyclic $
 
 {- | Convert from 'PAssetClassData' to 'PAssetClass'.
 
- @since 3.9.0
+ @since 3.10.3
 -}
 ptoScottEncoding ::
   forall (s :: S).
-  Term s (PAsData PAssetClassData :--> PAssetClass)
+  Term s (PAssetClassData :--> PAssetClass)
 ptoScottEncoding = phoistAcyclic $
   plam $ \cls ->
     pletFields @["symbol", "name"] cls $
@@ -330,30 +330,29 @@ ptoScottEncoding = phoistAcyclic $
 
 {- | Convert from 'PAssetClass' to 'PAssetClassData'.
 
- @since 3.9.0
+ @since 3.10.3
 -}
 pfromScottEncoding ::
   forall (s :: S).
-  Term s (PAssetClass :--> PAsData PAssetClassData)
+  Term s (PAssetClass :--> PAssetClassData)
 pfromScottEncoding = phoistAcyclic $
   plam $ \cls -> pmatch cls $
     \(PAssetClass sym tk) ->
-      pdata $
-        mkRecordConstr
-          PAssetClassData
-          ( #symbol .= sym
-              .& #name .= tk
-          )
+      mkRecordConstr
+        PAssetClassData
+        ( #symbol .= sym
+            .& #name .= tk
+        )
 
 {- | Wrap a function using the Scott-encoded 'PAssetClass' to one using the
  'PlutusTx.Data'-encoded version.
 
- @since 3.9.0
+ @since 3.10.3
 -}
 pviaScottEncoding ::
   forall (a :: PType).
   ClosedTerm (PAssetClass :--> a) ->
-  ClosedTerm (PAsData PAssetClassData :--> a)
+  ClosedTerm (PAssetClassData :--> a)
 pviaScottEncoding fn = phoistAcyclic $
   plam $ \cls ->
     fn #$ ptoScottEncoding # cls
