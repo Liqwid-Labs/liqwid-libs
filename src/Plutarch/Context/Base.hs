@@ -813,6 +813,13 @@ continuing = continuingWith id
  continued 'Value' to change, use 'continuing'; if you don't need the rest
  of the UTXO to change in the output, pass 'id'.
 
+ = Note
+
+ The 'Value' transformation function will affect only the continued 'Value';
+ thus, if the UTXO was built with additional 'withValue's, those will not be
+ affected by the application of the 'Value' transformation function between
+ input and output.
+
  @since 2.6.1
 -}
 continuingWith ::
