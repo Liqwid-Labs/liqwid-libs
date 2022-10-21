@@ -7,6 +7,11 @@ module Plutarch.Test.QuickCheck.Modifiers (
   AdaSymbolPresence (..),
   GenCurrencySymbol (..),
   GenValue (..),
+  TimeDelta,
+
+  -- * Functions
+  timeDeltaProperty,
+  withTimeDelta,
 ) where
 
 import Control.Monad (guard)
@@ -16,10 +21,14 @@ import Data.Char (ord)
 import Data.Coerce (Coercible, coerce)
 import Data.Kind (Type)
 import Data.List (nub, sort)
+import Data.Proxy (Proxy (Proxy))
+import Data.Semigroup (Sum (Sum))
 import Data.Word (Word8)
 import GHC.Exts (fromList, fromListN, toList)
+import GHC.TypeNats (KnownNat, Nat, natVal, type (<=))
 import PlutusLedgerApi.V2 (
   CurrencySymbol (CurrencySymbol),
+  POSIXTime (POSIXTime),
   TokenName (TokenName),
   Value (Value),
   fromBuiltin,
@@ -32,6 +41,14 @@ import Test.QuickCheck (
   CoArbitrary (coarbitrary),
   Function (function),
   Gen,
+  Negative (Negative),
+  NonNegative (NonNegative),
+  NonPositive (NonPositive),
+  NonZero (NonZero),
+  Positive (Positive),
+  Property,
+  counterexample,
+  property,
   shrinkList,
  )
 import Test.QuickCheck.Function (functionMap)
@@ -292,6 +309,198 @@ instance Function (GenValue adaMod otherMod) where
   {-# INLINEABLE function #-}
   function = functionMap unwrap rewrap
 
+{- | Represents a change in 'POSIXTime'. The @mod@ argument gives the kind of
+ change, represented by a QuickCheck modifier, while the @n@ argument is a
+ closed (inclusive) upper bound on the magnitude of the change.
+
+ For example, @'TimeDelta' 'Positive' 100@ represents a change in 'POSIXTime'
+ from @1@ to @100@ units, while @'TimeDelta' 'NonPositive' 250@ represents a
+ change in 'POSIXTime' from @0@ to @-250@. Modifiers intended to work with
+ this type are:
+
+ - 'Positive'
+ - 'Negative'
+ - 'NonPositive'
+ - 'NonNegative'
+ - 'NonZero'
+
+ The instances for 'TimeDelta' reflect this decision: while other modifiers
+ could potentially be useful, this ensures that we have safe behaviour and
+ efficient instances.
+
+ 'NonZero' is treated a bit specially in that the magnitude indicated by @n@
+ is in both the negative /and/ positive direction. Thus,
+ @'TimeDelta' 'NonZero' 50@ spans the union of @[-50, -1]@ and @[1, 50]@.
+
+ Shrinking a 'TimeDelta' will shrink towards zero: more specifically, it will
+ reduce the magnitude of the change.
+
+ To control what 'TimeDelta' you get, the easiest method is a type signature:
+
+ > forAll arbitrary $ \(delta :: TimeDelta NonNegative 100) -> ...
+
+ @since 2.1.4
+-}
+newtype TimeDelta (mod :: Type -> Type) (n :: Nat)
+  = TimeDelta (mod POSIXTime)
+
+-- | @since 2.1.4
+deriving via
+  (mod POSIXTime)
+  instance
+    (forall (a :: Type). (Eq a) => Eq (mod a)) =>
+    Eq (TimeDelta mod n)
+
+-- | @since 2.1.4
+deriving stock instance
+  (forall (a :: Type). (Show a) => Show (mod a)) =>
+  Show (TimeDelta mod n)
+
+{- | Strictly positive deltas are semigroups under addition.
+
+ @since 2.1.4
+-}
+deriving via (Sum Integer) instance Semigroup (TimeDelta Positive n)
+
+{- | Strictly negative deltas are semigroups under addition.
+
+ @since 2.1.4
+-}
+deriving via (Sum Integer) instance Semigroup (TimeDelta Negative n)
+
+{- | Non-negative deltas are semigroups under addition.
+
+ @since 2.1.4
+-}
+deriving via (Sum Integer) instance Semigroup (TimeDelta NonNegative n)
+
+{- | Non-positive deltas are semigroups under addition.
+
+ @since 2.1.4
+-}
+deriving via (Sum Integer) instance Semigroup (TimeDelta NonPositive n)
+
+{- | Non-negative deltas are monoids with the zero delta as the identity.
+
+ @since 2.1.4
+-}
+deriving via (Sum Integer) instance Monoid (TimeDelta NonNegative n)
+
+{- | Non-positive deltas are monoids with the zero delta as the identity.
+
+ @since 2.1.4
+-}
+deriving via (Sum Integer) instance Monoid (TimeDelta NonPositive n)
+
+-- | @since 2.1.4
+instance (KnownNat n, 1 <= n) => Arbitrary (TimeDelta NonZero n) where
+  {-# INLINEABLE arbitrary #-}
+  arbitrary =
+    let v = integerVal @n
+     in coerce
+          <$> Gen.oneof
+            [ Gen.chooseInteger (negate v, -1)
+            , Gen.chooseInteger (1, v)
+            ]
+  {-# INLINEABLE shrink #-}
+  shrink = coerce @(NonZero Integer -> [NonZero Integer]) shrink
+
+-- | @since 2.1.4
+instance (KnownNat n, 1 <= n) => Arbitrary (TimeDelta Positive n) where
+  {-# INLINEABLE arbitrary #-}
+  arbitrary = coerce <$> Gen.chooseInteger (1, integerVal @n)
+  {-# INLINEABLE shrink #-}
+  shrink = coerce @(Positive Integer -> [Positive Integer]) shrink
+
+-- | @since 2.1.4
+instance (KnownNat n, 1 <= n) => Arbitrary (TimeDelta Negative n) where
+  {-# INLINEABLE arbitrary #-}
+  arbitrary = coerce <$> Gen.chooseInteger (negate (integerVal @n), negate 1)
+  {-# INLINEABLE shrink #-}
+  shrink = coerce @(Negative Integer -> [Negative Integer]) shrink
+
+-- | @since 2.1.4
+instance (KnownNat n) => Arbitrary (TimeDelta NonPositive n) where
+  {-# INLINEABLE arbitrary #-}
+  arbitrary = coerce <$> Gen.chooseInteger (negate (integerVal @n), 0)
+  {-# INLINEABLE shrink #-}
+  shrink = coerce @(NonPositive Integer -> [NonPositive Integer]) shrink
+
+-- | @since 2.1.4
+instance (KnownNat n) => Arbitrary (TimeDelta NonNegative n) where
+  {-# INLINEABLE arbitrary #-}
+  arbitrary = coerce <$> Gen.chooseInteger (0, integerVal @n)
+  {-# INLINEABLE shrink #-}
+  shrink = coerce @(NonNegative Integer -> [NonNegative Integer]) shrink
+
+-- | @since 2.1.4
+deriving via
+  (mod Integer)
+  instance
+    ( forall (a :: Type) (b :: Type).
+      ( Coercible a b => Coercible (mod a) (mod b)
+      )
+    , CoArbitrary (mod Integer)
+    ) =>
+    CoArbitrary (TimeDelta mod n)
+
+-- | @since 2.1.4
+instance
+  (forall (a :: Type) (b :: Type). Coercible a b => Coercible (mod a) b) =>
+  Function (TimeDelta mod n)
+  where
+  {-# INLINEABLE function #-}
+  function = functionMap (coerce @(TimeDelta mod n) @Integer) coerce
+
+{- | A CPS-style 'Property' handler for applying a 'TimeDelta' to a 'POSIXTime'.
+ If the application of the delta to the time would produce an impossible
+ result (that is, the resulting time is negative), this will automatically
+ fail the property test with an informative message; otherwise, it will apply
+ the delta, and produce a new 'POSIXTime', which it will pass to the function
+ argument to determine the outcome.
+
+ The arguments are ordered to conveniently use with `forAll` and similar.
+
+ @since 2.1.4
+-}
+timeDeltaProperty ::
+  forall (n :: Nat) (mod :: Type -> Type).
+  (Coercible (mod POSIXTime) Integer) =>
+  (POSIXTime -> Property) ->
+  POSIXTime ->
+  TimeDelta mod n ->
+  Property
+timeDeltaProperty f time (TimeDelta d) = case signum (time + coerce d) of
+  (-1) -> counterexample badConversion . property $ False
+  d' -> f . coerce $ d'
+  where
+    badConversion :: String
+    badConversion =
+      "Applying a TimeDelta would yield a negative time.\n"
+        <> "Delta: "
+        <> (show . coerce @_ @Integer $ d)
+        <> "\n"
+        <> "Time: "
+        <> show time
+
+{- | A generic CPS-style handler for the application of a 'TimeDelta'. The
+ handler function argument will be passed 'Nothing' if applying the
+ 'TimeDelta' would produce an impossible (that is, negative) 'POSIXTime', and
+ a 'Just' with the new 'POSIXTime' otherwise.
+
+ @since 2.1.4
+-}
+withTimeDelta ::
+  forall (n :: Nat) (mod :: Type -> Type) (r :: Type).
+  (Coercible (mod POSIXTime) Integer) =>
+  (Maybe POSIXTime -> r) ->
+  POSIXTime ->
+  TimeDelta mod n ->
+  r
+withTimeDelta f time (TimeDelta d) = case signum (time + coerce d) of
+  (-1) -> f Nothing
+  d' -> f . Just . coerce $ d'
+
 -- Helpers
 
 unwrap ::
@@ -384,3 +593,6 @@ coerciveShrink =
   fmap (coerce @(mod Integer) @Integer)
     . shrink
     . coerce @Integer @(mod Integer)
+
+integerVal :: forall (n :: Nat). (KnownNat n) => Integer
+integerVal = fromIntegral . natVal $ Proxy @n
