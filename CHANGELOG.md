@@ -7,8 +7,9 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 ### Added
 
 * Newtype wrapper `TimeDelta` for generating bounded changes in `POSIXTime`.
-* Function `withTimeDelta` for CPS-style consumption of `TimeDelta`s in the
-  context of a `Property`.
+* Function `withTimeDelta` for CPS-style consumption of `TimeDelta`s.
+* Function `timeDeltaProperty` for CPS-style consumption of `TimeDelta`s in a
+  `Property` context.
 
 ## 2.1.3 -- 2022-10-20
 

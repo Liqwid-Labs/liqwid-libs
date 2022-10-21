@@ -10,6 +10,7 @@ module Plutarch.Test.QuickCheck.Modifiers (
   TimeDelta,
 
   -- * Functions
+  timeDeltaProperty,
   withTimeDelta,
 ) where
 
@@ -43,6 +44,7 @@ import Test.QuickCheck (
   Negative (Negative),
   NonNegative (NonNegative),
   NonPositive (NonPositive),
+  NonZero (NonZero),
   Positive (Positive),
   Property,
   counterexample,
@@ -320,10 +322,15 @@ instance Function (GenValue adaMod otherMod) where
  - 'Negative'
  - 'NonPositive'
  - 'NonNegative'
+ - 'NonZero'
 
  The instances for 'TimeDelta' reflect this decision: while other modifiers
  could potentially be useful, this ensures that we have safe behaviour and
  efficient instances.
+
+ 'NonZero' is treated a bit specially in that the magnitude indicated by @n@
+ is in both the negative /and/ positive direction. Thus,
+ @'TimeDelta' 'NonZero' 50@ spans the union of @[-50, -1]@ and @[1, 50]@.
 
  Shrinking a 'TimeDelta' will shrink towards zero: more specifically, it will
  reduce the magnitude of the change.
@@ -386,6 +393,19 @@ deriving via (Sum Integer) instance Monoid (TimeDelta NonNegative n)
 deriving via (Sum Integer) instance Monoid (TimeDelta NonPositive n)
 
 -- | @since 2.1.4
+instance (KnownNat n, 1 <= n) => Arbitrary (TimeDelta NonZero n) where
+  {-# INLINEABLE arbitrary #-}
+  arbitrary =
+    let v = integerVal @n
+     in coerce
+          <$> Gen.oneof
+            [ Gen.chooseInteger (negate v, -1)
+            , Gen.chooseInteger (1, v)
+            ]
+  {-# INLINEABLE shrink #-}
+  shrink = coerce @(NonZero Integer -> [NonZero Integer]) shrink
+
+-- | @since 2.1.4
 instance (KnownNat n, 1 <= n) => Arbitrary (TimeDelta Positive n) where
   {-# INLINEABLE arbitrary #-}
   arbitrary = coerce <$> Gen.chooseInteger (1, integerVal @n)
@@ -432,34 +452,54 @@ instance
   {-# INLINEABLE function #-}
   function = functionMap (coerce @(TimeDelta mod n) @Integer) coerce
 
-{- | A CPS-style 'Testable' handler for applying a 'TimeDelta' to a 'POSIXTime'.
+{- | A CPS-style 'Property' handler for applying a 'TimeDelta' to a 'POSIXTime'.
  If the application of the delta to the time would produce an impossible
  result (that is, the resulting time is negative), this will automatically
  fail the property test with an informative message; otherwise, it will apply
  the delta, and produce a new 'POSIXTime', which it will pass to the function
  argument to determine the outcome.
 
+ The arguments are ordered to conveniently use with `forAll` and similar.
+
  @since 2.1.4
 -}
-withTimeDelta ::
+timeDeltaProperty ::
   forall (n :: Nat) (mod :: Type -> Type).
   (Coercible (mod POSIXTime) Integer) =>
-  TimeDelta mod n ->
-  POSIXTime ->
   (POSIXTime -> Property) ->
+  POSIXTime ->
+  TimeDelta mod n ->
   Property
-withTimeDelta (TimeDelta d) time f = case signum (time + coerce d) of
+timeDeltaProperty f time (TimeDelta d) = case signum (time + coerce d) of
   (-1) -> counterexample badConversion . property $ False
   d' -> f . coerce $ d'
   where
     badConversion :: String
     badConversion =
-      "Applying a TimeDelta would yield an impossible time.\n"
+      "Applying a TimeDelta would yield a negative time.\n"
         <> "Delta: "
         <> (show . coerce @_ @Integer $ d)
         <> "\n"
         <> "Time: "
         <> show time
+
+{- | A generic CPS-style handler for the application of a 'TimeDelta'. The
+ handler function argument will be passed 'Nothing' if applying the
+ 'TimeDelta' would produce an impossible (that is, negative) 'POSIXTime', and
+ a 'Just' with the new 'POSIXTime' otherwise.
+
+ @since 2.1.4
+-}
+withTimeDelta ::
+  forall (n :: Nat) (mod :: Type -> Type) (r :: Type).
+  (Coercible (mod POSIXTime) Integer) =>
+  (Maybe POSIXTime -> r) ->
+  POSIXTime ->
+  TimeDelta mod n ->
+  r
+withTimeDelta f time (TimeDelta d) = case signum (time + coerce d) of
+  (-1) -> f Nothing
+  d' -> f . Just . coerce $ d'
 
 -- Helpers
 
