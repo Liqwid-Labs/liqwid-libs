@@ -2,6 +2,13 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.10.3 -- 2022-10-24
+
+### Added
+
+* Module `Plutarch.Extra.Optics`, containing a utility type family for working
+  with labelled-optics-driven records.
+
 ## 3.10.2 -- 2022-10-12
 
 ### Modified
