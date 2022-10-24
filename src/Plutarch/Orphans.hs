@@ -1,6 +1,5 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE UndecidableInstances #-}
 -- The whole point of this module
 {-# OPTIONS_GHC -Wno-orphans #-}
 

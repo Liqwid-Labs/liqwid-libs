@@ -1,6 +1,5 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 module Plutarch.Extra.IsData (
   -- * PlutusTx ToData/FromData derive-wrappers

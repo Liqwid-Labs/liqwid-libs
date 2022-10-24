@@ -1,5 +1,4 @@
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 module Plutarch.Extra.DebuggableScript (
   -- * Type
