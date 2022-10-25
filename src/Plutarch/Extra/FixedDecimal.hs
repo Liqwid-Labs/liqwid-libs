@@ -12,11 +12,9 @@ module Plutarch.Extra.FixedDecimal (
   punsafeMkFixedDecimal,
 ) where
 
-import Control.Composition (on, (.*))
 import Data.Proxy (Proxy (Proxy))
 import GHC.Real (Ratio ((:%)))
 import GHC.TypeLits (KnownNat, Natural, natVal)
-import Plutarch.Extra.Function (pflip)
 import Plutarch.Extra.Rational ((#%))
 import Plutarch.Lift (
   PConstantDecl (PConstantRepr, PConstanted, pconstantFromRepr, pconstantToRepr),
@@ -166,10 +164,14 @@ instance forall (exp :: Natural). KnownNat exp => PShow (PFixedDecimal exp) wher
 
 -- | @since 3.11.0
 instance forall (exp :: Natural). KnownNat exp => PNum (PFixedDecimal exp) where
-  (#*) =
-    (pcon . PFixedDecimal)
-      .* (pflip # pdiv # pconstant (10 ^ natVal (Proxy @exp)) #)
-      .* (#*) `on` pto
+  a' #* b' =
+    phoistAcyclic
+      ( plam $ \a b ->
+          pcon . PFixedDecimal $
+            pdiv # (pfixedNumerator a * pfixedNumerator b) # pconstant (10 ^ natVal (Proxy @exp))
+      )
+      # a'
+      # b'
   pfromInteger =
     pcon
       . PFixedDecimal
@@ -212,18 +214,20 @@ instance (KnownNat exp) => PFractional (PFixedDecimal exp) where
       plam $ \x ->
         pcon . PFixedDecimal $ pdiv # pfromInteger (10 ^ (2 * natVal (Proxy @exp))) # pto x
 
--- | Integer numerator of 'PFixedDecimal'
---
--- @since 3.11.0
+{- | Integer numerator of 'PFixedDecimal'
+
+ @since 3.11.0
+-}
 pfixedNumerator ::
   forall (s :: S) (unit :: Natural).
   Term s (PFixedDecimal unit) ->
   Term s PInteger
 pfixedNumerator x = pmatch x $ \(PFixedDecimal n) -> n
 
--- | Integer denominator of 'PFixedDecimal'
---
--- @since 3.11.0
+{- | Integer denominator of 'PFixedDecimal'
+
+ @since 3.11.0
+-}
 pfixedDenominator ::
   forall (s :: S) (unit :: Natural).
   (KnownNat unit) =>
