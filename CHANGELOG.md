@@ -7,7 +7,12 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 ### Added
 
 * `FixedDecimal` Haskell equivalent to `PFixedDecimal`, along with `Num` and
-* `Fractional` instances, `fixedNumerator` and `fixedDenominator` extractor functions.
+* `Fractional` instances and the following functions:
+  - `fixedNumerator`
+  - `fixedDenominator`
+  - `emul`
+  - `ediv`
+  - `convertExp`
 
 ### Modified
 
@@ -17,6 +22,8 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   - `PFixedDecimal`
   - `pfixedNumerator`
   - `pfixedDenominator`
+  - `pemul`
+  - `pediv`
   - `pconvertExp`
   - `pfromFixedDecimal`
   - `ptoFixedDecimal`
