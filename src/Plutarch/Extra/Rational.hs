@@ -21,7 +21,8 @@ import Plutarch.Builtin (pforgetData)
 import Plutarch.Extra.Tagged (PTagged)
 import "plutarch-extra" Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Orphans ()
-import Plutarch.Positive (ptryPositive)
+import Plutarch.Positive (PPositive)
+import Plutarch.Unsafe (punsafeCoerce)
 import PlutusTx (fromData)
 
 --------------------------------------------------------------------------------
@@ -106,7 +107,7 @@ divRational =
 infixl 7 #%
 
 {- | Create a 'PRational' out of two 'PIntegers'. Will error if the denominator
- is  non-positive.
+ is zero.
 
  @since 3.9.0
 -}
@@ -116,10 +117,31 @@ infixl 7 #%
   Term s PInteger ->
   Term s PRational
 x #% y =
+  ptoPositiveCases
+    y
+    (pcon . PRational (x * (-1)))
+    (pcon . PRational x)
+
+{- | Absolute 'PInteger' as 'PPositive', distinguishing the @< 0@ and @> 0@ cases.
+
+ Will error on 0.
+-}
+ptoPositiveCases ::
+  forall (s :: S) (r :: PType).
+  Term s PInteger ->
+  (Term s PPositive -> Term s r) ->
+  (Term s PPositive -> Term s r) ->
+  Term s r
+ptoPositiveCases n contNeg contPos =
   pif
-    (y #< 0)
-    (pcon $ PRational (x * (-1)) (ptryPositive # (y * (-1))))
-    (pcon $ PRational x (ptryPositive # y))
+    (n #<= 0)
+    ( pif
+        (n #== 0)
+        (ptraceError "ptoPositiveCases with 0")
+        -- The PPositive constructor is not exported, so we need coercion
+        (contNeg (punsafeCoerce $ -n))
+    )
+    (contPos (punsafeCoerce n))
 
 -- | `plift` for Tagged Rationals (kind polymorphic)
 pliftTaggedRational ::
