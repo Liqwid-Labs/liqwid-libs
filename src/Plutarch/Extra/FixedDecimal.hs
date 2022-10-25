@@ -1,21 +1,86 @@
 module Plutarch.Extra.FixedDecimal (
-  PFixedDecimal,
+  FixedDecimal (..),
+  fixedNumerator,
+  fixedDenominator,
+  PFixedDecimal (..),
+  pfixedNumerator,
+  pfixedDenominator,
   pconvertExp,
   pfromFixedDecimal,
   ptoFixedDecimal,
-  pfromRational,
   ptoRational,
   punsafeMkFixedDecimal,
 ) where
 
 import Control.Composition (on, (.*))
 import Data.Proxy (Proxy (Proxy))
+import GHC.Real (Ratio ((:%)))
 import GHC.TypeLits (KnownNat, Natural, natVal)
 import Plutarch.Extra.Function (pflip)
 import Plutarch.Extra.Rational ((#%))
-import Plutarch.Num (PNum, pabs, pfromInteger, (#*), (#-))
+import Plutarch.Lift (
+  PConstantDecl (PConstantRepr, PConstanted, pconstantFromRepr, pconstantToRepr),
+  PUnsafeLiftDecl (PLifted),
+ )
+import Plutarch.Num (
+  PNum,
+  pabs,
+  pfromInteger,
+  (#*),
+  (#-),
+ )
+import Plutarch.Rational (PFractional (pfromRational, precip, (#/)))
 import Plutarch.Show (pshow')
 import Plutarch.Unsafe (punsafeCoerce)
+import qualified PlutusLedgerApi.V1 as PlutusTx
+
+------ Haskell
+
+{- | Fixed precision number. It behaves like scientific notation:
+     `exp` shows to what power of base 10 an integer is multiplied.
+
+     For example, Underlying value of 123456 with type `FixedDecimal 3` is
+     `123.456 (123456 * 10 ^ -3)`. If it's coerced into `FixedDecimal 5`, it will be
+     `1.23456 (123456 * 10 ^ -5)`. `FixedDecimal 0` will be identical to `Integer`.
+
+     Note, `exp` is the negative exponent to base 10.
+
+     Compared to 'Rational', 'Fixed' gives addition and subtraction
+     as fast as regular 'PInteger', allows negative values, and does
+     not require simplifications.
+
+ @since 3.11.0
+-}
+newtype FixedDecimal (exp :: Natural) = FixedDecimal {numerator :: Integer}
+  deriving stock (Generic, Eq, Ord, Show)
+
+{- | Integer numerator of 'FixedDecimal'
+
+ @since 3.11.0
+-}
+fixedNumerator :: forall (exp :: Natural). FixedDecimal exp -> Integer
+fixedNumerator (FixedDecimal num) = num
+
+{- | Integer denominator of 'FixedDecimal'
+
+ @since 3.11.0
+-}
+fixedDenominator :: forall (exp :: Natural). (KnownNat exp) => FixedDecimal exp -> Integer
+fixedDenominator _ = 10 ^ natVal (Proxy @exp)
+
+instance (KnownNat exp) => Num (FixedDecimal exp) where
+  (FixedDecimal a) + (FixedDecimal b) = FixedDecimal (a + b)
+  fa@(FixedDecimal a) * (FixedDecimal b) = FixedDecimal (a * b `div` fixedDenominator fa)
+  abs (FixedDecimal a) = FixedDecimal $ abs a
+  signum fa@(FixedDecimal a) = FixedDecimal $ signum a * fixedDenominator fa
+  negate (FixedDecimal a) = FixedDecimal (negate a)
+  fromInteger i = FixedDecimal (i * 10 ^ natVal (Proxy @exp))
+
+instance (KnownNat exp) => Fractional (FixedDecimal exp) where
+  fromRational (a :% b) = FixedDecimal $ a * 10 ^ natVal (Proxy @exp) `div` b
+  (FixedDecimal a) / (FixedDecimal b) = FixedDecimal $ a * 10 ^ natVal (Proxy @exp) `div` b
+
+------ Plutarch
 
 {- | Fixed precision number. It behaves like scientific notation:
      `exp` shows to what power of base 10 an integer is multiplied.
@@ -55,6 +120,24 @@ newtype PFixedDecimal (exp :: Natural) (s :: S)
 -- | @since 3.11.0
 instance forall (exp :: Natural). DerivePlutusType (PFixedDecimal exp) where
   type DPTStrat _ = PlutusTypeNewtype
+
+instance PUnsafeLiftDecl (PFixedDecimal unit) where
+  type PLifted (PFixedDecimal unit) = FixedDecimal unit
+
+instance PConstantDecl (FixedDecimal unit) where
+  type PConstantRepr (FixedDecimal unit) = PConstantRepr Integer
+  type PConstanted (FixedDecimal unit) = PFixedDecimal unit
+  pconstantToRepr (FixedDecimal x) = pconstantToRepr x
+  pconstantFromRepr x = FixedDecimal <$> pconstantFromRepr x
+
+deriving newtype instance
+  PlutusTx.ToData (FixedDecimal unit)
+
+deriving newtype instance
+  PlutusTx.FromData (FixedDecimal unit)
+
+deriving newtype instance
+  PlutusTx.UnsafeFromData (FixedDecimal unit)
 
 -- | @since 3.11.0
 instance forall (exp :: Natural). KnownNat exp => PShow (PFixedDecimal exp) where
@@ -108,6 +191,45 @@ instance forall (exp :: Natural). KnownNat exp => PIntegral (PFixedDecimal exp) 
           pquot # (pto x * pconstant (10 ^ natVal (Proxy @exp))) # pto y
   prem =
     phoistAcyclic $ plam $ \x y -> pcon . PFixedDecimal $ prem # pto x # pto y
+
+instance (KnownNat exp) => PFractional (PFixedDecimal exp) where
+  pfromRational ::
+    forall (s :: S).
+    Term s (PRational :--> PFixedDecimal exp)
+  pfromRational = phoistAcyclic $
+    plam $
+      flip pmatch $ \(PRational num denom) ->
+        pcon . PFixedDecimal $ pdiv # (num * (10 ^ natVal (Proxy @exp))) # pto denom
+
+  a' #/ b' = go # a' # b'
+    where
+      go = phoistAcyclic $
+        plam $ \a b ->
+          pcon . PFixedDecimal $ pdiv # (pto a * pfromInteger (10 ^ natVal (Proxy @exp))) # pto b
+
+  precip =
+    phoistAcyclic $
+      plam $ \x ->
+        pcon . PFixedDecimal $ pdiv # pfromInteger (10 ^ (2 * natVal (Proxy @exp))) # pto x
+
+-- | Integer numerator of 'PFixedDecimal'
+--
+-- @since 3.11.0
+pfixedNumerator ::
+  forall (s :: S) (unit :: Natural).
+  Term s (PFixedDecimal unit) ->
+  Term s PInteger
+pfixedNumerator x = pmatch x $ \(PFixedDecimal n) -> n
+
+-- | Integer denominator of 'PFixedDecimal'
+--
+-- @since 3.11.0
+pfixedDenominator ::
+  forall (s :: S) (unit :: Natural).
+  (KnownNat unit) =>
+  Term s (PFixedDecimal unit) ->
+  Term s PInteger
+pfixedDenominator _ = pfromInteger (10 ^ natVal (Proxy @unit))
 
 {- | Change decimal point.
 
@@ -179,22 +301,6 @@ ptoRational ::
   Term s (PFixedDecimal exp :--> PRational)
 ptoRational = phoistAcyclic $
   plam $ \z -> pto z #% pconstant (10 ^ natVal (Proxy @exp))
-
-{- | Convert 'PRational' into 'PFixed'.
-
- Note, there can be data loss when decimal places are not enough to present
- rational value in full.
-
- @since 3.11.0
--}
-pfromRational ::
-  forall (exp :: Natural) (s :: S).
-  KnownNat exp =>
-  Term s (PRational :--> PFixedDecimal exp)
-pfromRational = phoistAcyclic $
-  plam $
-    flip pmatch $ \(PRational num denom) ->
-      pcon . PFixedDecimal $ pdiv # (num * (10 ^ natVal (Proxy @exp))) # pto denom
 
 {- | Make 'PFixed' from 'PInteger'.
 
