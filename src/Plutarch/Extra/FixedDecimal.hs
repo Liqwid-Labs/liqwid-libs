@@ -175,8 +175,8 @@ instance forall (exp :: Natural). KnownNat exp => PNum (PFixedDecimal exp) where
   pfromInteger =
     pcon
       . PFixedDecimal
-      . (* pconstant (10 ^ natVal (Proxy @exp)))
       . pconstant
+      . (* (10 ^ natVal (Proxy @exp)))
 
 -- | @since 3.11.0
 instance forall (exp :: Natural). KnownNat exp => PIntegral (PFixedDecimal exp) where
