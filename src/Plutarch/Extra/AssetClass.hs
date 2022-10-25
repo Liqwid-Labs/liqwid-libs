@@ -33,6 +33,10 @@ module Plutarch.Extra.AssetClass (
   ptoScottEncoding,
   pfromScottEncoding,
   pviaScottEncoding,
+
+  -- * Modifiers for QuickCheck
+  AdaACPresence (..),
+  GenAssetClass (..),
 ) where
 
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
@@ -41,6 +45,7 @@ import qualified Generics.SOP as SOP
 import Optics.Getter (A_Getter, view)
 import Optics.Internal.Optic (A_Lens, Is, (%%))
 import Optics.Label (LabelOptic, LabelOptic', labelOptic)
+import Optics.Setter (set)
 import Optics.TH (makeFieldLabelsNoPrefix)
 import Plutarch.Api.V1 (
   PCurrencySymbol,
@@ -59,6 +64,11 @@ import Plutarch.Lift (
   PUnsafeLiftDecl (PLifted),
  )
 import Plutarch.Orphans ()
+import Plutarch.Test.QuickCheck.Instances ()
+import Plutarch.Test.QuickCheck.Modifiers (
+  AdaSymbolPresence (WithAdaSymbol, WithoutAdaSymbol),
+  GenCurrencySymbol (GenCurrencySymbol),
+ )
 import PlutusLedgerApi.V1.Value (CurrencySymbol, TokenName)
 import qualified PlutusLedgerApi.V1.Value as Value
 import qualified PlutusTx
@@ -70,6 +80,12 @@ import Ply.Core.Class (
   ),
  )
 import Ply.Plutarch (PlyArgOf)
+import Test.QuickCheck (
+  Arbitrary (arbitrary, shrink),
+  CoArbitrary (coarbitrary),
+  Function (function),
+  functionMap,
+ )
 
 --------------------------------------------------------------------------------
 -- AssetClass & Variants
@@ -411,3 +427,158 @@ instance PlyArg AssetClass where
 
 -- | @since 3.10.4
 type instance PlyArgOf PAssetClassData = AssetClass
+
+{- | Type-level marker to indicate whether a 'GenAssetClass' can have the ADA
+ 'AssetClass' inside it or not.
+
+ @since 3.10.5
+-}
+data AdaACPresence = WithAdaAC | WithoutAdaAC
+  deriving stock
+    ( -- | @since 3.10.5
+      Eq
+    , -- | @since 3.10.5
+      Show
+    , -- | @since 3.10.5
+      Ord
+    )
+
+{- | A helper newtype for QuickCheck use with 'AssetClass'es. Has a type-level
+ tag to indicate whether it could potentially contain the ADA 'AssetClass'. We
+ provide instances of 'Arbitrary', 'CoArbitrary' and 'Function' around this
+ newtype, intended to act on the 'AssetClass' inside it.
+
+ The easiest way to use this newtype is by pattern matching:
+
+ > forAll arbitrary $ \((GenAssetClass ac) :: GenAssetClass WithAdaAC) -> ...
+
+ You can also \'re-wrap\' for shrinking:
+
+ > shrink (GenAssetClass ac :: GenAssetClass WithAdaAC)
+
+ = Note
+
+ Due to limitations in QuickCheck itself, 'GenCurrencySymbol' with the
+ 'WithAdaSymbol' tag over-represents the ADA symbol. We inherit this behaviour
+ on all instances of 'GenAssetClass' with th 'WithAdaAC' tag.
+
+ @since 3.10.5
+-}
+newtype GenAssetClass (p :: AdaACPresence) = GenAssetClass AssetClass
+  deriving
+    ( -- | @since 3.10.5
+      Eq
+    )
+    via AssetClass
+  deriving stock
+    ( -- | @since 3.10.5
+      Show
+    )
+
+{- | This instance shrinks only in the 'TokenName', as 'CurrencySymbol's do not
+ shrink.
+
+ = Note
+
+ If this would generate the ADA 'AssetClass', its 'TokenName' will be empty.
+
+ @since 3.10.5
+-}
+instance Arbitrary (GenAssetClass 'WithAdaAC) where
+  {-# INLINEABLE arbitrary #-}
+  arbitrary =
+    GenAssetClass <$> do
+      GenCurrencySymbol sym :: GenCurrencySymbol 'WithAdaSymbol <- arbitrary
+      let Value.CurrencySymbol inner = sym
+      tn <-
+        if inner == ""
+          then pure . Value.TokenName $ ""
+          else arbitrary
+      pure $
+        AssetClass
+          { symbol = sym
+          , name = tn
+          }
+  {-# INLINEABLE shrink #-}
+  shrink (GenAssetClass ac) =
+    GenAssetClass <$> do
+      tn' <- shrink . view #name $ ac
+      pure . set #name tn' $ ac
+
+{- | This instance shrinks only in the 'TokenName', as 'CurrencySymbol's do not
+ shrink.
+
+ @since 3.10.5
+-}
+instance Arbitrary (GenAssetClass 'WithoutAdaAC) where
+  {-# INLINEABLE arbitrary #-}
+  arbitrary =
+    GenAssetClass <$> do
+      GenCurrencySymbol sym :: GenCurrencySymbol 'WithoutAdaSymbol <- arbitrary
+      tn <- arbitrary
+      pure $
+        AssetClass
+          { symbol = sym
+          , name = tn
+          }
+  {-# INLINEABLE shrink #-}
+  shrink (GenAssetClass ac) =
+    GenAssetClass <$> do
+      tn' <- shrink . view #name $ ac
+      pure . set #name tn' $ ac
+
+-- | @since 3.10.5
+instance CoArbitrary (GenAssetClass 'WithAdaAC) where
+  {-# INLINEABLE coarbitrary #-}
+  coarbitrary (GenAssetClass ac) =
+    let asGen :: GenCurrencySymbol 'WithAdaSymbol =
+          GenCurrencySymbol . view #symbol $ ac
+     in coarbitrary asGen . coarbitrary (view #name ac)
+
+-- | @since 3.10.5
+instance CoArbitrary (GenAssetClass 'WithoutAdaAC) where
+  {-# INLINEABLE coarbitrary #-}
+  coarbitrary (GenAssetClass ac) =
+    let asGen :: GenCurrencySymbol 'WithoutAdaSymbol =
+          GenCurrencySymbol . view #symbol $ ac
+     in coarbitrary asGen . coarbitrary (view #name ac)
+
+-- | @since 3.10.5
+instance Function (GenAssetClass 'WithAdaAC) where
+  {-# INLINEABLE function #-}
+  function = functionMap into outOf
+    where
+      into ::
+        GenAssetClass 'WithAdaAC ->
+        (GenCurrencySymbol 'WithAdaSymbol, TokenName)
+      into (GenAssetClass ac) =
+        (GenCurrencySymbol . view #symbol $ ac, view #name ac)
+      outOf ::
+        (GenCurrencySymbol 'WithAdaSymbol, TokenName) ->
+        GenAssetClass 'WithAdaAC
+      outOf (GenCurrencySymbol sym, tn) =
+        GenAssetClass $
+          AssetClass
+            { symbol = sym
+            , name = tn
+            }
+
+-- | @since 3.10.5
+instance Function (GenAssetClass 'WithoutAdaAC) where
+  {-# INLINEABLE function #-}
+  function = functionMap into outOf
+    where
+      into ::
+        GenAssetClass 'WithoutAdaAC ->
+        (GenCurrencySymbol 'WithoutAdaSymbol, TokenName)
+      into (GenAssetClass ac) =
+        (GenCurrencySymbol . view #symbol $ ac, view #name ac)
+      outOf ::
+        (GenCurrencySymbol 'WithoutAdaSymbol, TokenName) ->
+        GenAssetClass 'WithoutAdaAC
+      outOf (GenCurrencySymbol sym, tn) =
+        GenAssetClass $
+          AssetClass
+            { symbol = sym
+            , name = tn
+            }

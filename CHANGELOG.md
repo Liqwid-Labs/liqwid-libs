@@ -2,13 +2,24 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.10.5 -- 2022-10-26
+
+### Added
+
+* Modifier `GenAssetClass` to provide QuickCheck support for `AssetClass`
+
+### Modified
+
+* `plutarch-quickcheck` is now a direct dependency, rather than test only.
+
 ## 3.10.4 -- 2022-10-25
 
-Changes to `Plutarch.Extra.AssetClass`:
+### Changed
 
-* Remove unnecessary `PAsData` wrappers
-* Allow tags of `AssetClass` to be poly-kinded
-* `PlyArg` instance for `AssetClass`
+* `Plutarch.Extra.AssetClass`:
+  * Remove unnecessary `PAsData` wrappers
+  * Allow tags of `AssetClass` to be poly-kinded
+  * `PlyArg` instance for `AssetClass`
 
 ## 3.10.3 -- 2022-10-24
 
