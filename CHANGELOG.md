@@ -2,7 +2,7 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-## 3.10.5 -- 2022-10-26
+## 3.11.1 -- 2022-10-26
 
 ### Added
 
@@ -11,6 +11,18 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 ### Modified
 
 * `plutarch-quickcheck` is now a direct dependency, rather than test only.
+
+## 3.11.0 -- 2022-10-25
+
+### Added
+
+* Added a `withStateThread` function (replacing the old function)
+  that wraps a minting policy with a unique spend state thread policy
+
+### Modified
+
+* Renamed the old `withStateThread` function to `pwithStateThread`, to
+  reflect the fact that it was applied at the plutarch level.` 
 
 ## 3.10.4 -- 2022-10-25
 

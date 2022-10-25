@@ -431,7 +431,7 @@ type instance PlyArgOf PAssetClassData = AssetClass
 {- | Type-level marker to indicate whether a 'GenAssetClass' can have the ADA
  'AssetClass' inside it or not.
 
- @since 3.10.5
+ @since 3.11.1
 -}
 data AdaACPresence = WithAdaAC | WithoutAdaAC
   deriving stock
@@ -462,7 +462,7 @@ data AdaACPresence = WithAdaAC | WithoutAdaAC
  'WithAdaSymbol' tag over-represents the ADA symbol. We inherit this behaviour
  on all instances of 'GenAssetClass' with th 'WithAdaAC' tag.
 
- @since 3.10.5
+ @since 3.11.1
 -}
 newtype GenAssetClass (p :: AdaACPresence) = GenAssetClass AssetClass
   deriving
@@ -482,7 +482,7 @@ newtype GenAssetClass (p :: AdaACPresence) = GenAssetClass AssetClass
 
  If this would generate the ADA 'AssetClass', its 'TokenName' will be empty.
 
- @since 3.10.5
+ @since 3.11.1
 -}
 instance Arbitrary (GenAssetClass 'WithAdaAC) where
   {-# INLINEABLE arbitrary #-}
@@ -508,7 +508,7 @@ instance Arbitrary (GenAssetClass 'WithAdaAC) where
 {- | This instance shrinks only in the 'TokenName', as 'CurrencySymbol's do not
  shrink.
 
- @since 3.10.5
+ @since 3.11.1
 -}
 instance Arbitrary (GenAssetClass 'WithoutAdaAC) where
   {-# INLINEABLE arbitrary #-}
@@ -527,7 +527,7 @@ instance Arbitrary (GenAssetClass 'WithoutAdaAC) where
       tn' <- shrink . view #name $ ac
       pure . set #name tn' $ ac
 
--- | @since 3.10.5
+-- | @since 3.11.1
 instance CoArbitrary (GenAssetClass 'WithAdaAC) where
   {-# INLINEABLE coarbitrary #-}
   coarbitrary (GenAssetClass ac) =
@@ -535,7 +535,7 @@ instance CoArbitrary (GenAssetClass 'WithAdaAC) where
           GenCurrencySymbol . view #symbol $ ac
      in coarbitrary asGen . coarbitrary (view #name ac)
 
--- | @since 3.10.5
+-- | @since 3.11.1
 instance CoArbitrary (GenAssetClass 'WithoutAdaAC) where
   {-# INLINEABLE coarbitrary #-}
   coarbitrary (GenAssetClass ac) =
@@ -543,7 +543,7 @@ instance CoArbitrary (GenAssetClass 'WithoutAdaAC) where
           GenCurrencySymbol . view #symbol $ ac
      in coarbitrary asGen . coarbitrary (view #name ac)
 
--- | @since 3.10.5
+-- | @since 3.11.1
 instance Function (GenAssetClass 'WithAdaAC) where
   {-# INLINEABLE function #-}
   function = functionMap into outOf
@@ -563,7 +563,7 @@ instance Function (GenAssetClass 'WithAdaAC) where
             , name = tn
             }
 
--- | @since 3.10.5
+-- | @since 3.11.1
 instance Function (GenAssetClass 'WithoutAdaAC) where
   {-# INLINEABLE function #-}
   function = functionMap into outOf
