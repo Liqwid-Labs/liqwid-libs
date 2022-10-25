@@ -49,7 +49,7 @@ withStateThread mp ref = plam $ \red ctx -> pletAll ctx $ \ctx' ->
 pwithStateThread ::
   forall (s :: S).
   Term s (PMintingPolicy :--> PTxOutRef :--> PMintingPolicy)
-pwithStateThread = plam withStateThread'
+pwithStateThread = plam withStateThread
 
 -- Helpers
 
