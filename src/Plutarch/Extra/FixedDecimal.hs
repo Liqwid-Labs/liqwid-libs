@@ -148,7 +148,7 @@ instance forall (exp :: Natural). KnownNat exp => PShow (PFixedDecimal exp) wher
         <> pshow decimal
     where
       baseExp = natVal (Proxy @exp)
-      base = pconstant (10 ^ baseExp)
+      base = 10 ^ baseExp
       decimal = prem # (pabs # pto z) # base
       wrap' x = if wrap then "(" <> x <> ")" else x
 
@@ -168,7 +168,7 @@ instance forall (exp :: Natural). KnownNat exp => PNum (PFixedDecimal exp) where
     phoistAcyclic
       ( plam $ \a b ->
           pcon . PFixedDecimal $
-            pdiv # (pfixedNumerator a * pfixedNumerator b) # pconstant (10 ^ natVal (Proxy @exp))
+            pdiv # (pto a * pto b) # (10 ^ natVal (Proxy @exp))
       )
       # a'
       # b'
@@ -184,13 +184,13 @@ instance forall (exp :: Natural). KnownNat exp => PIntegral (PFixedDecimal exp) 
     phoistAcyclic $
       plam $ \x y ->
         pcon . PFixedDecimal $
-          pdiv # (pto x * pconstant (10 ^ natVal (Proxy @exp))) # pto y
+          pdiv # (pto x * (10 ^ natVal (Proxy @exp))) # pto y
   pmod = phoistAcyclic $ plam $ \x y -> pcon . PFixedDecimal $ pmod # pto x # pto y
   pquot =
     phoistAcyclic $
       plam $ \x y ->
         pcon . PFixedDecimal $
-          pquot # (pto x * pconstant (10 ^ natVal (Proxy @exp))) # pto y
+          pquot # (pto x * (10 ^ natVal (Proxy @exp))) # pto y
   prem =
     phoistAcyclic $ plam $ \x y -> pcon . PFixedDecimal $ prem # pto x # pto y
 
@@ -207,12 +207,12 @@ instance (KnownNat exp) => PFractional (PFixedDecimal exp) where
     where
       go = phoistAcyclic $
         plam $ \a b ->
-          pcon . PFixedDecimal $ pdiv # (pto a * pfromInteger (10 ^ natVal (Proxy @exp))) # pto b
+          pcon . PFixedDecimal $ pdiv # (pto a * (10 ^ natVal (Proxy @exp))) # pto b
 
   precip =
     phoistAcyclic $
       plam $ \x ->
-        pcon . PFixedDecimal $ pdiv # pfromInteger (10 ^ (2 * natVal (Proxy @exp))) # pto x
+        pcon . PFixedDecimal $ pdiv # (10 ^ (2 * natVal (Proxy @exp))) # pto x
 
 {- | Integer numerator of 'PFixedDecimal'
 
@@ -222,7 +222,7 @@ pfixedNumerator ::
   forall (s :: S) (unit :: Natural).
   Term s (PFixedDecimal unit) ->
   Term s PInteger
-pfixedNumerator x = pmatch x $ \(PFixedDecimal n) -> n
+pfixedNumerator = pto
 
 {- | Integer denominator of 'PFixedDecimal'
 
@@ -233,7 +233,7 @@ pfixedDenominator ::
   (KnownNat unit) =>
   Term s (PFixedDecimal unit) ->
   Term s PInteger
-pfixedDenominator _ = pfromInteger (10 ^ natVal (Proxy @unit))
+pfixedDenominator _ = 10 ^ natVal (Proxy @unit)
 
 {- | Change decimal point.
 
@@ -257,8 +257,8 @@ pconvertExp = phoistAcyclic $
     let ediff = (natVal (Proxy @exp2) - natVal (Proxy @exp1))
      in pcon . PFixedDecimal $
           if ediff > 0
-            then pto z * pconstant (10 ^ abs ediff)
-            else pdiv # pto z #$ pconstant (10 ^ abs ediff)
+            then pto z * (10 ^ abs ediff)
+            else pdiv # pto z #$ 10 ^ abs ediff
 
 {- | Convert 'PFixed' into 'PInteger'.
 
@@ -275,7 +275,7 @@ pfromFixedDecimal ::
   KnownNat exp =>
   Term s (PFixedDecimal exp :--> PInteger)
 pfromFixedDecimal = phoistAcyclic $
-  plam $ \z -> pdiv # pto z #$ pconstant (10 ^ natVal (Proxy @exp))
+  plam $ \z -> pdiv # pto z #$ 10 ^ natVal (Proxy @exp)
 
 {- | Convert 'PInteger' into 'PFixed'.
 
@@ -291,7 +291,7 @@ ptoFixedDecimal = phoistAcyclic $
   plam $ \z ->
     pcon
       . PFixedDecimal
-      $ z * pconstant (10 ^ natVal (Proxy @exp))
+      $ z * 10 ^ natVal (Proxy @exp)
 
 {- | Convert 'PFixed' into 'PRational'.
 
@@ -304,7 +304,7 @@ ptoRational ::
   KnownNat exp =>
   Term s (PFixedDecimal exp :--> PRational)
 ptoRational = phoistAcyclic $
-  plam $ \z -> pto z #% pconstant (10 ^ natVal (Proxy @exp))
+  plam $ \z -> pto z #% 10 ^ natVal (Proxy @exp)
 
 {- | Make 'PFixed' from 'PInteger'.
 
