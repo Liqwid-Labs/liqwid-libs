@@ -17,7 +17,7 @@ import Plutarch.Extra.Field (pletAll)
 
 {- | Adds a state thread to a minting policy.
 
- @since 3.9.2
+ @since 3.11.0
 -}
 withStateThread' ::
   forall (s :: S).
@@ -40,6 +40,10 @@ withStateThread' mp ref = plam $ \red ctx -> pletAll ctx $ \ctx' ->
           (ptraceError "stateThread: Not minting a unique state token")
       _ -> ptraceError "stateThread: Not a minting script purpose"
 
+
+-- | Adds a state thread to a minting policy
+--
+-- @since 3.11.0
 withStateThread ::
   forall (s :: S).
   Term s (PMintingPolicy :--> PTxOutRef :--> PMintingPolicy)
