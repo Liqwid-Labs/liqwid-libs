@@ -2,6 +2,18 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.11.0 -- 2022-10-25
+
+### Added
+
+* Added a `withStateThread` function (replacing the old function)
+  that wraps a minting policy with a unique spend state thread policy
+
+### Modified
+
+* Renamed the old `withStateThread` function to `pwithStateThread`, to
+  reflect the fact that it was applied at the plutarch level.` 
+
 ## 3.10.4 -- 2022-10-25
 
 Changes to `Plutarch.Extra.AssetClass`:
