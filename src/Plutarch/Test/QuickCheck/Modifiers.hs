@@ -470,9 +470,11 @@ timeDeltaProperty ::
   POSIXTime ->
   TimeDelta mod n ->
   Property
-timeDeltaProperty f time (TimeDelta d) = case signum (time + coerce d) of
-  (-1) -> counterexample badConversion . property $ False
-  d' -> f . coerce $ d'
+timeDeltaProperty f time (TimeDelta d) =
+  let modified = time + coerce d
+   in case signum modified of
+        (-1) -> counterexample badConversion . property $ False
+        _ -> f modified
   where
     badConversion :: String
     badConversion =
@@ -497,9 +499,11 @@ withTimeDelta ::
   POSIXTime ->
   TimeDelta mod n ->
   r
-withTimeDelta f time (TimeDelta d) = case signum (time + coerce d) of
-  (-1) -> f Nothing
-  d' -> f . Just . coerce $ d'
+withTimeDelta f time (TimeDelta d) =
+  let modified = time + coerce d
+   in case signum modified of
+        (-1) -> f Nothing
+        _ -> f . Just $ modified
 
 -- Helpers
 
