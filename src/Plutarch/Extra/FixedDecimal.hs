@@ -2,10 +2,14 @@ module Plutarch.Extra.FixedDecimal (
   FixedDecimal (..),
   fixedNumerator,
   fixedDenominator,
+  emul,
+  ediv,
   convertExp,
   PFixedDecimal (..),
   pfixedNumerator,
   pfixedDenominator,
+  pemul,
+  pediv,
   pconvertExp,
   pfromFixedDecimal,
   ptoFixedDecimal,
@@ -15,7 +19,7 @@ module Plutarch.Extra.FixedDecimal (
 
 import Data.Proxy (Proxy (Proxy))
 import GHC.Real (Ratio ((:%)))
-import GHC.TypeLits (KnownNat, Natural, natVal)
+import GHC.TypeLits (KnownNat, Natural, natVal, type (+), type (-))
 import Plutarch.Extra.Rational ((#%))
 import Plutarch.Lift (
   PConstantDecl (PConstantRepr, PConstanted, pconstantFromRepr, pconstantToRepr),
@@ -67,6 +71,32 @@ fixedNumerator (FixedDecimal num) = num
 fixedDenominator :: forall (exp :: Natural). (KnownNat exp) => FixedDecimal exp -> Integer
 fixedDenominator _ = 10 ^ natVal (Proxy @exp)
 
+{- | Exponent-changing multiplication (implemented with a single integer multiplication)
+
+ @since 3.11.0
+-}
+emul ::
+  forall (expA :: Natural) (expB :: Natural).
+  FixedDecimal expA ->
+  FixedDecimal expB ->
+  FixedDecimal (expA + expB)
+emul (FixedDecimal a) (FixedDecimal b) = FixedDecimal $ a * b
+
+{- | Exponent-changing division (implemented with a single integer division)
+
+ @since 3.11.0
+-}
+ediv ::
+  forall (expA :: Natural) (expB :: Natural).
+  FixedDecimal expA ->
+  FixedDecimal expB ->
+  FixedDecimal (expA - expB)
+ediv (FixedDecimal a) (FixedDecimal b) = FixedDecimal $ a `div` b
+
+{- | Convert to a different type-level exponent.
+
+ @since 3.11.0
+-}
 convertExp ::
   forall (expA :: Natural) (expB :: Natural).
   (KnownNat expA, KnownNat expB) =>
@@ -247,6 +277,28 @@ pfixedDenominator ::
   Term s (PFixedDecimal unit) ->
   Term s PInteger
 pfixedDenominator _ = pfromInteger (10 ^ natVal (Proxy @unit))
+
+{- | Exponent-changing multiplication (implemented with a single integer multiplication)
+
+ @since 3.11.0
+-}
+pemul ::
+  forall (s :: S) (expA :: Natural) (expB :: Natural).
+  Term s (PFixedDecimal expA) ->
+  Term s (PFixedDecimal expB) ->
+  Term s (PFixedDecimal (expA + expB))
+pemul a b = pcon . PFixedDecimal $ pfixedNumerator a * pfixedNumerator b
+
+{- | Exponent-changing division (implemented with a single integer division)
+
+ @since 3.11.0
+-}
+pediv ::
+  forall (s :: S) (expA :: Natural) (expB :: Natural).
+  Term s (PFixedDecimal expA) ->
+  Term s (PFixedDecimal expB) ->
+  Term s (PFixedDecimal (expA - expB))
+pediv a b = pcon . PFixedDecimal $ pdiv # pfixedNumerator a # pfixedNumerator b
 
 {- | Change decimal point.
 
