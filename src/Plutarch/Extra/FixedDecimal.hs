@@ -2,6 +2,7 @@ module Plutarch.Extra.FixedDecimal (
   FixedDecimal (..),
   fixedNumerator,
   fixedDenominator,
+  convertExp,
   PFixedDecimal (..),
   pfixedNumerator,
   pfixedDenominator,
@@ -65,6 +66,18 @@ fixedNumerator (FixedDecimal num) = num
 -}
 fixedDenominator :: forall (exp :: Natural). (KnownNat exp) => FixedDecimal exp -> Integer
 fixedDenominator _ = 10 ^ natVal (Proxy @exp)
+
+convertExp ::
+  forall (expA :: Natural) (expB :: Natural).
+  (KnownNat expA, KnownNat expB) =>
+  FixedDecimal expA ->
+  FixedDecimal expB
+convertExp (FixedDecimal a) =
+  let ediff = natVal (Proxy @expB) - natVal (Proxy @expA)
+   in FixedDecimal $
+        if ediff >= 0
+          then a * 10 ^ ediff
+          else a `div` 10 ^ (-ediff)
 
 instance (KnownNat exp) => Num (FixedDecimal exp) where
   (FixedDecimal a) + (FixedDecimal b) = FixedDecimal (a + b)
@@ -256,9 +269,10 @@ pconvertExp = phoistAcyclic $
   plam $ \z ->
     let ediff = (natVal (Proxy @exp2) - natVal (Proxy @exp1))
      in pcon . PFixedDecimal $
-          if ediff > 0
-            then pto z * pconstant (10 ^ abs ediff)
-            else pdiv # pto z #$ pconstant (10 ^ abs ediff)
+          case compare ediff 0 of
+            GT -> pto z * pconstant (10 ^ abs ediff)
+            EQ -> pto z
+            LT -> pdiv # pto z #$ pconstant (10 ^ (-ediff))
 
 {- | Convert 'PFixed' into 'PInteger'.
 
