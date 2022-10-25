@@ -1,5 +1,5 @@
 {-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE UndecidableInstances #-}
+-- Needed to connect PConst to Const
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Plutarch.Extra.Const (

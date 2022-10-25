@@ -1,5 +1,3 @@
-{-# LANGUAGE UndecidableInstances #-}
-
 module Plutarch.Extra.Star (
   -- * Type
   PStar (..),
