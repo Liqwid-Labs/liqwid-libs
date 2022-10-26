@@ -38,7 +38,7 @@ import Plutarch.Test.Precompiled (
  )
 import Test.Tasty (TestTree, defaultMain, testGroup)
 
-import qualified PlutusTx
+import PlutusTx qualified
 
 main :: IO ()
 main = do
