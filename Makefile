@@ -42,14 +42,12 @@ build: requires_nix_shell
 dev: requires_nix_shell
 	cabal v2-build $(GHC_FLAGS) -f development
 
-
 watch: requires_nix_shell
 	while sleep 1;																				\
 	do	                                                  \
 	  find src testlib test plutarch-quickcheck.cabal |   \
 		  entr -cd make $(filter-out $@,$(MAKECMDGOALS));   \
   done
-
 
 test: requires_nix_shell
 	cabal v2-test

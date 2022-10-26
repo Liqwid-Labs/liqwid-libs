@@ -8,10 +8,10 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Plutarch.Test.QuickCheck (
-  type PLamArgs,
-  type PA,
-  type PB,
-  type PC,
+  PLamArgs,
+  PA,
+  PB,
+  PC,
   punlam',
   punlam,
   fromPFun,
@@ -28,13 +28,15 @@ module Plutarch.Test.QuickCheck (
   uplcEq,
   Equality (..),
   Partiality (..),
+  shouldCrash,
+  shouldRun,
 ) where
 
 import Data.Kind (Constraint, Type)
 import GHC.TypeLits
 import Generics.SOP (All, HPure (hcpure), NP (Nil, (:*)), Proxy (Proxy))
 import Plutarch (Config (Config), TracingMode (DoTracing, NoTracing), compile, tracingMode)
-import Plutarch.Evaluate (evalScript, evalTerm)
+import Plutarch.Evaluate (evalScript, evalScriptHuge, evalTerm)
 import Plutarch.Lift (DerivePConstantViaNewtype (..), PConstantDecl, PUnsafeLiftDecl (PLifted))
 import Plutarch.Num (PNum)
 import Plutarch.Prelude (
@@ -75,6 +77,7 @@ import Plutarch.Test.QuickCheck.Internal (
   pconstantT,
   pliftT,
  )
+import PlutusLedgerApi.V2 (Script)
 import Test.QuickCheck (
   Arbitrary (..),
   Gen,
@@ -85,6 +88,55 @@ import Test.QuickCheck (
   (.&&.),
  )
 import Test.QuickCheck.Poly (A (A), B (B), C (C))
+
+{- | Helper for writing property tests at the Haskell level. Given a 'Script',
+ run it with the largest limits possible: if it crashes, pass; otherwise,
+ fail and report any logs.
+
+ = Note
+
+ Depending on the logging settings the 'Script' was compiled with, you may not
+ get any logs. While we print a warning when this happens, there might have
+ just not been any logs to give you in the first place: there's no way to tell
+ for sure.
+
+ @since 2.1.5
+-}
+shouldCrash :: Script -> Property
+shouldCrash script =
+  let (res, _, logs) = evalScriptHuge script
+   in case res of
+        Left _ -> property True
+        Right _ ->
+          counterexample "Expected failure, but succeeded instead."
+            . counterexample (showLogs logs)
+            . property
+            $ False
+
+{- | Helper for writing property tests at the Haskell level. Given a 'Script',
+ run it with the largest limits possible: if it runs, pass; otherwise, fail
+ and report the error, as well as any logs.
+
+ = Note
+
+ Depending on the logging settings the 'Script' was compiled with, you may not
+ get any logs. While we print a warning when this happens, there might have
+ just not been any logs to give you in the first place: there's no way to tell
+ for sure.
+
+ @since 2.1.5
+-}
+shouldRun :: Script -> Property
+shouldRun script =
+  let (res, _, logs) = evalScriptHuge script
+   in case res of
+        Left err ->
+          counterexample "Expected success, but failed instead."
+            . counterexample ("Error: " <> show err)
+            . counterexample (showLogs logs)
+            . property
+            $ False
+        Right _ -> property True
 
 -- Get the type of Haskell TestableTerm function and change Plutarch
 -- lambda to PFun if there is one:
@@ -588,3 +640,8 @@ arbitraryPLift = pconstantT <$> arbitrary
 -- Utilities
 failWith :: String -> Property
 failWith err = counterexample err $ property False
+
+showLogs :: forall (a :: Type). (Show a) => [a] -> String
+showLogs = \case
+  [] -> "No logs found. Did you forget to compile with tracing on?"
+  logs -> show logs
