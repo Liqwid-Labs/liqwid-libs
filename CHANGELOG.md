@@ -2,6 +2,13 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 2.1.5 -- 2022-10-27
+
+### Added
+
+* `shouldCrash` and `shouldRun` helpers for Haskell-level property definitions
+  based on `Script` outcomes.
+
 ## 2.1.4 -- 2022-10-21
 
 ### Added
