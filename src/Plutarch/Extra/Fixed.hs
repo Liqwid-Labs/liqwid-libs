@@ -32,6 +32,7 @@ import Plutarch.Unsafe (punsafeCoerce)
  @since 3.12.0
 -}
 {-# DEPRECATED PFixed "Use PFixedDecimal instead" #-}
+
 newtype PFixed (unit :: Nat) (s :: S)
   = PFixed (Term s PInteger)
   deriving stock

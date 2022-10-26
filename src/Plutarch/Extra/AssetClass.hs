@@ -1,8 +1,6 @@
-{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 {- | Provides Data and Scott encoded  asset class types and utility
   functions.

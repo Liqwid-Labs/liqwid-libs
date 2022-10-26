@@ -1,5 +1,4 @@
 {-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 module Plutarch.Extra.Bind (
   -- * Type class
