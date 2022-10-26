@@ -35,7 +35,7 @@ module Plutarch.Extra.AssetClass (
   pviaScottEncoding,
 
   -- * Modifiers for QuickCheck
-  AdaACPresence (..),
+  AdaClassPresence (..),
   GenAssetClass (..),
 ) where
 
@@ -433,7 +433,7 @@ type instance PlyArgOf PAssetClassData = AssetClass
 
  @since 3.11.1
 -}
-data AdaACPresence = WithAdaAC | WithoutAdaAC
+data AdaClassPresence = WithAdaClass | WithoutAdaClass
   deriving stock
     ( -- | @since 3.10.5
       Eq
@@ -450,21 +450,21 @@ data AdaACPresence = WithAdaAC | WithoutAdaAC
 
  The easiest way to use this newtype is by pattern matching:
 
- > forAll arbitrary $ \((GenAssetClass ac) :: GenAssetClass WithAdaAC) -> ...
+ > forAll arbitrary $ \((GenAssetClass ac) :: GenAssetClass WithAdaClass) -> ...
 
  You can also \'re-wrap\' for shrinking:
 
- > shrink (GenAssetClass ac :: GenAssetClass WithAdaAC)
+ > shrink (GenAssetClass ac :: GenAssetClass WithAdaClass)
 
  = Note
 
  Due to limitations in QuickCheck itself, 'GenCurrencySymbol' with the
  'WithAdaSymbol' tag over-represents the ADA symbol. We inherit this behaviour
- on all instances of 'GenAssetClass' with th 'WithAdaAC' tag.
+ on all instances of 'GenAssetClass' with th 'WithAdaClass' tag.
 
  @since 3.11.1
 -}
-newtype GenAssetClass (p :: AdaACPresence) = GenAssetClass AssetClass
+newtype GenAssetClass (p :: AdaClassPresence) = GenAssetClass AssetClass
   deriving
     ( -- | @since 3.10.5
       Eq
@@ -484,7 +484,7 @@ newtype GenAssetClass (p :: AdaACPresence) = GenAssetClass AssetClass
 
  @since 3.11.1
 -}
-instance Arbitrary (GenAssetClass 'WithAdaAC) where
+instance Arbitrary (GenAssetClass 'WithAdaClass) where
   {-# INLINEABLE arbitrary #-}
   arbitrary =
     GenAssetClass <$> do
@@ -510,7 +510,7 @@ instance Arbitrary (GenAssetClass 'WithAdaAC) where
 
  @since 3.11.1
 -}
-instance Arbitrary (GenAssetClass 'WithoutAdaAC) where
+instance Arbitrary (GenAssetClass 'WithoutAdaClass) where
   {-# INLINEABLE arbitrary #-}
   arbitrary =
     GenAssetClass <$> do
@@ -528,7 +528,7 @@ instance Arbitrary (GenAssetClass 'WithoutAdaAC) where
       pure . set #name tn' $ ac
 
 -- | @since 3.11.1
-instance CoArbitrary (GenAssetClass 'WithAdaAC) where
+instance CoArbitrary (GenAssetClass 'WithAdaClass) where
   {-# INLINEABLE coarbitrary #-}
   coarbitrary (GenAssetClass ac) =
     let asGen :: GenCurrencySymbol 'WithAdaSymbol =
@@ -536,7 +536,7 @@ instance CoArbitrary (GenAssetClass 'WithAdaAC) where
      in coarbitrary asGen . coarbitrary (view #name ac)
 
 -- | @since 3.11.1
-instance CoArbitrary (GenAssetClass 'WithoutAdaAC) where
+instance CoArbitrary (GenAssetClass 'WithoutAdaClass) where
   {-# INLINEABLE coarbitrary #-}
   coarbitrary (GenAssetClass ac) =
     let asGen :: GenCurrencySymbol 'WithoutAdaSymbol =
@@ -544,18 +544,18 @@ instance CoArbitrary (GenAssetClass 'WithoutAdaAC) where
      in coarbitrary asGen . coarbitrary (view #name ac)
 
 -- | @since 3.11.1
-instance Function (GenAssetClass 'WithAdaAC) where
+instance Function (GenAssetClass 'WithAdaClass) where
   {-# INLINEABLE function #-}
   function = functionMap into outOf
     where
       into ::
-        GenAssetClass 'WithAdaAC ->
+        GenAssetClass 'WithAdaClass ->
         (GenCurrencySymbol 'WithAdaSymbol, TokenName)
       into (GenAssetClass ac) =
         (GenCurrencySymbol . view #symbol $ ac, view #name ac)
       outOf ::
         (GenCurrencySymbol 'WithAdaSymbol, TokenName) ->
-        GenAssetClass 'WithAdaAC
+        GenAssetClass 'WithAdaClass
       outOf (GenCurrencySymbol sym, tn) =
         GenAssetClass $
           AssetClass
@@ -564,18 +564,18 @@ instance Function (GenAssetClass 'WithAdaAC) where
             }
 
 -- | @since 3.11.1
-instance Function (GenAssetClass 'WithoutAdaAC) where
+instance Function (GenAssetClass 'WithoutAdaClass) where
   {-# INLINEABLE function #-}
   function = functionMap into outOf
     where
       into ::
-        GenAssetClass 'WithoutAdaAC ->
+        GenAssetClass 'WithoutAdaClass ->
         (GenCurrencySymbol 'WithoutAdaSymbol, TokenName)
       into (GenAssetClass ac) =
         (GenCurrencySymbol . view #symbol $ ac, view #name ac)
       outOf ::
         (GenCurrencySymbol 'WithoutAdaSymbol, TokenName) ->
-        GenAssetClass 'WithoutAdaAC
+        GenAssetClass 'WithoutAdaClass
       outOf (GenCurrencySymbol sym, tn) =
         GenAssetClass $
           AssetClass

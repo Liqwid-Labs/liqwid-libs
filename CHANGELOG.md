@@ -2,11 +2,13 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-## 3.11.1 -- 2022-10-26
+## 3.11.1 -- 2022-10-27
 
 ### Added
 
 * Modifier `GenAssetClass` to provide QuickCheck support for `AssetClass`
+* Helper type `AdaClassPresence` for indicating whether `GenAssetClass` should
+  generate the ADA class or not
 
 ### Modified
 
