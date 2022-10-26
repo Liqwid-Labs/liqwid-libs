@@ -1,4 +1,5 @@
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -34,18 +35,14 @@ module Plutarch.Extra.AssetClass (
   ptoScottEncoding,
   pfromScottEncoding,
   pviaScottEncoding,
-
-  -- * Optics utilities
-  symbolT,
-  nameT,
 ) where
 
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
 import Data.Tagged (Tagged (Tagged, unTagged), untag)
-import GHC.TypeLits (Symbol)
 import qualified Generics.SOP as SOP
-import Optics.Internal.Optic
-import Optics.Lens (Lens')
+import Optics.Getter (A_Getter, view)
+import Optics.Internal.Optic (A_Lens, Is, (%%))
+import Optics.Label (LabelOptic, LabelOptic', labelOptic)
 import Optics.TH (makeFieldLabelsNoPrefix)
 import Plutarch.Api.V1 (
   PCurrencySymbol,
@@ -67,6 +64,14 @@ import Plutarch.Orphans ()
 import PlutusLedgerApi.V1.Value (CurrencySymbol, TokenName)
 import qualified PlutusLedgerApi.V1.Value as Value
 import qualified PlutusTx
+import Ply.Core.Class (
+  PlyArg (
+    UPLCRep,
+    toBuiltinArg,
+    toBuiltinArgData
+  ),
+ )
+import Ply.Plutarch (PlyArgOf)
 
 --------------------------------------------------------------------------------
 -- AssetClass & Variants
@@ -152,9 +157,9 @@ passetClass = phoistAcyclic $
   plam $ \sym tk ->
     pcon $ PAssetClass (pdata sym) (pdata tk)
 
--- | @since 3.10.0
+-- | @since 3.10.4
 passetClassT ::
-  forall (unit :: Symbol) (s :: S).
+  forall {k :: Type} (unit :: k) (s :: S).
   Term s (PCurrencySymbol :--> PTokenName :--> PTagged unit PAssetClass)
 passetClassT = phoistAcyclic $
   plam $ \sym tk ->
@@ -162,16 +167,22 @@ passetClassT = phoistAcyclic $
 
 -- | @since 3.10.0
 pconstantClass ::
-  forall (s :: S).
-  AssetClass ->
+  forall (a :: Type) (k :: Type) (s :: S).
+  ( Is k A_Getter
+  , LabelOptic' "symbol" k a CurrencySymbol
+  , LabelOptic' "name" k a TokenName
+  ) =>
+  a ->
   Term s PAssetClass
-pconstantClass (AssetClass sym tk) =
+pconstantClass ac =
   pcon $
-    PAssetClass (pconstantData sym) (pconstantData tk)
+    PAssetClass
+      (pconstantData $ view #symbol ac)
+      (pconstantData $ view #name ac)
 
--- | @since 3.10.0
+-- | @since 3.10.4
 pconstantClassT ::
-  forall (unit :: Symbol) (s :: S).
+  forall {k :: Type} (unit :: k) (s :: S).
   Tagged unit AssetClass ->
   Term s (PTagged unit PAssetClass)
 pconstantClassT (Tagged (AssetClass sym tk)) =
@@ -188,10 +199,10 @@ psymbolAssetClass = phoistAcyclic $
     pcon $ PAssetClass (pdata sym) emptyTokenNameData
 
 {- | Tagged version of `psymbolAssetClass`
- @since 3.10.0
+ @since 3.10.4
 -}
 psymbolAssetClassT ::
-  forall (unit :: Symbol) (s :: S).
+  forall {k :: Type} (unit :: k) (s :: S).
   Term s (PCurrencySymbol :--> PTagged unit PAssetClass)
 psymbolAssetClassT = phoistAcyclic $
   plam $ \sym ->
@@ -204,8 +215,15 @@ psymbolAssetClassT = phoistAcyclic $
 
  @since 3.9.0
 -}
-isAdaClass :: AssetClass -> Bool
-isAdaClass (AssetClass s n) = s == s' && n == n'
+isAdaClass ::
+  forall (a :: Type) (k :: Type).
+  ( Is k A_Getter
+  , LabelOptic' "symbol" k a CurrencySymbol
+  , LabelOptic' "name" k a TokenName
+  ) =>
+  a ->
+  Bool
+isAdaClass ac = view #symbol ac == s' && view #name ac == n'
   where
     (Tagged (AssetClass s' n')) = adaClass
 
@@ -293,9 +311,9 @@ passetClassData = phoistAcyclic $
           .& #name .= pdata tk
       )
 
--- | @since 3.10.0
+-- | @since 3.10.4
 passetClassDataT ::
-  forall (unit :: Symbol) (s :: S).
+  forall {k :: Type} (unit :: k) (s :: S).
   Term s (PCurrencySymbol :--> PTokenName :--> PTagged unit PAssetClassData)
 passetClassDataT = phoistAcyclic $
   plam $ \sym tk ->
@@ -303,11 +321,11 @@ passetClassDataT = phoistAcyclic $
 
 {- | Convert from 'PAssetClassData' to 'PAssetClass'.
 
- @since 3.9.0
+ @since 3.10.4
 -}
 ptoScottEncoding ::
   forall (s :: S).
-  Term s (PAsData PAssetClassData :--> PAssetClass)
+  Term s (PAssetClassData :--> PAssetClass)
 ptoScottEncoding = phoistAcyclic $
   plam $ \cls ->
     pletFields @["symbol", "name"] cls $
@@ -319,44 +337,44 @@ ptoScottEncoding = phoistAcyclic $
 
 {- | Convert from 'PAssetClass' to 'PAssetClassData'.
 
- @since 3.9.0
+ @since 3.10.4
 -}
 pfromScottEncoding ::
   forall (s :: S).
-  Term s (PAssetClass :--> PAsData PAssetClassData)
+  Term s (PAssetClass :--> PAssetClassData)
 pfromScottEncoding = phoistAcyclic $
   plam $ \cls -> pmatch cls $
     \(PAssetClass sym tk) ->
-      pdata $
-        mkRecordConstr
-          PAssetClassData
-          ( #symbol .= sym
-              .& #name .= tk
-          )
+      mkRecordConstr
+        PAssetClassData
+        ( #symbol .= sym
+            .& #name .= tk
+        )
 
 {- | Wrap a function using the Scott-encoded 'PAssetClass' to one using the
  'PlutusTx.Data'-encoded version.
 
- @since 3.9.0
+ @since 3.10.4
 -}
 pviaScottEncoding ::
   forall (a :: PType).
   ClosedTerm (PAssetClass :--> a) ->
-  ClosedTerm (PAsData PAssetClassData :--> a)
+  ClosedTerm (PAssetClassData :--> a)
 pviaScottEncoding fn = phoistAcyclic $
   plam $ \cls ->
     fn #$ ptoScottEncoding # cls
 
 {- | Version of 'assetClassValue' for tagged 'AssetClass' and 'Tagged'.
 
- @since 3.9.0
+ @since 3.10.4
 -}
 assetClassValue ::
-  forall (unit :: Symbol).
+  forall {k :: Type} (unit :: k).
   Tagged unit AssetClass ->
   Tagged unit Integer ->
   Value.Value
-assetClassValue (Tagged (AssetClass sym tk)) q = Value.singleton sym tk $ untag q
+assetClassValue (Tagged (AssetClass sym tk)) q =
+  Value.singleton sym tk $ untag q
 
 ----------------------------------------
 -- Field Labels
@@ -367,14 +385,31 @@ makeFieldLabelsNoPrefix ''PAssetClass
 -- | @since 3.9.0
 makeFieldLabelsNoPrefix ''AssetClass
 
--- | @since 3.10.1
-symbolT ::
-  forall (unit :: Symbol).
-  Lens' (Tagged unit AssetClass) CurrencySymbol
-symbolT = #unTagged %% #symbol
+-- | @since 3.10.2
+instance
+  (k ~ A_Lens, a ~ CurrencySymbol, b ~ CurrencySymbol, tag ~ tag') =>
+  LabelOptic "symbol" k (Tagged tag AssetClass) (Tagged tag' AssetClass) a b
+  where
+  labelOptic = #unTagged %% #symbol
 
--- | @since 3.10.1
-nameT ::
-  forall (unit :: Symbol).
-  Lens' (Tagged unit AssetClass) TokenName
-nameT = #unTagged %% #name
+-- | @since 3.10.2
+instance
+  (k ~ A_Lens, a ~ TokenName, b ~ TokenName, tag ~ tag') =>
+  LabelOptic "name" k (Tagged tag AssetClass) (Tagged tag' AssetClass) a b
+  where
+  labelOptic = #unTagged %% #name
+
+----------------------------------------
+-- Ply instances
+
+-- | @since 3.10.4
+instance PlyArg AssetClass where
+  type UPLCRep AssetClass = [PlutusTx.Data]
+  toBuiltinArg ac =
+    case PlutusTx.toData @AssetClass ac of
+      PlutusTx.List x -> x
+      _ -> error "unreachable"
+  toBuiltinArgData = PlutusTx.toData
+
+-- | @since 3.10.4
+type instance PlyArgOf PAssetClassData = AssetClass

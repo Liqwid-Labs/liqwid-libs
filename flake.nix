@@ -29,6 +29,7 @@
       "github:liqwid-labs/plutarch-numeric?ref=main";
     plutarch-context-builder.url =
       "github:Liqwid-Labs/plutarch-context-builder?ref=main";
+    ply.url = "github:mlabs-haskell/ply?ref=master";
 
     liqwid-nix.url = "github:Liqwid-Labs/liqwid-nix";
   };
@@ -47,6 +48,8 @@
           "${inputs.plutarch-quickcheck}"
           "${inputs.plutarch-numeric}"
           "${inputs.plutarch-context-builder}"
+          "${inputs.ply}/ply-core"
+          "${inputs.ply}/ply-plutarch"
         ])
         (liqwid-nix.enableFormatCheck [
           "-XTemplateHaskell"

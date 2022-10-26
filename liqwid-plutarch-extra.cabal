@@ -109,6 +109,7 @@ library
     Plutarch.Extra.Monoid
     Plutarch.Extra.MultiSig
     Plutarch.Extra.Numeric
+    Plutarch.Extra.Optics
     Plutarch.Extra.Ord
     Plutarch.Extra.Precompile
     Plutarch.Extra.Profunctor
@@ -142,6 +143,8 @@ library
     , plutarch-extra
     , plutarch-numeric
     , plutus-core
+    , ply-core
+    , ply-plutarch
     , serialise
     , tagged
     , text
