@@ -29,35 +29,35 @@ import Plutarch.Unsafe (punsafeCoerce)
 {- | Fixed width decimal. Denominator will be given through typelit `unit`.
  This would be used for representing Ada value with some Lovelace changes.
 
- @since 3.11.0
+ @since 3.12.0
 -}
 {-# DEPRECATED PFixed "Use PFixedDecimal instead" #-}
 newtype PFixed (unit :: Nat) (s :: S)
   = PFixed (Term s PInteger)
   deriving stock
-    ( -- | @since 3.11.0
+    ( -- | @since 3.12.0
       Generic
     )
   deriving anyclass
-    ( -- | @since 3.11.0
+    ( -- | @since 3.12.0
       PlutusType
-    , -- | @since 3.11.0
+    , -- | @since 3.12.0
       PIsData
-    , -- | @since 3.11.0
+    , -- | @since 3.12.0
       PEq
-    , -- | @since 3.11.0
+    , -- | @since 3.12.0
       PPartialOrd
-    , -- | @since 3.11.0
+    , -- | @since 3.12.0
       POrd
-    , -- | @since 3.11.0
+    , -- | @since 3.12.0
       PShow
     )
 
--- | @since 3.11.0
+-- | @since 3.12.0
 instance DerivePlutusType (PFixed a) where
   type DPTStrat _ = PlutusTypeNewtype
 
--- | @since 3.11.0
+-- | @since 3.12.0
 instance KnownNat u => PNum (PFixed u) where
   (#*) =
     (pcon . PFixed)
@@ -65,7 +65,7 @@ instance KnownNat u => PNum (PFixed u) where
       .* (#*) `on` punsafeCoerce
   pfromInteger = pcon . PFixed . (* pconstant (natVal (Proxy @u))) . pconstant
 
--- | @since 3.11.0
+-- | @since 3.12.0
 instance PTryFrom PData (PAsData (PFixed unit)) where
   type PTryFromExcess PData (PAsData (PFixed unit)) = PTryFromExcess PData (PAsData PInteger)
   ptryFrom' d k = ptryFrom' @_ @(PAsData PInteger) d $ k . first punsafeCoerce
@@ -77,20 +77,20 @@ class DivideSemigroup a where
 class DivideSemigroup a => DivideMonoid a where
   one :: a
 
--- | @since 3.11.0
+-- | @since 3.12.0
 instance KnownNat u => DivideSemigroup (Term s (PFixed u)) where
   divide (pto -> x) (pto -> y) =
     pcon . PFixed $ pdiv # (x * pconstant (natVal (Proxy @u))) # y
 
--- | @since 3.11.0
+-- | @since 3.12.0
 instance KnownNat u => DivideMonoid (Term s (PFixed u)) where
   one = 1
 
--- | @since 3.11.0
+-- | @since 3.12.0
 instance KnownNat u => A.AdditiveSemigroup (Term s (PFixed u)) where
   (+) = (+)
 
--- | @since 3.11.0
+-- | @since 3.12.0
 instance KnownNat u => A.AdditiveMonoid (Term s (PFixed u)) where
   zero = pcon . PFixed $ pconstant 0
 
@@ -111,7 +111,7 @@ fixedToAdaValue =
 
 {- | Convert @PInteger@ to @PFixed@.
 
- @since 3.11.0
+ @since 3.12.0
 -}
 fromPInteger ::
   forall (unit :: Nat) (s :: S).
@@ -122,7 +122,7 @@ fromPInteger =
 
 {- | Convert @PFixed@ to @Integer@. Values that are smaller than 1 will be lost.
 
- @since 3.11.0
+ @since 3.12.0
 -}
 toPInteger ::
   forall (unit :: Nat) (s :: S).

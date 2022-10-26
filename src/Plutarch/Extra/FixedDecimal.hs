@@ -52,28 +52,28 @@ import qualified PlutusLedgerApi.V1 as PlutusTx
      as fast as regular 'PInteger', allows negative values, and does
      not require simplifications.
 
- @since 3.11.0
+ @since 3.12.0
 -}
 newtype FixedDecimal (exp :: Natural) = FixedDecimal {numerator :: Integer}
   deriving stock (Generic, Eq, Ord, Show)
 
 {- | Integer numerator of 'FixedDecimal'
 
- @since 3.11.0
+ @since 3.12.0
 -}
 fixedNumerator :: forall (exp :: Natural). FixedDecimal exp -> Integer
 fixedNumerator (FixedDecimal num) = num
 
 {- | Integer denominator of 'FixedDecimal'
 
- @since 3.11.0
+ @since 3.12.0
 -}
 fixedDenominator :: forall (exp :: Natural). (KnownNat exp) => FixedDecimal exp -> Integer
 fixedDenominator _ = 10 ^ natVal (Proxy @exp)
 
 {- | Exponent-changing multiplication (implemented with a single integer multiplication)
 
- @since 3.11.0
+ @since 3.12.0
 -}
 emul ::
   forall (expA :: Natural) (expB :: Natural).
@@ -84,7 +84,7 @@ emul (FixedDecimal a) (FixedDecimal b) = FixedDecimal $ a * b
 
 {- | Exponent-changing division (implemented with a single integer division)
 
- @since 3.11.0
+ @since 3.12.0
 -}
 ediv ::
   forall (expA :: Natural) (expB :: Natural).
@@ -95,7 +95,7 @@ ediv (FixedDecimal a) (FixedDecimal b) = FixedDecimal $ a `div` b
 
 {- | Convert to a different type-level exponent.
 
- @since 3.11.0
+ @since 3.12.0
 -}
 convertExp ::
   forall (expA :: Natural) (expB :: Natural).
@@ -137,28 +137,28 @@ instance (KnownNat exp) => Fractional (FixedDecimal exp) where
      as fast as regular 'PInteger', allows negative values, and does
      not require simplifications.
 
- @since 3.11.0
+ @since 3.12.0
 -}
 newtype PFixedDecimal (exp :: Natural) (s :: S)
   = PFixedDecimal (Term s PInteger)
   deriving stock
-    ( -- | @since 3.11.0
+    ( -- | @since 3.12.0
       Generic
     )
   deriving anyclass
-    ( -- | @since 3.11.0
+    ( -- | @since 3.12.0
       PlutusType
-    , -- | @since 3.11.0
+    , -- | @since 3.12.0
       PIsData
-    , -- | @since 3.11.0
+    , -- | @since 3.12.0
       PEq
-    , -- | @since 3.11.0
+    , -- | @since 3.12.0
       PPartialOrd
-    , -- | @since 3.11.0
+    , -- | @since 3.12.0
       POrd
     )
 
--- | @since 3.11.0
+-- | @since 3.12.0
 instance forall (exp :: Natural). DerivePlutusType (PFixedDecimal exp) where
   type DPTStrat _ = PlutusTypeNewtype
 
@@ -180,7 +180,7 @@ deriving newtype instance
 deriving newtype instance
   PlutusTx.UnsafeFromData (FixedDecimal unit)
 
--- | @since 3.11.0
+-- | @since 3.12.0
 instance forall (exp :: Natural). KnownNat exp => PShow (PFixedDecimal exp) where
   pshow' wrap z =
     wrap' $
@@ -205,7 +205,7 @@ instance forall (exp :: Natural). KnownNat exp => PShow (PFixedDecimal exp) wher
         pfix #$ plam $ \self x str ->
           pif (0 #< x) (str <> (self # (x #- 1) # str)) ""
 
--- | @since 3.11.0
+-- | @since 3.12.0
 instance forall (exp :: Natural). KnownNat exp => PNum (PFixedDecimal exp) where
   a' #* b' =
     phoistAcyclic
@@ -221,7 +221,7 @@ instance forall (exp :: Natural). KnownNat exp => PNum (PFixedDecimal exp) where
       . pconstant
       . (* (10 ^ natVal (Proxy @exp)))
 
--- | @since 3.11.0
+-- | @since 3.12.0
 instance forall (exp :: Natural). KnownNat exp => PIntegral (PFixedDecimal exp) where
   pdiv =
     phoistAcyclic $
@@ -259,7 +259,7 @@ instance (KnownNat exp) => PFractional (PFixedDecimal exp) where
 
 {- | Integer numerator of 'PFixedDecimal'
 
- @since 3.11.0
+ @since 3.12.0
 -}
 pfixedNumerator ::
   forall (s :: S) (unit :: Natural).
@@ -269,7 +269,7 @@ pfixedNumerator = pto
 
 {- | Integer denominator of 'PFixedDecimal'
 
- @since 3.11.0
+ @since 3.12.0
 -}
 pfixedDenominator ::
   forall (s :: S) (unit :: Natural).
@@ -280,7 +280,7 @@ pfixedDenominator _ = 10 ^ natVal (Proxy @unit)
 
 {- | Exponent-changing multiplication (implemented with a single integer multiplication)
 
- @since 3.11.0
+ @since 3.12.0
 -}
 pemul ::
   forall (s :: S) (expA :: Natural) (expB :: Natural).
@@ -291,7 +291,7 @@ pemul a b = pcon . PFixedDecimal $ pfixedNumerator a * pfixedNumerator b
 
 {- | Exponent-changing division (implemented with a single integer division)
 
- @since 3.11.0
+ @since 3.12.0
 -}
 pediv ::
   forall (s :: S) (expA :: Natural) (expB :: Natural).
@@ -311,7 +311,7 @@ pediv a b = pcon . PFixedDecimal $ pdiv # pfixedNumerator a # pfixedNumerator b
  There is not data loss going from small decimal points to big decimal points,
  but they will take up more memory.
 
- @since 3.11.0
+ @since 3.12.0
 -}
 pconvertExp ::
   forall (exp2 :: Natural) (exp1 :: Natural) (s :: S).
@@ -334,7 +334,7 @@ pconvertExp = phoistAcyclic $
 
  If one needs to retrive all decimal point values, use `pto` instead.
 
- @since 3.11.0
+ @since 3.12.0
 -}
 pfromFixedDecimal ::
   forall (exp :: Natural) (s :: S).
@@ -347,7 +347,7 @@ pfromFixedDecimal = phoistAcyclic $
 
  There is no dataloss, but takes more memory.
 
- @since 3.11.0
+ @since 3.12.0
 -}
 ptoFixedDecimal ::
   forall (exp :: Natural) (s :: S).
@@ -363,7 +363,7 @@ ptoFixedDecimal = phoistAcyclic $
 
  Note, it will *not* simplify. There is no data loss.
 
- @since 3.11.0
+ @since 3.12.0
 -}
 ptoRational ::
   forall (exp :: Natural) (s :: S).
@@ -377,7 +377,7 @@ ptoRational = phoistAcyclic $
  *Caution* 'PInteger' given will not be equal to returned 'PFixed'.
  Input ignores decimal point: `1234 :: Integer` will return `12.34 :: Fixed 2`.
 
- @since 3.11.0
+ @since 3.12.0
 -}
 punsafeMkFixedDecimal ::
   forall (exp :: Natural) (s :: S).
