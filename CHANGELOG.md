@@ -2,6 +2,36 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.12.0 -- 2022-10-26
+
+### Added
+
+* `FixedDecimal` Haskell equivalent to `PFixedDecimal`, along with `Num` and
+* `Fractional` instances and the following functions:
+  - `fixedNumerator`
+  - `fixedDenominator`
+  - `emul`
+  - `ediv`
+  - `convertExp`
+
+### Modified
+
+* `PFixedDecimal` is updated so that it represents decimal point range in exponential form.
+
+  Following type and functions are added along with Plutarch numerical instances.
+  - `PFixedDecimal`
+  - `pfixedNumerator`
+  - `pfixedDenominator`
+  - `pemul`
+  - `pediv`
+  - `pconvertExp`
+  - `pfromFixedDecimal`
+  - `ptoFixedDecimal`
+  - `ptoRational`
+  - `punsafeMkFixedDecimal`
+
+* old `PFixedDecimal` is renamed and relocated into `Plutarch.Extra.Fixed`.
+
 ## 3.11.1 -- 2022-10-27
 
 ### Added
@@ -24,7 +54,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 ### Modified
 
 * Renamed the old `withStateThread` function to `pwithStateThread`, to
-  reflect the fact that it was applied at the plutarch level.` 
+  reflect the fact that it was applied at the plutarch level.
 
 ## 3.10.4 -- 2022-10-25
 
