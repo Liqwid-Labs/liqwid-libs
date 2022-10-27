@@ -114,6 +114,7 @@ library
     , plutus-tx
     , pretty
     , pretty-show
+    , liqwid-script-export
     , tagged
     , tasty
     , text
