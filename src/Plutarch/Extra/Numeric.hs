@@ -31,9 +31,19 @@ ppowIntegral =
               next
               (x * next)
 
-{- | Power to a 'PIntegral' exponent. Exponent must be @>= 0@.
+{- | Power to a 'PIntegral' exponent. Exponent must be @>= 0@. Only use this if
+ the exponent isn't statically known!
 
- @since 3.12.1
+ Performance note: Haskell '(^)' already works for Plutarch if the exponent is
+ 'Integral' (can just be 'Int' or 'Integer', if known statically), and the base
+ is in 'Num', which is the case for most/all Plutarch numeric types. It probably
+ performs better, due to the exponent calculations being done ahead of time.
+
+ Performance note: When working with `PRational', you most likely want to use
+ the 'Plutarch.Extra.PRationalNoReduce' wrapper to prevent reducing after each
+ internal multiplication.
+
+ @since 3.12.2
 -}
 (#^) ::
   forall (s :: S) (n :: S -> Type) (e :: S -> Type).
