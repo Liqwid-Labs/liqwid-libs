@@ -144,9 +144,11 @@ library
     , optics-th
     , plutarch-extra
     , plutarch-numeric
+    , plutarch-quickcheck
     , plutus-core
     , ply-core
     , ply-plutarch
+    , QuickCheck
     , serialise
     , tagged
     , text
