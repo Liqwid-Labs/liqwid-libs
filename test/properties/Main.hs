@@ -5,6 +5,7 @@ module Main (main) where
 
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
 import Plutarch.Extra.Maybe (pisJust, ptraceIfNothing)
+import Plutarch.Extra.Numeric ((#^))
 import Plutarch.Extra.Ord (
   PComparator,
   pallUniqueBy,
@@ -15,7 +16,15 @@ import Plutarch.Extra.Ord (
   psortBy,
  )
 import Plutarch.Test.QuickCheck (PA, TestableTerm (TestableTerm), fromPFun)
-import Test.QuickCheck (Property, arbitrary, forAllShrinkShow, scale, shrink)
+import Test.QuickCheck (
+  NonNegative (NonNegative),
+  Property,
+  arbitrary,
+  forAllShrinkShow,
+  scale,
+  shrink,
+  (===),
+ )
 import Test.Tasty (adjustOption, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (QuickCheckTests, testProperty)
 
@@ -30,6 +39,10 @@ main = do
         , testProperty "nubbed lists should prove ordered" propNubList
         , testProperty "nubbed lists should prove unique" propNubList'
         , testProperty "singleton lists are always nubbed" propNubSingleton
+        ]
+    , testGroup
+        "Numeric"
+        [ testProperty "Integer power (#^)" propPowInt
         ]
     ]
   where
@@ -71,6 +84,10 @@ propNubSingleton =
       ptraceIfNothing
         "unexpectedly out-of-order"
         (pallUniqueBy # cmp #$ pnubSortBy @_ @PList # cmp #$ psingleton # x)
+
+propPowInt :: NonNegative Integer -> NonNegative Integer -> Property
+propPowInt (NonNegative n) (NonNegative i) =
+  (n ^ i) === plift (pconstant n #^ pconstant i)
 
 -- Helpers
 

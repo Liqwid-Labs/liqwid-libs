@@ -2,6 +2,12 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.12.1 -- 2022-10-27
+
+### Added
+
+* Integer power (`#^`) in `Plutarch.Extra.Numeric`.
+
 ## 3.12.0 -- 2022-10-26
 
 ### Added
