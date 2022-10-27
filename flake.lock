@@ -455,16 +455,15 @@
         "nixpkgs-2205": "nixpkgs-2205"
       },
       "locked": {
-        "lastModified": 1660148797,
-        "narHash": "sha256-uSwB6jmiP0giQM9NwCkXloabfRnbDSsd1EAKXbTQpq4=",
+        "lastModified": 1666695559,
+        "narHash": "sha256-v8DcNma4hAgLCbPHpsxNYzeMURfbxh20VXfFzUED6bs=",
         "owner": "Liqwid-Labs",
         "repo": "liqwid-nix",
-        "rev": "a4a33254c70181a6c2861ccd0155065a9cde2863",
+        "rev": "7add1f24e9360e96b2bab4a1fc7929d4fa649439",
         "type": "github"
       },
       "original": {
         "owner": "Liqwid-Labs",
-        "ref": "emiflake/consistent-nixpkgs",
         "repo": "liqwid-nix",
         "type": "github"
       }
@@ -618,17 +617,16 @@
     },
     "nixpkgs-latest": {
       "locked": {
-        "lastModified": 1653918805,
-        "narHash": "sha256-6ahwAnBNGgqSNSn/6RnsxrlFi+fkA+RyT6o/5S1915o=",
+        "lastModified": 1666902743,
+        "narHash": "sha256-uCQcqfI4QhNGBbVb48ggqK3oVqg9MyU6Wz9N5bhiLOw=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "a0a69be4b5ee63f1b5e75887a406e9194012b492",
+        "rev": "b9a643f139e73ef95d3bd131cb4d8ee6dd7d8d23",
         "type": "github"
       },
       "original": {
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "a0a69be4b5ee63f1b5e75887a406e9194012b492",
         "type": "github"
       }
     },
