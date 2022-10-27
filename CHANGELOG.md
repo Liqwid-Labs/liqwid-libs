@@ -2,7 +2,17 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-## 3.12.0 -- 2022-10-26
+## 3.12.1 -- 2022-10-27
+
+### Added
+
+* In `Plutarch.Extra.FixedDecimal`, zero-cost conversions to/from integers:
+  - `toFixedZero`
+  - `fromFixedZero`
+  - `ptoFixedZero`
+  - `pfromFixedZero`
+
+## 3.12.0 -- 2022-10-27
 
 ### Added
 

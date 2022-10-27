@@ -4,12 +4,16 @@ module Plutarch.Extra.FixedDecimal (
   fixedDenominator,
   emul,
   ediv,
+  toFixedZero,
+  fromFixedZero,
   convertExp,
   PFixedDecimal (..),
   pfixedNumerator,
   pfixedDenominator,
   pemul,
   pediv,
+  ptoFixedZero,
+  pfromFixedZero,
   pconvertExp,
   pfromFixedDecimal,
   ptoFixedDecimal,
@@ -52,6 +56,10 @@ import qualified PlutusLedgerApi.V1 as PlutusTx
      as fast as regular 'PInteger', allows negative values, and does
      not require simplifications.
 
+     Performance note: Prefer 'emul', 'ediv', 'toFixedZero', and
+     'fromFixedZero'.  Then group calculations in a way that requires the least
+     amount of 'convertExp' calls.
+
  @since 3.12.0
 -}
 newtype FixedDecimal (exp :: Natural) = FixedDecimal {numerator :: Integer}
@@ -92,6 +100,24 @@ ediv ::
   FixedDecimal expB ->
   FixedDecimal (expA - expB)
 ediv (FixedDecimal a) (FixedDecimal b) = FixedDecimal $ a `div` b
+
+{- | Zero-cost transformation from 'Integer' to 'FixedDecimal 0'.
+
+ For use together with `emul` and `ediv`.
+
+ @since 3.12.1
+-}
+toFixedZero :: Integer -> FixedDecimal 0
+toFixedZero = FixedDecimal
+
+{- | Zero-cost transformation from 'FixedDecimal 0' to 'Integer'.
+
+ For use together with `emul` and `ediv`.
+
+ @since 3.12.1
+-}
+fromFixedZero :: FixedDecimal 0 -> Integer
+fromFixedZero (FixedDecimal n) = n
 
 {- | Convert to a different type-level exponent.
 
@@ -136,6 +162,10 @@ instance (KnownNat exp) => Fractional (FixedDecimal exp) where
      Compared to 'PRational', 'PFixed' gives addition and subtraction
      as fast as regular 'PInteger', allows negative values, and does
      not require simplifications.
+
+     Performance note: Prefer 'pemul', 'pediv', 'ptoFixedZero', and
+     'pfromFixedZero'.  Then group calculations in a way that requires the least
+     amount of 'convertExp' calls.
 
  @since 3.12.0
 -}
@@ -191,7 +221,8 @@ instance forall (exp :: Natural). KnownNat exp => PShow (PFixedDecimal exp) wher
         <> pshow decimal
     where
       baseExp = natVal (Proxy @exp)
-      base = 10 ^ baseExp
+      -- without pconstant, the 10 is a Term and ^ creates Plutarch-level calculations
+      base = pconstant $ 10 ^ baseExp
       decimal = prem # (pabs # pto z) # base
       wrap' x = if wrap then "(" <> x <> ")" else x
 
@@ -211,7 +242,7 @@ instance forall (exp :: Natural). KnownNat exp => PNum (PFixedDecimal exp) where
     phoistAcyclic
       ( plam $ \a b ->
           pcon . PFixedDecimal $
-            pdiv # (pto a * pto b) # (10 ^ natVal (Proxy @exp))
+            pdiv # (pto a * pto b) # pconstant (10 ^ natVal (Proxy @exp))
       )
       # a'
       # b'
@@ -227,13 +258,13 @@ instance forall (exp :: Natural). KnownNat exp => PIntegral (PFixedDecimal exp) 
     phoistAcyclic $
       plam $ \x y ->
         pcon . PFixedDecimal $
-          pdiv # (pto x * (10 ^ natVal (Proxy @exp))) # pto y
+          pdiv # (pto x * pconstant (10 ^ natVal (Proxy @exp))) # pto y
   pmod = phoistAcyclic $ plam $ \x y -> pcon . PFixedDecimal $ pmod # pto x # pto y
   pquot =
     phoistAcyclic $
       plam $ \x y ->
         pcon . PFixedDecimal $
-          pquot # (pto x * (10 ^ natVal (Proxy @exp))) # pto y
+          pquot # (pto x * pconstant (10 ^ natVal (Proxy @exp))) # pto y
   prem =
     phoistAcyclic $ plam $ \x y -> pcon . PFixedDecimal $ prem # pto x # pto y
 
@@ -244,18 +275,18 @@ instance (KnownNat exp) => PFractional (PFixedDecimal exp) where
   pfromRational = phoistAcyclic $
     plam $
       flip pmatch $ \(PRational num denom) ->
-        pcon . PFixedDecimal $ pdiv # (num * (10 ^ natVal (Proxy @exp))) # pto denom
+        pcon . PFixedDecimal $ pdiv # (num * pconstant (10 ^ natVal (Proxy @exp))) # pto denom
 
   a' #/ b' = go # a' # b'
     where
       go = phoistAcyclic $
         plam $ \a b ->
-          pcon . PFixedDecimal $ pdiv # (pto a * (10 ^ natVal (Proxy @exp))) # pto b
+          pcon . PFixedDecimal $ pdiv # (pto a * pconstant (10 ^ natVal (Proxy @exp))) # pto b
 
   precip =
     phoistAcyclic $
       plam $ \x ->
-        pcon . PFixedDecimal $ pdiv # (10 ^ (2 * natVal (Proxy @exp))) # pto x
+        pcon . PFixedDecimal $ pdiv # pconstant (10 ^ (2 * natVal (Proxy @exp))) # pto x
 
 {- | Integer numerator of 'PFixedDecimal'
 
@@ -276,7 +307,7 @@ pfixedDenominator ::
   (KnownNat unit) =>
   Term s (PFixedDecimal unit) ->
   Term s PInteger
-pfixedDenominator _ = 10 ^ natVal (Proxy @unit)
+pfixedDenominator _ = pconstant $ 10 ^ natVal (Proxy @unit)
 
 {- | Exponent-changing multiplication (implemented with a single integer multiplication)
 
@@ -300,6 +331,30 @@ pediv ::
   Term s (PFixedDecimal (expA - expB))
 pediv a b = pcon . PFixedDecimal $ pdiv # pfixedNumerator a # pfixedNumerator b
 
+{- | Zero-cost transformation from 'PInteger' to 'PFixedDecimal 0'.
+
+ For use together with `pemul` and `pediv`.
+
+ @since 3.12.1
+-}
+ptoFixedZero ::
+  forall (s :: S).
+  Term s PInteger ->
+  Term s (PFixedDecimal 0)
+ptoFixedZero = pcon . PFixedDecimal
+
+{- | Zero-cost transformation from 'PFixedDecimal 0' to 'PInteger'.
+
+ For use together with `pemul` and `pediv`.
+
+ @since 3.12.1
+-}
+pfromFixedZero ::
+  forall (s :: S).
+  Term s (PFixedDecimal 0) ->
+  Term s PInteger
+pfromFixedZero = pto
+
 {- | Change decimal point.
 
  *Caution* This function will drop precision when converting from more
@@ -322,9 +377,9 @@ pconvertExp = phoistAcyclic $
     let ediff = (natVal (Proxy @exp2) - natVal (Proxy @exp1))
      in pcon . PFixedDecimal $
           case compare ediff 0 of
-            GT -> pto z * (10 ^ abs ediff)
+            GT -> pto z * pconstant (10 ^ abs ediff)
             EQ -> pto z
-            LT -> pdiv # pto z # (10 ^ (-ediff))
+            LT -> pdiv # pto z # pconstant (10 ^ (-ediff))
 
 {- | Convert 'PFixed' into 'PInteger'.
 
@@ -341,7 +396,12 @@ pfromFixedDecimal ::
   KnownNat exp =>
   Term s (PFixedDecimal exp :--> PInteger)
 pfromFixedDecimal = phoistAcyclic $
-  plam $ \z -> pdiv # pto z #$ 10 ^ natVal (Proxy @exp)
+  plam $ \z ->
+    if expVal == 0
+      then pto z
+      else pdiv # pto z #$ pconstant (10 ^ expVal)
+  where
+    expVal = natVal (Proxy @exp)
 
 {- | Convert 'PInteger' into 'PFixed'.
 
@@ -357,7 +417,11 @@ ptoFixedDecimal = phoistAcyclic $
   plam $ \z ->
     pcon
       . PFixedDecimal
-      $ z * 10 ^ natVal (Proxy @exp)
+      $ if expVal == 0
+        then z
+        else z * pconstant (10 ^ natVal (Proxy @exp))
+  where
+    expVal = natVal (Proxy @exp)
 
 {- | Convert 'PFixed' into 'PRational'.
 
@@ -370,7 +434,7 @@ ptoRational ::
   KnownNat exp =>
   Term s (PFixedDecimal exp :--> PRational)
 ptoRational = phoistAcyclic $
-  plam $ \z -> pto z #% 10 ^ natVal (Proxy @exp)
+  plam $ \z -> pto z #% pconstant (10 ^ natVal (Proxy @exp))
 
 {- | Make 'PFixed' from 'PInteger'.
 
