@@ -2,6 +2,13 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 2.1.6 -- 2022-10-27
+
+### Modified
+
+* `PArbitrary` for `PPOSIXTime` now generates only non-negative values, in
+  agreement with the `POSIXTime` instance in `Instances`.
+
 ## 2.1.5 -- 2022-10-27
 
 ### Added

@@ -68,6 +68,7 @@ import Plutarch.Extra.Maybe (
  )
 import Plutarch.Lift (PUnsafeLiftDecl (PLifted), plift)
 import Plutarch.Maybe (pfromJust)
+import Plutarch.Num (pabs)
 import Plutarch.Positive (PPositive, ptryPositive)
 import Plutarch.Prelude (
   PAsData,
@@ -547,9 +548,8 @@ instance
 -- | @since 2.0.0
 instance PArbitrary PPOSIXTime where
   parbitrary = do
-    (TestableTerm x) <- parbitrary
-    return $ pconT $ PPOSIXTime x
-
+    TestableTerm x <- parbitrary
+    return . pconT $ PPOSIXTime $ pabs # x
   pshrink = fmap (\(TestableTerm x) -> pconT $ PPOSIXTime x) . shrink . unTime
     where
       unTime = flip pmatchT $ \(PPOSIXTime a) -> a
