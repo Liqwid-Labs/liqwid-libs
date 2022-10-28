@@ -2,6 +2,14 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.12.2 -- 2022-10-27
+
+### Added
+
+* Integer power (`#^`) in `Plutarch.Extra.Numeric`.
+* `PRationalNoReduce` wrapper in `Plutarch.Extra.Rational`, along with
+  conversion functions `pnoReduce` and `preduce'`.
+
 ## 3.12.1 -- 2022-10-27
 
 ### Added

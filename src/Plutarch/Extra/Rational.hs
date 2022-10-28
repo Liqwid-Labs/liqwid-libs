@@ -3,6 +3,9 @@
 {-# LANGUAGE RankNTypes #-}
 
 module Plutarch.Extra.Rational (
+  PRationalNoReduce (..),
+  pnoReduce,
+  preduce',
   mulTruncate,
   mulDivTruncate,
   divTruncate,
@@ -20,10 +23,123 @@ import GHC.Stack (HasCallStack)
 import Plutarch.Builtin (pforgetData)
 import Plutarch.Extra.Tagged (PTagged)
 import "plutarch-extra" Plutarch.Extra.TermCont (pmatchC)
+import Plutarch.Num (PNum (pabs, pfromInteger, pnegate, psignum, (#*), (#+), (#-)))
 import Plutarch.Orphans ()
 import Plutarch.Positive (PPositive)
-import Plutarch.Unsafe (punsafeCoerce)
+import Plutarch.Rational (preduce)
+import Plutarch.Unsafe (punsafeCoerce, punsafeDowncast)
 import PlutusTx (fromData)
+
+-------------------------------------------------------------------------------
+
+{- | Wrapper for 'PRational'. Numeric instances of this don't reduce the
+ fraction after each operation.
+-}
+newtype PRationalNoReduce (s :: S)
+  = PRationalNoReduce (Term s PRational)
+  deriving stock
+    ( -- | @since 3.12.2
+      Generic
+    )
+  deriving anyclass
+    ( -- | @since 3.12.2
+      PlutusType
+    , -- | @since 3.12.2
+      PIsData
+    , -- | @since 3.12.2
+      PEq
+    , -- | @since 3.12.2
+      PPartialOrd
+    , -- | @since 3.12.2
+      POrd
+    )
+
+-- | @since 3.12.2
+instance DerivePlutusType PRationalNoReduce where
+  type DPTStrat _ = PlutusTypeNewtype
+
+{- | Put a 'PRational' into a wrapper that prevents reducing after every numeric operation.
+
+ @since 3.12.2
+-}
+pnoReduce :: forall (s :: S). Term s PRational -> Term s PRationalNoReduce
+pnoReduce = pcon . PRationalNoReduce
+
+{- | Free a 'PRational' from its no-reduce-wrapper and reduce it.
+
+ @since 3.12.2
+-}
+preduce' :: forall (s :: S). Term s PRationalNoReduce -> Term s PRational
+preduce' nr = preduce # pto nr
+
+-- | @since 3.12.2
+instance PNum PRationalNoReduce where
+  x' #+ y' =
+    phoistAcyclic
+      ( plam $ \x y -> unTermCont $ do
+          PRational xn xd' <- tcont $ pmatch $ pto x
+          PRational yn yd' <- tcont $ pmatch $ pto y
+          xd <- tcont $ plet xd'
+          yd <- tcont $ plet yd'
+          pure $
+            pcon $
+              PRationalNoReduce $
+                pcon $
+                  PRational (xn * pto yd + yn * pto xd) $
+                    punsafeDowncast $ pto xd * pto yd
+      )
+      # x'
+      # y'
+
+  x' #- y' =
+    phoistAcyclic
+      ( plam $ \x y -> unTermCont $ do
+          PRational xn xd' <- tcont $ pmatch $ pto x
+          PRational yn yd' <- tcont $ pmatch $ pto y
+          xd <- tcont $ plet xd'
+          yd <- tcont $ plet yd'
+          pure $
+            pcon . PRationalNoReduce $
+              pcon $
+                PRational (xn * pto yd - yn * pto xd) $
+                  punsafeDowncast $ pto xd * pto yd
+      )
+      # x'
+      # y'
+
+  x' #* y' =
+    phoistAcyclic
+      ( plam $ \x y -> unTermCont $ do
+          PRational xn xd <- tcont $ pmatch $ pto x
+          PRational yn yd <- tcont $ pmatch $ pto y
+          pure $
+            pcon . PRationalNoReduce $
+              pcon $
+                PRational (xn * yn) $
+                  punsafeDowncast $ pto xd * pto yd
+      )
+      # x'
+      # y'
+
+  pnegate =
+    phoistAcyclic $
+      plam $ \x ->
+        pmatch x $ \(PRationalNoReduce x') ->
+          pcon $ PRationalNoReduce (pnegate # x')
+
+  pabs =
+    phoistAcyclic $
+      plam $ \x ->
+        pmatch x $ \(PRationalNoReduce x') ->
+          pcon $ PRationalNoReduce (pabs # x')
+
+  psignum =
+    phoistAcyclic $
+      plam $ \x ->
+        pmatch x $ \(PRationalNoReduce x') ->
+          pcon $ PRationalNoReduce (psignum # x')
+
+  pfromInteger n = pcon . PRationalNoReduce $ pfromInteger n
 
 --------------------------------------------------------------------------------
 
