@@ -5,9 +5,9 @@ module Plutarch.Extra.ScriptContext (
   paddressFromPubKeyHash,
   pownTxOutRef,
   pownTxInfo,
-  pownValue,
+  ptryOwnValue,
   pownMintValue,
-  pownInput,
+  ptryOwnInput,
   pisTokenSpent,
   pisUTXOSpent,
   pvalueSpent,
@@ -22,10 +22,10 @@ module Plutarch.Extra.ScriptContext (
   pfromPDatum,
   presolveOutputDatum,
   ptryResolveOutputDatum,
-  ptryFromOutputDatum,
   pfromOutputDatum,
-  pfromDatumHash,
-  pfromInlineDatum,
+  ptryFromOutputDatum,
+  ptryFromDatumHash,
+  ptryFromInlineDatum,
 ) where
 
 import Plutarch.Api.V1 (
@@ -61,6 +61,7 @@ import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.Extra.Value (passetClassValueOf)
 import Plutarch.Unsafe (punsafeCoerce)
 
+-- | @since 3.13.0
 pownTxOutRef ::
   forall (s :: S).
   Term s (PScriptContext :--> PTxOutRef)
@@ -69,35 +70,42 @@ pownTxOutRef = phoistAcyclic $
     PSpending t <- pmatchC (pfield @"purpose" # sc)
     pure $ pfield @"_0" # t
 
+-- | @since 3.13.0
 pownTxInfo ::
   forall (s :: S).
   Term s (PScriptContext :--> PTxInfo)
 pownTxInfo = phoistAcyclic $ plam $ \sc -> pfield @"txInfo" # sc
 
-pownValue ::
+-- | @since 3.13.0
+ptryOwnValue ::
   forall (s :: S).
   Term s (PScriptContext :--> PValue 'Sorted 'Positive)
-pownValue = phoistAcyclic $
+ptryOwnValue = phoistAcyclic $
   plam $ \sc -> unTermCont $ do
-    input <- pletC (pownInput # sc)
+    input <- pletC (ptryOwnInput # sc)
     pure $ pfield @"value" # (pfield @"resolved" # input)
 
+-- | @since 3.13.0
 pownMintValue ::
   forall (s :: S).
   Term s (PScriptContext :--> PValue 'Sorted 'NoGuarantees)
 pownMintValue = phoistAcyclic $ plam $ \sc -> pfield @"mint" # (pownTxInfo # sc)
 
-pownInput ::
+{- | Attempts to retrieve a 'PScriptContext' own input, blowing up if not found
+
+ @since 3.13.0
+-}
+ptryOwnInput ::
   forall (s :: S).
   Term s (PScriptContext :--> PTxInInfo)
-pownInput = phoistAcyclic $
+ptryOwnInput = phoistAcyclic $
   plam $ \sc -> unTermCont $ do
     txInfo <- pletC (pownTxInfo # sc)
     txOutRef <- pletC (pownTxOutRef # sc)
     txInInfos <- pletC (pfromData $ pfield @"inputs" # txInfo)
     res <- pmatchC (pfind # (go # txOutRef) # txInInfos)
     pure $ case res of
-      PNothing -> ptraceError "pownInput: Could not find my own input"
+      PNothing -> ptraceError "ptryOwnInput: Could not find my own input"
       PJust res' -> res'
   where
     go ::
@@ -239,27 +247,7 @@ ptryResolveOutputDatum = phoistAcyclic $
 
 {- | Extract the datum from a 'POutputDatum' and convert it to the given type.
 
-     @since 3.0.3
--}
-ptryFromOutputDatum ::
-  forall (a :: S -> Type) (s :: S).
-  PTryFrom PData a =>
-  Term
-    s
-    ( POutputDatum
-        :--> PMap 'Unsorted PDatumHash PDatum
-        :--> PMaybe a
-    )
-ptryFromOutputDatum =
-  phoistAcyclic $
-    (pfmap # pfromPDatum)
-      #.* presolveOutputDatum
-
-{- | Extract the datum from a 'POutputDatum' and convert it to the given type.
-     This function will throw an error if for some reason it's not able to find
-      the datum or convert it.
-
-     @since 3.0.3
+     @since 3.13.0
 -}
 pfromOutputDatum ::
   forall (a :: S -> Type) (s :: S).
@@ -268,18 +256,38 @@ pfromOutputDatum ::
     s
     ( POutputDatum
         :--> PMap 'Unsorted PDatumHash PDatum
-        :--> a
+        :--> PMaybe a
     )
 pfromOutputDatum =
-  phoistAcyclic $ pfromJust #.* ptryFromOutputDatum
+  phoistAcyclic $
+    (pfmap # pfromPDatum)
+      #.* presolveOutputDatum
+
+{- | Extract the datum from a 'POutputDatum' and convert it to the given type.
+     This function will throw an error if for some reason it's not able to find
+      the datum or convert it.
+
+     @since 3.13.0
+-}
+ptryFromOutputDatum ::
+  forall (a :: S -> Type) (s :: S).
+  PTryFrom PData a =>
+  Term
+    s
+    ( POutputDatum
+        :--> PMap 'Unsorted PDatumHash PDatum
+        :--> a
+    )
+ptryFromOutputDatum =
+  phoistAcyclic $ pfromJust #.* pfromOutputDatum
 
 {- | Extract the datum hash from a 'POutputDatum', throw an error if the given
      'POuptutDatum' doesn't contain a datum hash.
 
-     @since 3.0.3
+     @since 3.13.0
 -}
-pfromDatumHash :: forall (s :: S). Term s (POutputDatum :--> PDatumHash)
-pfromDatumHash = phoistAcyclic $
+ptryFromDatumHash :: forall (s :: S). Term s (POutputDatum :--> PDatumHash)
+ptryFromDatumHash = phoistAcyclic $
   plam $
     flip pmatch $ \case
       POutputDatumHash ((pfield @"datumHash" #) -> hash) -> hash
@@ -288,10 +296,10 @@ pfromDatumHash = phoistAcyclic $
 {- | Extract the inline datum from a 'POutputDatum', throw an error if the given
      'POuptutDatum' is not an inline datum.
 
-     @since 3.0.3
+     @since 3.13.0
 -}
-pfromInlineDatum :: forall (s :: S). Term s (POutputDatum :--> PDatum)
-pfromInlineDatum = phoistAcyclic $
+ptryFromInlineDatum :: forall (s :: S). Term s (POutputDatum :--> PDatum)
+ptryFromInlineDatum = phoistAcyclic $
   plam $
     flip pmatch $ \case
       POutputDatum ((pfield @"outputDatum" #) -> datum) -> datum
@@ -365,7 +373,7 @@ pisPubKey = phoistAcyclic $
       PScriptCredential _ -> pconstant False
       _ -> pconstant True
 
-{- | Find all TxOuts sent to an Address
+{- | Find all 'TxOut's sent to an 'Address'.
      @since 1.3.0
 -}
 pfindOutputsToAddress ::
@@ -386,12 +394,14 @@ pfindOutputsToAddress = phoistAcyclic $
 {- | Find the input being spent in the current transaction.
 
   Takes as arguments the inputs, as well as the spending transaction referenced
-  from `PScriptPurpose`.
+  from a 'PScriptPurpose'.
 
-  NOTE: this function is identical to the one in `Plutarch.Extra.Api` of the same
+  = Note
+
+  This function is identical to the one in `Plutarch.Extra.Api` of the same
   name, except it is updated to work on V2 types.
 
-  __Example:__
+  = Example
 
   @
   ctx <- tcont $ pletFields @["txInfo", "purpose"] sc
