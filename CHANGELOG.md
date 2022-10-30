@@ -6,6 +6,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### Added
 
+* Module `Plutarch.Extra.Deriving` to house derivation helpers.
 * Derivation helper for `Semigroup` and `Monoid` via `PInner`, along with a
   _very_ prominent warning about potential misuse.
 

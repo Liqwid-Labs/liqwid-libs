@@ -98,6 +98,7 @@ library
     Plutarch.Extra.Compile
     Plutarch.Extra.Const
     Plutarch.Extra.DebuggableScript
+    Plutarch.Extra.Deriving
     Plutarch.Extra.ExchangeRate
     Plutarch.Extra.Field
     Plutarch.Extra.Fixed
