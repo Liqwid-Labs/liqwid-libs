@@ -9,22 +9,19 @@
 -}
 module Plutarch.Orphans () where
 
-import Control.Composition (on, (.*))
-import Data.Coerce (Coercible, coerce)
-import Data.Ratio (Ratio, denominator, numerator, (%))
-
-import Plutarch.Api.V2 (PDatumHash (PDatumHash), PScriptHash (PScriptHash))
-import Plutarch.Builtin (PIsData (pdataImpl, pfromDataImpl))
-import Plutarch.Extra.TermCont (ptryFromC)
-import Plutarch.TryFrom (PTryFrom (ptryFrom'), PTryFromExcess)
-import Plutarch.Unsafe (punsafeCoerce, punsafeDowncast)
-
 import Codec.Serialise (Serialise, deserialiseOrFail, serialise)
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (parserThrowError)
 import Data.ByteString.Lazy (fromStrict, toStrict)
+import Data.Coerce (Coercible, coerce)
+import Data.Ratio (Ratio, denominator, numerator, (%))
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
+import Plutarch.Api.V2 (PDatumHash (PDatumHash), PScriptHash (PScriptHash))
+import Plutarch.Builtin (PIsData (pdataImpl, pfromDataImpl))
+import Plutarch.Extra.TermCont (ptryFromC)
+import Plutarch.TryFrom (PTryFrom (ptryFrom'), PTryFromExcess)
+import Plutarch.Unsafe (punsafeCoerce)
 
 --------------------------------------------------------------------------------
 
@@ -50,22 +47,6 @@ import PlutusLedgerApi.V2 (
 import PlutusTx (FromData (fromBuiltinData), ToData (toBuiltinData))
 
 newtype Flip f a b = Flip (f b a) deriving stock (Generic)
-
--- | @since 1.3.0
-instance
-  {-# OVERLAPPABLE #-}
-  (Semigroup (Term s a), a ~ PInner b) =>
-  Semigroup (Term s b)
-  where
-  (<>) = punsafeDowncast .* ((<>) `on` punsafeCoerce)
-
--- | @since 1.3.0
-instance
-  {-# OVERLAPPABLE #-}
-  (Monoid (Term s a), a ~ PInner b) =>
-  Monoid (Term s b)
-  where
-  mempty = punsafeDowncast mempty
 
 -- | @since 3.0.3
 instance (PIsData a) => PIsData (PAsData a) where

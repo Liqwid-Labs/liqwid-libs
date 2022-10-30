@@ -2,6 +2,17 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.13.0 -- 2022-10-31
+
+### Added
+
+* Derivation helper for `Semigroup` and `Monoid` via `PInner`, along with a
+  _very_ prominent warning about potential misuse.
+
+### Removed
+
+* Overlapping instances of `Semigroup` and `Monoid` via `PInner`.
+
 ## 3.12.2 -- 2022-10-27
 
 ### Added
