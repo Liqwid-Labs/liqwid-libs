@@ -26,9 +26,8 @@
 
     liqwid-nix.url = "github:Liqwid-Labs/liqwid-nix";
 
-    # overridden here so that we can use follows and the updated fork
     plutarch-context-builder = {
-      url = "github:tbidne/plutarch-context-builder?ref=liqwid-nix-update";
+      url = "github:Liqwid-Labs/plutarch-context-builder?ref=main";
       inputs.haskell-language-server.follows = "haskell-language-server";
       inputs.haskell-nix.follows = "haskell-nix";
       inputs.haskell-nix-extra-hackage.follows = "haskell-nix-extra-hackage";
@@ -70,7 +69,7 @@
       inputs.plutarch-numeric.follows = "plutarch-numeric";
     };
     plutarch-numeric = {
-      url = "github:tbidne/plutarch-numeric?ref=update-deps";
+      url = "github:Liqwid-Labs/plutarch-numeric?ref=main";
       inputs.haskell-language-server.follows = "haskell-language-server";
       inputs.haskell-nix.follows = "haskell-nix";
       inputs.haskell-nix-extra-hackage.follows = "haskell-nix-extra-hackage";

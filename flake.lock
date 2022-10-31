@@ -3017,16 +3017,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1666903175,
+        "lastModified": 1667168582,
         "narHash": "sha256-HMm/xrFFzrzyzPNGy36yLXVMKO5c8V+YhrFbMTzrxbY=",
-        "owner": "tbidne",
+        "owner": "Liqwid-Labs",
         "repo": "plutarch-context-builder",
-        "rev": "14a7f7294d710bf28820483f1fda5e6eb552678d",
+        "rev": "0303fbd322f483a197fd035be6d706f27a7ce148",
         "type": "github"
       },
       "original": {
-        "owner": "tbidne",
-        "ref": "liqwid-nix-update",
+        "owner": "Liqwid-Labs",
+        "ref": "main",
         "repo": "plutarch-context-builder",
         "type": "github"
       }
@@ -3060,16 +3060,16 @@
         "plutarch": "plutarch_3"
       },
       "locked": {
-        "lastModified": 1666904508,
+        "lastModified": 1667168577,
         "narHash": "sha256-sTLRs96OWa4ezWZTyYl/p9HUNbbJrn0UkOrFk1zMlZ4=",
-        "owner": "tbidne",
+        "owner": "Liqwid-Labs",
         "repo": "plutarch-numeric",
-        "rev": "01f79d1bf43070e1dd115d40ac0bcc3d8d4301f7",
+        "rev": "5c39d997f3e2057562fb879d84cc79fe6951627d",
         "type": "github"
       },
       "original": {
-        "owner": "tbidne",
-        "ref": "update-deps",
+        "owner": "Liqwid-Labs",
+        "ref": "main",
         "repo": "plutarch-numeric",
         "type": "github"
       }
