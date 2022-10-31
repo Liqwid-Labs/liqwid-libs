@@ -2,7 +2,7 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-## 3.13.0 -- 2022-10-31
+## 3.14.0 -- 2022-11-01
 
 ### Added
 
@@ -13,6 +13,20 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 ### Removed
 
 * Overlapping instances of `Semigroup` and `Monoid` via `PInner`.
+
+## 3.13.0 -- 2022-10-31
+
+### Modified
+
+* `pfromInlineDatum` has been renamed `ptryFromInlineDatum`, to match
+  conventions.
+* `ptryFromOutputDatum` has been renamed `pfromOutputDatum`, to match
+  conventions.
+* `pfromOutputDatum` has been renamed `ptryFromOutputDatum`, to match
+  conventions.
+* `pownInput` has been renamed `ptryOwnInput`, to match conventions.
+* `pfromDatumHash` has been renamed `ptryFromDatumHash`, to match conventions.
+* `pownValue` has been renamed `ptryOwnValue`, to match conventions.
 
 ## 3.12.2 -- 2022-10-27
 

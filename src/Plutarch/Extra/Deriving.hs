@@ -21,12 +21,12 @@ import Plutarch.Unsafe (punsafeDowncast)
  '<>' between 'PInner's can produce an invalid value of your type, deriving in
  this manner will allow such values to exist.
 
- @since 3.13.0
+ @since 3.14.0
 -}
 newtype FromPInner (a :: S -> Type) (s :: S)
   = FromPInner (Term s a)
 
--- | @since 3.13.0
+-- | @since 3.14.0
 instance
   (PInnerSemigroup a (PInner a)) =>
   Semigroup (FromPInner a s)
@@ -39,7 +39,7 @@ instance
   {-# INLINEABLE sconcat #-}
   sconcat = FromPInner . punsafeDowncast . sconcat . fmap (pto . coerce)
 
--- | @since 3.13.0
+-- | @since 3.14.0
 instance
   (PInnerMonoid a (PInner a)) =>
   Monoid (FromPInner a s)
