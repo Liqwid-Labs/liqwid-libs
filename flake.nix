@@ -3,7 +3,7 @@
 
   inputs = {
     nixpkgs.follows = "plutarch/nixpkgs";
-    nixpkgs-latest.url = "github:NixOS/nixpkgs?rev=cf63df0364f67848083ff75bc8ac9b7ca7aa5a01";
+    nixpkgs-latest.url = "github:NixOS/nixpkgs";
     # temporary fix for nix versions that have the transitive follows bug
     # see https://github.com/NixOS/nix/issues/6013
     nixpkgs-2111 = { url = "github:NixOS/nixpkgs/nixpkgs-21.11-darwin"; };
@@ -24,12 +24,74 @@
         "plutarch/haskell-nix/nixpkgs-unstable";
     };
 
-    plutarch-numeric.url =
-      "github:Liqwid-Labs/plutarch-numeric?ref=main";
-    liqwid-plutarch-extra.url =
-      "github:Liqwid-Labs/liqwid-plutarch-extra?ref=main";
-
     liqwid-nix.url = "github:Liqwid-Labs/liqwid-nix";
+
+    plutarch-context-builder = {
+      url = "github:Liqwid-Labs/plutarch-context-builder?ref=main";
+      inputs.haskell-language-server.follows = "haskell-language-server";
+      inputs.haskell-nix.follows = "haskell-nix";
+      inputs.haskell-nix-extra-hackage.follows = "haskell-nix-extra-hackage";
+      inputs.iohk-nix.follows = "iohk-nix";
+      inputs.liqwid-nix.follows = "liqwid-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.nixpkgs-latest.follows = "nixpkgs-latest";
+      inputs.nixpkgs-2111.follows = "nixpkgs-2111";
+      inputs.plutarch.follows = "plutarch";
+    };
+    liqwid-plutarch-extra = {
+      url = "github:Liqwid-Labs/liqwid-plutarch-extra?ref=main";
+      inputs.haskell-language-server.follows = "haskell-language-server";
+      inputs.haskell-nix.follows = "haskell-nix";
+      inputs.haskell-nix-extra-hackage.follows = "haskell-nix-extra-hackage";
+      inputs.iohk-nix.follows = "iohk-nix";
+      inputs.liqwid-nix.follows = "liqwid-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.nixpkgs-latest.follows = "nixpkgs-latest";
+      inputs.nixpkgs-2111.follows = "nixpkgs-2111";
+      inputs.nixpkgs-2205.follows = "nixpkgs-2205";
+      inputs.plutarch.follows = "plutarch";
+      inputs.plutarch-context-builder.follows = "plutarch-context-builder";
+      inputs.plutarch-numeric.follows = "plutarch-numeric";
+      inputs.plutarch-quickcheck.follows = "plutarch-quickcheck";
+    };
+    liqwid-script-export = {
+      url = "github:Liqwid-Labs/liqwid-script-export?ref=main";
+      inputs.haskell-language-server.follows = "haskell-language-server";
+      inputs.haskell-nix.follows = "haskell-nix";
+      inputs.haskell-nix-extra-hackage.follows = "haskell-nix-extra-hackage";
+      inputs.iohk-nix.follows = "iohk-nix";
+      inputs.liqwid-nix.follows = "liqwid-nix";
+      inputs.liqwid-plutarch-extra.follows = "liqwid-plutarch-extra";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.nixpkgs-latest.follows = "nixpkgs-latest";
+      inputs.nixpkgs-2111.follows = "nixpkgs-2111";
+      inputs.plutarch.follows = "plutarch";
+      inputs.plutarch-numeric.follows = "plutarch-numeric";
+    };
+    plutarch-numeric = {
+      url = "github:Liqwid-Labs/plutarch-numeric?ref=main";
+      inputs.haskell-language-server.follows = "haskell-language-server";
+      inputs.haskell-nix.follows = "haskell-nix";
+      inputs.haskell-nix-extra-hackage.follows = "haskell-nix-extra-hackage";
+      inputs.iohk-nix.follows = "iohk-nix";
+      inputs.liqwid-nix.follows = "liqwid-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.nixpkgs-latest.follows = "nixpkgs-latest";
+      inputs.nixpkgs-2111.follows = "nixpkgs-2111";
+    };
+    plutarch-quickcheck = {
+      url = "github:Liqwid-Labs/plutarch-quickcheck?ref=main";
+      inputs.haskell-language-server.follows = "haskell-language-server";
+      inputs.haskell-nix.follows = "haskell-nix";
+      inputs.haskell-nix-extra-hackage.follows = "haskell-nix-extra-hackage";
+      inputs.iohk-nix.follows = "iohk-nix";
+      inputs.liqwid-nix.follows = "liqwid-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.nixpkgs-latest.follows = "nixpkgs-latest";
+      inputs.nixpkgs-2111.follows = "nixpkgs-2111";
+      inputs.nixpkgs-2205.follows = "nixpkgs-2205";
+      inputs.plutarch.follows = "plutarch";
+    };
   };
 
   outputs = inputs@{ liqwid-nix, ... }:
@@ -42,8 +104,12 @@
         liqwid-nix.haskellProject
         liqwid-nix.plutarchProject
         (liqwid-nix.addDependencies [
-          "${inputs.plutarch-numeric}"
           "${inputs.liqwid-plutarch-extra}"
+          "${inputs.liqwid-script-export}"
+          "${inputs.liqwid-script-export.inputs.ply}/ply-core"
+          "${inputs.liqwid-script-export.inputs.ply}/ply-plutarch"
+          "${inputs.plutarch-numeric}"
+          "${inputs.plutarch-quickcheck}"
         ])
         (liqwid-nix.enableFormatCheck [
           "-XTemplateHaskell"

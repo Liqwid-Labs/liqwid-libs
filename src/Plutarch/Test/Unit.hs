@@ -168,7 +168,8 @@ testValidator ::
 testValidator f name val dat red sc =
   f name $
     mustCompile
-      ( val # pforgetConstant dat
+      ( val
+          # pforgetConstant dat
           # pforgetConstant red
           # pconstant sc
       )
