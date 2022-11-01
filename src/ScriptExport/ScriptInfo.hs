@@ -16,6 +16,7 @@ module ScriptExport.ScriptInfo (
   Linker (..),
   RawScriptExport (..),
   ScriptExport (..),
+  LinkerError(..),
 
   -- * Linker utilities
   runLinker,
