@@ -2,6 +2,12 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 2.6.2 -- 2022-11-1
+
+### Modified
+
+* `checkMints` fixed
+
 ## 2.6.1 -- 2022-10-20
 
 ### Added
@@ -12,7 +18,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### Modified
 * `normalizeValue` now has the correct behavior of:
-  * adding a 0 Ada entry to the underlying map if the 
+  * adding a 0 Ada entry to the underlying map if the
     entry would otherwise be missing.
   * removing entries with the Ada currency symbol, but a non-Ada
     token name
@@ -21,13 +27,13 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### Added
 
-* Labelled optics for `BaseBuilder`, `MintingBuilder`, `SpendingBuilder`, 
-  `UTXO` and `Mint`. These follow the names of the old field selectors, but 
+* Labelled optics for `BaseBuilder`, `MintingBuilder`, `SpendingBuilder`,
+  `UTXO` and `Mint`. These follow the names of the old field selectors, but
   without disambiguation prefixes: for example, `bbMints` is now `#mints`.
 
 ### Modified
 
-* `BaseBuilder`, `MintingBuilder`, `SpendingBuilder`, `UTXO` and `Mint` no 
+* `BaseBuilder`, `MintingBuilder`, `SpendingBuilder`, `UTXO` and `Mint` no
   longer export their constructors.
 * `runChecker` is now a regular function, not a field selector.
 * `checkBSLength` replaced old `checkByteString`. It checks if `ByteString` is
@@ -35,7 +41,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### Removed
 
-* Field selectors for `BaseBuilder`, `MintingBuilder`, `SpendingBuilder`, 
+* Field selectors for `BaseBuilder`, `MintingBuilder`, `SpendingBuilder`,
   `UTXO` and `Mint`.
 
 ### Fixed

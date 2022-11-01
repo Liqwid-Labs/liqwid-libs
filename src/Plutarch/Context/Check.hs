@@ -39,7 +39,10 @@ import Acc (Acc)
 import Control.Arrow ((&&&))
 import Data.Foldable (toList)
 import Data.Functor.Contravariant (Contravariant (contramap))
-import Data.Functor.Contravariant.Divisible (Decidable (choose, lose), Divisible (conquer, divide))
+import Data.Functor.Contravariant.Divisible (
+  Decidable (choose, lose),
+  Divisible (conquer, divide),
+ )
 import Data.Kind (Type)
 import Data.Maybe (fromMaybe)
 import Data.Void (absurd)
@@ -113,17 +116,23 @@ newtype CheckerError e
 
 -- | @since 2.1.0
 instance P.Pretty e => P.Pretty (CheckerErrorType e) where
-  pretty (IncorrectByteString lb) = "\"" <> P.pretty lb <> "\"" P.<+> "is an invalid bytestring"
+  pretty (IncorrectByteString lb) =
+    "\"" <> P.pretty lb <> "\"" P.<+> "is an invalid bytestring"
   pretty NoSignature = "Signature not provided"
   pretty OrphanDatum = "Extra datum is provided"
   pretty (MintingAda val) = "Transaction mints Ada:" P.<+> P.pretty val
-  pretty (NonAdaFee val) = "Transaction takes tokens other than Ada as fee:" P.<+> P.pretty val
-  pretty (DuplicateTxOutRefIndex idx) = "Overlapping input indices: " P.<+> P.pretty idx
-  pretty (NonPositiveValue val) = P.pretty val P.<+> "is an invalid value (contains non positive)."
+  pretty (NonAdaFee val) =
+    "Transaction takes tokens other than Ada as fee:" P.<+> P.pretty val
+  pretty (DuplicateTxOutRefIndex idx) =
+    "Overlapping input indices: " P.<+> P.pretty idx
+  pretty (NonPositiveValue val) =
+    P.pretty val P.<+> "is an invalid value (contains non positive)."
   pretty (NonNormalizedValue val) = P.pretty val P.<+> "is not normalized."
   pretty (NoZeroSum val) =
-    "Transaction doesn't not have equal inflow and outflow." <> P.line
-      <> "Diff:" P.<+> P.pretty val
+    "Transaction doesn't not have equal inflow and outflow."
+      <> P.line
+      <> "Diff:"
+      P.<+> P.pretty val
   pretty (MissingRedeemer hash) =
     "Missing script redeemer while spending UTxO owned by:" P.<+> P.pretty hash
   pretty SpecifyRedeemerForNonValidatorInput =
@@ -137,9 +146,11 @@ instance P.Pretty CheckerPos where
 -- | @since 2.1.0
 instance P.Pretty e => P.Pretty (CheckerError e) where
   pretty (CheckerError (err, at)) =
-    "Error at" P.<+> P.pretty at <> ":"
-      <> P.line
-      <> P.indent 4 (P.pretty err)
+    "Error at"
+      P.<+> P.pretty at
+        <> ":"
+        <> P.line
+        <> P.indent 4 (P.pretty err)
 
 {- | Checker that accumulates error.
 
@@ -154,7 +165,8 @@ instance Contravariant (Checker e) where
 -- | @since 2.1.0
 instance Divisible (Checker e) where
   conquer = Checker $ const mempty
-  divide f x y = Checker $ \(f -> (x', y')) -> runChecker x x' <> runChecker y y'
+  divide f x y =
+    Checker $ \(f -> (x', y')) -> runChecker x x' <> runChecker y y'
 
 -- | @since 2.1.0
 instance Decidable (Checker e) where
@@ -185,7 +197,8 @@ runChecker (Checker f) = f
  @since 2.1.0
 -}
 renderErrors :: (Foldable t, P.Pretty e) => t (CheckerError e) -> String
-renderErrors err = show . P.indent 4 $ P.line <> P.vsep (P.pretty <$> toList err)
+renderErrors err =
+  show . P.indent 4 $ P.line <> P.vsep (P.pretty <$> toList err)
 
 {- | Check type @a@ with given checker. It returns input
  if there are no errors; throws error if not.
@@ -280,14 +293,19 @@ checkIfWith f err = Checker $ \y ->
  @since 2.1.0
 -}
 checkBSLength :: Int -> Checker e BuiltinByteString
-checkBSLength len = checkWith $ \x -> contramap lengthOfByteString $ checkIf (== toInteger len) (IncorrectByteString $ LedgerBytes x)
+checkBSLength len =
+  checkWith $
+    \x ->
+      contramap lengthOfByteString $
+        checkIf (== toInteger len) (IncorrectByteString $ LedgerBytes x)
 
 {- | Check if all tokens in `Value` are positive.
 
  @since 2.1.0
 -}
 checkPositiveValue :: Checker e Value
-checkPositiveValue = checkWith $ \x -> contramap isPos $ checkBool (NonPositiveValue x)
+checkPositiveValue =
+  checkWith $ \x -> contramap isPos $ checkBool (NonPositiveValue x)
   where
     isPos = all (\(_, _, x) -> x > 0) . flattenValue
 
@@ -416,7 +434,7 @@ checkReferenceInputs =
 
 {- | Check if minted tokens are valid.
 
- @since 2.1.0
+ @since 2.6.2
 -}
 checkMints :: Builder a => Checker e a
 checkMints =
@@ -426,7 +444,14 @@ checkMints =
     nullAda :: Checker e Value
     nullAda = checkWith $ \x ->
       contramap
-        (all (\(cs, tk, a) -> cs /= adaSymbol || tk /= adaToken || a == 0) . flattenValue)
+        ( all
+            ( \(cs, tk, a) ->
+                if cs == adaSymbol && tk == adaToken
+                  then a == 0
+                  else a /= 0
+            )
+            . flattenValue
+        )
         (checkBool $ MintingAda x)
 
 {- | Check if fee amount is valid.
@@ -511,4 +536,9 @@ checkPhase1 =
  @since 2.1.0
 -}
 flattenValue :: Value -> [(CurrencySymbol, TokenName, Integer)]
-flattenValue x = concatMap (\(cs, z) -> (\(tk, amt) -> (cs, tk, amt)) <$> AssocMap.toList z) (AssocMap.toList (getValue x))
+flattenValue x =
+  concatMap
+    ( \(cs, z) ->
+        (\(tk, amt) -> (cs, tk, amt)) <$> AssocMap.toList z
+    )
+    (AssocMap.toList (getValue x))
