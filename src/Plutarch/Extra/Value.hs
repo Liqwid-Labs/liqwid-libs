@@ -122,7 +122,9 @@ psingleValue ::
   forall (key :: KeyGuarantees) (s :: S).
   Term
     s
-    ( PAsData PCurrencySymbol :--> PAsData PTokenName :--> PInteger
+    ( PAsData PCurrencySymbol
+        :--> PAsData PTokenName
+        :--> PInteger
         :--> PBuiltinPair
               (PAsData PCurrencySymbol)
               (PAsData (PMap key PTokenName PInteger))
@@ -571,8 +573,12 @@ phasOnlyOneTokenOfCurrencySymbol ::
   Term s (PCurrencySymbol :--> PValue keys amounts :--> PBool)
 phasOnlyOneTokenOfCurrencySymbol = phoistAcyclic $
   plam $ \cs vs ->
-    psymbolValueOf # cs # vs #== 1
-      #&& (plength #$ pto $ pto $ pto vs) #== 1
+    psymbolValueOf
+      # cs
+      # vs
+      #== 1
+      #&& (plength #$ pto $ pto $ pto vs)
+      #== 1
 
 {- | Returns 'PTrue' if the argument 'PValue' contains /exactly/
   one token of the argument 'PAssetClass'.
@@ -760,8 +766,10 @@ matchOrTryRec requiredAsset = phoistAcyclic $
     precValue
       ( \self pcurrencySymbol pTokenName pint rest ->
           pif
-            ( pconstantData (view #symbol requiredAsset) #== pcurrencySymbol
-                #&& pconstantData (view #name requiredAsset) #== pTokenName
+            ( pconstantData (view #symbol requiredAsset)
+                #== pcurrencySymbol
+                #&& pconstantData (view #name requiredAsset)
+                #== pTokenName
             )
             -- assetClass found - return its quantity and tail of PValueMap
             (pcon $ PPair pint rest)

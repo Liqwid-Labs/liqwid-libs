@@ -122,7 +122,8 @@ ptryOwnInput = phoistAcyclic $
 -}
 pisUTXOSpent :: Term s (PTxOutRef :--> PBuiltinList PTxInInfo :--> PBool)
 pisUTXOSpent = phoistAcyclic $
-  plam $ \oref inputs -> pisJust #$ pfindTxInByTxOutRef # oref # inputs
+  plam $
+    \oref inputs -> pisJust #$ pfindTxInByTxOutRef # oref # inputs
 
 {- | Sum of all value at input.
 
@@ -167,15 +168,15 @@ pisTokenSpent =
   plam $ \tokenClass inputs ->
     0
       #< pfoldr @PBuiltinList
-        # plam
-          ( \txInInfo' acc -> unTermCont $ do
-              PTxInInfo txInInfo <- pmatchC txInInfo'
-              PTxOut txOut' <- pmatchC $ pfromData $ pfield @"resolved" # txInInfo
-              let value = pfromData $ pfield @"value" # txOut'
-              pure $ acc + passetClassValueOf # tokenClass # value
-          )
-        # 0
-        # inputs
+      # plam
+        ( \txInInfo' acc -> unTermCont $ do
+            PTxInInfo txInInfo <- pmatchC txInInfo'
+            PTxOut txOut' <- pmatchC $ pfromData $ pfield @"resolved" # txInInfo
+            let value = pfromData $ pfield @"value" # txOut'
+            pure $ acc + passetClassValueOf # tokenClass # value
+        )
+      # 0
+      # inputs
 
 {- | Find the TxInInfo by a TxOutRef.
 
@@ -193,7 +194,7 @@ pfindTxInByTxOutRef = phoistAcyclic $
                 (pcon (PJust r))
                 (pcon PNothing)
         )
-      #$ inputs
+        #$ inputs
 
 {- | Check if a PubKeyHash signs this transaction.
 
@@ -201,7 +202,8 @@ pfindTxInByTxOutRef = phoistAcyclic $
 -}
 ptxSignedBy :: forall (s :: S). Term s (PBuiltinList (PAsData PPubKeyHash) :--> PAsData PPubKeyHash :--> PBool)
 ptxSignedBy = phoistAcyclic $
-  plam $ \sigs sig -> pelem # sig # sigs
+  plam $
+    \sigs sig -> pelem # sig # sigs
 
 {- | Convert a 'PDatum' to the give type @a@.
 
@@ -328,9 +330,11 @@ paddressFromValidatorHash ::
   Term s (PValidatorHash :--> PMaybeData PStakingCredential :--> PAddress)
 paddressFromValidatorHash = plam $ \valHash stakingCred ->
   pcon . PAddress $
-    pdcons # pdata (pcon $ PScriptCredential (pdcons # pdata valHash # pdnil))
-      #$ pdcons # pdata stakingCred
-      #$ pdnil
+    pdcons
+      # pdata (pcon $ PScriptCredential (pdcons # pdata valHash # pdnil))
+        #$ pdcons
+      # pdata stakingCred
+        #$ pdnil
 
 {- | Constuct an address (with a staking credential) from a @PPubKeyHash@
 and maybe a @PStakingCredential
@@ -342,9 +346,11 @@ paddressFromPubKeyHash ::
   Term s (PPubKeyHash :--> PMaybeData PStakingCredential :--> PAddress)
 paddressFromPubKeyHash = plam $ \pkh stakingCred ->
   pcon . PAddress $
-    pdcons # pdata (pcon $ PPubKeyCredential (pdcons # pdata pkh # pdnil))
-      #$ pdcons # pdata stakingCred
-      #$ pdnil
+    pdcons
+      # pdata (pcon $ PPubKeyCredential (pdcons # pdata pkh # pdnil))
+        #$ pdcons
+      # pdata stakingCred
+        #$ pdnil
 
 {- | Get script hash from an Address.
      @since 1.3.0
@@ -361,7 +367,8 @@ pscriptHashFromAddress = phoistAcyclic $
 -}
 pisScriptAddress :: forall (s :: S). Term s (PAddress :--> PBool)
 pisScriptAddress = phoistAcyclic $
-  plam $ \addr -> pnot #$ pisPubKey #$ pfromData $ pfield @"credential" # addr
+  plam $
+    \addr -> pnot #$ pisPubKey #$ pfromData $ pfield @"credential" # addr
 
 {- | Return true if the given credential is a pub-key-hash.
      @since 1.3.0
@@ -388,7 +395,8 @@ pfindOutputsToAddress = phoistAcyclic $
   plam $ \outputs address' -> unTermCont $ do
     address <- pletC $ pdata address'
     pure $
-      pfilter # plam (\txOut -> pfield @"address" # txOut #== address)
+      pfilter
+        # plam (\txOut -> pfield @"address" # txOut #== address)
         # outputs
 
 {- | Find the input being spent in the current transaction.
@@ -419,7 +427,8 @@ pfindOutputsToAddress = phoistAcyclic $
 pfindOwnInput ::
   Term
     s
-    ( PBuiltinList PTxInInfo :--> PTxOutRef
+    ( PBuiltinList PTxInInfo
+        :--> PTxOutRef
         :--> PMaybe PTxInInfo
     )
 pfindOwnInput = phoistAcyclic $

@@ -2764,11 +2764,11 @@
         "nixpkgs-2205": "nixpkgs-2205"
       },
       "locked": {
-        "lastModified": 1660580223,
-        "narHash": "sha256-r1i92rrUjSBdnQZpHLxeCAtVGMHYqKQHm05mzddIte8=",
+        "lastModified": 1666695559,
+        "narHash": "sha256-v8DcNma4hAgLCbPHpsxNYzeMURfbxh20VXfFzUED6bs=",
         "owner": "Liqwid-Labs",
         "repo": "liqwid-nix",
-        "rev": "fa1eeba35b37ac2551a00798dffdf053879699c3",
+        "rev": "7add1f24e9360e96b2bab4a1fc7929d4fa649439",
         "type": "github"
       },
       "original": {
@@ -3616,11 +3616,11 @@
     },
     "nixpkgs-latest": {
       "locked": {
-        "lastModified": 1663696179,
-        "narHash": "sha256-vjsfJKxW+z2t2RrYJ9gs71m48kX97+p+fpCHVmH3xxc=",
+        "lastModified": 1667327275,
+        "narHash": "sha256-zmBIBpHGECLNX58BNH36Sn0o4t4uJjSX9P4ODUDX3zE=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "d4717ad12898f9c36f9b9538da0ca9df175ee05e",
+        "rev": "98c61465b148fb34dd17bc87960d107cf20b2b78",
         "type": "github"
       },
       "original": {

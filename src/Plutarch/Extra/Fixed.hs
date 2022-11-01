@@ -63,7 +63,8 @@ instance KnownNat u => PNum (PFixed u) where
   (#*) =
     (pcon . PFixed)
       .* (pflip # pdiv # pconstant (natVal (Proxy @u)) #)
-      .* (#*) `on` punsafeCoerce
+      .* (#*)
+      `on` punsafeCoerce
   pfromInteger = pcon . PFixed . (* pconstant (natVal (Proxy @u))) . pconstant
 
 -- | @since 3.12.0

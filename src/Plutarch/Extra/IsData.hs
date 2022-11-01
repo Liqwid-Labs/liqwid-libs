@@ -151,10 +151,10 @@ type family MatchTypesError (n :: [S -> Type]) (m :: [S -> Type]) (a :: Bool) ::
             ':$$: 'Text "\tMismatch between constituent Haskell and Plutarch types"
             ':$$: 'Text "Constituent Haskell Types: "
             ':$$: 'Text "\t"
-            ':<>: 'ShowType n
+              ':<>: 'ShowType n
             ':$$: 'Text "Constituent Plutarch Types: "
             ':$$: 'Text "\t"
-            ':<>: 'ShowType m
+              ':<>: 'ShowType m
         )
     )
 
