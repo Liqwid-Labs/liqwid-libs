@@ -248,10 +248,10 @@ type family CheckReturn (fin :: S -> Type) (p :: S -> Type) :: Constraint where
     , TypeError
         ( 'Text "Return type does not match:"
             ':$$: 'Text "\tExpected \""
-            ':<>: 'ShowType a
-            ':<>: 'Text "\" but given function returns \""
-            ':<>: 'ShowType b
-            ':<>: 'Text "\""
+              ':<>: 'ShowType a
+              ':<>: 'Text "\" but given function returns \""
+              ':<>: 'ShowType b
+              ':<>: 'Text "\""
         )
     )
 
@@ -442,7 +442,9 @@ instance
   where
   haskEquiv h (TestableTerm p) _ =
     counterexample "Comparison by PEq Failed" $
-      property $ plift $ p #== pconstant h
+      property $
+        plift $
+          p #== pconstant h
 
 -- | @since 2.1.0
 instance
@@ -452,7 +454,8 @@ instance
   where
   haskEquiv h (TestableTerm p) _ =
     counterexample "Comparison by PData Failed" $
-      property $ plift (pdata p #== pdata (pconstant h))
+      property $
+        plift (pdata p #== pdata (pconstant h))
 
 -- | @since 2.1.0
 instance
