@@ -3,7 +3,7 @@
 
   inputs = {
     nixpkgs.follows = "plutarch/nixpkgs";
-    nixpkgs-latest.url = "github:NixOS/nixpkgs?rev=cf63df0364f67848083ff75bc8ac9b7ca7aa5a01";
+    nixpkgs-latest.url = "github:NixOS/nixpkgs";
 
     # temporary fix for nix versions that have the transitive follows bug
     # see https://github.com/NixOS/nix/issues/6013
@@ -24,8 +24,11 @@
       inputs.nixpkgs.follows =
         "plutarch/haskell-nix/nixpkgs-unstable";
     };
-
-    liqwid-nix.url = "github:Liqwid-Labs/liqwid-nix";
+    
+    liqwid-nix = {
+      url = "github:Liqwid-Labs/liqwid-nix";
+      inputs.nixpkgs-latest.follows = "nixpkgs-latest";
+    };
   };
 
   outputs = inputs@{ liqwid-nix, ... }:
