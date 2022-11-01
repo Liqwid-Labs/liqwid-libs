@@ -285,7 +285,8 @@ ptryLookup ::
   Term s (k :--> PMap keys k v :--> v)
 ptryLookup = phoistAcyclic $
   plam $ \k kvs ->
-    passertPJust # "plookupPartial: No value found for key."
+    passertPJust
+      # "plookupPartial: No value found for key."
       # (plookup # k # kvs)
 
 {- | Given a 'Foldable' of key-value pairs, construct an unsorted 'PMap'.

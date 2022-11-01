@@ -31,12 +31,14 @@ exchangeFromTruncate ::
   forall (a :: Symbol) (b :: Symbol) (s :: S).
   Term
     s
-    ( PTagged (a :> b) PRational :--> PTagged a PInteger
+    ( PTagged (a :> b) PRational
+        :--> PTagged a PInteger
         :--> PTagged b PInteger
     )
 exchangeFromTruncate =
   phoistAcyclic $
-    plam $ \ex x -> ppure #$ mulTruncate # pto ex # pto x
+    plam $
+      \ex x -> ppure #$ mulTruncate # pto ex # pto x
 
 {- | Exchange from  one currency to another, truncating the result
  (inverse direction).
@@ -47,7 +49,8 @@ exchangeToTruncate ::
   forall (a :: Symbol) (b :: Symbol) (s :: S).
   Term
     s
-    ( PTagged (a :> b) PRational :--> PTagged b PInteger
+    ( PTagged (a :> b) PRational
+        :--> PTagged b PInteger
         :--> PTagged a PInteger
     )
 exchangeToTruncate =
@@ -64,7 +67,8 @@ exchangeFrom ::
   forall (a :: Symbol) (b :: Symbol) (s :: S).
   Term
     s
-    ( PTagged (a :> b) PRational :--> PTagged a PInteger
+    ( PTagged (a :> b) PRational
+        :--> PTagged a PInteger
         :--> PTagged b PRational
     )
 exchangeFrom =
@@ -80,7 +84,8 @@ exchangeTo ::
   forall (a :: Symbol) (b :: Symbol) (s :: S).
   Term
     s
-    ( PTagged (a :> b) PRational :--> PTagged b PInteger
+    ( PTagged (a :> b) PRational
+        :--> PTagged b PInteger
         :--> PTagged a PRational
     )
 exchangeTo =

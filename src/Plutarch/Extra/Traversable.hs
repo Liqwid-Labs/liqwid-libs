@@ -135,16 +135,16 @@ instance PTraversable PMaybeData where
 
 -- | @since 1.0.0
 instance PTraversable PList where
-  ptraverse = phoistAcyclic $
-    pfix
+  ptraverse = phoistAcyclic
+    $ pfix
       #$ plam
-      $ \self f xs ->
-        pmatch (puncons # xs) $ \case
-          PNothing -> ppure # pnil
-          PJust t' -> do
-            pmatch t' $ \case
-              PPair thead ttail ->
-                pliftA2 # pcons # (f # thead) # (self # f # ttail)
+    $ \self f xs ->
+      pmatch (puncons # xs) $ \case
+        PNothing -> ppure # pnil
+        PJust t' -> do
+          pmatch t' $ \case
+            PPair thead ttail ->
+              pliftA2 # pcons # (f # thead) # (self # f # ttail)
   ptraverse_ ::
     forall
       (b :: S -> Type)
@@ -174,16 +174,16 @@ instance PTraversable PList where
 
 -- | @since 1.0.0
 instance PTraversable PBuiltinList where
-  ptraverse = phoistAcyclic $
-    pfix
+  ptraverse = phoistAcyclic
+    $ pfix
       #$ plam
-      $ \r f xs ->
-        pmatch (puncons # xs) $ \case
-          PNothing -> ppure # pnil
-          PJust t' -> do
-            pmatch t' $ \case
-              PPair thead ttail ->
-                pliftA2 # pcons # (f # thead) # (r # f # ttail)
+    $ \r f xs ->
+      pmatch (puncons # xs) $ \case
+        PNothing -> ppure # pnil
+        PJust t' -> do
+          pmatch t' $ \case
+            PPair thead ttail ->
+              pliftA2 # pcons # (f # thead) # (r # f # ttail)
   ptraverse_ ::
     forall
       (b :: S -> Type)

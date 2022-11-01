@@ -321,8 +321,10 @@ passetClassData = phoistAcyclic $
   plam $ \sym tk ->
     mkRecordConstr
       PAssetClassData
-      ( #symbol .= pdata sym
-          .& #name .= pdata tk
+      ( #symbol
+          .= pdata sym
+          .& #name
+          .= pdata tk
       )
 
 -- | @since 3.10.4
@@ -361,8 +363,10 @@ pfromScottEncoding = phoistAcyclic $
     \(PAssetClass sym tk) ->
       mkRecordConstr
         PAssetClassData
-        ( #symbol .= sym
-            .& #name .= tk
+        ( #symbol
+            .= sym
+            .& #name
+            .= tk
         )
 
 {- | Wrap a function using the Scott-encoded 'PAssetClass' to one using the

@@ -102,7 +102,8 @@ pfromOrd2 ::
   Term s (PComparator2 a)
 pfromOrd2 =
   pcon . PComparator2 (phoistAcyclic $ plam (#==)) $
-    phoistAcyclic $ plam (#<=)
+    phoistAcyclic $
+      plam (#<=)
 
 pcompareBy2 ::
   forall (a :: S -> Type) (s :: S).
@@ -176,7 +177,8 @@ pfromOrd3 =
     . PComparator3
       (phoistAcyclic $ plam (#==))
       (phoistAcyclic $ plam (#<=))
-    $ phoistAcyclic $ plam (#<)
+    $ phoistAcyclic
+    $ plam (#<)
 
 pcompareBy3 ::
   forall (a :: S -> Type) (s :: S).

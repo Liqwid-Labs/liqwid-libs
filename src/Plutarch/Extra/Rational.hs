@@ -86,7 +86,8 @@ instance PNum PRationalNoReduce where
               PRationalNoReduce $
                 pcon $
                   PRational (xn * pto yd + yn * pto xd) $
-                    punsafeDowncast $ pto xd * pto yd
+                    punsafeDowncast $
+                      pto xd * pto yd
       )
       # x'
       # y'
@@ -102,7 +103,8 @@ instance PNum PRationalNoReduce where
             pcon . PRationalNoReduce $
               pcon $
                 PRational (xn * pto yd - yn * pto xd) $
-                  punsafeDowncast $ pto xd * pto yd
+                  punsafeDowncast $
+                    pto xd * pto yd
       )
       # x'
       # y'
@@ -116,7 +118,8 @@ instance PNum PRationalNoReduce where
             pcon . PRationalNoReduce $
               pcon $
                 PRational (xn * yn) $
-                  punsafeDowncast $ pto xd * pto yd
+                  punsafeDowncast $
+                    pto xd * pto yd
       )
       # x'
       # y'

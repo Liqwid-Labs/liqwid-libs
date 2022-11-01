@@ -54,31 +54,31 @@ instance PApply PMaybeData where
 
 -- | @since 1.0.0
 instance PApply PList where
-  pliftA2 = phoistAcyclic $
-    pfix
+  pliftA2 = phoistAcyclic
+    $ pfix
       #$ plam
-      $ \self f xs ys -> unTermCont $ do
-        t <- pmatchC (puncons # ys)
-        case t of
-          PNothing -> pure pnil
-          PJust t' -> do
-            PPair thead ttail <- pmatchC t'
-            res <- pletC (pmap # plam (\x -> f # x # thead) # xs)
-            pure $ pconcat # res # (self # f # xs # ttail)
+    $ \self f xs ys -> unTermCont $ do
+      t <- pmatchC (puncons # ys)
+      case t of
+        PNothing -> pure pnil
+        PJust t' -> do
+          PPair thead ttail <- pmatchC t'
+          res <- pletC (pmap # plam (\x -> f # x # thead) # xs)
+          pure $ pconcat # res # (self # f # xs # ttail)
 
 -- | @since 1.0.0
 instance PApply PBuiltinList where
-  pliftA2 = phoistAcyclic $
-    pfix
+  pliftA2 = phoistAcyclic
+    $ pfix
       #$ plam
-      $ \self f xs ys -> unTermCont $ do
-        t <- pmatchC (puncons # ys)
-        case t of
-          PNothing -> pure pnil
-          PJust t' -> do
-            PPair thead ttail <- pmatchC t'
-            res <- pletC (pmap # plam (\x -> f # x # thead) # xs)
-            pure $ pconcat # res # (self # f # xs # ttail)
+    $ \self f xs ys -> unTermCont $ do
+      t <- pmatchC (puncons # ys)
+      case t of
+        PNothing -> pure pnil
+        PJust t' -> do
+          PPair thead ttail <- pmatchC t'
+          res <- pletC (pmap # plam (\x -> f # x # thead) # xs)
+          pure $ pconcat # res # (self # f # xs # ttail)
 
 -- | @since 1.0.0
 instance (forall (s :: S). Semigroup (Term s a)) => PApply (PPair a) where

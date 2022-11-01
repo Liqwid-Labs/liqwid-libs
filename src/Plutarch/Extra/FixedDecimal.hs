@@ -434,7 +434,8 @@ ptoRational ::
   KnownNat exp =>
   Term s (PFixedDecimal exp :--> PRational)
 ptoRational = phoistAcyclic $
-  plam $ \z -> pto z #% pconstant (10 ^ natVal (Proxy @exp))
+  plam $
+    \z -> pto z #% pconstant (10 ^ natVal (Proxy @exp))
 
 {- | Make 'PFixed' from 'PInteger'.
 

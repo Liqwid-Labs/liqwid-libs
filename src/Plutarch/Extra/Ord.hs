@@ -236,7 +236,8 @@ pmapComparator = phoistAcyclic $
   plam $ \f cmp ->
     pmatch cmp $ \(PComparator peq ple) ->
       pcon . PComparator (plam $ \x y -> peq # (f # x) # (f # y)) $
-        plam $ \x y -> ple # (f # x) # (f # y)
+        plam $
+          \x y -> ple # (f # x) # (f # y)
 
 {- | Reverses the ordering described by a 'PComparator'.
 
