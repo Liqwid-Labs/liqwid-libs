@@ -28,6 +28,8 @@
       "github:Liqwid-Labs/plutarch-numeric?ref=main";
     liqwid-plutarch-extra.url =
       "github:Liqwid-Labs/liqwid-plutarch-extra?ref=main";
+    plutarch-quickcheck.url = 
+      "github:Liqwid-Labs/plutarch-quickcheck?ref=main";
     liqwid-script-export.url = 
       "github:Liqwid-Labs/liqwid-script-export?ref=main";
 
@@ -47,6 +49,7 @@
           "${inputs.plutarch-numeric}"
           "${inputs.liqwid-plutarch-extra}"
           "${inputs.liqwid-script-export}"
+          "${inputs.plutarch-quickcheck}"
           "${inputs.liqwid-script-export.inputs.ply}/ply-core"
           "${inputs.liqwid-script-export.inputs.ply}/ply-plutarch"
         ])

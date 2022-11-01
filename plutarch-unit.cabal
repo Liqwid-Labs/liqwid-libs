@@ -60,6 +60,7 @@ common common-lang
     DeriveGeneric
     DeriveTraversable
     DerivingVia
+    DuplicateRecordFields
     EmptyCase
     FlexibleContexts
     FlexibleInstances
@@ -78,6 +79,7 @@ common common-lang
     TypeApplications
     TypeFamilies
     TypeOperators
+    UndecidableInstances
     NoFieldSelectors
 
   default-language:   Haskell2010
@@ -100,24 +102,31 @@ common common-tests
 library
   import:          common-lang
   exposed-modules:
+    Plutarch.Test.Export
     Plutarch.Test.Precompiled
     Plutarch.Test.Unit
 
   other-modules:
   build-depends:
     , acc
+    , containers
     , liqwid-plutarch-extra
+    , liqwid-script-export
     , mtl
     , optics-core
+    , optics-extra
     , optics-th
     , plutus-ledger-api
     , plutus-tx
+    , ply-core
     , pretty
     , pretty-show
-    , liqwid-script-export
+    , selective
+    , semigroupoids
     , tagged
     , tasty
     , text
+    , transformers
 
   hs-source-dirs:  src
 
