@@ -24,7 +24,7 @@
       inputs.nixpkgs.follows =
         "plutarch/haskell-nix/nixpkgs-unstable";
     };
-    
+
     liqwid-nix = {
       url = "github:Liqwid-Labs/liqwid-nix";
       inputs.nixpkgs-latest.follows = "nixpkgs-latest";

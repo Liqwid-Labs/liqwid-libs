@@ -314,10 +314,10 @@ instance PArbitrary a => PArbitrary (PMaybe a) where
       ]
   pshrink (TestableTerm x)
     | plift $ pisJust # x =
-        TestableTerm (pcon PNothing) :
-          [ TestableTerm $ pcon $ PJust a
-          | (TestableTerm a) <- shrink (TestableTerm $ pfromJust # x)
-          ]
+        TestableTerm (pcon PNothing)
+          : [ TestableTerm $ pcon $ PJust a
+            | (TestableTerm a) <- shrink (TestableTerm $ pfromJust # x)
+            ]
     | otherwise = []
 
 instance PCoArbitrary a => PCoArbitrary (PMaybe a) where
@@ -338,10 +338,10 @@ instance (PIsData a, PArbitrary a) => PArbitrary (PMaybeData a) where
       ]
   pshrink (TestableTerm x)
     | plift $ pisDJust # x =
-        pconT (PDNothing pdnil) :
-          [ TestableTerm $ pcon $ PDJust $ pdcons @"_0" # pdata a # pdnil
-          | (TestableTerm a) <- shrink (TestableTerm $ pfromDJust # x)
-          ]
+        pconT (PDNothing pdnil)
+          : [ TestableTerm $ pcon $ PDJust $ pdcons @"_0" # pdata a # pdnil
+            | (TestableTerm a) <- shrink (TestableTerm $ pfromDJust # x)
+            ]
     | otherwise = []
 
 instance (PIsData a, PCoArbitrary a) => PCoArbitrary (PMaybeData a) where
@@ -652,9 +652,13 @@ instance PArbitrary PStakingCredential where
       [ pconT $ PStakingHash $ pdcons @"_0" # pdata cred # pdnil
       , pconT $
           PStakingPtr $
-            pdcons @"_0" # pdata x
-              #$ pdcons @"_1" # pdata y
-              #$ pdcons @"_2" # pdata z # pdnil
+            pdcons @"_0"
+              # pdata x
+              #$ pdcons @"_1"
+              # pdata y
+              #$ pdcons @"_2"
+              # pdata z
+              # pdnil
       ]
 
 -- | @since 2.0.0
@@ -665,8 +669,11 @@ instance PArbitrary PAddress where
     return $
       pconT $
         PAddress $
-          pdcons @"credential" # pdata cred
-            #$ pdcons @"stakingCredential" # pdata scred # pdnil
+          pdcons @"credential"
+            # pdata cred
+            #$ pdcons @"stakingCredential"
+            # pdata scred
+            # pdnil
 
 -- | @since 2.0.0
 instance PArbitrary PCurrencySymbol where
@@ -860,5 +867,6 @@ coArbitraryPListLike ::
 coArbitraryPListLike (TestableTerm x)
   | plift (pnull # x) = variant (0 :: Integer)
   | otherwise =
-      variant (1 :: Integer) . pcoarbitrary (TestableTerm $ phead # x)
+      variant (1 :: Integer)
+        . pcoarbitrary (TestableTerm $ phead # x)
         . pcoarbitrary (TestableTerm $ ptail # x)
