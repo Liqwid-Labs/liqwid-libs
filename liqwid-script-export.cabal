@@ -93,6 +93,7 @@ common deps
     , wai
     , wai-cors
     , warp
+    , filepath
 
   mixins:
 
@@ -110,6 +111,12 @@ library
   other-modules:
     Codec.Serialise.Orphans
     Data.Cache.Cached
+
+executable export-stat
+  import:         lang, deps
+  hs-source-dirs: export-stat
+  main-is:         Main.hs
+  build-depends: liqwid-script-export
 
 executable example
   import:         lang, deps
