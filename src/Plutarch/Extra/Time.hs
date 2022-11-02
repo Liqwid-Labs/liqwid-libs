@@ -7,6 +7,7 @@ module Plutarch.Extra.Time (
   passertCurrentTime,
   pisWithinCurrentTime,
   pisCurrentTimeWithin,
+  pcurrentTimeDuration,
 ) where
 
 import Control.Composition ((.*))
@@ -160,3 +161,19 @@ pisCurrentTimeWithin = phoistAcyclic $
   plam $ \lb' ub' ctr ->
     pmatch ctr $ \(PCurrentTime lb ub) ->
       lb' #<= lb #&& ub #<= ub'
+
+{- | Return the duration of current time.
+
+     @since 3.14.1
+-}
+pcurrentTimeDuration ::
+  forall (s :: S).
+  Term
+    s
+    ( PCurrentTime
+        :--> PPOSIXTime
+    )
+pcurrentTimeDuration = phoistAcyclic $
+  plam $
+    flip pmatch $
+      \(PCurrentTime lb ub) -> ub - lb
