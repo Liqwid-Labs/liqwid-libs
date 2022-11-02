@@ -97,7 +97,7 @@ import Test.Tasty.Providers (
  policies, the redeemer is ignored; you can set it to '()' to keep the
  compiler happy.
 
- @since 1.2.0
+ @since 1.2.1
 -}
 data ScriptParams (dat :: Type) (red :: Type) = ScriptParams
   { datum :: dat
@@ -110,7 +110,7 @@ makeFieldLabelsNoPrefix ''ScriptParams
 {- | A combination of (initial) script parameters, as well as any required
  parameters that should be passed to the linker when assembling tests.
 
- @since 1.2.0
+ @since 1.2.1
 -}
 data TestParams (dat :: Type) (red :: Type) (p :: Type) = TestParams
   { scriptParams :: ScriptParams dat red
@@ -122,31 +122,48 @@ makeFieldLabelsNoPrefix ''TestParams
 {- | What you expect to happen when a script is tested with specified
  parameters.
 
- @since 1.2.0
+ @since 1.2.1
 -}
 data ScriptOutcome = Crashes | Runs
   deriving stock
-    ( -- | @since 1.2.0
+    ( -- | @since 1.2.1
       Eq
-    , -- | @since 1.2.0
+    , -- | @since 1.2.1
       Ord
-    , -- | @since 1.2.0
+    , -- | @since 1.2.1
       Show
     )
 
 {- | A helper newtype for passing script arguments implicitly, as well as
  modifying them using local scoping.
 
- @since 1.2.0
+ The intended use is with @do@-notation, using a combination of contextual
+ argument modifiers and assertions, then \'running\' with 'exportTests':
+
+ > tests :: TestTree
+ > tests = exportTests "my tests" export linker testParams $ do
+ >    assertValidator Crashes "my context is bad" "script1"
+ >    modifyingSC fixUpContext $ do
+ >      assertValidator Crashes "context fine, redeemer bad" "script1"
+ >      modifyingRedeemer fixUpRedeemer $ do
+ >        assertValidator Runs "now everything is fine" "script1"
+ >      -- Redeemer fix-up resets here
+ >      assertMintingPolicy Crashes "inappropriate datum" "script2"
+ >      settingDatum' redeemerDatum $ do
+ >        assertMintingPolicy Runs "appropriate datum" "script2"
+
+ You can also define separate \'bits\' of a suite using 'WithExport' directly.
+
+ @since 1.2.1
 -}
 newtype WithExport (dat :: Type) (red :: Type) (info :: Type) (a :: Type)
   = WithExport (RWS (WithExportEnv dat red info) WithExportLog () a)
   deriving
-    ( -- | @since 1.2.0
+    ( -- | @since 1.2.1
       Functor
-    , -- | @since 1.2.0
+    , -- | @since 1.2.1
       Applicative
-    , -- | @since 1.2.0
+    , -- | @since 1.2.1
       Monad
     )
     via ( RWS (WithExportEnv dat red info) WithExportLog ()
@@ -167,7 +184,7 @@ newtype WithExport (dat :: Type) (red :: Type) (info :: Type) (a :: Type)
  script associated with it;
  - Otherwise, one test per request.
 
- @since 1.2.0
+ @since 1.2.1
 -}
 exportTests ::
   forall (dat :: Type) (red :: Type) (info :: Type) (param :: Type).
@@ -191,7 +208,13 @@ exportTests name raw linker args comp = case runWithExport comp raw linker args 
  explanation (or reason) in the suite, as long as the named script actually
  exists.
 
- @since 1.2.0
+ = Example
+
+ > tests = do
+ >    assertValidator Crashes "reason for crash" "myScript"
+ >    assertValidator Runs "reason for success" "aBetterScript"
+
+ @since 1.2.1
 -}
 assertValidator ::
   forall (dat :: Type) (red :: Type) (info :: Type).
@@ -219,7 +242,7 @@ assertValidator outcome reason name = WithExport $ do
 
 {- | As 'assertValidator', but for a minting policy instead.
 
- @since 1.2.0
+ @since 1.2.1
 -}
 assertMintingPolicy ::
   forall (dat :: Type) (red :: Type) (info :: Type).
@@ -248,7 +271,35 @@ assertMintingPolicy outcome reason name = WithExport $ do
  provided function. The additional information provided by the script export
  is provided as an additional parameter to the function argument.
 
- @since 1.2.0
+ = Example
+
+ > tests = do
+ >    -- This will use unmodified arguments
+ >    assertValidator Crashes "bad datum" "myScript"
+ >    modifyingDatum fixMyDatum $ do
+ >      -- This will use a datum modified according to fixMyDatum
+ >      assertValidator Runs "good datum" "myScript"
+ >      -- So will this
+ >      assertValidator Crashes "this one is wrong" "myScript2"
+ >    -- However, here, the change resets
+ >    assertValidator Runs "but this one is good" "myScript2"
+
+ You can \'nest\' modifications, which behave according to lexical scope:
+
+ > tests = do
+ >    -- One change
+ >    modifyingDatum change1 $ do
+ >      -- This will only modify with change1
+ >      assertValidator Crashes "not enough fixes" "myScript"
+ >      -- Stack on another change
+ >      modifyingDatum change2 $ do
+ >        -- This modifies with change1, then change2 on top
+ >        assertValidator Runs "enough fixes" "myScript"
+ >      -- reset change2
+ >      assertValidator Crashes "why did we undo this change?" "myScript"
+ >   -- reset change1
+
+ @since 1.2.1
 -}
 modifyingDatum ::
   forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
@@ -263,7 +314,7 @@ modifyingDatum f (WithExport comp) =
 {- | As 'modifyingDatum', except the \'locally scoped\' datum is replaced with
  the given value.
 
- @since 1.2.0
+ @since 1.2.1
 -}
 settingDatum ::
   forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
@@ -277,7 +328,7 @@ settingDatum f = modifyingDatum (\i _ -> f i)
 {- | As 'modifyingDatum', but without additional information from the script
  export.
 
- @since 1.2.0
+ @since 1.2.1
 -}
 modifyingDatum' ::
   forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
@@ -291,7 +342,7 @@ modifyingDatum' f = modifyingDatum (\_ x -> f x)
 {- | As 'settingDatum', but without additional information from the script
  export.
 
- @since 1.2.0
+ @since 1.2.1
 -}
 settingDatum' ::
   forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
@@ -306,7 +357,9 @@ settingDatum' x = modifyingDatum (\_ _ -> x)
  provided function. The additional information provided by the script export
  is provided as an additional parameter to the function argument.
 
- @since 1.2.0
+ Use this similarly to 'modifyingDatum': see its documentation for an example of use.
+
+ @since 1.2.1
 -}
 modifyingRedeemer ::
   forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
@@ -321,7 +374,7 @@ modifyingRedeemer f (WithExport comp) =
 {- | As 'modifyingRedeemer', except the \'locally scoped\' redeemer is replaced with
  the given value.
 
- @since 1.2.0
+ @since 1.2.1
 -}
 settingRedeemer ::
   forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
@@ -335,7 +388,7 @@ settingRedeemer f = modifyingRedeemer (\i _ -> f i)
 {- | As 'modifyingRedeemer', but without additional information from the script
  export.
 
- @since 1.2.0
+ @since 1.2.1
 -}
 modifyingRedeemer' ::
   forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
@@ -349,7 +402,7 @@ modifyingRedeemer' f = modifyingRedeemer (\_ x -> f x)
 {- | As 'settingRedeemer', but without additional information from the script
  export.
 
- @since 1.2.0
+ @since 1.2.1
 -}
 settingRedeemer' ::
   forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
@@ -364,7 +417,9 @@ settingRedeemer' x = modifyingRedeemer (\_ _ -> x)
  provided function. The additional information provided by the script export
  is provided as an additional parameter to the function argument.
 
- @since 1.2.0
+ Use this similarly to 'modifyingDatum': see its documentation for an example of use.
+
+ @since 1.2.1
 -}
 modifyingSC ::
   forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
@@ -379,7 +434,7 @@ modifyingSC f (WithExport comp) =
 {- | As 'modifyingSC', except the \'locally scoped\' context is replaced with
  the given value.
 
- @since 1.2.0
+ @since 1.2.1
 -}
 settingSC ::
   forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
@@ -393,7 +448,7 @@ settingSC f = modifyingSC (\i _ -> f i)
 {- | As 'modifyingSC', but without additional information from the script
  export.
 
- @since 1.2.0
+ @since 1.2.1
 -}
 modifyingSC' ::
   forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
@@ -407,7 +462,7 @@ modifyingSC' f = modifyingSC (\_ x -> f x)
 {- | As 'settingSC', but without additional information from the script
  export.
 
- @since 1.2.0
+ @since 1.2.1
 -}
 settingSC' ::
   forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
@@ -424,7 +479,9 @@ settingSC' x = modifyingSC (\_ _ -> x)
  provided by the script export is provided as an additional parameter to the
  function argument.
 
- @since 1.2.0
+ Use this similarly to 'modifyingDatum': see its documentation for an example of use.
+
+ @since 1.2.1
 -}
 modifyingScriptParams ::
   forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
@@ -451,7 +508,7 @@ modifyingScriptParams f (WithExport comp) = WithExport . local go $ comp
 {- | As 'modifyingScriptParams', except the \'locally scoped\' arguments are replaced with
  the given ones.
 
- @since 1.2.0
+ @since 1.2.1
 -}
 settingScriptParams ::
   forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
@@ -465,7 +522,7 @@ settingScriptParams f = modifyingScriptParams (\i _ -> f i)
 {- | As 'modifyingScriptParams', but without additional information from the script
  export.
 
- @since 1.2.0
+ @since 1.2.1
 -}
 modifyingScriptParams' ::
   forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
@@ -479,7 +536,7 @@ modifyingScriptParams' f = modifyingScriptParams (\_ x -> f x)
 {- | As 'settingScriptParams', but without additional information from the script
  export.
 
- @since 1.2.0
+ @since 1.2.1
 -}
 settingScriptParams' ::
   forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).

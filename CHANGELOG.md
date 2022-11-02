@@ -2,6 +2,12 @@
 
 ## 1.3.0 -- ???
 
+## 1.2.1 -- 2022-11-03
+
+### Added
+
+* `Plutarch.Test.Export`, containing an API for working with script exports.
+
 ## 1.2.0 -- 2022-10-07
 
 ### Added
