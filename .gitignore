@@ -65,3 +65,6 @@ TAGS
 *.hoo
 *.warn
 haddock/
+
+# Other stuff
+clear\ /

@@ -170,7 +170,7 @@ newtype TestCompiled a = TestCompiled
  @since 1.1.0
 -}
 withApplied :: [Data] -> TestCompiled () -> TestCompiled ()
-withApplied args = local (flip applyDebuggableScript args)
+withApplied args = local (`applyDebuggableScript` args)
 
 {- | An operator for 'withApplied'.
 
