@@ -29,6 +29,11 @@ module Plutarch.Extra.AssetClass (
   passetClassData,
   passetClassDataT,
 
+  -- * ExtendedAssetClass
+  AnyTokenAssetClass (..),
+  FixedTokenAssetClass (..),
+  ExtendedAssetClass (..),
+
   -- * Scott <-> Data conversions
   ptoScottEncoding,
   pfromScottEncoding,
@@ -39,12 +44,27 @@ module Plutarch.Extra.AssetClass (
   GenAssetClass (..),
 ) where
 
-import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
+import Data.Aeson (
+  FromJSON (parseJSON),
+  FromJSONKey,
+  ToJSON (toEncoding, toJSON),
+  ToJSONKey,
+  object,
+  pairs,
+  withObject,
+  (.:),
+ )
+import Data.Aeson.Encoding (pair)
+import Data.Coerce (coerce)
 import Data.Tagged (Tagged (Tagged, unTagged), untag)
+import Data.Text (Text, unpack)
 import qualified Generics.SOP as SOP
-import Optics.Getter (A_Getter, view)
-import Optics.Internal.Optic (A_Lens, Is, (%%))
+import Optics.AffineTraversal (An_AffineTraversal, atraversal)
+import Optics.Getter (A_Getter, to, view)
+import Optics.Iso (An_Iso, coercedTo)
 import Optics.Label (LabelOptic, LabelOptic', labelOptic)
+import Optics.Lens (A_Lens)
+import Optics.Optic (Is, (%), (%%))
 import Optics.Setter (set)
 import Optics.TH (makeFieldLabelsNoPrefix)
 import Plutarch.Api.V1 (
@@ -87,6 +107,231 @@ import Test.QuickCheck (
   functionMap,
  )
 
+{- | An 'AssetClass' whose 'TokenName' is irrelevant.
+
+ @since 3.14.1
+-}
+newtype AnyTokenAssetClass = AnyTokenAssetClass CurrencySymbol
+  deriving stock
+    ( -- | @since 3.14.1
+      Generic
+    , -- | @since 3.14.1
+      Show
+    )
+  deriving
+    ( -- | @since 3.14.1
+      Eq
+    , -- | @since 3.14.1
+      Ord
+    )
+    via CurrencySymbol
+
+-- | @since 3.14.1
+instance ToJSON AnyTokenAssetClass where
+  {-# INLINEABLE toJSON #-}
+  toJSON atac = object [("symbol", toJSON . view #symbol $ atac)]
+  {-# INLINEABLE toEncoding #-}
+  toEncoding = pairs . pair "symbol" . toEncoding . view #symbol
+
+-- | @since 3.14.1
+instance FromJSON AnyTokenAssetClass where
+  {-# INLINEABLE parseJSON #-}
+  parseJSON = withObject "AnyTokenAssetClass" $ \obj ->
+    AnyTokenAssetClass <$> obj .: "symbol"
+
+-- | @since 3.14.1
+instance
+  (k ~ A_Getter, a ~ CurrencySymbol, b ~ CurrencySymbol) =>
+  LabelOptic "symbol" k AnyTokenAssetClass AnyTokenAssetClass a b
+  where
+  labelOptic = to coerce
+
+{- | We can always \'pull out\' an 'AssetClass' by \'filling in\' an empty
+ 'TokenName'.
+
+ @since 3.14.1
+-}
+instance
+  (k ~ A_Getter, a ~ AssetClass, b ~ AssetClass) =>
+  LabelOptic "assetClass" k AnyTokenAssetClass AnyTokenAssetClass a b
+  where
+  labelOptic = to $ \(AnyTokenAssetClass cs) -> AssetClass cs ""
+
+{- | An 'AssetClass' whose 'TokenName' is significant somehow.
+
+ @since 3.14.1
+-}
+newtype FixedTokenAssetClass = FixedTokenAssetClass AssetClass
+  deriving stock
+    ( -- | @since 3.14.1
+      Generic
+    , -- | @since 3.14.1
+      Show
+    )
+  deriving
+    ( -- | @since 3.14.1
+      Eq
+    , -- | @since 3.14.1
+      Ord
+    )
+    via AssetClass
+
+-- | @since 3.14.1
+instance
+  (k ~ A_Lens, a ~ CurrencySymbol, b ~ CurrencySymbol) =>
+  LabelOptic "symbol" k FixedTokenAssetClass FixedTokenAssetClass a b
+  where
+  labelOptic = coercedTo @AssetClass % #symbol
+
+-- | @since 3.14.1
+instance
+  (k ~ A_Lens, a ~ TokenName, b ~ TokenName) =>
+  LabelOptic "name" k FixedTokenAssetClass FixedTokenAssetClass a b
+  where
+  labelOptic = coercedTo @AssetClass % #name
+
+-- | @since 3.14.1
+instance ToJSON FixedTokenAssetClass where
+  {-# INLINEABLE toJSON #-}
+  toJSON ftac =
+    object
+      [ ("symbol", toJSON . view #symbol $ ftac)
+      , ("name", toJSON . view #name $ ftac)
+      ]
+  {-# INLINEABLE toEncoding #-}
+  toEncoding ftac =
+    pairs $
+      pair "symbol" (toEncoding . view #symbol $ ftac)
+        <> pair "name" (toEncoding . view #name $ ftac)
+
+-- | @since 3.14.1
+instance FromJSON FixedTokenAssetClass where
+  {-# INLINEABLE parseJSON #-}
+  parseJSON = withObject "FixedTokenAssetClass" $ \obj -> do
+    cs <- obj .: "symbol"
+    tn <- obj .: "name"
+    pure . FixedTokenAssetClass . AssetClass cs $ tn
+
+{- | 'FixedTokenAssetClass' and 'AssetClass' are isomorphic.
+
+ @since 3.14.1
+-}
+instance
+  (k ~ An_Iso, a ~ AssetClass, b ~ AssetClass) =>
+  LabelOptic "assetClass" k FixedTokenAssetClass FixedTokenAssetClass a b
+  where
+  labelOptic = coercedTo @AssetClass
+
+{- | An 'AssetClass' whose 'TokenName' may or may not be relevant.
+
+ @since 3.14.1
+-}
+data ExtendedAssetClass
+  = AnyToken AnyTokenAssetClass
+  | FixedToken FixedTokenAssetClass
+  deriving stock
+    ( -- | @since 3.14.1
+      Generic
+    , -- | @since 3.14.1
+      Show
+    , -- | @since 3.14.1
+      Eq
+    , -- | @since 3.14.1
+      Ord
+    )
+
+-- | @since 3.14.1
+instance ToJSON ExtendedAssetClass where
+  {-# INLINEABLE toJSON #-}
+  toJSON = \case
+    AnyToken x ->
+      object
+        [ ("tag", toJSON @Text "anyToken")
+        , ("symbol", toJSON . view #symbol $ x)
+        ]
+    FixedToken x ->
+      object
+        [ ("tag", toJSON @Text "fixedToken")
+        , ("symbol", toJSON . view #symbol $ x)
+        , ("name", toJSON . view #name $ x)
+        ]
+  {-# INLINEABLE toEncoding #-}
+  toEncoding = \case
+    AnyToken x ->
+      pairs $
+        pair "tag" (toEncoding @Text "anyToken")
+          <> pair "symbol" (toEncoding . view #symbol $ x)
+    FixedToken x ->
+      pairs $
+        pair "tag" (toEncoding @Text "fixedToken")
+          <> pair "symbol" (toEncoding . view #symbol $ x)
+          <> pair "name" (toEncoding . view #name $ x)
+
+-- | @since 3.14.1
+instance FromJSON ExtendedAssetClass where
+  {-# INLINEABLE parseJSON #-}
+  parseJSON = withObject "ExtendedAssetClass" $ \obj -> do
+    tag :: Text <- obj .: "tag"
+    cs <- obj .: "symbol"
+    case tag of
+      "anyToken" -> do
+        pure . AnyToken . AnyTokenAssetClass $ cs
+      "fixedToken" -> do
+        tn <- obj .: "name"
+        pure . FixedToken . FixedTokenAssetClass . AssetClass cs $ tn
+      _ -> fail $ "Not a valid tag: " <> unpack tag
+
+{- | We can always retrieve a 'CurrencySymbol', but depending on what we have,
+ we may be unable to change it.
+
+ @since 3.14.1
+-}
+instance
+  (k ~ A_Getter, a ~ CurrencySymbol, b ~ CurrencySymbol) =>
+  LabelOptic "symbol" k ExtendedAssetClass ExtendedAssetClass a b
+  where
+  labelOptic = to $ \case
+    AnyToken x -> view #symbol x
+    FixedToken x -> view #symbol x
+
+{- | We may not necessarily have a 'TokenName' that matters; if we do, then
+ changing it is fine, but erasure should be impossible, and an arbitrary
+ change is possible, but with an \'internal shift\'.
+
+ = Note
+
+ If you modify or set the \'target\' of this optic, you will force a
+ 'FixedToken' constructor. Keep this in mind.
+
+ @since 3.14.1
+-}
+instance
+  (k ~ An_AffineTraversal, a ~ TokenName, b ~ TokenName) =>
+  LabelOptic "name" k ExtendedAssetClass ExtendedAssetClass a b
+  where
+  labelOptic = atraversal out $ \eac tn -> FixedToken $ case eac of
+    AnyToken x -> FixedTokenAssetClass . AssetClass (view #symbol x) $ tn
+    FixedToken x -> set #name tn x
+    where
+      out :: ExtendedAssetClass -> Either ExtendedAssetClass TokenName
+      out eac = case eac of
+        AnyToken _ -> Left eac
+        FixedToken x -> Right . view #name $ x
+
+{- | We can always \'pull out\' an 'AssetClass', by essentially \'forgetting\'
+ the significance of our \'TokenName\'. In cases where it's not significant,
+ we stub it with the empty name.
+
+ @since 3.14.1
+-}
+instance
+  (k ~ A_Getter, a ~ AssetClass, b ~ AssetClass) =>
+  LabelOptic "assetClass" k ExtendedAssetClass ExtendedAssetClass a b
+  where
+  labelOptic = to $ \case
+    AnyToken x -> view #assetClass x
+    FixedToken x -> view #assetClass x
+
 --------------------------------------------------------------------------------
 -- AssetClass & Variants
 
@@ -127,6 +372,8 @@ data AssetClass = AssetClass
       PlutusTx.ToData
     , -- | @since 3.10.0
       PlutusTx.FromData
+    , -- | @since 3.14.1
+      PlutusTx.UnsafeFromData
     )
     via Plutarch.Extra.IsData.ProductIsData AssetClass
   deriving

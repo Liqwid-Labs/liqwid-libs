@@ -2,6 +2,19 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.14.1 -- 2022-11-04
+
+### Added
+
+* `AssetClass` now has an `UnsafeFromData` instance, derived the same way as
+  `FromData` and `ToData`.
+* `AnyTokenAssetClass`, designating an `AssetClass` whose `TokenName` is
+  irrelevant.
+* `FixedTokenAssetClass`, designating an `AssetClass` whose `TokenName` is
+  significant.
+* `ExtendedAssetClass`, designed to provide a runtime distinction between 
+  `AssetClass`es whose `TokenNames` are arbitrary versus non-arbitrary.
+
 ## 3.14.0 -- 2022-11-01
 
 ### Added
