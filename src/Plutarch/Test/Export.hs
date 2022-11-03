@@ -556,18 +556,16 @@ runWithExport ::
   Linker param (ScriptExport info) ->
   TestParams dat red param ->
   Either LinkerError (Map Text PreparedScriptTests)
-runWithExport (WithExport comp) raw linker args =
-  case runLinker linker raw . view #linkerParams $ args of
-    Left err -> Left err
-    Right linked ->
-      let env =
-            WithExportEnv
-              (view (#scriptParams %% #datum) args)
-              (view (#scriptParams %% #redeemer) args)
-              (view (#scriptParams %% #context) args)
-              raw
-              (view #information linked)
-       in Right . coerce . snd . execRWS comp env $ ()
+runWithExport (WithExport comp) raw linker args = do
+  linked <- runLinker linker raw . view #linkerParams $ args
+  let env =
+        WithExportEnv
+          (view (#scriptParams %% #datum) args)
+          (view (#scriptParams %% #redeemer) args)
+          (view (#scriptParams %% #context) args)
+          raw
+          (view #information linked)
+  pure . coerce . snd . execRWS comp env $ ()
 
 -- Note from Koz: the manual lenses are due to a weird interaction between TH
 -- and record syntax. I wasn't able to establish _why_ it was being weird, but
