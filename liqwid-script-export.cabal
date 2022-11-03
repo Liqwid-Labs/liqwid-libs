@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               liqwid-script-export
-version:            1.1.1
+version:            2.1.0
 extra-source-files: CHANGELOG.md
 author:             Emily Martins <emi@haskell.fyi>
 license:            Apache-2.0
@@ -93,7 +93,6 @@ common deps
     , wai
     , wai-cors
     , warp
-    , filepath
 
   mixins:
 
@@ -115,8 +114,8 @@ library
 executable export-stat
   import:         lang, deps
   hs-source-dirs: export-stat
-  main-is:         Main.hs
-  build-depends: liqwid-script-export
+  main-is:        Main.hs
+  build-depends:  liqwid-script-export
 
 executable example
   import:         lang, deps

@@ -2,6 +2,14 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 2.1.0 -- 2022-11-02
+
+### Added
+
+- `RoledScript` is added to encode role data into `ScriptExport`.
+- Aeson instances and other functions are updated to use `RoledScript`.
+- Helper function `toRoledScript` is added
+
 ## 2.0.0 -- 2022-10-12
 
 ### Added

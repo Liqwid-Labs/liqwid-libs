@@ -27,16 +27,19 @@ import Plutarch.Prelude (
   (:-->),
  )
 import PlutusLedgerApi.V2 (Validator (getValidator))
-import Ply (ScriptRole (ValidatorRole), toScript, (#))
+import Ply ((#))
 import Ply.Plutarch.TypedWriter (mkEnvelope)
 import ScriptExport.Export (exportMain)
 import ScriptExport.ScriptInfo (
   Linker,
   RawScriptExport (RawScriptExport),
+  RoledScript (RoledScript),
   ScriptExport (ScriptExport),
+  ScriptRole (ValidatorRole),
   fetchTS,
   getParam,
   mkValidatorInfo,
+  toRoledScript,
  )
 import ScriptExport.Types (
   Builders,
@@ -90,7 +93,7 @@ myproject :: ScriptExport Int
 myproject =
   ScriptExport
     ( fromList
-        [ ("alwaysSucceeds", getValidator $ mkValidator def alwaysSucceeds)
+        [ ("alwaysSucceeds", RoledScript (getValidator $ mkValidator def alwaysSucceeds) ValidatorRole)
         ]
     )
     10
@@ -112,7 +115,7 @@ myProjectLinker = do
   return $
     ScriptExport
       ( fromList
-          [ ("alwaysSucceeds", toScript $ as Ply.# arg)
+          [ ("alwaysSucceeds", toRoledScript $ as Ply.# arg)
           ]
       )
       ()

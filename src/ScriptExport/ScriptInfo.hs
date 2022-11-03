@@ -16,19 +16,24 @@ module ScriptExport.ScriptInfo (
   Linker (..),
   RawScriptExport (..),
   ScriptExport (..),
-  LinkerError(..),
+  LinkerError (..),
+  RoledScript (..),
 
   -- * Linker utilities
   runLinker,
   fetchTS,
   getParam,
   getRawScripts,
+  toRoledScript,
 
   -- * Introduction functions
   mkScriptInfo,
   mkValidatorInfo,
   mkPolicyInfo,
   mkStakeValidatorInfo,
+
+  -- * Re-exports
+  ScriptRole (..),
 ) where
 
 import Cardano.Binary qualified as CBOR
@@ -69,7 +74,12 @@ import PlutusLedgerApi.V2 (
   StakeValidator (getStakeValidator),
   Validator (getValidator),
  )
-import Ply (ScriptRole, TypedScript, TypedScriptEnvelope)
+import Ply (
+  ScriptRole (MintingPolicyRole, ValidatorRole),
+  TypedScript,
+  TypedScriptEnvelope,
+  toScript,
+ )
 import Ply.Core.TypedReader (TypedReader, mkTypedScript)
 
 {- | Type for holding parameterized scripts. This type represents the
@@ -95,6 +105,23 @@ newtype RawScriptExport = RawScriptExport
       Aeson.FromJSON
     )
 
+{- | Type for holding scripts, with role information.
+
+ @since 2.1.0
+-}
+data RoledScript = RoledScript
+  { script :: Script
+  , role :: ScriptRole
+  }
+  deriving stock
+    ( -- | @since 2.1.0
+      Show
+    , -- | @since 2.1.0
+      Eq
+    , -- | @since 2.1.0
+      GHC.Generic
+    )
+
 {- | Type for holding ready-to-go scripts. Ready-to-go scripts are
      scripts that can be used on-onchain without any extra
      arguments. They are `MintingPolicy ~ StakingValidator ~ PData ->
@@ -104,7 +131,7 @@ newtype RawScriptExport = RawScriptExport
  @since 2.0.0
 -}
 data ScriptExport a = ScriptExport
-  { scripts :: Map Text Script
+  { scripts :: Map Text RoledScript
   , information :: a
   }
   deriving stock
@@ -194,6 +221,27 @@ getParam = asks snd
 getRawScripts :: forall (lparam :: Type). Linker lparam RawScriptExport
 getRawScripts = asks fst
 
+class ToRoledScript (rl :: ScriptRole) where
+  toRoledScript' ::
+    forall (params :: [Type]). TypedScript rl params -> RoledScript
+
+instance ToRoledScript 'MintingPolicyRole where
+  toRoledScript' s = RoledScript (toScript s) MintingPolicyRole
+
+instance ToRoledScript 'ValidatorRole where
+  toRoledScript' s = RoledScript (toScript s) ValidatorRole
+
+{- | Convert any 'TypedScript' into 'RoledScript'.
+
+ @since 2.1.0
+-}
+toRoledScript ::
+  forall (rl :: ScriptRole) (param :: [Type]).
+  (ToRoledScript rl) =>
+  TypedScript rl param ->
+  RoledScript
+toRoledScript = toRoledScript'
+
 -- Internal helper for CBOR deserialization
 newtype CBORSerializedScript = CBORSerializedScript SBS.ShortByteString
 
@@ -208,6 +256,37 @@ cborToScript x =
     . (\(CBORSerializedScript x) -> x)
     <$> CBOR.decodeFull' x
 
+-- | @since 2.1.0
+instance Aeson.ToJSON RoledScript where
+  toJSON s =
+    let scr = view #script s
+        raw = LBS.toStrict $ Codec.serialise scr
+        cbor = CBOR.serialize' $ SBS.toShort raw
+     in Aeson.toJSON $
+          Aeson.object
+            [ "cborHex" Aeson..= Base16.encodeBase16 cbor
+            , "rawHex" Aeson..= Base16.encodeBase16 raw
+            , "hash" Aeson..= scriptHash scr
+            , "role" Aeson..= view #role s
+            ]
+
+-- | @since 2.1.0
+instance Aeson.FromJSON RoledScript where
+  parseJSON (Aeson.Object v) =
+    RoledScript
+      <$> (v Aeson..: "cborHex" >>= parseAndDeserialize)
+      <*> v Aeson..: "role"
+    where
+      parseAndDeserialize v =
+        Aeson.parseJSON v
+          >>= either (fail . show) (either (fail . show) pure . cborToScript)
+            . Base16.decodeBase16
+            . Text.encodeUtf8
+  parseJSON invalid =
+    Aeson.prependFailure
+      "parsing RoledScript failed, "
+      (Aeson.typeMismatch "Object" invalid)
+
 -- | @since 2.0.0
 instance
   forall (a :: Type).
@@ -218,18 +297,8 @@ instance
     Aeson.toJSON $
       Aeson.object
         [ "info" Aeson..= info
-        , "scripts" Aeson..= (toJSONScript <$> scripts)
+        , "scripts" Aeson..= scripts
         ]
-    where
-      toJSONScript scr =
-        let raw = LBS.toStrict $ Codec.serialise scr
-            cbor = CBOR.serialize' $ SBS.toShort raw
-         in Aeson.toJSON $
-              Aeson.object
-                [ "cborHex" Aeson..= Base16.encodeBase16 cbor
-                , "rawHex" Aeson..= Base16.encodeBase16 raw
-                , "hash" Aeson..= scriptHash scr
-                ]
 
 -- | @since 2.0.0
 instance
@@ -239,22 +308,8 @@ instance
   where
   parseJSON (Aeson.Object v) =
     ScriptExport
-      <$> (v Aeson..: "scripts" >>= Aeson.liftParseJSON parseJSONScriptMap Aeson.parseJSON)
+      <$> v Aeson..: "scripts"
       <*> v Aeson..: "info"
-    where
-      parseAndDeserialize v =
-        Aeson.parseJSON v
-          >>= either (fail . show) (either (fail . show) pure . cborToScript)
-            . Base16.decodeBase16
-            . Text.encodeUtf8
-
-      parseJSONScriptMap :: Aeson.Value -> Aeson.Parser Script
-      parseJSONScriptMap (Aeson.Object v) =
-        v Aeson..: "cborHex" >>= parseAndDeserialize
-      parseJSONScriptMap invalid =
-        Aeson.prependFailure
-          "parsing Script from ScriptExport failed, "
-          (Aeson.typeMismatch "Object" invalid)
   parseJSON invalid =
     Aeson.prependFailure
       "parsing ScriptExport failed, "
@@ -332,3 +387,6 @@ makeFieldLabelsNoPrefix ''ScriptExport
 
 -- | @since 2.0.0
 makeFieldLabelsNoPrefix ''RawScriptExport
+
+-- | @since 2.1.0
+makeFieldLabelsNoPrefix ''RoledScript
