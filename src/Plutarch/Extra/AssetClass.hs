@@ -30,9 +30,16 @@ module Plutarch.Extra.AssetClass (
   passetClassDataT,
 
   -- * ExtendedAssetClass
+
+  -- ** Haskell
   AnyTokenAssetClass (..),
   FixedTokenAssetClass (..),
   ExtendedAssetClass (..),
+
+  -- ** Plutarch
+  PAnyTokenAssetClass (..),
+  -- PFixedTokenAssetClass (..),
+  -- PExtendedAssetClass (..),
 
   -- * Scott <-> Data conversions
   ptoScottEncoding,
@@ -58,6 +65,7 @@ import Data.Aeson.Encoding (pair)
 import Data.Coerce (coerce)
 import Data.Tagged (Tagged (Tagged, unTagged), untag)
 import Data.Text (Text, unpack)
+import GHC.Records (HasField)
 import qualified Generics.SOP as SOP
 import Optics.AffineTraversal (An_AffineTraversal, atraversal)
 import Optics.Getter (A_Getter, to, view)
@@ -69,7 +77,7 @@ import Optics.Setter (set)
 import Optics.TH (makeFieldLabelsNoPrefix)
 import Plutarch.Api.V1 (
   PCurrencySymbol,
-  PTokenName,
+  PTokenName (PTokenName),
  )
 import Plutarch.DataRepr (PDataFields)
 import Plutarch.Extra.Applicative (ppure)
@@ -80,7 +88,12 @@ import Plutarch.Extra.IsData (
 import Plutarch.Extra.Record (mkRecordConstr, (.&), (.=))
 import Plutarch.Extra.Tagged (PTagged)
 import Plutarch.Lift (
-  PConstantDecl,
+  PConstantDecl (
+    PConstantRepr,
+    PConstanted,
+    pconstantFromRepr,
+    pconstantToRepr
+  ),
   PUnsafeLiftDecl (PLifted),
  )
 import Plutarch.Orphans ()
@@ -156,6 +169,78 @@ instance
   LabelOptic "assetClass" k AnyTokenAssetClass AnyTokenAssetClass a b
   where
   labelOptic = to $ \(AnyTokenAssetClass cs) -> AssetClass cs ""
+
+-- | @since 3.14.1
+instance PConstantDecl AnyTokenAssetClass where
+  type PConstanted AnyTokenAssetClass = PAnyTokenAssetClass
+  type PConstantRepr AnyTokenAssetClass = PlutusTx.Data
+  pconstantFromRepr =
+    fmap AnyTokenAssetClass . \case
+      PlutusTx.Constr 0 [PlutusTx.B dat] -> pconstantFromRepr dat
+      _ -> Nothing
+  pconstantToRepr (AnyTokenAssetClass cs) =
+    PlutusTx.Constr 0 [PlutusTx.B . pconstantToRepr $ cs]
+
+-- | @since 3.14.1
+instance PlutusTx.FromData AnyTokenAssetClass where
+  fromBuiltinData dat =
+    AnyTokenAssetClass <$> case PlutusTx.builtinDataToData dat of
+      PlutusTx.Constr 0 [dat'] -> PlutusTx.fromData dat'
+      _ -> Nothing
+
+-- | @since 3.14.1
+instance PlutusTx.UnsafeFromData AnyTokenAssetClass where
+  unsafeFromBuiltinData dat = case PlutusTx.builtinDataToData dat of
+    PlutusTx.Constr 0 [dat'] -> case PlutusTx.fromData dat' of
+      Just cs -> AnyTokenAssetClass cs
+      Nothing ->
+        error "unsafeFromBuiltinData: Did not get a CurrencySymbol for AnyTokenAssetClass"
+    _ -> error "unsafeFromBuiltinData: Could not make AnyTokenAssetClass"
+
+-- | @since 3.14.1
+instance PlutusTx.ToData AnyTokenAssetClass where
+  toBuiltinData (AnyTokenAssetClass cs) =
+    PlutusTx.dataToBuiltinData $ PlutusTx.Constr 0 [PlutusTx.toData cs]
+
+{- | Plutarch equivalent to 'AnyTokenAssetClass'.
+
+ @since 3.14.1
+-}
+newtype PAnyTokenAssetClass (s :: S)
+  = PAnyTokenAssetClass (Term s PCurrencySymbol)
+  deriving stock
+    ( -- | @since 3.14.1
+      Generic
+    )
+  deriving anyclass
+    ( -- | @since 3.14.1
+      PEq
+    , -- | @since 3.14.1
+      PlutusType
+    , -- | @since 3.14.1
+      PShow
+    , -- | @since 3.14.1
+      PIsData
+    )
+
+-- | @since 3.14.1
+instance HasField "symbol" (PAnyTokenAssetClass s) (Term s PCurrencySymbol) where
+  {-# INLINEABLE getField #-}
+  getField = coerce
+
+-- | @since 3.14.1
+instance HasField "assetClass" (PAnyTokenAssetClass s) (Term s PAssetClass) where
+  {-# INLINEABLE getField #-}
+  getField (PAnyTokenAssetClass cs) =
+    pcon . PAssetClass (pdata cs) . pdata . pcon . PTokenName . pconstant $ ""
+
+-- | @since 3.14.1
+instance DerivePlutusType PAnyTokenAssetClass where
+  type DPTStrat _ = PlutusTypeNewtype
+
+-- | @since 3.14.1
+instance PUnsafeLiftDecl PAnyTokenAssetClass where
+  type PLifted PAnyTokenAssetClass = AnyTokenAssetClass
 
 {- | An 'AssetClass' whose 'TokenName' is significant somehow.
 
