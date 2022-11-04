@@ -2,6 +2,55 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.14.1 -- 2022-11-02
+
+### Added
+
+* In `Plutarch.Extra.Value`:
+  - `psymbolValueOf'` for extracting positive and negative amount of a currency
+    symbol separately. Particularly useful in a minting policy that supports both
+    minting and burning.
+* In `Plutarch.Extra.Applicative`:
+  - Plutarch level monoid on applicative functors `PAlternative`
+  - `PAlternative` instances for:
+    * `PMaybe`
+    * `PMaybeData`
+    * `PList`
+    * `PBuiltinList`
+  - `ppureIf`
+* In `Plutarch.Extra.List`:
+  - Delete a value from a list:
+    * `pdeleteFirstBy`
+    * `ptryDeleteFirstBy`
+    * `pdeleteFirst`
+  - `plistEqualsBy`
+  - Deal with singleton lists:
+    * `pisSingleton`
+    * `pfromSingleton`
+    * `ptryFromSingleton`
+* In `Plutarch.Extra.Ord`:
+  - `pinsertUniqueBy`
+* In `Plutarch.Extra.ScriptContext`:
+  - Generate token names:
+    * `validatorHashToTokenName` and `pvalidatorHashToTokenName`
+    * `scriptHashToTokenName` and `pscriptHashToTokenName`
+  - `ptryFromRedeemer` to resolve redeemer
+* In `Plutarch.Extra.Time`:
+  - `pcurrentTimeDuration`
+* In `Plutarch.Extra.Bool`:
+  - `passert`
+
+### Modified
+
+* Modified the signature of `pmapMaybe'` in `Plutarch.Extra.List` to allow
+  choosing the output list type
+* In `Plutarch.Extra.Value`, make `unit` type parameters in the following tagged 
+  assetclass utilities poly-kinded:
+  - `passetClassDataValueT`
+  - `psingleValueT'`
+  - `passetClassValueOfT'`
+  - `passetClassValueOfT`
+
 ## 3.14.0 -- 2022-11-01
 
 ### Added
