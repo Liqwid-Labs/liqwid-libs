@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Plutarch.Test.Export (
@@ -13,34 +14,15 @@ module Plutarch.Test.Export (
   assertValidator,
   assertMintingPolicy,
 
-  -- ** Environment change
-
-  -- *** Datums
-  modifyingDatum,
-  settingDatum,
-  modifyingDatum',
-  settingDatum',
-
-  -- *** Redeemers
-  modifyingRedeemer,
-  settingRedeemer,
-  modifyingRedeemer',
-  settingRedeemer',
-
-  -- *** Script contexts
-  modifyingSC,
-  settingSC,
-  modifyingSC',
-  settingSC',
-
-  -- *** Multiple components
-  modifyingScriptParams,
-  settingScriptParams,
-  modifyingScriptParams',
-  settingScriptParams',
+  -- ** Scoped parameter changes
+  localScriptParams,
+  localScriptParams',
+  setScriptParams,
+  setScriptParams',
 
   -- ** Elimination
-  exportTests,
+  withLinked,
+  withRaw,
 ) where
 
 import Acc (Acc)
@@ -48,22 +30,21 @@ import Control.Monad.Trans.RWS.CPS (
   RWS,
   asks,
   execRWS,
-  local,
   tell,
+  withRWS,
  )
-import Data.Coerce (coerce)
 import Data.Kind (Type)
-import Data.Map (Map)
+import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Tagged (Tagged (Tagged))
 import Data.Text (Text, unpack)
 import GHC.Exts (toList)
-import Optics.At (at')
-import Optics.Getter (to, view)
+import Optics.At (at)
+import Optics.Getter (A_Getter, to, view)
 import Optics.Label (LabelOptic (labelOptic))
 import Optics.Lens (A_Lens, lens)
 import Optics.Optic ((%), (%%))
-import Optics.Setter (over, set)
+import Optics.Setter (over)
 import Optics.TH (makeFieldLabelsNoPrefix)
 import Plutarch.Evaluate (evalScriptHuge)
 import PlutusLedgerApi.V1.Scripts (applyArguments)
@@ -74,15 +55,12 @@ import PlutusLedgerApi.V2 (
   ToData,
   toData,
  )
-import Ply (
-  ScriptRole (MintingPolicyRole, ValidatorRole),
-  TypedScriptEnvelope (tsRole, tsScript),
- )
 import ScriptExport.ScriptInfo (
   Linker,
   LinkerError,
   RawScriptExport,
   ScriptExport,
+  ScriptRole (MintingPolicyRole, ValidatorRole),
   runLinker,
  )
 import Test.Tasty (TestTree, testGroup)
@@ -99,9 +77,9 @@ import Test.Tasty.Providers (
 
  @since 1.2.1
 -}
-data ScriptParams (dat :: Type) (red :: Type) = ScriptParams
-  { datum :: dat
-  , redeemer :: red
+data ScriptParams (datum :: Type) (redeemer :: Type) = ScriptParams
+  { datum :: datum
+  , redeemer :: redeemer
   , context :: ScriptContext
   }
 
@@ -112,9 +90,9 @@ makeFieldLabelsNoPrefix ''ScriptParams
 
  @since 1.2.1
 -}
-data TestParams (dat :: Type) (red :: Type) (p :: Type) = TestParams
-  { scriptParams :: ScriptParams dat red
-  , linkerParams :: p
+data TestParams (datum :: Type) (redeemer :: Type) (params :: Type) = TestParams
+  { scriptParams :: ScriptParams datum redeemer
+  , linkerParams :: params
   }
 
 makeFieldLabelsNoPrefix ''TestParams
@@ -134,30 +112,9 @@ data ScriptOutcome = Crashes | Runs
       Show
     )
 
-{- | A helper newtype for passing script arguments implicitly, as well as
- modifying them using local scoping.
-
- The intended use is with @do@-notation, using a combination of contextual
- argument modifiers and assertions, then \'running\' with 'exportTests':
-
- > tests :: TestTree
- > tests = exportTests "my tests" export linker testParams $ do
- >    assertValidator Crashes "my context is bad" "script1"
- >    modifyingSC fixUpContext $ do
- >      assertValidator Crashes "context fine, redeemer bad" "script1"
- >      modifyingRedeemer fixUpRedeemer $ do
- >        assertValidator Runs "now everything is fine" "script1"
- >      -- Redeemer fix-up resets here
- >      assertMintingPolicy Crashes "inappropriate datum" "script2"
- >      settingDatum' redeemerDatum $ do
- >        assertMintingPolicy Runs "appropriate datum" "script2"
-
- You can also define separate \'bits\' of a suite using 'WithExport' directly.
-
- @since 1.2.1
--}
-newtype WithExport (dat :: Type) (red :: Type) (info :: Type) (a :: Type)
-  = WithExport (RWS (WithExportEnv dat red info) WithExportLog () a)
+-- | @since 1.2.1
+newtype WithExport (datum :: Type) (redeemer :: Type) (info :: Type) (a :: Type)
+  = WithExport (RWS (WithExportEnv datum redeemer info) TestMap () a)
   deriving
     ( -- | @since 1.2.1
       Functor
@@ -166,47 +123,12 @@ newtype WithExport (dat :: Type) (red :: Type) (info :: Type) (a :: Type)
     , -- | @since 1.2.1
       Monad
     )
-    via ( RWS (WithExportEnv dat red info) WithExportLog ()
-        )
+    via (RWS (WithExportEnv datum redeemer info) TestMap ())
 
-{- | Given a name for the overall test suite, a raw export, a linker, and some
- test parameters, assemble a 'TestTree'.
-
- This acts as a 'testGroup' replacement, and can be used in a similar way. The
- exact number of tests this will generate depends on the script export given,
- and the scripts we ask to test:
-
- - If linking fails, you will get a single, always-failing, test, which
- presents the linker error;
- - If any tests request non-existent scripts (that is, a name that doesn't
- correspond to an existing script), those requests will be bundled into a
- single, always-failing, test, which presents the name that doesn't have a
- script associated with it;
- - Otherwise, one test per request.
-
- @since 1.2.1
--}
-exportTests ::
-  forall (dat :: Type) (red :: Type) (info :: Type) (param :: Type).
-  String ->
-  RawScriptExport ->
-  Linker param (ScriptExport info) ->
-  TestParams dat red param ->
-  WithExport dat red info () ->
-  TestTree
-exportTests name raw linker args comp = case runWithExport comp raw linker args of
-  Left err -> singleTest "Linking" . FailedToLink $ err
-  Right result -> testGroup name . toList . Map.foldMapWithKey go $ result
-    where
-      go :: Text -> PreparedScriptTests -> Acc TestTree
-      go testName = \case
-        NoSuchScript -> pure . singleTest "Presence" . MissingScript $ testName
-        PreparedTests tests -> fmap prepDataToTest tests
-
-{- | States that the named validator should have the given outcome, using the
- currently in-scope arguments. The test will be labelled with the given
- explanation (or reason) in the suite, as long as the named script actually
- exists.
+{- | Specify that the validator under the given name should have the given
+ outcome, using the currently in-scope parameters. The test will be labelled
+ with the given explanation (or reason) in the suite, as long as the named
+ script exists.
 
  = Example
 
@@ -217,510 +139,333 @@ exportTests name raw linker args comp = case runWithExport comp raw linker args 
  @since 1.2.1
 -}
 assertValidator ::
-  forall (dat :: Type) (red :: Type) (info :: Type).
-  (ToData dat, ToData red) =>
+  forall (datum :: Type) (redeemer :: Type) (info :: Type).
+  (ToData datum, ToData redeemer) =>
   -- | What you expect to happen
   ScriptOutcome ->
-  -- | The reason or explanation to label the test with
+  -- | The explanation (or reason) to label the test with
   String ->
-  -- | The name of the script to run
+  -- | Name of the script to run
   Text ->
-  WithExport dat red info ()
+  WithExport datum redeemer info ()
 assertValidator outcome reason name = WithExport $ do
-  lookedUp <- asks (view (#raws % #rawScripts % at' @(Map _ _) name))
+  lookedUp <- asks (view (#exports % #scripts % at name))
   case lookedUp of
     Nothing -> tell . noSuchScript $ name
-    Just envelope -> case view (to tsRole) envelope of
+    Just found -> case view #role found of
       ValidatorRole -> do
-        datum' <- asks (toData . view #datum)
-        redeemer' <- asks (toData . view #redeemer)
-        sc' <- asks (toData . view #context)
-        let script = view (to tsScript) envelope
-        let result = AppliedValidator script datum' redeemer' sc'
-        tell . prepareTest name reason outcome $ result
-      MintingPolicyRole -> tell . roleMismatch name reason $ ValidatorRole
+        sp <- asks (view #params)
+        tell . prepareValidator name reason (view #script found) outcome $ sp
+      MintingPolicyRole -> tell . wrongRole name reason $ ValidatorRole
 
-{- | As 'assertValidator', but for a minting policy instead.
-
- @since 1.2.1
--}
-assertMintingPolicy ::
-  forall (dat :: Type) (red :: Type) (info :: Type).
-  (ToData dat) =>
-  -- | What you expect to happen
-  ScriptOutcome ->
-  -- | The reason or explanation to label the test with
-  String ->
-  -- | The name of the script to run
-  Text ->
-  WithExport dat red info ()
-assertMintingPolicy outcome reason name = WithExport $ do
-  lookedUp <- asks (view (#raws % #rawScripts % at' @(Map _ _) name))
-  case lookedUp of
-    Nothing -> tell . noSuchScript $ name
-    Just envelope -> case tsRole envelope of
-      ValidatorRole -> tell . roleMismatch name reason $ MintingPolicyRole
-      MintingPolicyRole -> do
-        datum' <- asks (toData . view #datum)
-        sc' <- asks (toData . view #context)
-        let script = tsScript envelope
-        let result = AppliedMP script datum' sc'
-        tell . prepareTest name reason outcome $ result
-
-{- | Modify the given test collection to use a different datum, based on the
- provided function. The additional information provided by the script export
- is provided as an additional parameter to the function argument.
+{- | Specify that the minting policy under the given name should have the given
+ outcome, using the currently in-scope parameters. The test will be labelled
+ with the given explanation (or reason) in the suite, as long as the named
+ script exists.
 
  = Example
 
  > tests = do
- >    -- This will use unmodified arguments
- >    assertValidator Crashes "bad datum" "myScript"
- >    modifyingDatum fixMyDatum $ do
- >      -- This will use a datum modified according to fixMyDatum
- >      assertValidator Runs "good datum" "myScript"
- >      -- So will this
- >      assertValidator Crashes "this one is wrong" "myScript2"
- >    -- However, here, the change resets
- >    assertValidator Runs "but this one is good" "myScript2"
-
- You can \'nest\' modifications, which behave according to lexical scope:
-
- > tests = do
- >    -- One change
- >    modifyingDatum change1 $ do
- >      -- This will only modify with change1
- >      assertValidator Crashes "not enough fixes" "myScript"
- >      -- Stack on another change
- >      modifyingDatum change2 $ do
- >        -- This modifies with change1, then change2 on top
- >        assertValidator Runs "enough fixes" "myScript"
- >      -- reset change2
- >      assertValidator Crashes "why did we undo this change?" "myScript"
- >   -- reset change1
+ >    assertMintingPolicy Crashes "reason for crash" "myPolicy"
+ >    assertMintingPolicy Runs "reason for success" "aBetterPolicy"
 
  @since 1.2.1
 -}
-modifyingDatum ::
-  forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
-  -- | How to \'locally modify\' the datum
-  (info -> dat -> dat) ->
-  -- | The collection of tests to run using the modified datum as an argument
-  WithExport dat red info a ->
-  WithExport dat red info a
-modifyingDatum f (WithExport comp) =
-  WithExport . local (\env -> over #datum (f (view #info env)) env) $ comp
+assertMintingPolicy ::
+  forall (datum :: Type) (redeemer :: Type) (info :: Type).
+  (ToData datum) =>
+  -- | What you expect to happen
+  ScriptOutcome ->
+  -- | The explanation (or reason) to label the test with
+  String ->
+  -- | Name of the script to run
+  Text ->
+  WithExport datum redeemer info ()
+assertMintingPolicy outcome reason name = WithExport $ do
+  lookedUp <- asks (view (#exports % #scripts % at name))
+  case lookedUp of
+    Nothing -> tell . noSuchScript $ name
+    Just found -> case view #role found of
+      ValidatorRole -> tell . wrongRole name reason $ MintingPolicyRole
+      MintingPolicyRole -> do
+        sp <- asks (view #params)
+        tell . prepareMintingPolicy name reason (view #script found) outcome $ sp
 
-{- | As 'modifyingDatum', except the \'locally scoped\' datum is replaced with
- the given value.
-
- @since 1.2.1
--}
-settingDatum ::
-  forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
-  -- | How to \'locally set\' the datum
-  (info -> dat) ->
-  -- | The collection of tests to run using the set datum as an argument
-  WithExport dat red info a ->
-  WithExport dat red info a
-settingDatum f = modifyingDatum (\i _ -> f i)
-
-{- | As 'modifyingDatum', but without additional information from the script
- export.
-
- @since 1.2.1
--}
-modifyingDatum' ::
-  forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
-  -- | How to \'locally modify\' the datum
-  (dat -> dat) ->
-  -- | The collection of tests to run using the modified datum as an argument
-  WithExport dat red info a ->
-  WithExport dat red info a
-modifyingDatum' f = modifyingDatum (\_ x -> f x)
-
-{- | As 'settingDatum', but without additional information from the script
- export.
-
- @since 1.2.1
--}
-settingDatum' ::
-  forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
-  -- | A \'local value\' for the datum
-  dat ->
-  -- | The collection of tests to run using the set datum as an argument
-  WithExport dat red info a ->
-  WithExport dat red info a
-settingDatum' x = modifyingDatum (\_ _ -> x)
-
-{- | Modify the given test collection to use a different redeemer, based on the
- provided function. The additional information provided by the script export
- is provided as an additional parameter to the function argument.
-
- Use this similarly to 'modifyingDatum': see its documentation for an example of use.
-
- @since 1.2.1
--}
-modifyingRedeemer ::
-  forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
-  -- | How to \'locally modify\' the redeemer
-  (info -> red -> red) ->
-  -- | The collection of tests to run using the modified redeemer as an argument
-  WithExport dat red info a ->
-  WithExport dat red info a
-modifyingRedeemer f (WithExport comp) =
-  WithExport . local (\env -> over #redeemer (f (view #info env)) env) $ comp
-
-{- | As 'modifyingRedeemer', except the \'locally scoped\' redeemer is replaced with
- the given value.
-
- @since 1.2.1
--}
-settingRedeemer ::
-  forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
-  -- | How to \'locally set\' the redeemer
-  (info -> red) ->
-  -- | The collection of tests to run using the set redeemer as an argument
-  WithExport dat red info a ->
-  WithExport dat red info a
-settingRedeemer f = modifyingRedeemer (\i _ -> f i)
-
-{- | As 'modifyingRedeemer', but without additional information from the script
- export.
-
- @since 1.2.1
--}
-modifyingRedeemer' ::
-  forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
-  -- | How to \'locally modify\' the redeemer
-  (red -> red) ->
-  -- | The collection of tests to run using the modified redeemer as an argument
-  WithExport dat red info a ->
-  WithExport dat red info a
-modifyingRedeemer' f = modifyingRedeemer (\_ x -> f x)
-
-{- | As 'settingRedeemer', but without additional information from the script
- export.
-
- @since 1.2.1
--}
-settingRedeemer' ::
-  forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
-  -- | A \'local value\' for the redeemer
-  red ->
-  -- | The collection of tests to run using the set redeemer as an argument
-  WithExport dat red info a ->
-  WithExport dat red info a
-settingRedeemer' x = modifyingRedeemer (\_ _ -> x)
-
-{- | Modify the given test collection to use a different context, based on the
- provided function. The additional information provided by the script export
- is provided as an additional parameter to the function argument.
-
- Use this similarly to 'modifyingDatum': see its documentation for an example of use.
-
- @since 1.2.1
--}
-modifyingSC ::
-  forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
-  -- | How to \'locally modify\' the context
-  (info -> ScriptContext -> ScriptContext) ->
-  -- | The collection of tests to run using the modified context as an argument
-  WithExport dat red info a ->
-  WithExport dat red info a
-modifyingSC f (WithExport comp) =
-  WithExport . local (\env -> over #context (f (view #info env)) env) $ comp
-
-{- | As 'modifyingSC', except the \'locally scoped\' context is replaced with
- the given value.
-
- @since 1.2.1
--}
-settingSC ::
-  forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
-  -- | How to \'locally set\' the context
-  (info -> ScriptContext) ->
-  -- | The collection of tests to run using the set context as an argument
-  WithExport dat red info a ->
-  WithExport dat red info a
-settingSC f = modifyingSC (\i _ -> f i)
-
-{- | As 'modifyingSC', but without additional information from the script
- export.
-
- @since 1.2.1
--}
-modifyingSC' ::
-  forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
-  -- | How to \'locally modify\' the context
-  (ScriptContext -> ScriptContext) ->
-  -- | The collection of tests to run using the modified context as an argument
-  WithExport dat red info a ->
-  WithExport dat red info a
-modifyingSC' f = modifyingSC (\_ x -> f x)
-
-{- | As 'settingSC', but without additional information from the script
- export.
-
- @since 1.2.1
--}
-settingSC' ::
-  forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
-  -- | A \'local value\' for the context
-  ScriptContext ->
-  -- | The collection of tests to run using the set context as an argument
-  WithExport dat red info a ->
-  WithExport dat red info a
-settingSC' x = modifyingSC (\_ _ -> x)
-
-{- | Modify the given test collection to use different script arguments, based
- on the provided function. This is equivalent to nesting the other environment
- changing functions, but can be more convenient. The additional information
- provided by the script export is provided as an additional parameter to the
- function argument.
-
- Use this similarly to 'modifyingDatum': see its documentation for an example of use.
-
- @since 1.2.1
--}
-modifyingScriptParams ::
-  forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
-  -- | How to \'locally modify\' the script arguments
-  (info -> ScriptParams dat red -> ScriptParams dat red) ->
-  -- | The collection of tests to run using the modified arguments
-  WithExport dat red info a ->
-  WithExport dat red info a
-modifyingScriptParams f (WithExport comp) = WithExport . local go $ comp
+-- | @since 1.2.1
+localScriptParams ::
+  forall (datum :: Type) (datum' :: Type) (redeemer :: Type) (redeemer' :: Type) (info :: Type) (a :: Type).
+  (info -> ScriptParams datum redeemer -> ScriptParams datum' redeemer') ->
+  WithExport datum' redeemer' info a ->
+  WithExport datum redeemer info a
+localScriptParams f (WithExport comp) = WithExport $ do
+  information <- asks (view (#exports %% #information))
+  withRWS (go information) comp
   where
-    go :: WithExportEnv dat red info -> WithExportEnv dat red info
-    go env =
-      let collected =
-            ScriptParams
-              (view #datum env)
-              (view #redeemer env)
-              (view #context env)
-          modified = f (view #info env) collected
-       in set #datum (view #datum modified)
-            . set #redeemer (view #redeemer modified)
-            . set #context (view #context modified)
-            $ env
+    go ::
+      info ->
+      WithExportEnv datum redeemer info ->
+      () ->
+      (WithExportEnv datum' redeemer' info, ())
+    go information env () = (over #params (f information) env, ())
 
-{- | As 'modifyingScriptParams', except the \'locally scoped\' arguments are replaced with
- the given ones.
+-- | @since 1.2.1
+localScriptParams' ::
+  forall (datum :: Type) (datum' :: Type) (redeemer :: Type) (redeemer' :: Type) (info :: Type) (a :: Type).
+  (ScriptParams datum redeemer -> ScriptParams datum' redeemer') ->
+  WithExport datum' redeemer' info a ->
+  WithExport datum redeemer info a
+localScriptParams' f = localScriptParams (const f)
 
- @since 1.2.1
--}
-settingScriptParams ::
-  forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
-  -- | How to \'locally set\' the script arguments
-  (info -> ScriptParams dat red) ->
-  -- | The collection of tests to run using the set arguments
-  WithExport dat red info a ->
-  WithExport dat red info a
-settingScriptParams f = modifyingScriptParams (\i _ -> f i)
+-- | @since 1.2.1
+setScriptParams ::
+  forall (datum :: Type) (datum' :: Type) (redeemer :: Type) (redeemer' :: Type) (info :: Type) (a :: Type).
+  (info -> ScriptParams datum' redeemer') ->
+  WithExport datum' redeemer' info a ->
+  WithExport datum redeemer info a
+setScriptParams f = localScriptParams (\information _ -> f information)
 
-{- | As 'modifyingScriptParams', but without additional information from the script
- export.
+-- | @since 1.2.1
+setScriptParams' ::
+  forall (datum :: Type) (datum' :: Type) (redeemer :: Type) (redeemer' :: Type) (info :: Type) (a :: Type).
+  ScriptParams datum' redeemer' ->
+  WithExport datum' redeemer' info a ->
+  WithExport datum redeemer info a
+setScriptParams' x = localScriptParams (\_ _ -> x)
 
- @since 1.2.1
--}
-modifyingScriptParams' ::
-  forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
-  -- | How to \'locally modify\' the arguments
-  (ScriptParams dat red -> ScriptParams dat red) ->
-  -- | The collection of tests to run using the modified arguments
-  WithExport dat red info a ->
-  WithExport dat red info a
-modifyingScriptParams' f = modifyingScriptParams (\_ x -> f x)
+-- | @since 1.2.1
+withLinked ::
+  forall (datum :: Type) (redeemer :: Type) (info :: Type).
+  String ->
+  ScriptParams datum redeemer ->
+  ScriptExport info ->
+  WithExport datum redeemer info () ->
+  TestTree
+withLinked name sp se (WithExport comp) =
+  let env = WithExportEnv sp se
+   in case execRWS comp env () of
+        ((), TestMap result) ->
+          testGroup name . toList . Map.foldMapWithKey go $ result
+  where
+    go ::
+      Text ->
+      PreparedScriptTests ->
+      Acc TestTree
+    go scriptName =
+      pure . testGroup (unpack scriptName) . \case
+        NoSuchScript -> [singleTest "Presence" MissingScript]
+        PreparedTests rigs -> toList $ rigToTest <$> rigs
 
-{- | As 'settingScriptParams', but without additional information from the script
- export.
-
- @since 1.2.1
--}
-settingScriptParams' ::
-  forall (dat :: Type) (red :: Type) (info :: Type) (a :: Type).
-  -- | A \'local value\' for the arguments
-  ScriptParams dat red ->
-  -- | The collection of tests to run using the set arguments
-  WithExport dat red info a ->
-  WithExport dat red info a
-settingScriptParams' x = modifyingScriptParams (\_ _ -> x)
+-- | @since 1.2.1
+withRaw ::
+  forall (datum :: Type) (redeemer :: Type) (info :: Type) (params :: Type).
+  String ->
+  TestParams datum redeemer params ->
+  RawScriptExport ->
+  Linker params (ScriptExport info) ->
+  WithExport datum redeemer info () ->
+  TestTree
+withRaw name tp raw linker comp =
+  case runLinker linker raw (view #linkerParams tp) of
+    Left err -> testGroup name [singleTest "linking" . FailedToLink $ err]
+    Right linked -> withLinked name (view #scriptParams tp) linked comp
 
 -- Helpers
-
-runWithExport ::
-  forall (dat :: Type) (red :: Type) (info :: Type) (param :: Type).
-  WithExport dat red info () ->
-  RawScriptExport ->
-  Linker param (ScriptExport info) ->
-  TestParams dat red param ->
-  Either LinkerError (Map Text PreparedScriptTests)
-runWithExport (WithExport comp) raw linker args = do
-  linked <- runLinker linker raw . view #linkerParams $ args
-  let env =
-        WithExportEnv
-          (view (#scriptParams %% #datum) args)
-          (view (#scriptParams %% #redeemer) args)
-          (view (#scriptParams %% #context) args)
-          raw
-          (view #information linked)
-  pure . coerce . snd . execRWS comp env $ ()
-
--- Note from Koz: the manual lenses are due to a weird interaction between TH
--- and record syntax. I wasn't able to establish _why_ it was being weird, but
--- when written this way, it behaves.
-data WithExportEnv (dat :: Type) (red :: Type) (info :: Type)
-  = WithExportEnv dat red ScriptContext RawScriptExport info
-
-instance
-  (k ~ A_Lens, a ~ dat, b ~ dat) =>
-  LabelOptic "datum" k (WithExportEnv dat red info) (WithExportEnv dat red info) a b
-  where
-  labelOptic = lens (\(WithExportEnv x _ _ _ _) -> x) $ \(WithExportEnv _ r sc ra i) d' ->
-    WithExportEnv d' r sc ra i
-
-instance
-  (k ~ A_Lens, a ~ red, b ~ red) =>
-  LabelOptic "redeemer" k (WithExportEnv dat red info) (WithExportEnv dat red info) a b
-  where
-  labelOptic = lens (\(WithExportEnv _ x _ _ _) -> x) $ \(WithExportEnv d _ sc ra i) r' ->
-    WithExportEnv d r' sc ra i
-
-instance
-  (k ~ A_Lens, a ~ ScriptContext, b ~ ScriptContext) =>
-  LabelOptic "context" k (WithExportEnv dat red info) (WithExportEnv dat red info) a b
-  where
-  labelOptic = lens (\(WithExportEnv _ _ x _ _) -> x) $ \(WithExportEnv d r _ ra i) sc' ->
-    WithExportEnv d r sc' ra i
-
-instance
-  (k ~ A_Lens, a ~ RawScriptExport, b ~ RawScriptExport) =>
-  LabelOptic "raws" k (WithExportEnv dat red info) (WithExportEnv dat red info) a b
-  where
-  labelOptic = lens (\(WithExportEnv _ _ _ x _) -> x) $ \(WithExportEnv d r sc _ i) raws' ->
-    WithExportEnv d r sc raws' i
-
-instance
-  (k ~ A_Lens, a ~ info, b ~ info) =>
-  LabelOptic "info" k (WithExportEnv dat red info) (WithExportEnv dat red info) a b
-  where
-  labelOptic = lens (\(WithExportEnv _ _ _ _ x) -> x) $ \(WithExportEnv d r sc ra _) i' ->
-    WithExportEnv d r sc ra i'
-
-data Applied
-  = AppliedValidator Script Data Data Data
-  | AppliedMP Script Data Data
-
-data PreparedTestData
-  = WrongRole String ScriptRole
-  | PreparedData String ScriptOutcome Applied
-
-data PreparedScriptTests
-  = NoSuchScript
-  | PreparedTests (Acc PreparedTestData)
-
-instance Semigroup PreparedScriptTests where
-  {-# INLINEABLE (<>) #-}
-  NoSuchScript <> _ = NoSuchScript
-  _ <> NoSuchScript = NoSuchScript
-  PreparedTests acc <> PreparedTests acc' = PreparedTests $ acc <> acc'
-
-newtype WithExportLog = WithExportLog (Map Text PreparedScriptTests)
-
-instance Semigroup WithExportLog where
-  {-# INLINEABLE (<>) #-}
-  WithExportLog m1 <> WithExportLog m2 =
-    WithExportLog . Map.unionWith (<>) m1 $ m2
-
-instance Monoid WithExportLog where
-  {-# INLINEABLE mempty #-}
-  mempty = WithExportLog Map.empty
-
-noSuchScript :: Text -> WithExportLog
-noSuchScript scriptName =
-  WithExportLog . Map.singleton scriptName $ NoSuchScript
-
-prepareTest ::
-  Text ->
-  String ->
-  ScriptOutcome ->
-  Applied ->
-  WithExportLog
-prepareTest name reason outcome =
-  WithExportLog
-    . Map.singleton name
-    . PreparedTests
-    . pure
-    . PreparedData reason outcome
-
-roleMismatch :: Text -> String -> ScriptRole -> WithExportLog
-roleMismatch name reason =
-  WithExportLog
-    . Map.singleton name
-    . PreparedTests
-    . pure
-    . WrongRole reason
 
 newtype FailedToLink = FailedToLink LinkerError
 
 instance IsTest FailedToLink where
   run _ (FailedToLink err) _ =
     pure . testFailed $
-      "Could not link:\n"
+      "Linking failed\n"
+        <> "Error:\n"
         <> show err
   testOptions = Tagged []
 
-newtype MissingScript = MissingScript Text
+rigToTest :: TestRig -> TestTree
+rigToTest = \case
+  WrongRole label expected ->
+    singleTest label . GotRoleWrong $ expected
+  Prepared label outcome prep ->
+    singleTest label . GotRoleRight outcome $ prep
+
+data MissingScript = MissingScript
 
 instance IsTest MissingScript where
-  run _ (MissingScript name) _ =
-    pure . testFailed $
-      "No such script: " <> unpack name
+  run _ MissingScript _ = pure . testFailed $ "No script exported with that name"
   testOptions = Tagged []
 
-newtype RoleMisAssigned = RoleMisAssigned ScriptRole
+data Rigged
+  = GotRoleWrong ScriptRole
+  | GotRoleRight ScriptOutcome PreparedTest
 
-instance IsTest RoleMisAssigned where
-  run _ (RoleMisAssigned intended) _ =
-    pure . testFailed $ case intended of
-      ValidatorRole ->
-        "Declared as minting policy, but script is a validator."
-      MintingPolicyRole ->
-        "Declared as a validator, but script is a minting policy."
+instance IsTest Rigged where
+  run _ rigged _ = case rigged of
+    GotRoleWrong expected -> pure . testFailed $ case expected of
+      ValidatorRole -> "Expected a validator, but given a minting policy"
+      MintingPolicyRole -> "Expected a minting policy, but given a validator"
+    GotRoleRight outcome prepped -> do
+      let d = view #datum prepped
+      let sc = view #context prepped
+      let script = view #script prepped
+      let applied = case view #redeemer prepped of
+            -- We have a minting policy
+            Nothing -> applyArguments script [d, sc]
+            -- We have a validator
+            Just r -> applyArguments script [d, r, sc]
+      let (res, _, logs) = evalScriptHuge applied
+      pure $ case (res, outcome) of
+        (Left _, Crashes) -> testPassed "Crashed as expected"
+        (Left err, Runs) ->
+          testFailed $
+            "Expected to run, but crashed instead\n"
+              <> "Error:\n"
+              <> show err
+              <> "\nLogs:\n"
+              <> show logs
+        (Right _, Crashes) ->
+          testFailed $
+            "Expected a crash, but ran instead\n"
+              <> "Logs:\n"
+              <> show logs
+        (Right _, Runs) -> testPassed "Ran as expected"
   testOptions = Tagged []
 
-prepDataToTest :: PreparedTestData -> TestTree
-prepDataToTest = \case
-  WrongRole reason intended ->
-    singleTest reason . RoleMisAssigned $ intended
-  PreparedData reason outcome applied ->
-    singleTest reason . RunWithExpectation outcome $ applied
+-- Carries the environment for script test construction
+data WithExportEnv (datum :: Type) (redeemer :: Type) (info :: Type)
+  = WithExportEnv (ScriptParams datum redeemer) (ScriptExport info)
 
-data RunWithExpectation = RunWithExpectation ScriptOutcome Applied
+instance
+  (k ~ A_Lens, a ~ ScriptParams datum redeemer, b ~ ScriptParams datum' redeemer') =>
+  LabelOptic "params" k (WithExportEnv datum redeemer info) (WithExportEnv datum' redeemer' info) a b
+  where
+  labelOptic = lens out $ \(WithExportEnv _ se) sp' ->
+    WithExportEnv sp' se
+    where
+      out :: WithExportEnv datum redeemer info -> ScriptParams datum redeemer
+      out (WithExportEnv sp _) = sp
 
-instance IsTest RunWithExpectation where
-  run _ (RunWithExpectation outcome applied) _ = do
-    let withArgs = case applied of
-          AppliedValidator script datum redeemer sc ->
-            applyArguments script [datum, redeemer, sc]
-          AppliedMP script datum sc ->
-            applyArguments script [datum, sc]
-    let (res, _, logs) = evalScriptHuge withArgs
-    case (res, outcome) of
-      (Left _, Crashes) -> pure . testPassed $ "Crashed as expected"
-      (Left err, Runs) ->
-        pure . testFailed $
-          "Expected to run, but crashed instead.\n"
-            <> "Error: "
-            <> show err
-            <> "\n"
-            <> "Logs:\n\n"
-            <> show logs
-      (Right _, Crashes) ->
-        pure . testFailed $
-          "Expected to crash, but ran instead.\n"
-            <> "Logs:\n\n"
-            <> show logs
-      (Right _, Runs) -> pure . testPassed $ "Ran as expected"
-  testOptions = Tagged []
+instance
+  (k ~ A_Lens, a ~ ScriptExport info, b ~ ScriptExport info) =>
+  LabelOptic "exports" k (WithExportEnv datum redeemer info) (WithExportEnv datum redeemer info) a b
+  where
+  labelOptic = lens out $ \(WithExportEnv sp _) se' ->
+    WithExportEnv sp se'
+    where
+      out :: WithExportEnv datum redeemer info -> ScriptExport info
+      out (WithExportEnv _ se) = se
+
+-- A script with 'burned in' parameters
+data PreparedTest
+  = PreparedValidator Script Data Data Data
+  | PreparedMintingPolicy Script Data Data
+
+instance
+  (k ~ A_Lens, a ~ Script, b ~ Script) =>
+  LabelOptic "script" k PreparedTest PreparedTest a b
+  where
+  labelOptic = lens out $ \prep script' -> case prep of
+    PreparedValidator _ d r sc -> PreparedValidator script' d r sc
+    PreparedMintingPolicy _ d sc -> PreparedMintingPolicy script' d sc
+    where
+      out :: PreparedTest -> Script
+      out = \case
+        PreparedValidator s _ _ _ -> s
+        PreparedMintingPolicy s _ _ -> s
+
+instance
+  (k ~ A_Lens, a ~ Data, b ~ Data) =>
+  LabelOptic "datum" k PreparedTest PreparedTest a b
+  where
+  labelOptic = lens out $ \prep d' -> case prep of
+    PreparedValidator s _ r sc -> PreparedValidator s d' r sc
+    PreparedMintingPolicy s _ sc -> PreparedMintingPolicy s d' sc
+    where
+      out :: PreparedTest -> Data
+      out = \case
+        PreparedValidator _ d _ _ -> d
+        PreparedMintingPolicy _ d _ -> d
+
+instance
+  (k ~ A_Lens, a ~ Data, b ~ Data) =>
+  LabelOptic "context" k PreparedTest PreparedTest a b
+  where
+  labelOptic = lens out $ \prep sc' -> case prep of
+    PreparedValidator s d r _ -> PreparedValidator s d r sc'
+    PreparedMintingPolicy s d _ -> PreparedMintingPolicy s d sc'
+    where
+      out :: PreparedTest -> Data
+      out = \case
+        PreparedValidator _ _ _ sc -> sc
+        PreparedMintingPolicy _ _ sc -> sc
+
+instance
+  (k ~ A_Getter, a ~ Maybe Data, b ~ Maybe Data) =>
+  LabelOptic "redeemer" k PreparedTest PreparedTest a b
+  where
+  labelOptic = to $ \case
+    PreparedValidator _ r _ _ -> Just r
+    PreparedMintingPolicy {} -> Nothing
+
+-- Either a 'burned in' script, or an indication the role was wrong
+data TestRig
+  = WrongRole String ScriptRole
+  | Prepared String ScriptOutcome PreparedTest
+
+data PreparedScriptTests
+  = NoSuchScript
+  | PreparedTests (Acc TestRig)
+
+instance Semigroup PreparedScriptTests where
+  NoSuchScript <> _ = NoSuchScript
+  _ <> NoSuchScript = NoSuchScript
+  PreparedTests xs <> PreparedTests xs' = PreparedTests $ xs <> xs'
+
+newtype TestMap = TestMap (Map Text PreparedScriptTests)
+
+instance Semigroup TestMap where
+  TestMap m <> TestMap m' = TestMap . Map.unionWith (<>) m $ m'
+
+instance Monoid TestMap where
+  mempty = TestMap []
+
+noSuchScript :: Text -> TestMap
+noSuchScript name = TestMap [(name, NoSuchScript)]
+
+wrongRole :: Text -> String -> ScriptRole -> TestMap
+wrongRole name reason expected =
+  TestMap [(name, PreparedTests [WrongRole reason expected])]
+
+prepareValidator ::
+  forall (datum :: Type) (redeemer :: Type).
+  (ToData datum, ToData redeemer) =>
+  Text ->
+  String ->
+  Script ->
+  ScriptOutcome ->
+  ScriptParams datum redeemer ->
+  TestMap
+prepareValidator name reason script expected sp =
+  let datum = toData . view #datum $ sp
+      redeemer = toData . view #redeemer $ sp
+      sc = toData . view #context $ sp
+      prepped = PreparedValidator script datum redeemer sc
+   in TestMap
+        [ (name, PreparedTests [Prepared reason expected prepped])
+        ]
+
+prepareMintingPolicy ::
+  forall (datum :: Type) (redeemer :: Type).
+  (ToData datum) =>
+  Text ->
+  String ->
+  Script ->
+  ScriptOutcome ->
+  ScriptParams datum redeemer ->
+  TestMap
+prepareMintingPolicy name reason script expected sp =
+  let datum = toData . view #datum $ sp
+      sc = toData . view #context $ sp
+      prepped = PreparedMintingPolicy script datum sc
+   in TestMap
+        [ (name, PreparedTests [Prepared reason expected prepped])
+        ]

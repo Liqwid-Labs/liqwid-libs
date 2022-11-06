@@ -1977,11 +1977,11 @@
         "ply": "ply"
       },
       "locked": {
-        "lastModified": 1667405172,
-        "narHash": "sha256-2y1l1Vba3gXI+8rgbMQ0carqRDd9Qqhx+Fpversneq4=",
+        "lastModified": 1667498866,
+        "narHash": "sha256-rzP1HxKacT7hz4YzJ4LTxh+TEZyzrtCgPRbXzJHSv28=",
         "owner": "Liqwid-Labs",
         "repo": "liqwid-script-export",
-        "rev": "cad1a2da7b69ce39662eb9fbcf3bfca280e59d6f",
+        "rev": "fd8bd015741137ad206c8c8bbca0428da5a13504",
         "type": "github"
       },
       "original": {
