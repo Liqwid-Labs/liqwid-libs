@@ -16,6 +16,9 @@ module Plutarch.Extra.List (
 
   -- * Transformation
   pmapMaybe,
+  pdeleteFirstBy,
+  ptryDeleteFirstBy,
+  pdeleteFirst,
 
   -- * Search
   pfindJust,
@@ -25,7 +28,18 @@ module Plutarch.Extra.List (
   phandleList,
   precListLookahead,
   ptryElimSingle,
+
+  -- * Comparison
+  plistEqualsBy,
+
+  -- * Singleton
+  pisSingleton,
+  pfromSingleton,
+  ptryFromSingleton,
 ) where
+
+import Plutarch.Extra.Functor (PFunctor (pfmap))
+import Plutarch.Extra.Maybe (pjust, pnothing)
 
 {- | 'pelimList' with re-ordered arguments. Useful for cases when the \'nil
  case\' is simple, but the \'cons case\' is complex.
@@ -69,21 +83,26 @@ ptryElimSingle f = pelimList go (ptraceError emptyErr)
  corresponding element is removed, while for elements where the function
  argument returns `PJust`, the value is used in the result.
 
- @since 3.6.0
+     @since 3.14.1
 -}
 pmapMaybe ::
-  forall (ell :: (S -> Type) -> S -> Type) (b :: S -> Type) (a :: S -> Type) (s :: S).
-  (PElemConstraint ell a, PElemConstraint ell b, PListLike ell) =>
-  Term s ((a :--> PMaybe b) :--> ell a :--> ell b)
+  forall
+    (listO :: (S -> Type) -> (S -> Type))
+    (b :: S -> Type)
+    (listI :: (S -> Type) -> (S -> Type))
+    (a :: S -> Type)
+    (s :: S).
+  (PIsListLike listI a, PIsListLike listO b) =>
+  Term s ((a :--> PMaybe b) :--> listI a :--> listO b)
 pmapMaybe = phoistAcyclic $ plam $ \f -> precList (go f) (const pnil)
   where
     go ::
       forall (s' :: S).
       Term s' (a :--> PMaybe b) ->
-      Term s' (ell a :--> ell b) ->
+      Term s' (listI a :--> listO b) ->
       Term s' a ->
-      Term s' (ell a) ->
-      Term s' (ell b)
+      Term s' (listI a) ->
+      Term s' (listO b)
     go f self x xs = pmatch (f # x) $ \case
       PNothing -> self # xs
       PJust y -> pcons # y #$ self # xs
@@ -209,3 +228,155 @@ pfromList ::
   [Term s a] ->
   Term s (list a)
 pfromList = foldr (\x xs -> pcons # x # xs) pnil
+
+{- | Check if two lists are equal. The two list types can be different. The first
+     argument is used for equality checks.
+
+     @since 3.14.1
+-}
+plistEqualsBy ::
+  forall
+    (list1 :: (S -> Type) -> (S -> Type))
+    (list2 :: (S -> Type) -> (S -> Type))
+    (a :: S -> Type)
+    (b :: S -> Type)
+    (s :: S).
+  (PIsListLike list1 a, PIsListLike list2 b) =>
+  Term s ((a :--> b :--> PBool) :--> list1 a :--> list2 b :--> PBool)
+plistEqualsBy = phoistAcyclic $
+  plam $ \eq -> pfix #$ plam $ \self l1 l2 ->
+    pelimList
+      ( \x xs ->
+          pelimList
+            ( \y ys ->
+                -- Avoid comparison if two lists have different length.
+                self # xs # ys #&& eq # x # y
+            )
+            -- l2 is empty, but l1 is not.
+            (pconstant False)
+            l2
+      )
+      -- l1 is empty, so l2 should be empty as well.
+      (pnull # l2)
+      l1
+
+{- | / O(n) /. Remove the first occurance of a value that satisfies the
+     predicate from the given list. Return nothing if said value is not in
+     the list.
+
+     @since 3.14.1
+-}
+pdeleteFirstBy ::
+  forall
+    (a :: S -> Type)
+    (list :: (S -> Type) -> (S -> Type))
+    (s :: S).
+  (PIsListLike list a) =>
+  Term s ((a :--> PBool) :--> list a :--> PMaybe (list a))
+pdeleteFirstBy = phoistAcyclic $
+  plam $ \p ->
+    precList
+      ( \self h t ->
+          pif
+            (p # h)
+            (pjust # t)
+            (pfmap # (pcons # h) # (self # t))
+      )
+      (const pnothing)
+
+{- | Partial version of 'pdeleteBy'.
+
+     @since 3.14.1
+-}
+ptryDeleteFirstBy ::
+  forall
+    (a :: S -> Type)
+    (list :: (S -> Type) -> (S -> Type))
+    (s :: S).
+  (PIsListLike list a) =>
+  Term s ((a :--> PBool) :--> list a :--> list a)
+ptryDeleteFirstBy = phoistAcyclic $
+  plam $ \p ->
+    precList
+      ( \self h t ->
+          pif
+            (p # h)
+            t
+            (pcons # h #$ self # t)
+      )
+      (const $ ptraceError "Cannot delete element")
+
+{- | Special version of 'pdeleteBy', for types with 'PEq' instance.
+
+     @since 3.14.1
+-}
+pdeleteFirst ::
+  forall
+    (a :: S -> Type)
+    (list :: (S -> Type) -> (S -> Type))
+    (s :: S).
+  (PEq a, PIsListLike list a) =>
+  Term s (a :--> list a :--> PMaybe (list a))
+pdeleteFirst = phoistAcyclic $ plam $ \x -> pdeleteFirstBy # plam (#== x)
+
+{- | / O(1) /.Return true if the given list has exactly one element.
+
+     @since 3.14.1
+-}
+pisSingleton ::
+  forall
+    (a :: S -> Type)
+    (list :: (S -> Type) -> (S -> Type))
+    (s :: S).
+  (PIsListLike list a) =>
+  Term s (list a :--> PBool)
+pisSingleton =
+  phoistAcyclic $
+    precList
+      (\_ _ t -> pnull # t)
+      (const $ pconstant False)
+
+{- | Extract a singeton value from the given list. Return nothing if the list
+     consists of zero or more than one elements.
+
+     @since 3.14.1
+-}
+pfromSingleton ::
+  forall
+    (a :: S -> Type)
+    (list :: (S -> Type) -> (S -> Type))
+    (s :: S).
+  (PIsListLike list a) =>
+  Term s (list a :--> PMaybe a)
+pfromSingleton =
+  phoistAcyclic $
+    precList
+      ( \_ h t ->
+          pif
+            (pnull # t)
+            (pjust # h)
+            pnothing
+      )
+      (const pnothing)
+
+{- | Partial version of `pfromSingleton`.
+
+     @since 3.14.1
+-}
+ptryFromSingleton ::
+  forall
+    (a :: S -> Type)
+    (list :: (S -> Type) -> (S -> Type))
+    (s :: S).
+  (PIsListLike list a) =>
+  Term s (list a :--> a)
+ptryFromSingleton =
+  phoistAcyclic $
+    precList
+      ( \_ h t ->
+          pif
+            (pnull # t)
+            h
+            (ptraceError "More than one element")
+      )
+      (const $ ptraceError "Empty list")

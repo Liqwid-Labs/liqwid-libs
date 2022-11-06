@@ -71,6 +71,9 @@ module Plutarch.Extra.Ord (
   -- *** Nubbing
   pnubSort,
   pnubSortBy,
+
+  -- *** Inserting
+  pinsertUniqueBy,
 ) where
 
 import Data.Semigroup (Semigroup (stimes), stimesIdempotentMonoid)
@@ -1029,3 +1032,31 @@ pcmpValue self doCmp cmp k1 k2 v1 v2 kv1 kv2 = pmatch (pcompareBy # pfromOrd # k
   -- Need to advance the second key.
   PGT -> phandleMin kv2 (pcon PTrue) $ \k2' v2' kv2' ->
     self # doCmp # cmp # k1 # k2' # v1 # v2' # kv1 # kv2'
+
+{- | Insert a value to a list with no duplicate, assuming the list is sorted
+     in ascending order. Error out if the value is already in the list.
+
+     @since 3.14.1
+-}
+pinsertUniqueBy ::
+  forall (list :: PType -> PType) (a :: PType) (s :: S).
+  (PIsListLike list a) =>
+  Term s (PComparator a :--> a :--> list a :--> list a)
+pinsertUniqueBy = phoistAcyclic $
+  plam $ \c x ->
+    let lt = plessThanBy # c
+        eq = pequateBy # c
+     in precList
+          ( \self h t ->
+              let ensureUniqueness =
+                    pif
+                      (eq # x # h)
+                      (ptraceError "inserted value already exists")
+                  next =
+                    pif
+                      (lt # x # h)
+                      (pcons # x #$ pcons # h # t)
+                      (pcons # h #$ self # t)
+               in ensureUniqueness next
+          )
+          (const $ psingleton # x)

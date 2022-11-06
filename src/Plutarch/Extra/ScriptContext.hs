@@ -26,16 +26,25 @@ module Plutarch.Extra.ScriptContext (
   ptryFromOutputDatum,
   ptryFromDatumHash,
   ptryFromInlineDatum,
+  validatorHashToTokenName,
+  pvalidatorHashToTokenName,
+  scriptHashToTokenName,
+  pscriptHashToTokenName,
+  ptryFromRedeemer,
 ) where
 
+import Data.Coerce (coerce)
 import Plutarch.Api.V1 (
   AmountGuarantees (NoGuarantees, NonZero, Positive),
   PCredential (PPubKeyCredential, PScriptCredential),
   PMap,
+  PTokenName,
   PValidatorHash,
   PValue,
  )
+import Plutarch.Api.V1.AssocMap (plookup)
 import qualified Plutarch.Api.V1.AssocMap as AssocMap
+import Plutarch.Api.V1.Scripts (PRedeemer)
 import Plutarch.Api.V2 (
   KeyGuarantees (Sorted, Unsorted),
   PAddress (PAddress),
@@ -45,6 +54,7 @@ import Plutarch.Api.V2 (
   POutputDatum (PNoOutputDatum, POutputDatum, POutputDatumHash),
   PPubKeyHash,
   PScriptContext,
+  PScriptHash,
   PScriptPurpose (PSpending),
   PStakingCredential,
   PTxInInfo (PTxInInfo),
@@ -60,6 +70,8 @@ import Plutarch.Extra.Maybe (pfromJust, pisJust, pjust, pnothing, ptraceIfNothin
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.Extra.Value (passetClassValueOf)
 import Plutarch.Unsafe (punsafeCoerce)
+import PlutusLedgerApi.V1 (TokenName (TokenName), ValidatorHash (ValidatorHash))
+import PlutusLedgerApi.V2 (ScriptHash (ScriptHash))
 
 -- | @since 3.13.0
 pownTxOutRef ::
@@ -439,3 +451,61 @@ pfindOwnInput = phoistAcyclic $
     matches = phoistAcyclic $
       plam $ \outref txininfo ->
         outref #== pfield @"outRef" # txininfo
+
+{- | Safely convert a 'ValidatorHash' into a 'TokenName'. This can be useful for tagging
+     tokens for extra safety.
+
+     @since 3.14.1
+-}
+validatorHashToTokenName :: ValidatorHash -> TokenName
+validatorHashToTokenName = coerce
+
+{- | Safely convert a 'PValidatorHash' into a 'PTokenName'. This can be useful for tagging
+     tokens for extra safety.
+
+     @since 3.14.1
+-}
+pvalidatorHashToTokenName ::
+  forall (s :: S).
+  Term s PValidatorHash ->
+  Term s PTokenName
+pvalidatorHashToTokenName = punsafeCoerce
+
+{- | Safely convert a 'PScriptHash' into a 'PTokenName'. This can be useful for tagging
+     tokens for extra safety.
+
+     @since 3.14.1
+-}
+scriptHashToTokenName :: ScriptHash -> TokenName
+scriptHashToTokenName = coerce
+
+{- | Safely convert a 'PScriptHash' into a 'PTokenName'. This can be useful for tagging
+     tokens for extra safety.
+
+     @since 3.14.1
+-}
+pscriptHashToTokenName ::
+  forall (s :: S).
+  Term s PScriptHash ->
+  Term s PTokenName
+pscriptHashToTokenName = punsafeCoerce
+
+{- | Find a redeemer in the redeemer map and convert it. Typically the second
+     argument is the 'redeemers' field of 'PTxInfo'.
+
+    @since 3.14.1
+-}
+ptryFromRedeemer ::
+  forall (r :: PType) (s :: S).
+  (PTryFrom PData r) =>
+  Term
+    s
+    ( PScriptPurpose
+        :--> PMap 'Unsorted PScriptPurpose PRedeemer
+        :--> PMaybe r
+    )
+ptryFromRedeemer = phoistAcyclic $
+  plam $ \p m ->
+    pfmap
+      # plam (flip ptryFrom fst . pto)
+      # (plookup # p # m)

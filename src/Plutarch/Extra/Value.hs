@@ -22,6 +22,7 @@ module Plutarch.Extra.Value (
 
   -- * Aggregation and elimination
   psymbolValueOf,
+  psymbolValueOf',
   precValue,
   pelimValue,
 
@@ -52,6 +53,7 @@ import Plutarch.Api.V1 (
   PTokenName,
   PValue (PValue),
  )
+import Plutarch.Api.V1.AssocMap (plookup)
 import qualified Plutarch.Api.V1.AssocMap as AssocMap
 import qualified Plutarch.Api.V1.Value as Value
 import Plutarch.Api.V2 (
@@ -67,6 +69,7 @@ import Plutarch.Extra.AssetClass (
   PAssetClassData,
  )
 import Plutarch.Extra.Comonad (pextract)
+import Plutarch.Extra.Functor (PFunctor (pfmap))
 import Plutarch.Extra.List (pfromList, plookupAssoc, ptryElimSingle)
 import Plutarch.Extra.Map (phandleMin)
 import Plutarch.Extra.Maybe (pexpectJustC)
@@ -100,10 +103,10 @@ passetClassDataValue = phoistAcyclic $
 
 {- | Tagged version of `passetClassDataValue`.
 
- @since 3.10.0
+ @since 3.14.1
 -}
 passetClassDataValueT ::
-  forall (unit :: Symbol) (s :: S).
+  forall {k :: Type} (unit :: k) (s :: S).
   Term
     s
     ( PTagged unit PAssetClassData
@@ -161,17 +164,17 @@ psingleValue' ac =
 
 {- | Tagged version of `psingleValue'`.
 
- @since 3.10.0
+ @since 3.14.1
 -}
 psingleValueT' ::
-  forall (k :: KeyGuarantees) (unit :: Symbol) (s :: S).
+  forall {k :: Type} (keys :: KeyGuarantees) (unit :: k) (s :: S).
   Tagged unit AssetClass ->
   Term
     s
     ( PTagged unit PInteger
         :--> PBuiltinPair
               (PAsData PCurrencySymbol)
-              (PAsData (PMap k PTokenName PInteger))
+              (PAsData (PMap keys PTokenName PInteger))
     )
 psingleValueT' (Tagged (AssetClass sym tk)) =
   phoistAcyclic $
@@ -258,10 +261,10 @@ passetClassValueOf' ac =
 
 {- | Tagged version of `passetClassValueOf'`.
 
- @since 3.9.0
+ @since 3.14.1
 -}
 passetClassValueOfT' ::
-  forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (unit :: Symbol) (s :: S).
+  forall {k :: Type} (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (unit :: k) (s :: S).
   Tagged unit AssetClass ->
   Term s (PValue keys amounts :--> PTagged unit PInteger)
 passetClassValueOfT' (Tagged (AssetClass sym token)) =
@@ -290,9 +293,10 @@ passetClassValueOf = phoistAcyclic $
 -}
 passetClassValueOfT ::
   forall
+    {k :: Type}
     (key :: KeyGuarantees)
     (amount :: AmountGuarantees)
-    (unit :: Symbol)
+    (unit :: k)
     (s :: S).
   Term s (PTagged unit PAssetClass :--> PValue key amount :--> PTagged unit PInteger)
 passetClassValueOfT = phoistAcyclic $
@@ -778,3 +782,46 @@ matchOrTryRec requiredAsset = phoistAcyclic $
       )
       (const def)
       # inputpvalue
+
+{- | Get the negative and positive amount of a particular 'CurrencySymbol', and
+     return nothing if it doesn't exist in the value.
+
+     @since 3.14.1
+-}
+psymbolValueOf' ::
+  forall
+    (keys :: KeyGuarantees)
+    (amounts :: AmountGuarantees)
+    (s :: S).
+  Term
+    s
+    ( PCurrencySymbol
+        :--> PValue keys amounts
+        :--> PMaybe
+              ( PPair
+                  -- Positive amount
+                  PInteger
+                  -- Negative amount
+                  PInteger
+              )
+    )
+psymbolValueOf' = phoistAcyclic $
+  plam $ \sym value ->
+    let tnMap = plookup # sym # pto value
+        f =
+          plam $
+            ( pfoldr
+                # plam
+                  ( \x r ->
+                      let q = pfromData $ psndBuiltin # x
+                       in pmatch r $ \(PPair p n) ->
+                            pif
+                              (0 #< q)
+                              (pcon $ PPair (p + q) n)
+                              (pcon $ PPair p (n + q))
+                  )
+                # pcon (PPair 0 0)
+                #
+            )
+              . pto
+     in pfmap # f # tnMap
