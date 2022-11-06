@@ -52,7 +52,6 @@ common common-lang
 
   default-extensions:
     NoFieldSelectors
-    NoFieldSelectors
     NoStarIsType
     BangPatterns
     BinaryLiterals
