@@ -4,21 +4,26 @@ module Plutarch.Extra.Applicative (
   -- * Type classes
   PApply (..),
   PApplicative (..),
+  PAlt (..),
+  PAlternative (..),
 
   -- * Functions
   (#<*>),
   (#*>),
   (#<*),
+  (#<!>),
   preplicateA,
   preplicateA_,
   pwhen,
   punless,
+  ppureIf,
 ) where
 
 import Plutarch.Api.V1.Maybe (PMaybeData (PDJust, PDNothing))
 import Plutarch.Extra.Boring (PBoring (pboring))
 import Plutarch.Extra.Function (papply, pconst)
 import Plutarch.Extra.Functor (PFunctor (PSubcategory))
+import Plutarch.Extra.Maybe (pdnothing, pnothing)
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.List (puncons)
 
@@ -236,3 +241,108 @@ punless ::
   (PApplicative f, PBoring b, PSubcategory f b) =>
   Term s (PBool :--> f b :--> f b)
 punless = phoistAcyclic $ plam $ \b comp -> pif b (ppure # pboring) comp
+
+{- | Laws:
+
+    > (a #<!> b) #<!> c = a #<!> (b #<!> c)
+    > f #<$> (a #<!> b) = (f #<$> a) #<!> (f #<$> b)
+
+    @since 3.14.1
+-}
+class (PFunctor f) => PAlt f where
+  palt ::
+    forall (a :: PType) (s :: S).
+    (PSubcategory f a) =>
+    Term s (f a :--> f a :--> f a)
+
+infixl 3 #<!>
+
+-- | @since 3.14.1
+(#<!>) ::
+  forall (f :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
+  (PSubcategory f a, PAlt f) =>
+  Term s (f a) ->
+  Term s (f a) ->
+  Term s (f a)
+a #<!> b = palt # a # b
+
+-- | @since 3.14.1
+instance PAlt PMaybe where
+  palt = phoistAcyclic $
+    plam $ \a b -> pmatch a $ \case
+      PNothing -> b
+      _ -> a
+
+-- | @since 3.14.1
+instance PAlt (PEither a) where
+  palt = phoistAcyclic $
+    plam $ \a b -> pmatch a $ \case
+      PLeft _ -> b
+      _ -> a
+
+-- | @since 3.14.1
+instance PAlt PMaybeData where
+  palt = phoistAcyclic $
+    plam $ \a b -> pmatch a $ \case
+      PDNothing _ -> b
+      _ -> a
+
+-- | @since 3.14.1
+instance PAlt PList where
+  palt = phoistAcyclic $
+    plam $ \a b ->
+      pif (pnull # a) b a
+
+-- | @since 3.14.1
+instance PAlt PBuiltinList where
+  palt = phoistAcyclic $
+    plam $ \a b ->
+      pif (pnull # a) b a
+
+{- | Laws:
+
+    > pempty #<!> x = x
+    > x #<!> pempty = x
+    > (a #<!> b) #<*> c = (a #<*> c) #<!> (b #<*> c)
+
+    @since 3.14.1
+-}
+class (PApplicative f, PAlt f) => PAlternative f where
+  pempty ::
+    forall (a :: PType) (s :: S).
+    (PSubcategory f a) =>
+    Term s (f a)
+
+-- | @since 3.14.1
+instance PAlternative PMaybe where
+  pempty = pnothing
+
+-- | @since 3.14.1
+instance PAlternative PMaybeData where
+  pempty = pdnothing
+
+-- | @since 3.14.1
+instance PAlternative PList where
+  pempty = pnil
+
+-- | @since 3.14.1
+instance PAlternative PBuiltinList where
+  pempty = pnil
+
+{- | Return a pure value if a condition is True, otherwise empty.
+
+     @since 3.14.1
+-}
+ppureIf ::
+  forall
+    (f :: PType -> PType)
+    (a :: PType)
+    (s :: S).
+  (PAlternative f, PSubcategory f a) =>
+  Term s (PBool :--> a :--> f a)
+ppureIf = phoistAcyclic $
+  plam $ \cond x ->
+    pif
+      cond
+      (ppure # x)
+      pempty

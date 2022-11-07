@@ -1,6 +1,7 @@
 module Plutarch.Extra.Bool (
   pcompare,
   pcond,
+  passert,
 ) where
 
 --------------------------------------------------------------------------------
@@ -40,3 +41,19 @@ pcompare t1 t2 ifLT ifEQ ifGT =
 -}
 pcond :: forall (s :: S) (a :: S -> Type). [Term s a -> Term s a] -> Term s a -> Term s a
 pcond = appEndo . foldMap Endo
+
+{- | If the condition evaluated to true, return the third argument. Otherwise error
+     out with the error message.
+
+     @since 3.14.1
+-}
+passert ::
+  forall (a :: PType) (s :: S).
+  -- | The error message.
+  Term s PString ->
+  -- | The condition.
+  Term s PBool ->
+  -- | The result.
+  Term s a ->
+  Term s a
+passert msg cond x = pif cond x $ ptraceError msg
