@@ -124,7 +124,25 @@ data ScriptOutcome = Crashes | Runs
       Show
     )
 
--- | @since 1.2.1
+{- | A description of a batch of tests, with implicitly-passed parameters. Also
+ contains some metadata from 'ScriptExport's.
+
+ While this is a 'Monad', it's really designed only to be used with the
+ operations defined in this module. We provide this API mostly for
+ convenience.
+
+ = See also
+
+ - 'assertValidator' and 'assertMintingPolicy' for defining tests;
+ - 'localScriptParams' and related functions for scoped modifications to
+    implicit parameters;
+ - 'withLinked' to build tests from a description using a pre-linked
+   'ScriptExport';
+ - 'withRaw' to pass a 'RawScriptExport' and a linker explicitly to build
+    tests.
+
+ @since 1.2.1
+-}
 newtype WithExport (datum :: Type) (redeemer :: Type) (info :: Type) (a :: Type)
   = WithExport (RWS (Env datum redeemer info) TestMap () a)
   deriving

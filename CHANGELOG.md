@@ -1,8 +1,6 @@
 # Revision history for `plutarch-unit`
 
-## 1.3.0 -- ???
-
-## 1.2.1 -- 2022-11-03
+## 1.2.1 -- 2022-11-08
 
 ### Added
 
