@@ -15,6 +15,14 @@ module Plutarch.Test.Export (
   assertMintingPolicy,
 
   -- ** Scoped parameter changes
+
+  -- *** Script context
+  localScriptContext,
+  localScriptContext',
+  setScriptContext,
+  setScriptContext',
+
+  -- *** All parameters at once
   localScriptParams,
   localScriptParams',
   setScriptParams,
@@ -39,8 +47,10 @@ import Data.Map.Strict qualified as Map
 import Data.Tagged (Tagged (Tagged))
 import Data.Text (Text, unpack)
 import GHC.Exts (toList)
+import Optics.AffineFold (preview)
+import Optics.AffineTraversal (An_AffineTraversal, atraversal)
 import Optics.At (at)
-import Optics.Getter (A_Getter, to, view)
+import Optics.Getter (view)
 import Optics.Label (LabelOptic (labelOptic))
 import Optics.Lens (A_Lens, lens)
 import Optics.Optic ((%), (%%))
@@ -83,6 +93,7 @@ data ScriptParams (datum :: Type) (redeemer :: Type) = ScriptParams
   , context :: ScriptContext
   }
 
+-- | @since 1.2.1
 makeFieldLabelsNoPrefix ''ScriptParams
 
 {- | A combination of (initial) script parameters, as well as any required
@@ -95,6 +106,7 @@ data TestParams (datum :: Type) (redeemer :: Type) (params :: Type) = TestParams
   , linkerParams :: params
   }
 
+-- | @since 1.2.1
 makeFieldLabelsNoPrefix ''TestParams
 
 {- | What you expect to happen when a script is tested with specified
@@ -114,7 +126,7 @@ data ScriptOutcome = Crashes | Runs
 
 -- | @since 1.2.1
 newtype WithExport (datum :: Type) (redeemer :: Type) (info :: Type) (a :: Type)
-  = WithExport (RWS (WithExportEnv datum redeemer info) TestMap () a)
+  = WithExport (RWS (Env datum redeemer info) TestMap () a)
   deriving
     ( -- | @since 1.2.1
       Functor
@@ -123,7 +135,7 @@ newtype WithExport (datum :: Type) (redeemer :: Type) (info :: Type) (a :: Type)
     , -- | @since 1.2.1
       Monad
     )
-    via (RWS (WithExportEnv datum redeemer info) TestMap ())
+    via (RWS (Env datum redeemer info) TestMap ())
 
 {- | Specify that the validator under the given name should have the given
  outcome, using the currently in-scope parameters. The test will be labelled
@@ -191,9 +203,38 @@ assertMintingPolicy outcome reason name = WithExport $ do
         sp <- asks (view #params)
         tell . prepareMintingPolicy name reason (view #script found) outcome $ sp
 
--- | @since 1.2.1
+{- | Given a function to modify the 'ScriptParams' used for test definitions,
+ and a collection of tests, construct those tests using parameters modified
+ according to the function. The function accepts an additional parameter,
+ which is metadata from the script export.
+
+ The \'changes\' made by the function argument are scoped /only/ to the given
+ collection of tests:
+
+ > tests = do
+ >    -- Here, we use the unmodified parameters
+ >    assertMintingPolicy Crashes "bad params" "aPolicy"
+ >    localScriptParams fixBadParams $ do
+ >      -- Here, the parameters are modified by fixBadParams
+ >      assertMintingPolicy Runs "good params" "aPolicy"
+ >    -- The parameters reset, as we've left the scope
+ >    assertMintingPolicy Crashs "params are bad again" "aPolicy"
+
+ = Note
+
+ The \'modification function\' is allowed to change the types of the datum
+ or redeemer (or both): in particular, you can use raw 'Data' if you wish.
+
+ @since 1.2.1
+-}
 localScriptParams ::
-  forall (datum :: Type) (datum' :: Type) (redeemer :: Type) (redeemer' :: Type) (info :: Type) (a :: Type).
+  forall
+    (datum :: Type)
+    (datum' :: Type)
+    (redeemer :: Type)
+    (redeemer' :: Type)
+    (info :: Type)
+    (a :: Type).
   (info -> ScriptParams datum redeemer -> ScriptParams datum' redeemer') ->
   WithExport datum' redeemer' info a ->
   WithExport datum redeemer info a
@@ -203,12 +244,16 @@ localScriptParams f (WithExport comp) = WithExport $ do
   where
     go ::
       info ->
-      WithExportEnv datum redeemer info ->
+      Env datum redeemer info ->
       () ->
-      (WithExportEnv datum' redeemer' info, ())
+      (Env datum' redeemer' info, ())
     go information env () = (over #params (f information) env, ())
 
--- | @since 1.2.1
+{- | As 'localScriptParams', but without using the metadata parameter for the
+ function argument.
+
+ @since 1.2.1
+-}
 localScriptParams' ::
   forall (datum :: Type) (datum' :: Type) (redeemer :: Type) (redeemer' :: Type) (info :: Type) (a :: Type).
   (ScriptParams datum redeemer -> ScriptParams datum' redeemer') ->
@@ -216,7 +261,11 @@ localScriptParams' ::
   WithExport datum redeemer info a
 localScriptParams' f = localScriptParams (const f)
 
--- | @since 1.2.1
+{- | As 'localScriptParams', but temporarily /setting/ the 'ScriptParams' in the
+ scope instead. We still take the metadata parameter.
+
+ @since 1.2.1
+-}
 setScriptParams ::
   forall (datum :: Type) (datum' :: Type) (redeemer :: Type) (redeemer' :: Type) (info :: Type) (a :: Type).
   (info -> ScriptParams datum' redeemer') ->
@@ -224,7 +273,10 @@ setScriptParams ::
   WithExport datum redeemer info a
 setScriptParams f = localScriptParams (\information _ -> f information)
 
--- | @since 1.2.1
+{- | As 'setScriptParams', but without using the metadata parameter.
+
+ @since 1.2.1
+-}
 setScriptParams' ::
   forall (datum :: Type) (datum' :: Type) (redeemer :: Type) (redeemer' :: Type) (info :: Type) (a :: Type).
   ScriptParams datum' redeemer' ->
@@ -232,7 +284,58 @@ setScriptParams' ::
   WithExport datum redeemer info a
 setScriptParams' x = localScriptParams (\_ _ -> x)
 
+{- | As 'localScriptParams', but modifying only the context. Provided for
+ convenience. The other similarly-named functions are parallels to their
+ 'ScriptParams' equivalents.
+
+ @since 1.2.1
+-}
+localScriptContext ::
+  forall (datum :: Type) (redeemer :: Type) (info :: Type) (a :: Type).
+  (info -> ScriptContext -> ScriptContext) ->
+  WithExport datum redeemer info a ->
+  WithExport datum redeemer info a
+localScriptContext f = localScriptParams (over #context . f)
+
 -- | @since 1.2.1
+localScriptContext' ::
+  forall (datum :: Type) (redeemer :: Type) (info :: Type) (a :: Type).
+  (ScriptContext -> ScriptContext) ->
+  WithExport datum redeemer info a ->
+  WithExport datum redeemer info a
+localScriptContext' f = localScriptContext (const f)
+
+-- | @since 1.2.1
+setScriptContext ::
+  forall (datum :: Type) (redeemer :: Type) (info :: Type) (a :: Type).
+  (info -> ScriptContext) ->
+  WithExport datum redeemer info a ->
+  WithExport datum redeemer info a
+setScriptContext f = localScriptContext (\information _ -> f information)
+
+-- | @since 1.2.1
+setScriptContext' ::
+  forall (datum :: Type) (redeemer :: Type) (info :: Type) (a :: Type).
+  ScriptContext ->
+  WithExport datum redeemer info a ->
+  WithExport datum redeemer info a
+setScriptContext' x = setScriptContext (const x)
+
+{- | Given a name for the test collection, some \'initial parameters\' for the
+ scripts being tested, and a pre-linked 'ScriptExport', build the tests
+ specified.
+
+ This function is similar in use to 'testGroup', and can be seen as a drop-in
+ replacement for it:
+
+ > main :: IO ()
+ > main = defaultMain . withLinked "my tests" initialParams exports $ do
+ >          assertMintingPolicy Crashes "unfinished" "aPolicy"
+ >          localScriptParams tweakParams $ do
+ >            ....
+
+ @since 1.2.1
+-}
 withLinked ::
   forall (datum :: Type) (redeemer :: Type) (info :: Type).
   String ->
@@ -241,7 +344,7 @@ withLinked ::
   WithExport datum redeemer info () ->
   TestTree
 withLinked name sp se (WithExport comp) =
-  let env = WithExportEnv sp se
+  let env = Env sp se
    in case execRWS comp env () of
         ((), TestMap result) ->
           testGroup name . toList . Map.foldMapWithKey go $ result
@@ -255,7 +358,17 @@ withLinked name sp se (WithExport comp) =
         NoSuchScript -> [singleTest "Presence" MissingScript]
         PreparedTests rigs -> toList $ rigToTest <$> rigs
 
--- | @since 1.2.1
+{- | As 'withLinked', but instead of a pre-linked 'ScriptExport', requires a
+ 'RawScriptExport' and a linker. Parameters for the linker can be provided via
+ 'TestParams'.
+
+ = Note
+
+ If the linking fails, you will get a single, automatically-failing, test that
+ emits the linker error.
+
+ @since 1.2.1
+-}
 withRaw ::
   forall (datum :: Type) (redeemer :: Type) (info :: Type) (params :: Type).
   String ->
@@ -307,7 +420,7 @@ instance IsTest Rigged where
       let d = view #datum prepped
       let sc = view #context prepped
       let script = view #script prepped
-      let applied = case view #redeemer prepped of
+      let applied = case preview #redeemer prepped of
             -- We have a minting policy
             Nothing -> applyArguments script [d, sc]
             -- We have a validator
@@ -331,28 +444,26 @@ instance IsTest Rigged where
   testOptions = Tagged []
 
 -- Carries the environment for script test construction
-data WithExportEnv (datum :: Type) (redeemer :: Type) (info :: Type)
-  = WithExportEnv (ScriptParams datum redeemer) (ScriptExport info)
+data Env (datum :: Type) (redeemer :: Type) (info :: Type)
+  = Env (ScriptParams datum redeemer) (ScriptExport info)
 
 instance
   (k ~ A_Lens, a ~ ScriptParams datum redeemer, b ~ ScriptParams datum' redeemer') =>
-  LabelOptic "params" k (WithExportEnv datum redeemer info) (WithExportEnv datum' redeemer' info) a b
+  LabelOptic "params" k (Env datum redeemer info) (Env datum' redeemer' info) a b
   where
-  labelOptic = lens out $ \(WithExportEnv _ se) sp' ->
-    WithExportEnv sp' se
+  labelOptic = lens out $ \(Env _ se) sp' -> Env sp' se
     where
-      out :: WithExportEnv datum redeemer info -> ScriptParams datum redeemer
-      out (WithExportEnv sp _) = sp
+      out :: Env datum redeemer info -> ScriptParams datum redeemer
+      out (Env sp _) = sp
 
 instance
   (k ~ A_Lens, a ~ ScriptExport info, b ~ ScriptExport info) =>
-  LabelOptic "exports" k (WithExportEnv datum redeemer info) (WithExportEnv datum redeemer info) a b
+  LabelOptic "exports" k (Env datum redeemer info) (Env datum redeemer info) a b
   where
-  labelOptic = lens out $ \(WithExportEnv sp _) se' ->
-    WithExportEnv sp se'
+  labelOptic = lens out $ \(Env sp _) se' -> Env sp se'
     where
-      out :: WithExportEnv datum redeemer info -> ScriptExport info
-      out (WithExportEnv _ se) = se
+      out :: Env datum redeemer info -> ScriptExport info
+      out (Env _ se) = se
 
 -- A script with 'burned in' parameters
 data PreparedTest
@@ -399,12 +510,17 @@ instance
         PreparedMintingPolicy _ _ sc -> sc
 
 instance
-  (k ~ A_Getter, a ~ Maybe Data, b ~ Maybe Data) =>
+  (k ~ An_AffineTraversal, a ~ Data, b ~ Data) =>
   LabelOptic "redeemer" k PreparedTest PreparedTest a b
   where
-  labelOptic = to $ \case
-    PreparedValidator _ r _ _ -> Just r
-    PreparedMintingPolicy {} -> Nothing
+  labelOptic = atraversal out $ \prep r' -> case prep of
+    PreparedValidator s d _ sc -> PreparedValidator s d r' sc
+    PreparedMintingPolicy s d sc -> PreparedMintingPolicy s d sc
+    where
+      out :: PreparedTest -> Either PreparedTest Data
+      out = \case
+        PreparedValidator _ _ r _ -> Right r
+        prep@PreparedMintingPolicy {} -> Left prep
 
 -- Either a 'burned in' script, or an indication the role was wrong
 data TestRig
