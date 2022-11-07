@@ -1,6 +1,10 @@
 # Revision history for `plutarch-unit`
 
-## 1.3.0 -- ???
+## 1.2.1 -- 2022-11-08
+
+### Added
+
+* `Plutarch.Test.Export`, containing an API for working with script exports.
 
 ## 1.2.0 -- 2022-10-07
 
