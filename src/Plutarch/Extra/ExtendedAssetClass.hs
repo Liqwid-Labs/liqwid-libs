@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Plutarch.Extra.ExtendedAssetClass (
   -- * Types
 
@@ -47,16 +49,9 @@ import Plutarch.Lift (
  )
 import PlutusLedgerApi.V2 (
   CurrencySymbol,
-  Data (Constr),
-  FromData (fromBuiltinData),
-  ToData (toBuiltinData),
   TokenName,
-  UnsafeFromData (unsafeFromBuiltinData),
-  builtinDataToData,
-  dataToBuiltinData,
-  fromData,
-  toData,
  )
+import PlutusTx.IsData (makeIsDataIndexed)
 
 {- | An 'AssetClass' whose 'TokenName' may or may not be relevant.
 
@@ -79,24 +74,11 @@ data ExtendedAssetClass
     )
 
 -- | @since 3.14.2
-instance FromData ExtendedAssetClass where
-  fromBuiltinData dat = case builtinDataToData dat of
-    Constr 0 [dat'] -> AnyToken <$> fromData dat'
-    Constr 1 [dat'] -> FixedToken <$> fromData dat'
-    _ -> Nothing
-
--- | @since 3.14.2
-instance UnsafeFromData ExtendedAssetClass where
-  unsafeFromBuiltinData dat = case fromBuiltinData dat of
-    Just eac -> eac
-    Nothing -> error "unsafeFromBuiltinData: Could not make an ExtendedAssetClass"
-
--- | @since 3.14.2
-instance ToData ExtendedAssetClass where
-  toBuiltinData =
-    dataToBuiltinData . \case
-      AnyToken x -> Constr 0 [toData x]
-      FixedToken x -> Constr 1 [toData x]
+makeIsDataIndexed
+  ''ExtendedAssetClass
+  [ ('AnyToken, 0)
+  , ('FixedToken, 1)
+  ]
 
 -- | @since 3.14.2
 deriving via
