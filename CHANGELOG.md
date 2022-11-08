@@ -2,6 +2,13 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.14.3 -- 2022-11-09
+
+### Added
+
+* `inspect`, as a convenient combination of `asks` and `view`.
+* `inspects`, as a parallel to `views`.
+
 ## 3.14.2 -- 2022-11-09
 
 ### Added
