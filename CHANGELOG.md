@@ -68,7 +68,6 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   - `psingleValueT'`
   - `passetClassValueOfT'`
   - `passetClassValueOfT`
->>>>>>> main
 
 ## 3.14.0 -- 2022-11-01
 
