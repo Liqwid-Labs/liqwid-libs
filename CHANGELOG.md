@@ -2,6 +2,12 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.14.4 -- 2022-11-09
+
+### Added
+
+* `Real` instance for `FixedDecimal`.
+
 ## 3.14.3 -- 2022-11-09
 
 ### Added
@@ -16,7 +22,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 * `AssetClass` now has an `UnsafeFromData` instance, derived the same way as
   `FromData` and `ToData`.
 * Module `Plutarch.Extra.ExtendedAssetClass`:
-  * `ExtendedAssetClass`, designed to provide a runtime distinction between 
+  * `ExtendedAssetClass`, designed to provide a runtime distinction between
     `AssetClass`es whose `TokenNames` are arbitrary versus non-arbitrary.
   * Plutarch equivalents to the above: `PExtendedAssetClass`.
   * Helper functions for comparing and retrieving values from
@@ -64,7 +70,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 * Modified the signature of `pmapMaybe'` in `Plutarch.Extra.List` to allow
   choosing the output list type
-* In `Plutarch.Extra.Value`, make `unit` type parameters in the following tagged 
+* In `Plutarch.Extra.Value`, make `unit` type parameters in the following tagged
   assetclass utilities poly-kinded:
   - `passetClassDataValueT`
   - `psingleValueT'`

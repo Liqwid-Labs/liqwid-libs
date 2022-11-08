@@ -22,6 +22,7 @@ module Plutarch.Extra.FixedDecimal (
 ) where
 
 import Data.Proxy (Proxy (Proxy))
+import Data.Ratio ((%))
 import GHC.Real (Ratio ((:%)))
 import GHC.TypeLits (KnownNat, Natural, natVal, type (+), type (-))
 import Plutarch.Extra.Rational ((#%))
@@ -146,6 +147,10 @@ instance (KnownNat exp) => Num (FixedDecimal exp) where
 instance (KnownNat exp) => Fractional (FixedDecimal exp) where
   fromRational (a :% b) = FixedDecimal $ a * 10 ^ natVal (Proxy @exp) `div` b
   (FixedDecimal a) / (FixedDecimal b) = FixedDecimal $ a * 10 ^ natVal (Proxy @exp) `div` b
+
+-- | @since 3.14.4
+instance KnownNat n => Real (FixedDecimal n) where
+  toRational f = fixedNumerator f % fixedDenominator f
 
 ------ Plutarch
 
