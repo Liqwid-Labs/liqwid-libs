@@ -2,13 +2,9 @@ module Plutarch.Extra.ExtendedAssetClass (
   -- * Types
 
   -- ** Haskell
-  AnyTokenAssetClass (..),
-  FixedTokenAssetClass (..),
   ExtendedAssetClass (..),
 
   -- ** Plutarch
-  PAnyTokenAssetClass (..),
-  PFixedTokenAssetClass (..),
   PExtendedAssetClass (..),
 
   -- * Functions
@@ -27,14 +23,10 @@ import Data.Aeson (
   (.:),
  )
 import Data.Aeson.Encoding (pair)
-import Data.Coerce (coerce)
 import Data.Text (Text, unpack)
 import Optics.AffineTraversal (An_AffineTraversal, atraversal)
 import Optics.Getter (A_Getter, to, view)
-import Optics.Iso (An_Iso, coercedTo)
 import Optics.Label (LabelOptic (labelOptic))
-import Optics.Lens (A_Lens)
-import Optics.Optic ((%))
 import Optics.Setter (set)
 import Plutarch.Api.V1 (
   AmountGuarantees,
@@ -50,12 +42,7 @@ import Plutarch.Extra.AssetClass (
  )
 import Plutarch.Extra.Value (passetClassValueOf, psymbolValueOf)
 import Plutarch.Lift (
-  PConstantDecl (
-    PConstantRepr,
-    PConstanted,
-    pconstantFromRepr,
-    pconstantToRepr
-  ),
+  PConstantDecl,
   PUnsafeLiftDecl (PLifted),
  )
 import PlutusLedgerApi.V2 (
@@ -71,242 +58,15 @@ import PlutusLedgerApi.V2 (
   toData,
  )
 
-{- | An 'AssetClass' whose 'TokenName' is irrelevant.
-
- @since 3.14.2
--}
-newtype AnyTokenAssetClass = AnyTokenAssetClass CurrencySymbol
-  deriving stock
-    ( -- | @since 3.14.2
-      Generic
-    , -- | @since 3.14.2
-      Show
-    )
-  deriving
-    ( -- | @since 3.14.2
-      Eq
-    , -- | @since 3.14.2
-      Ord
-    )
-    via CurrencySymbol
-
--- | @since 3.14.2
-instance ToJSON AnyTokenAssetClass where
-  {-# INLINEABLE toJSON #-}
-  toJSON atac = object [("symbol", toJSON . view #symbol $ atac)]
-  {-# INLINEABLE toEncoding #-}
-  toEncoding = pairs . pair "symbol" . toEncoding . view #symbol
-
--- | @since 3.14.2
-instance FromJSON AnyTokenAssetClass where
-  {-# INLINEABLE parseJSON #-}
-  parseJSON = withObject "AnyTokenAssetClass" $ \obj ->
-    AnyTokenAssetClass <$> obj .: "symbol"
-
--- | @since 3.14.2
-instance
-  (k ~ A_Getter, a ~ CurrencySymbol, b ~ CurrencySymbol) =>
-  LabelOptic "symbol" k AnyTokenAssetClass AnyTokenAssetClass a b
-  where
-  labelOptic = to coerce
-
-{- | We can always \'pull out\' an 'AssetClass' by \'filling in\' an empty
- 'TokenName'.
-
- @since 3.14.2
--}
-instance
-  (k ~ A_Getter, a ~ AssetClass, b ~ AssetClass) =>
-  LabelOptic "assetClass" k AnyTokenAssetClass AnyTokenAssetClass a b
-  where
-  labelOptic = to $ \(AnyTokenAssetClass cs) -> AssetClass cs ""
-
--- | @since 3.14.2
-instance PConstantDecl AnyTokenAssetClass where
-  type PConstanted AnyTokenAssetClass = PAnyTokenAssetClass
-  type PConstantRepr AnyTokenAssetClass = Data
-  pconstantFromRepr = fromData
-  pconstantToRepr = toData
-
--- | @since 3.14.2
-instance FromData AnyTokenAssetClass where
-  fromBuiltinData dat =
-    AnyTokenAssetClass <$> case builtinDataToData dat of
-      Constr 0 [dat'] -> fromData dat'
-      _ -> Nothing
-
--- | @since 3.14.2
-instance UnsafeFromData AnyTokenAssetClass where
-  unsafeFromBuiltinData dat = case builtinDataToData dat of
-    Constr 0 [dat'] -> case fromData dat' of
-      Just cs -> AnyTokenAssetClass cs
-      Nothing ->
-        error "unsafeFromBuiltinData: Did not get a CurrencySymbol for AnyTokenAssetClass"
-    _ -> error "unsafeFromBuiltinData: Could not make AnyTokenAssetClass"
-
--- | @since 3.14.2
-instance ToData AnyTokenAssetClass where
-  toBuiltinData (AnyTokenAssetClass cs) =
-    dataToBuiltinData $ Constr 0 [toData cs]
-
-{- | Plutarch equivalent to 'AnyTokenAssetClass'.
-
- @since 3.14.2
--}
-newtype PAnyTokenAssetClass (s :: S)
-  = PAnyTokenAssetClass (Term s PCurrencySymbol)
-  deriving stock
-    ( -- | @since 3.14.2
-      Generic
-    )
-  deriving anyclass
-    ( -- | @since 3.14.2
-      PEq
-    , -- | @since 3.14.2
-      PlutusType
-    , -- | @since 3.14.2
-      PShow
-    , -- | @since 3.14.2
-      PIsData
-    )
-
--- | @since 3.14.2
-instance DerivePlutusType PAnyTokenAssetClass where
-  type DPTStrat _ = PlutusTypeNewtype
-
--- | @since 3.14.2
-instance PUnsafeLiftDecl PAnyTokenAssetClass where
-  type PLifted PAnyTokenAssetClass = AnyTokenAssetClass
-
-{- | An 'AssetClass' whose 'TokenName' is significant somehow.
-
- @since 3.14.2
--}
-newtype FixedTokenAssetClass = FixedTokenAssetClass AssetClass
-  deriving stock
-    ( -- | @since 3.14.2
-      Generic
-    , -- | @since 3.14.2
-      Show
-    )
-  deriving
-    ( -- | @since 3.14.2
-      Eq
-    , -- | @since 3.14.2
-      Ord
-    )
-    via AssetClass
-
--- | @since 3.14.2
-instance PConstantDecl FixedTokenAssetClass where
-  type PConstantRepr FixedTokenAssetClass = Data
-  type PConstanted FixedTokenAssetClass = PFixedTokenAssetClass
-  pconstantFromRepr = fromData
-  pconstantToRepr = toData
-
--- | @since 3.14.2
-instance FromData FixedTokenAssetClass where
-  fromBuiltinData dat =
-    FixedTokenAssetClass <$> case builtinDataToData dat of
-      Constr 0 [dat'] -> fromData dat'
-      _ -> Nothing
-
--- | @since 3.14.2
-instance UnsafeFromData FixedTokenAssetClass where
-  unsafeFromBuiltinData dat = case builtinDataToData dat of
-    Constr 0 [dat'] -> case fromData dat' of
-      Just ac -> FixedTokenAssetClass ac
-      Nothing ->
-        error "unsafeFromBuitinData: Did not get an AssetClass for FixedTokenAssetClass"
-    _ -> error "unsafeFromBuiltinData: Could not make FixedTokenAssetClass"
-
--- | @since 3.14.2
-instance ToData FixedTokenAssetClass where
-  toBuiltinData (FixedTokenAssetClass ac) =
-    dataToBuiltinData $ Constr 0 [toData ac]
-
--- | @since 3.14.2
-instance
-  (k ~ A_Lens, a ~ CurrencySymbol, b ~ CurrencySymbol) =>
-  LabelOptic "symbol" k FixedTokenAssetClass FixedTokenAssetClass a b
-  where
-  labelOptic = coercedTo @AssetClass % #symbol
-
--- | @since 3.14.2
-instance
-  (k ~ A_Lens, a ~ TokenName, b ~ TokenName) =>
-  LabelOptic "name" k FixedTokenAssetClass FixedTokenAssetClass a b
-  where
-  labelOptic = coercedTo @AssetClass % #name
-
--- | @since 3.14.2
-instance ToJSON FixedTokenAssetClass where
-  {-# INLINEABLE toJSON #-}
-  toJSON ftac =
-    object
-      [ ("symbol", toJSON . view #symbol $ ftac)
-      , ("name", toJSON . view #name $ ftac)
-      ]
-  {-# INLINEABLE toEncoding #-}
-  toEncoding ftac =
-    pairs $
-      pair "symbol" (toEncoding . view #symbol $ ftac)
-        <> pair "name" (toEncoding . view #name $ ftac)
-
--- | @since 3.14.1
-instance FromJSON FixedTokenAssetClass where
-  {-# INLINEABLE parseJSON #-}
-  parseJSON = withObject "FixedTokenAssetClass" $ \obj -> do
-    cs <- obj .: "symbol"
-    tn <- obj .: "name"
-    pure . FixedTokenAssetClass . AssetClass cs $ tn
-
-{- | 'FixedTokenAssetClass' and 'AssetClass' are isomorphic.
-
- @since 3.14.2
--}
-instance
-  (k ~ An_Iso, a ~ AssetClass, b ~ AssetClass) =>
-  LabelOptic "assetClass" k FixedTokenAssetClass FixedTokenAssetClass a b
-  where
-  labelOptic = coercedTo @AssetClass
-
-{- | Plutarch equivalent to 'FixedTokenAssetClass'.
-
- @since 3.14.2
--}
-newtype PFixedTokenAssetClass (s :: S)
-  = PFixedTokenAssetClass (Term s PAssetClassData)
-  deriving stock
-    ( -- | @since 3.14.2
-      Generic
-    )
-  deriving anyclass
-    ( -- | @since 3.14.2
-      PEq
-    , -- | @since 3.14.2
-      PlutusType
-    , -- | @since 3.14.2
-      PShow
-    , -- | @since 3.14.2
-      PIsData
-    )
-
--- | @since 3.14.2
-instance DerivePlutusType PFixedTokenAssetClass where
-  type DPTStrat _ = PlutusTypeNewtype
-
--- | @since 3.14.2
-instance PUnsafeLiftDecl PFixedTokenAssetClass where
-  type PLifted PFixedTokenAssetClass = FixedTokenAssetClass
-
 {- | An 'AssetClass' whose 'TokenName' may or may not be relevant.
 
  @since 3.14.2
 -}
 data ExtendedAssetClass
-  = AnyToken AnyTokenAssetClass
-  | FixedToken FixedTokenAssetClass
+  = -- | 'TokenName' is irrelevant
+    AnyToken CurrencySymbol
+  | -- | 'TokenName' is relevant
+    FixedToken AssetClass
   deriving stock
     ( -- | @since 3.14.2
       Generic
@@ -351,7 +111,7 @@ instance ToJSON ExtendedAssetClass where
     AnyToken x ->
       object
         [ ("tag", toJSON @Text "anyToken")
-        , ("symbol", toJSON . view #symbol $ x)
+        , ("symbol", toJSON x)
         ]
     FixedToken x ->
       object
@@ -364,7 +124,7 @@ instance ToJSON ExtendedAssetClass where
     AnyToken x ->
       pairs $
         pair "tag" (toEncoding @Text "anyToken")
-          <> pair "symbol" (toEncoding . view #symbol $ x)
+          <> pair "symbol" (toEncoding x)
     FixedToken x ->
       pairs $
         pair "tag" (toEncoding @Text "fixedToken")
@@ -379,10 +139,10 @@ instance FromJSON ExtendedAssetClass where
     cs <- obj .: "symbol"
     case tag of
       "anyToken" -> do
-        pure . AnyToken . AnyTokenAssetClass $ cs
+        pure . AnyToken $ cs
       "fixedToken" -> do
         tn <- obj .: "name"
-        pure . FixedToken . FixedTokenAssetClass . AssetClass cs $ tn
+        pure . FixedToken . AssetClass cs $ tn
       _ -> fail $ "Not a valid tag: " <> unpack tag
 
 {- | We can always retrieve a 'CurrencySymbol', but depending on what we have,
@@ -395,7 +155,7 @@ instance
   LabelOptic "symbol" k ExtendedAssetClass ExtendedAssetClass a b
   where
   labelOptic = to $ \case
-    AnyToken x -> view #symbol x
+    AnyToken x -> x
     FixedToken x -> view #symbol x
 
 {- | We may not necessarily have a 'TokenName' that matters; if we do, then
@@ -427,16 +187,16 @@ instance
   LabelOptic "assetClass" k ExtendedAssetClass ExtendedAssetClass a b
   where
   labelOptic = to $ \case
-    AnyToken x -> view #assetClass x
-    FixedToken x -> view #assetClass x
+    AnyToken x -> AssetClass x ""
+    FixedToken x -> x
 
 {- | Plutarch equivalent to 'ExtendedAssetClass'.
 
  @since 3.14.2
 -}
 data PExtendedAssetClass (s :: S)
-  = PAnyToken (Term s (PDataRecord '["_0" ':= PAnyTokenAssetClass]))
-  | PFixedToken (Term s (PDataRecord '["_0" ':= PFixedTokenAssetClass]))
+  = PAnyToken (Term s (PDataRecord '["_0" ':= PCurrencySymbol]))
+  | PFixedToken (Term s (PDataRecord '["_0" ':= PAssetClassData]))
   deriving stock
     ( -- | @since 3.14.2
       Generic
@@ -469,10 +229,10 @@ pextendedAssetClassValueOf ::
   Term s (PExtendedAssetClass :--> PValue keys amounts :--> PInteger)
 pextendedAssetClassValueOf = phoistAcyclic $ plam $ \eac value ->
   pmatch eac $ \case
-    PAnyToken t -> pmatch (pfromData $ pfield @"_0" # t) $ \(PAnyTokenAssetClass t') ->
-      psymbolValueOf # t' # value
-    PFixedToken t -> pmatch (pfromData $ pfield @"_0" # t) $ \(PFixedTokenAssetClass t') ->
-      passetClassValueOf # (ptoScottEncoding # t') # value
+    PAnyToken t -> psymbolValueOf # pfromData (pfield @"_0" # t) # value
+    PFixedToken t ->
+      let t' = ptoScottEncoding #$ pfield @"_0" # t
+       in passetClassValueOf # t' # value
 
 {- | Compare a 'PExtendedAssetClass' to a 'PAssetClass'.
 
@@ -483,7 +243,6 @@ peqClasses ::
   Term s (PExtendedAssetClass :--> PAssetClassData :--> PBool)
 peqClasses = phoistAcyclic $ plam $ \eac acd ->
   pmatch eac $ \case
-    PAnyToken t -> pmatch (pfromData $ pfield @"_0" # t) $ \(PAnyTokenAssetClass t') ->
-      t' #== pfromData (pfield @"symbol" # acd)
-    PFixedToken t -> pmatch (pfromData $ pfield @"_0" # t) $ \(PFixedTokenAssetClass t') ->
-      t' #== acd
+    PAnyToken t ->
+      pfromData (pfield @"_0" # t) #== pfromData (pfield @"symbol" # acd)
+    PFixedToken t -> pfromData (pfield @"_0" # t) #== acd
