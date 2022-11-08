@@ -2,6 +2,19 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.14.2 -- 2022-11-09
+
+### Added
+
+* `AssetClass` now has an `UnsafeFromData` instance, derived the same way as
+  `FromData` and `ToData`.
+* Module `Plutarch.Extra.ExtendedAssetClass`:
+  * `ExtendedAssetClass`, designed to provide a runtime distinction between 
+    `AssetClass`es whose `TokenNames` are arbitrary versus non-arbitrary.
+  * Plutarch equivalents to the above: `PExtendedAssetClass`.
+  * Helper functions for comparing and retrieving values from
+    `PExtendedAssetClass`.
+
 ## 3.14.1 -- 2022-11-02
 
 ### Added

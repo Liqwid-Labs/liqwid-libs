@@ -39,18 +39,21 @@ module Plutarch.Extra.AssetClass (
   GenAssetClass (..),
 ) where
 
-import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
+import Data.Aeson (
+  FromJSON,
+  FromJSONKey,
+  ToJSON,
+  ToJSONKey,
+ )
 import Data.Tagged (Tagged (Tagged, unTagged), untag)
 import qualified Generics.SOP as SOP
 import Optics.Getter (A_Getter, view)
-import Optics.Internal.Optic (A_Lens, Is, (%%))
 import Optics.Label (LabelOptic, LabelOptic', labelOptic)
+import Optics.Lens (A_Lens)
+import Optics.Optic (Is, (%%))
 import Optics.Setter (set)
 import Optics.TH (makeFieldLabelsNoPrefix)
-import Plutarch.Api.V1 (
-  PCurrencySymbol,
-  PTokenName,
- )
+import Plutarch.Api.V1 (PCurrencySymbol, PTokenName)
 import Plutarch.DataRepr (PDataFields)
 import Plutarch.Extra.Applicative (ppure)
 import Plutarch.Extra.IsData (
@@ -127,6 +130,8 @@ data AssetClass = AssetClass
       PlutusTx.ToData
     , -- | @since 3.10.0
       PlutusTx.FromData
+    , -- | @since 3.14.2
+      PlutusTx.UnsafeFromData
     )
     via Plutarch.Extra.IsData.ProductIsData AssetClass
   deriving
