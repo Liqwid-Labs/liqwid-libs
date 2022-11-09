@@ -2,6 +2,13 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.14.5 -- 2022-11-10
+
+### Added
+
+* `ptoAssetClass` and `ptoAssetClassData` for converting `PExtendedAssetClass`
+  to `PAssetClass` and `PAssetClassData` respectively.
+
 ## 3.14.4 -- 2022-11-09
 
 ### Added

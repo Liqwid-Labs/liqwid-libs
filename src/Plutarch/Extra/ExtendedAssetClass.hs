@@ -14,6 +14,8 @@ module Plutarch.Extra.ExtendedAssetClass (
   -- ** Plutarch
   pextendedAssetClassValueOf,
   peqClasses,
+  ptoAssetClass,
+  ptoAssetClassData,
 ) where
 
 import Data.Aeson (
@@ -39,7 +41,8 @@ import Plutarch.Api.V1 (
 import Plutarch.DataRepr (DerivePConstantViaData (DerivePConstantViaData))
 import Plutarch.Extra.AssetClass (
   AssetClass (AssetClass),
-  PAssetClassData,
+  PAssetClass (PAssetClass),
+  PAssetClassData (PAssetClassData),
   ptoScottEncoding,
  )
 import Plutarch.Extra.Value (passetClassValueOf, psymbolValueOf)
@@ -228,3 +231,31 @@ peqClasses = phoistAcyclic $ plam $ \eac acd ->
     PAnyToken t ->
       pfromData (pfield @"_0" # t) #== pfromData (pfield @"symbol" # acd)
     PFixedToken t -> pfromData (pfield @"_0" # t) #== acd
+
+{- | Convert to a 'PAssetClass'.
+
+ @since 3.14.5
+-}
+ptoAssetClass ::
+  forall (s :: S).
+  Term s (PExtendedAssetClass :--> PAssetClass)
+ptoAssetClass = phoistAcyclic $ plam $ \eac ->
+  pmatch eac $ \case
+    PAnyToken t ->
+      pcon . PAssetClass (pfield @"_0" # t) . pdata . pconstant $ ""
+    PFixedToken t -> ptoScottEncoding #$ pfield @"_0" # t
+
+{- | Convert to a 'PAssetClassData'.
+
+ @since 3.14.5
+-}
+ptoAssetClassData ::
+  forall (s :: S).
+  Term s (PExtendedAssetClass :--> PAssetClassData)
+ptoAssetClassData = phoistAcyclic $ plam $ \eac ->
+  pmatch eac $ \case
+    PAnyToken t ->
+      pcon
+        . PAssetClassData
+        $ pdcons # (pfield @"_0" # t) #$ pdcons # (pdata . pconstant $ "") # pdnil
+    PFixedToken t -> pfield @"_0" # t
