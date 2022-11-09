@@ -8,6 +8,8 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 * `ptoAssetClass` and `ptoAssetClassData` for converting `PExtendedAssetClass`
   to `PAssetClass` and `PAssetClassData` respectively.
+* `PlyArg` instance for `ExtendedAssetClass`.
+* `PlyArgOf` type instance for `ExtendedAssetClass`.
 
 ## 3.14.4 -- 2022-11-09
 
