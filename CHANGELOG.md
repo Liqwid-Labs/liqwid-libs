@@ -2,6 +2,18 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.15.0 -- 2022-11-11
+
+### Added
+
+* Explain why `punsafeToAssetClassData` and `punsafeToAssetClass` are dangerous
+  conversions in general.
+
+### Changed
+
+* `ptoAssetClass` and `ptoAssetClassData` renamed to `punsafeToAssetClass` and
+  `punsafeToAssetClassData` respectively.
+
 ## 3.14.5 -- 2022-11-10
 
 ### Added
