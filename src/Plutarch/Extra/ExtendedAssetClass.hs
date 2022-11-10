@@ -253,7 +253,7 @@ peqClasses = phoistAcyclic $ plam $ \eac acd ->
 
  > cls = pcon $ PAnyTokenType sym
  >
- > passetClassValueOf # (ptoAssetClass cls) #
+ > passetClassValueOf # (punsafeToAssetClass cls) #
  >  pconstant (singleton x "" 1 <> singleton x "a" 1)
 
  Then @v@ would equal @1@, when it's supposed to be @2@.
