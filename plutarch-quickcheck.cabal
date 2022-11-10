@@ -134,6 +134,15 @@ test-suite zip-test
   main-is:        Main.hs
   hs-source-dirs: sample/zip-test
 
+test-suite validator-test
+  import:
+    common-tests,
+    common-lang
+
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  hs-source-dirs: sample/validator-test
+
 test-suite instances
   import:
     common-tests,

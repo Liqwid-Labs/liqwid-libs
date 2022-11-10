@@ -15,6 +15,7 @@ module Plutarch.Test.QuickCheck (
   punlam',
   punlam,
   fromPFun,
+  fromPPartial,
   haskEquiv',
   haskEquiv,
   shrinkPLift,
@@ -49,6 +50,7 @@ import Plutarch.Prelude (
   PInteger,
   PIsData,
   PLift,
+  POpaque,
   POrd,
   PPartialOrd,
   PlutusType,
@@ -324,6 +326,20 @@ fromPFun ::
   ClosedTerm p ->
   PLamWrapped (PUnLamHask PBool p)
 fromPFun pf = pwrapLam $ punlam @PBool pf
+
+{- | Same as 'fromPFun' but it expects 'POpaque' as the return type. It is
+     helpful testing partial functions like 'PValidator'.
+
+ @since 2.1.6
+-}
+fromPPartial ::
+  forall (p :: S -> Type).
+  ( PUnLam POpaque p
+  , PWrapLam (PUnLamHask POpaque p)
+  ) =>
+  ClosedTerm p ->
+  PLamWrapped (PUnLamHask POpaque p)
+fromPPartial pf = pwrapLam $ punlam @POpaque pf
 
 {- | Ways an Plutarch terms can be compared.
      @OnPEq@ uses Plutarch `PEq` instance to compare give terms. This
