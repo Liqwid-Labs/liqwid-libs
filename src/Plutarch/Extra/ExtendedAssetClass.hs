@@ -13,6 +13,7 @@ module Plutarch.Extra.ExtendedAssetClass (
 
   -- ** Plutarch
   pextendedAssetClassValueOf,
+  pextendedAssetClassValueOf',
   peqClasses,
   ptoAssetClass,
   ptoAssetClassData,
@@ -45,7 +46,11 @@ import Plutarch.Extra.AssetClass (
   PAssetClassData (PAssetClassData),
   ptoScottEncoding,
  )
-import Plutarch.Extra.Value (passetClassValueOf, psymbolValueOf)
+import Plutarch.Extra.Value (
+  passetClassValueOf,
+  passetClassValueOf',
+  psymbolValueOf,
+ )
 import Plutarch.Lift (
   PConstantDecl,
   PUnsafeLiftDecl (PLifted),
@@ -231,6 +236,20 @@ pextendedAssetClassValueOf = phoistAcyclic $ plam $ \eac value ->
     PFixedToken t ->
       let t' = ptoScottEncoding #$ pfield @"_0" # t
        in passetClassValueOf # t' # value
+
+{- | As 'pextendedAssetClassValueOf', but using a Haskell-level
+ 'ExtendedAssetClass'.
+
+ @since 3.14.6
+-}
+pextendedAssetClassValueOf' ::
+  forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
+  ExtendedAssetClass ->
+  Term s (PValue keys amounts :--> PInteger)
+pextendedAssetClassValueOf' eac = phoistAcyclic $ plam $ \value ->
+  case eac of
+    AnyToken cs -> psymbolValueOf # pconstant cs # value
+    FixedToken ac -> passetClassValueOf' ac # value
 
 {- | Compare a 'PExtendedAssetClass' to a 'PAssetClass'.
 

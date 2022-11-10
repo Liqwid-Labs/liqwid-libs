@@ -2,6 +2,12 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.14.6 -- 2022-11-11
+
+### Added
+
+* `pextendedAssetClassValueOf'`, a parallel to `passetClassValueOf'`.
+
 ## 3.14.5 -- 2022-11-10
 
 ### Added
