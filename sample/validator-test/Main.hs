@@ -1,8 +1,5 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 {- | Module: Main
  Copyright: (C) Liqwid Labs 2022
@@ -15,13 +12,36 @@
 module Main (main) where
 
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
-import Plutarch.Builtin
-import Plutarch.Prelude
-import Plutarch.Test.QuickCheck
-import Test.QuickCheck
-import Test.Tasty
-import Test.Tasty.ExpectedFailure
-import Test.Tasty.QuickCheck
+import Plutarch.Builtin (pforgetData)
+import Plutarch.Prelude (
+  PData,
+  PInteger,
+  POpaque,
+  S,
+  Term,
+  pconstant,
+  pdata,
+  pfromData,
+  pif,
+  plam,
+  popaque,
+  ptraceError,
+  ptryFrom,
+  tcont,
+  unTermCont,
+  (#),
+  (#<),
+  (:-->),
+ )
+import Plutarch.Test.QuickCheck (fromFailingPPartial, fromPPartial, pconstantT)
+import Test.Tasty (adjustOption, defaultMain, testGroup)
+import Test.Tasty.QuickCheck (
+  Property,
+  QuickCheckTests,
+  chooseInteger,
+  forAll,
+  testProperty,
+ )
 
 -- This is an example pseudo validator that will pass when the sum of parameter
 -- and the datum is less than 20.
@@ -71,7 +91,7 @@ main = do
   setLocaleEncoding utf8
   defaultMain . adjustOption go $
     testGroup
-      ""
+      "validator tests"
       [ testProperty "Validator Property" valProp
       , testProperty "Validator Property - should fail" valPropFail
       ]

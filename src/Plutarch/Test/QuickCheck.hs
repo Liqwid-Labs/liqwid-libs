@@ -398,7 +398,7 @@ fromFailingPPartial pf = pexpectFailure $ pwrapLam $ punlam @POpaque pf
 
 {- | Ways an Plutarch terms can be compared.
      @OnPEq@ uses Plutarch `PEq` instance to compare give terms. This
-     means to terms with different UPLC representations can be
+     means two terms with different UPLC representations can be
      considered equal when `PEq` instance defines so.
      @OnUPLC@ uses compiled and evaluated raw UPLC to compare two
      terms. It is useful comparing Terms that forgot their types--
