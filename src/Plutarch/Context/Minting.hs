@@ -66,7 +66,8 @@ import PlutusLedgerApi.V2 (
     txInfoOutputs,
     txInfoRedeemers,
     txInfoReferenceInputs,
-    txInfoSignatories
+    txInfoSignatories,
+    txInfoWdrl
   ),
   Value,
   fromList,
@@ -150,6 +151,7 @@ buildMinting' builder@(unpack -> bb) =
           , txInfoMint = mintedValue
           , txInfoRedeemers = fromList $ toList (view #redeemers bb) <> redeemerMap
           , txInfoSignatories = toList . view #signatures $ bb
+          , txInfoWdrl = fromList $ toList (view #withdrawals bb)
           }
       mintcs = case view #mintingCS builder of
         Just cs ->

@@ -27,6 +27,7 @@ import Plutarch.Context (
   withSpendingUTXO,
   withStakingCredential,
   withValue,
+  withdrawal,
  )
 import PlutusLedgerApi.V1 (getValue)
 import PlutusLedgerApi.V1.Value (AssetClass (AssetClass), assetClassValueOf)
@@ -35,7 +36,7 @@ import PlutusLedgerApi.V2 (
   Credential (PubKeyCredential),
   PubKeyHash (PubKeyHash),
   ScriptContext (scriptContextTxInfo),
-  StakingCredential (StakingPtr),
+  StakingCredential (StakingHash, StakingPtr),
   TxInfo (txInfoOutputs),
   TxOut (txOutValue),
   Value (Value),
@@ -43,6 +44,7 @@ import PlutusLedgerApi.V2 (
   adaToken,
   fromList,
   singleton,
+  txInfoWdrl,
  )
 import PlutusTx.AssocMap qualified as AssocMap
 
@@ -116,6 +118,11 @@ main = do
                     )
                   ]
               )
+    , testCase
+        "adding a withdrawal has the expected behavior when building a Txinfo"
+        $ let stakingCred = StakingHash $ PubKeyCredential "abcd"
+           in txInfoWdrl (buildTxInfo (withdrawal stakingCred 1))
+                @?= fromList [(stakingCred, 1)]
     ]
   where
     a = buildMinting mempty (mkNormalized $ generalSample <> withMinting "aaaa")

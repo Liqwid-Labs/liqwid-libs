@@ -38,6 +38,7 @@ module Plutarch.Context (
   B.txId,
   B.fee,
   B.unpack,
+  B.withdrawal,
   B.timeRange,
   B.mkOutRefIndices,
   B.combinePair,

@@ -41,7 +41,8 @@ import PlutusLedgerApi.V2 (
     txInfoOutputs,
     txInfoRedeemers,
     txInfoReferenceInputs,
-    txInfoSignatories
+    txInfoSignatories,
+    txInfoWdrl
   ),
   fromList,
  )
@@ -84,6 +85,7 @@ buildTxInfo (unpack -> builder) =
           , txInfoMint = mintedValue
           , txInfoSignatories = toList (view #signatures builder)
           , txInfoRedeemers = fromList $ toList (view #redeemers builder) <> redeemerMap
+          , txInfoWdrl = fromList $ toList (view #withdrawals builder)
           }
    in txinfo
 
