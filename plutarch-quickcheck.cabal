@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutarch-quickcheck
-version:            2.1.5
+version:            2.1.6
 synopsis:           Quickcheck for Plutarch.
 description:
   Bridge between QuickCheck and Plutarch. The interfaces provide

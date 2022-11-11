@@ -53,6 +53,18 @@ valProp =
         # pforgetData (pdata x)
         # pforgetData (pdata x)
 
+valPropFail :: Property
+valPropFail =
+  forAll (pconstantT <$> chooseInteger (15, 4000)) $
+    fromFailingPPartial valScript
+  where
+    valScript :: forall (s :: S). Term s (PInteger :--> POpaque)
+    valScript = plam $ \x ->
+      myValidator
+        # 5
+        # pforgetData (pdata x)
+        # pforgetData (pdata x)
+
 main :: IO ()
 main = do
   -- This will fix some problems regarding text encoding.
@@ -61,6 +73,7 @@ main = do
     testGroup
       ""
       [ testProperty "Validator Property" valProp
+      , testProperty "Validator Property - should fail" valPropFail
       ]
   where
     -- 100 tests is way too small for a property test to search for a counterexample,

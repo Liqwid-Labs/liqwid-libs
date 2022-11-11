@@ -16,6 +16,8 @@ module Plutarch.Test.QuickCheck (
   punlam,
   fromPFun,
   fromPPartial,
+  fromFailingPPartial,
+  pexpectFailure,
   haskEquiv',
   haskEquiv,
   shrinkPLift,
@@ -73,6 +75,7 @@ import Plutarch.Test.QuickCheck.Function (
  )
 import Plutarch.Test.QuickCheck.Helpers (loudEval)
 import Plutarch.Test.QuickCheck.Internal (
+  FailingTestableTerm (..),
   PArbitrary (..),
   PCoArbitrary (..),
   TestableTerm (..),
@@ -341,9 +344,61 @@ fromPPartial ::
   PLamWrapped (PUnLamHask POpaque p)
 fromPPartial pf = pwrapLam $ punlam @POpaque pf
 
+-- Makes return type 'FailingTestableTerm' to make QC look for fails instead
+-- of successes.
+type family PExpectingFail (a :: Type) where
+  PExpectingFail (TestableTerm a) = FailingTestableTerm a
+  PExpectingFail (TestableTerm a -> b) = TestableTerm a -> PExpectingFail b
+
+class PExpectFailure' (a :: Type) (last :: Bool) where
+  pexpectFailure' :: a -> PExpectingFail a
+
+instance PExpectFailure' (TestableTerm a) 'True where
+  pexpectFailure' = FailingTestableTerm
+
+instance
+  forall (a :: Type) (b :: Type).
+  ( PExpectFailure' b (IsLast b)
+  , PExpectingFail (a -> b) ~ (a -> PExpectingFail b)
+  ) =>
+  PExpectFailure' (a -> b) 'False
+  where
+  pexpectFailure' f x = pexpectFailure' @b @(IsLast b) $ f x
+
+type PExpectFailure a = (PExpectFailure' a (IsLast a))
+
+{- | Mark testable function to expect failing case. Unlike `expectFailure` from
+     QC, this will *not* abort after encountering one failing. Instead, it will
+     run for all cases and make sure all cases fail. This can accept any
+     Plutarch types.
+
+ @since 2.1.6
+-}
+pexpectFailure ::
+  forall (a :: Type).
+  PExpectFailure a =>
+  a ->
+  PExpectingFail a
+pexpectFailure =
+  pexpectFailure' @a @(IsLast a)
+
+{- | Same as 'fromPPartial' but it test for failure instead of successes.
+
+ @since 2.1.6
+-}
+fromFailingPPartial ::
+  forall (p :: S -> Type).
+  ( PUnLam POpaque p
+  , PWrapLam (PUnLamHask POpaque p)
+  , PExpectFailure (PLamWrapped (PUnLamHask POpaque p))
+  ) =>
+  ClosedTerm p ->
+  PExpectingFail (PLamWrapped (PUnLamHask POpaque p))
+fromFailingPPartial pf = pexpectFailure $ pwrapLam $ punlam @POpaque pf
+
 {- | Ways an Plutarch terms can be compared.
      @OnPEq@ uses Plutarch `PEq` instance to compare give terms. This
-     means two terms with different UPLC representations can be
+     means to terms with different UPLC representations can be
      considered equal when `PEq` instance defines so.
      @OnUPLC@ uses compiled and evaluated raw UPLC to compare two
      terms. It is useful comparing Terms that forgot their types--

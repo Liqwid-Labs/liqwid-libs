@@ -2,6 +2,21 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 2.1.6 -- 2022-11-10
+
+### Added
+
+* `fromPPartial` allows using a partial function like `PVaildator`. It will
+  expect given function to return `POpaque` and success.
+* `fromFailingPPartial` allows users to test for a Plutarch partial function
+  that will fail. Unlike QC `expectFailure`, this will *not* abort after first
+  encounter of the failure.
+* `pexpectFailure` changes regular unplam-ed Plutarch function into expecting
+  failure. It does samething as `fromFailingPPartial` but it can be used on
+  return type other than `POpaque`.
+* `FailingTestableTerm` is a wrapper around regular `TestableTerm` but indicates
+  a case is expecting a failure.
+
 ## 2.1.5 -- 2022-10-27
 
 ### Added

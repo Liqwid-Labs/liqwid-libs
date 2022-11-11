@@ -10,6 +10,7 @@
 module Plutarch.Test.QuickCheck.Internal (
   TestableTerm (..),
   unTestableTerm,
+  FailingTestableTerm (..),
   PArbitrary (..),
   PCoArbitrary (..),
   pconstantT,
@@ -120,6 +121,26 @@ import Test.QuickCheck (
   vectorOf,
  )
 
+{- | TestableTerm is a wrapper for closed Plutarch terms. This
+     abstraction allows Plutarch values to be generated via QuickCheck
+     generators.
+
+     = Note
+     The typechecker is picky about how @TestableTerm@s are constructed.
+     Meaning, TestableTerm can throw an error when it's composed.
+
+ @since 2.0.0
+-}
+data TestableTerm (a :: S -> Type)
+  = TestableTerm (forall (s :: S). Term s a)
+
+{- | Wrapper around the 'TestableTerm' that expect failure.
+
+ @since 2.1.6
+-}
+data FailingTestableTerm (a :: S -> Type)
+  = FailingTestableTerm (TestableTerm a)
+
 -- | @since 2.0.0
 instance Testable (TestableTerm PBool) where
   property (TestableTerm t) = property (plift t)
@@ -144,18 +165,19 @@ instance Testable (TestableTerm POpaque) where
           (Right _, _, _) ->
             property True
 
-{- | TestableTerm is a wrapper for closed Plutarch terms. This
-     abstraction allows Plutarch values to be generated via QuickCheck
-     generators.
-
-     = Note
-     The typechecker is picky about how @TestableTerm@s are constructed.
-     Meaning, TestableTerm can throw an error when it's composed.
-
- @since 2.0.0
--}
-data TestableTerm (a :: S -> Type)
-  = TestableTerm (forall (s :: S). Term s a)
+-- | @since 2.1.6
+instance Testable (FailingTestableTerm a) where
+  property (FailingTestableTerm (TestableTerm t)) =
+    case compile (Config {tracingMode = DoTracing}) t of
+      Left err ->
+        counterexample ("Script failed to compile:\n" <> show err) $
+          property False
+      Right script ->
+        case evalScriptHuge script of
+          (Left _, _, _) -> property True
+          (Right _, _, _) ->
+            counterexample "Script ran successfully when it is expected to fail" $
+              property False
 
 {- | Converts a 'TestableTerm' into a 'ClosedTerm'.
 
