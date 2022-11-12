@@ -73,6 +73,12 @@ valProp =
         # pforgetData (pdata x)
         # pforgetData (pdata x)
 
+-- When 'valProp' checks for values that should pass the validator, this
+-- property checks if validator fails when given incorrect values.
+-- This is somewhat of a negative case for the validator.
+--
+-- Unlike 'expectFailure' given by the QuickCheck, using 'fromFailingPPartial'
+-- will not abort the test after getting a failure.
 valPropFail :: Property
 valPropFail =
   forAll (pconstantT <$> chooseInteger (15, 4000)) $

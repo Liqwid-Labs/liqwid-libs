@@ -156,7 +156,7 @@ instance Testable (TestableTerm POpaque) where
         case evalScriptHuge script of
           (Left err, _, trace) ->
             counterexample
-              ( "Script failed to run:\n"
+              ( "Script evaluated with an error:\n"
                   <> show err
                   <> "\nTrace:\n"
                   <> show trace
