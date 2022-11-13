@@ -23,6 +23,7 @@ module Plutarch.Extra.ExtendedAssetClass (
   isExtendedAdaClass,
 
   -- ** Plutarch
+  pisExtendedAdaClass,
   pextendedAssetClassValueOf,
   pextendedAssetClassValueOf',
   peqClasses,
@@ -345,3 +346,13 @@ pextendedAdaClass = pconstant extendedAdaClass
 -}
 isExtendedAdaClass :: ExtendedAssetClass -> Bool
 isExtendedAdaClass = (extendedAdaClass ==)
+
+{- | As 'isExtendedAdaClass', but for Plutarch.
+
+ @since 3.15.1
+-}
+pisExtendedAdaClass ::
+  forall (s :: S).
+  Term s (PExtendedAssetClass :--> PBool)
+pisExtendedAdaClass = phoistAcyclic $ plam $ \eac ->
+  eac #== pextendedAdaClass

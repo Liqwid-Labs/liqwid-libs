@@ -8,7 +8,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 * `extendedAdaClass` and `pextendedAdaClass` constants for convenience.
 * `isExtendedAdaClass` to quickly determine whether we have the ADA extended
-  asset class.
+  asset class, along with its Plutarch equivalent `pisExtendedAdaClass`.
 
 ## 3.15.0 -- 2022-11-11
 
