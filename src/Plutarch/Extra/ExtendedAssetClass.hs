@@ -15,8 +15,8 @@ module Plutarch.Extra.ExtendedAssetClass (
   pextendedAssetClassValueOf,
   pextendedAssetClassValueOf',
   peqClasses,
-  ptoAssetClass,
-  ptoAssetClassData,
+  punsafeToAssetClass,
+  punsafeToAssetClassData,
 ) where
 
 import Data.Aeson (
@@ -266,12 +266,26 @@ peqClasses = phoistAcyclic $ plam $ \eac acd ->
 
 {- | Convert to a 'PAssetClass'.
 
- @since 3.14.5
+ = Note
+
+ This is /not/ a safe conversion in general (hence its name). For example:
+
+ > cls = pcon $ PAnyTokenType sym
+ >
+ > passetClassValueOf # (punsafeToAssetClass cls) #
+ >  pconstant (singleton x "" 1 <> singleton x "a" 1)
+
+ Then @v@ would equal @1@, when it's supposed to be @2@.
+
+ There are some legitimate uses for this conversion (specifically for creating
+ 'Value's), which is why it exists, but it should be used with care.
+
+ @since 3.15.0
 -}
-ptoAssetClass ::
+punsafeToAssetClass ::
   forall (s :: S).
   Term s (PExtendedAssetClass :--> PAssetClass)
-ptoAssetClass = phoistAcyclic $ plam $ \eac ->
+punsafeToAssetClass = phoistAcyclic $ plam $ \eac ->
   pmatch eac $ \case
     PAnyToken t ->
       pcon . PAssetClass (pfield @"_0" # t) . pdata . pconstant $ ""
@@ -279,12 +293,18 @@ ptoAssetClass = phoistAcyclic $ plam $ \eac ->
 
 {- | Convert to a 'PAssetClassData'.
 
- @since 3.14.5
+ = Note
+
+ This is not a safe conversion in general, for the same reasons as
+ 'punsafeToAssetClass'. All caveats on the use of 'punsafeToAssetClass' also
+ apply to this function.
+
+ @since 3.15.0
 -}
-ptoAssetClassData ::
+punsafeToAssetClassData ::
   forall (s :: S).
   Term s (PExtendedAssetClass :--> PAssetClassData)
-ptoAssetClassData = phoistAcyclic $ plam $ \eac ->
+punsafeToAssetClassData = phoistAcyclic $ plam $ \eac ->
   pmatch eac $ \case
     PAnyToken t ->
       pcon
