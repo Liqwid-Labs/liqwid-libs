@@ -9,9 +9,21 @@ module Plutarch.Extra.ExtendedAssetClass (
   -- ** Plutarch
   PExtendedAssetClass (..),
 
-  -- * Functions
+  -- * Constants
+
+  -- ** Haskell
+  extendedAdaClass,
 
   -- ** Plutarch
+  pextendedAdaClass,
+
+  -- * Functions
+
+  -- ** Haskell
+  isExtendedAdaClass,
+
+  -- ** Plutarch
+  pisExtendedAdaClass,
   pextendedAssetClassValueOf,
   pextendedAssetClassValueOf',
   peqClasses,
@@ -28,6 +40,7 @@ import Data.Aeson (
   (.:),
  )
 import Data.Aeson.Encoding (pair)
+import Data.Tagged (unTagged)
 import Data.Text (Text, unpack)
 import Optics.AffineTraversal (An_AffineTraversal, atraversal)
 import Optics.Getter (A_Getter, to, view)
@@ -44,6 +57,7 @@ import Plutarch.Extra.AssetClass (
   AssetClass (AssetClass),
   PAssetClass (PAssetClass),
   PAssetClassData (PAssetClassData),
+  adaClass,
   ptoScottEncoding,
  )
 import Plutarch.Extra.Value (
@@ -311,3 +325,34 @@ punsafeToAssetClassData = phoistAcyclic $ plam $ \eac ->
         . PAssetClassData
         $ pdcons # (pfield @"_0" # t) #$ pdcons # (pdata . pconstant $ "") # pdnil
     PFixedToken t -> pfield @"_0" # t
+
+{- | A 'FixedToken' wrapper around 'adaClass'. Provided mostly for convenience.
+
+ @since 3.15.1
+-}
+extendedAdaClass :: ExtendedAssetClass
+extendedAdaClass = FixedToken . unTagged $ adaClass
+
+{- | Plutarch equivalent to 'extendedAdaClass'.
+
+ @since 3.15.1
+-}
+pextendedAdaClass :: forall (s :: S). Term s PExtendedAssetClass
+pextendedAdaClass = pconstant extendedAdaClass
+
+{- | Verify whether an 'ExtendedAssetClass' is the ADA extended asset class.
+
+ @since 3.15.1
+-}
+isExtendedAdaClass :: ExtendedAssetClass -> Bool
+isExtendedAdaClass = (extendedAdaClass ==)
+
+{- | As 'isExtendedAdaClass', but for Plutarch.
+
+ @since 3.15.1
+-}
+pisExtendedAdaClass ::
+  forall (s :: S).
+  Term s (PExtendedAssetClass :--> PBool)
+pisExtendedAdaClass = phoistAcyclic $ plam $ \eac ->
+  eac #== pextendedAdaClass
