@@ -10,6 +10,7 @@
 module Plutarch.Test.QuickCheck.Internal (
   TestableTerm (..),
   unTestableTerm,
+  FailingTestableTerm (..),
   PArbitrary (..),
   PCoArbitrary (..),
   pconstantT,
@@ -20,7 +21,8 @@ import Data.ByteString (ByteString)
 import qualified Data.Text as T (intercalate, pack, unpack)
 import qualified GHC.Exts as Exts (IsList (fromList, toList))
 import Plutarch (
-  Config (..),
+  Config (Config, tracingMode),
+  POpaque,
   PlutusType,
   S,
   Term,
@@ -60,7 +62,7 @@ import Plutarch.Api.V2 (
   PPubKeyHash (PPubKeyHash),
   PStakingCredential (PStakingHash, PStakingPtr),
  )
-import Plutarch.Evaluate (evalScript)
+import Plutarch.Evaluate (evalScriptHuge)
 import Plutarch.Extra.Maybe (
   pfromDJust,
   pisDJust,
@@ -110,6 +112,7 @@ import Test.QuickCheck (
   Gen,
   Testable (property),
   chooseInt,
+  counterexample,
   elements,
   frequency,
   functionMap,
@@ -117,10 +120,6 @@ import Test.QuickCheck (
   variant,
   vectorOf,
  )
-
--- | @since 2.0.0
-instance Testable (TestableTerm PBool) where
-  property (TestableTerm t) = property (plift t)
 
 {- | TestableTerm is a wrapper for closed Plutarch terms. This
      abstraction allows Plutarch values to be generated via QuickCheck
@@ -134,6 +133,51 @@ instance Testable (TestableTerm PBool) where
 -}
 data TestableTerm (a :: S -> Type)
   = TestableTerm (forall (s :: S). Term s a)
+
+{- | Wrapper around the 'TestableTerm' that expect failure.
+
+ @since 2.1.6
+-}
+data FailingTestableTerm (a :: S -> Type)
+  = FailingTestableTerm (TestableTerm a)
+
+-- | @since 2.0.0
+instance Testable (TestableTerm PBool) where
+  property (TestableTerm t) = property (plift t)
+
+-- | @since 2.1.6
+instance Testable (TestableTerm POpaque) where
+  property (TestableTerm t) =
+    case compile (Config {tracingMode = DoTracing}) t of
+      Left err ->
+        counterexample ("Script failed to compile:\n" <> show err) $
+          property False
+      Right script ->
+        case evalScriptHuge script of
+          (Left err, _, trace) ->
+            counterexample
+              ( "Script evaluated with an error:\n"
+                  <> show err
+                  <> "\nTrace:\n"
+                  <> show trace
+              )
+              $ property False
+          (Right _, _, _) ->
+            property True
+
+-- | @since 2.1.6
+instance Testable (FailingTestableTerm a) where
+  property (FailingTestableTerm (TestableTerm t)) =
+    case compile (Config {tracingMode = DoTracing}) t of
+      Left err ->
+        counterexample ("Script failed to compile:\n" <> show err) $
+          property False
+      Right script ->
+        case evalScriptHuge script of
+          (Left _, _, _) -> property True
+          (Right _, _, _) ->
+            counterexample "Script ran successfully when it is expected to fail" $
+              property False
 
 {- | Converts a 'TestableTerm' into a 'ClosedTerm'.
 
@@ -167,7 +211,7 @@ instance PShow a => Show (TestableTerm a) where
       ptraceError
         (pshow term) of
       Left err -> show err
-      Right (evalScript -> (_, _, trace)) ->
+      Right (evalScriptHuge -> (_, _, trace)) ->
         T.unpack . T.intercalate " " $ trace
 
 {- | PArbitrary is the Plutarch equivalent of the `Arbitrary` typeclass from

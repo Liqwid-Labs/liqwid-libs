@@ -75,13 +75,17 @@ hreverse [] = []
 -- `haskEquiv'` will construct a property using `Arbitrary` instance.
 propCorrect :: Property
 propCorrect =
-  haskEquiv' @( 'OnPEq) @( 'ByComplete)
+  haskEquiv'
+    @( 'OnPEq)
+    @( 'ByComplete)
     hreverse
     (preverseCorrect @PBuiltinList @PInteger)
 
 propWrong :: Property
 propWrong =
-  haskEquiv' @( 'OnPEq) @( 'ByComplete)
+  haskEquiv'
+    @( 'OnPEq)
+    @( 'ByComplete)
     hreverse
     (preverseWrong @PBuiltinList @PInteger)
 
@@ -91,7 +95,9 @@ propWrong =
 -- from `Generics.SOP`. (hint: it's using `NP`)
 propCustom :: Property
 propCustom =
-  haskEquiv @( 'OnPEq) @( 'ByComplete)
+  haskEquiv
+    @( 'OnPEq)
+    @( 'ByComplete)
     hreverse
     (TestableTerm preverseCorrect)
     (genList :* Nil)
