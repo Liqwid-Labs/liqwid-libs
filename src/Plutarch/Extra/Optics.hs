@@ -1,5 +1,9 @@
 module Plutarch.Extra.Optics (
+  -- * Type families for constraints
+  HasLabelled,
   HasLabelledGetters,
+
+  -- * Helper functions
   inspect,
   inspects,
 ) where
@@ -12,25 +16,44 @@ import Optics.Label (LabelOptic)
 import Optics.Optic (Is, Optic')
 
 {- | Describes that a type @s@ has a collection of labelled optics, all of type
- @k@, which is at least a getter. @labels@ describes which optics @s@ must
- have, as name-result pairs.
+ @k@, which is at least as capable as @opt@ (though could be more so).
+ @labels@ describes which optics @s@ must have, as name-result pairs.
 
  = Note
 
  This type family unfortunately has two caveats to its use:
 
  - Redundant constraints resulting from its use won't be picked up by GHC
-   warnings.
+ warnings.
  - If @labels@ is empty, you will get an overlapping instances error.
 
  Keep these in mind when using.
 
- @since 3.10.3
+ @since 3.15.2
 -}
-type family HasLabelledGetters (k :: Type) (s :: Type) (labels :: [(Symbol, Type)]) :: Constraint where
-  HasLabelledGetters k s '[] = (k `Is` A_Getter)
-  HasLabelledGetters k s ('(sym, t) ': labels) =
-    (LabelOptic sym k s s t t, HasLabelledGetters k s labels)
+type family
+  HasLabelled
+    (opt :: Type)
+    (k :: Type)
+    (s :: Type)
+    (labels :: [(Symbol, Type)]) ::
+    Constraint
+  where
+  HasLabelled opt k s '[] = (k `Is` opt)
+  HasLabelled opt k s ('(sym, t) ': labels) =
+    (LabelOptic sym k s s t t, HasLabelled opt k s labels)
+
+{- | Short for @'HasLabelled' 'A_Getter'@.
+
+ @since 3.10.3
+ Note from Koz: To avoid breaking everything, I've made this a type synonym
+ for now, while folks act on the deprecation warning. Not ideal, but far less
+ damaging.
+-}
+{-# DEPRECATED HasLabelledGetters "Use HasLabelled A_Getter instead." #-}
+
+type HasLabelledGetters (k :: Type) (s :: Type) (labels :: [(Symbol, Type)]) =
+  HasLabelled A_Getter k s labels
 
 {- | 'view' the 'MonadReader' environment using the provided optic.
 
