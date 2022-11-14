@@ -8,6 +8,8 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 * `HasLabelled`, a generalization of `HasLabelledGetters` allowing for any type
   of optic.
+* `guarantee` and `guarantees`, which parallel `preview` and `previews`, but
+  with a default if they 'miss'.
 
 ### Modified
 
