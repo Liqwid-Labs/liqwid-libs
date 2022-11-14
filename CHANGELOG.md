@@ -2,6 +2,19 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.15.2 -- 2022-11-15
+
+### Added
+
+* `HasLabelled`, a generalization of `HasLabelledGetters` allowing for any type
+  of optic.
+
+### Modified
+
+* `HasLabelledGetters` is now a synonym for `HasLabelled A_Getter`.
+* `HasLabelledGetters` is marked `DEPRECATED`, and will be removed in the next
+  major release.
+
 ## 3.15.1 -- 2022-11-14
 
 ### Added
