@@ -6,11 +6,15 @@ module Plutarch.Extra.Optics (
   -- * Helper functions
   inspect,
   inspects,
+  guarantee,
+  guarantees,
 ) where
 
 import Control.Monad.Reader (MonadReader, asks)
 import Data.Kind (Constraint)
+import Data.Maybe (fromMaybe)
 import GHC.TypeLits (Symbol)
+import Optics.AffineFold (An_AffineFold, preview, previews)
 import Optics.Getter (A_Getter, view, views)
 import Optics.Label (LabelOptic)
 import Optics.Optic (Is, Optic')
@@ -90,3 +94,32 @@ inspects ::
   (a -> b) ->
   m b
 inspects opt f = asks (views opt f)
+
+{- | As 'preview', but also gives a default in case the optic \'misses\'.
+
+ @since 3.15.2
+-}
+{-# INLINEABLE guarantee #-}
+guarantee ::
+  forall (k :: Type) (is :: [Type]) (s :: Type) (a :: Type).
+  (Is k An_AffineFold) =>
+  a ->
+  Optic' k is s a ->
+  s ->
+  a
+guarantee x opt = fromMaybe x . preview opt
+
+{- | As 'previews', but also gives a default in case the optic \'misses\'.
+
+ @since 3.15.2
+-}
+{-# INLINEABLE guarantees #-}
+guarantees ::
+  forall (k :: Type) (is :: [Type]) (s :: Type) (a :: Type) (b :: Type).
+  (Is k An_AffineFold) =>
+  b ->
+  Optic' k is s a ->
+  (a -> b) ->
+  s ->
+  b
+guarantees x opt f = fromMaybe x . previews opt f
