@@ -31,6 +31,9 @@ module Plutarch.Test.QuickCheck (
   uplcEq,
   Equality (..),
   Partiality (..),
+  PWrapLam,
+  PUnLamHask,
+  FromPFun,
   shouldCrash,
   shouldRun,
 ) where
@@ -314,6 +317,15 @@ punlam ::
   PUnLamHask fin p
 punlam pf = punlam' @fin (loudEval pf)
 
+{- | Constraint for 'fromPFun'.
+
+ @since 2.2.0
+-}
+type FromPFun (end :: S -> Type) (a :: S -> Type) =
+  ( PUnLam end a
+  , PWrapLam (PUnLamHask end a)
+  )
+
 {- | "Converts a Plutarch function into a Haskell function on
      'TestableTerm's, then wraps functions into 'PFun' as
      necessary. The result will be 'Quickcheck-compatible' if all
@@ -323,9 +335,7 @@ punlam pf = punlam' @fin (loudEval pf)
 -}
 fromPFun ::
   forall (p :: S -> Type).
-  ( PUnLam PBool p
-  , PWrapLam (PUnLamHask PBool p)
-  ) =>
+  FromPFun PBool p =>
   ClosedTerm p ->
   PLamWrapped (PUnLamHask PBool p)
 fromPFun pf = pwrapLam $ punlam @PBool pf
@@ -337,9 +347,7 @@ fromPFun pf = pwrapLam $ punlam @PBool pf
 -}
 fromPPartial ::
   forall (p :: S -> Type).
-  ( PUnLam POpaque p
-  , PWrapLam (PUnLamHask POpaque p)
-  ) =>
+  FromPFun POpaque p =>
   ClosedTerm p ->
   PLamWrapped (PUnLamHask POpaque p)
 fromPPartial pf = pwrapLam $ punlam @POpaque pf
