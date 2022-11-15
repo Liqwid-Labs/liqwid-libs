@@ -1,5 +1,4 @@
 {-# LANGUAGE ImpredicativeTypes #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Properties.NumericProp (tests) where
 
@@ -9,14 +8,16 @@ import Test.QuickCheck (
   Property,
   (===),
  )
-import Test.Tasty (adjustOption, testGroup, TestTree)
+import Test.Tasty (TestTree, adjustOption, testGroup)
 import Test.Tasty.QuickCheck (QuickCheckTests, testProperty)
 
 tests :: TestTree
 tests =
-  adjustOption go $ testGroup "Numeric"
-  [ testProperty "Integer power (#^)" propPowInt
-  ]
+  adjustOption go $
+    testGroup
+      "Numeric"
+      [ testProperty "Integer power (#^)" propPowInt
+      ]
   where
     go :: QuickCheckTests -> QuickCheckTests
     go = max 1000

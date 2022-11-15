@@ -21,18 +21,20 @@ import Test.QuickCheck (
   scale,
   shrink,
  )
-import Test.Tasty (adjustOption, testGroup, TestTree)
+import Test.Tasty (TestTree, adjustOption, testGroup)
 import Test.Tasty.QuickCheck (QuickCheckTests, testProperty)
 
 tests :: TestTree
 tests =
-  adjustOption go $ testGroup "Plutarch.Extra.Ord"
-  [ testProperty "sorted lists should prove sorted" propSortedList
-  , testProperty "singleton lists are always sorted" propSortedSingleton
-  , testProperty "nubbed lists should prove ordered" propNubList
-  , testProperty "nubbed lists should prove unique" propNubList'
-  , testProperty "singleton lists are always nubbed" propNubSingleton
-  ]
+  adjustOption go $
+    testGroup
+      "Plutarch.Extra.Ord"
+      [ testProperty "sorted lists should prove sorted" propSortedList
+      , testProperty "singleton lists are always sorted" propSortedSingleton
+      , testProperty "nubbed lists should prove ordered" propNubList
+      , testProperty "nubbed lists should prove unique" propNubList'
+      , testProperty "singleton lists are always nubbed" propNubSingleton
+      ]
   where
     go :: QuickCheckTests -> QuickCheckTests
     go = max 1000

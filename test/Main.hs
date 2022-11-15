@@ -1,13 +1,13 @@
 {-# LANGUAGE ImpredicativeTypes #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Main (main) where
 
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
 import Test.Tasty (defaultMain, testGroup)
 
-import qualified Properties.OrdProp as OrdProp
+import qualified Properties.FunctorProp as FunctorProp
 import qualified Properties.NumericProp as NumericProp
+import qualified Properties.OrdProp as OrdProp
 import qualified Properties.TraversableProp as TraversableProp
 
 main :: IO ()
@@ -17,4 +17,5 @@ main = do
     [ OrdProp.tests
     , NumericProp.tests
     , TraversableProp.tests
+    , FunctorProp.tests
     ]
