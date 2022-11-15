@@ -160,10 +160,13 @@ library
 
 -- Test suite
 
-test-suite properties
+test-suite test
   import:         common-lang
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
+  other-modules:
+    Properties.NumericProp
+    Properties.OrdProp
   build-depends:
     , liqwid-plutarch-extra
     , plutarch-extra
@@ -173,7 +176,7 @@ test-suite properties
     , tasty-quickcheck
 
   ghc-options:    -O2 -threaded -rtsopts -with-rtsopts=-N
-  hs-source-dirs: test/properties
+  hs-source-dirs: test
 
 -- Benchmarks
 

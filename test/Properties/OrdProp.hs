@@ -1,11 +1,9 @@
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Main (main) where
+module Properties.OrdProp (tests) where
 
-import GHC.IO.Encoding (setLocaleEncoding, utf8)
 import Plutarch.Extra.Maybe (pisJust, ptraceIfNothing)
-import Plutarch.Extra.Numeric ((#^))
 import Plutarch.Extra.Ord (
   PComparator,
   pallUniqueBy,
@@ -17,34 +15,24 @@ import Plutarch.Extra.Ord (
  )
 import Plutarch.Test.QuickCheck (PA, TestableTerm (TestableTerm), fromPFun)
 import Test.QuickCheck (
-  NonNegative (NonNegative),
   Property,
   arbitrary,
   forAllShrinkShow,
   scale,
   shrink,
-  (===),
  )
-import Test.Tasty (adjustOption, defaultMain, testGroup)
+import Test.Tasty (adjustOption, testGroup, TestTree)
 import Test.Tasty.QuickCheck (QuickCheckTests, testProperty)
 
-main :: IO ()
-main = do
-  setLocaleEncoding utf8
-  defaultMain . adjustOption go . testGroup "Properties" $
-    [ testGroup
-        "Plutarch.Extra.Ord"
-        [ testProperty "sorted lists should prove sorted" propSortedList
-        , testProperty "singleton lists are always sorted" propSortedSingleton
-        , testProperty "nubbed lists should prove ordered" propNubList
-        , testProperty "nubbed lists should prove unique" propNubList'
-        , testProperty "singleton lists are always nubbed" propNubSingleton
-        ]
-    , testGroup
-        "Numeric"
-        [ testProperty "Integer power (#^)" propPowInt
-        ]
-    ]
+tests :: TestTree
+tests =
+  adjustOption go $ testGroup "Plutarch.Extra.Ord"
+  [ testProperty "sorted lists should prove sorted" propSortedList
+  , testProperty "singleton lists are always sorted" propSortedSingleton
+  , testProperty "nubbed lists should prove ordered" propNubList
+  , testProperty "nubbed lists should prove unique" propNubList'
+  , testProperty "singleton lists are always nubbed" propNubSingleton
+  ]
   where
     go :: QuickCheckTests -> QuickCheckTests
     go = max 1000
@@ -84,10 +72,6 @@ propNubSingleton =
       ptraceIfNothing
         "unexpectedly out-of-order"
         (pallUniqueBy # cmp #$ pnubSortBy @_ @PList # cmp #$ psingleton # x)
-
-propPowInt :: NonNegative Integer -> NonNegative Integer -> Property
-propPowInt (NonNegative n) (NonNegative i) =
-  (n ^ i) === plift (pconstant n #^ pconstant i)
 
 -- Helpers
 
