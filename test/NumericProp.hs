@@ -37,24 +37,24 @@ tests =
 propPow :: Property
 propPow =
   counterexample
-    "Power one"
+    "x ^ 1 = x"
     ( forAll genNum $
         \x -> fromPFun powOne x
     )
     .&&. counterexample
-      "Pow zero"
+      "x ^ 0 = 1"
       ( forAll genNum $
           \x -> fromPFun powZero x
       )
     .&&. counterexample
-      "Multiplication"
+      "x ^ y * x ^ z = x ^ (y + z)"
       ( forAll genNum $ \x ->
           forAll genNum $ \y ->
             forAll genNum $ \z ->
               fromPFun powMult x y z
       )
     .&&. counterexample
-      "Power"
+      "x ^ (y ^ z) = x ^ (y * z)"
       ( forAll genNum $ \x ->
           forAll genNum $ \y ->
             forAll genNum $ \z ->
