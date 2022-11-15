@@ -167,6 +167,7 @@ test-suite test
   other-modules:
     Properties.NumericProp
     Properties.OrdProp
+    Properties.TraversableProp
   build-depends:
     , liqwid-plutarch-extra
     , plutarch-extra

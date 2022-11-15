@@ -12,7 +12,6 @@ import Test.QuickCheck (
 import Test.Tasty (adjustOption, testGroup, TestTree)
 import Test.Tasty.QuickCheck (QuickCheckTests, testProperty)
 
-
 tests :: TestTree
 tests =
   adjustOption go $ testGroup "Numeric"

@@ -8,6 +8,7 @@ import Test.Tasty (defaultMain, testGroup)
 
 import qualified Properties.OrdProp as OrdProp
 import qualified Properties.NumericProp as NumericProp
+import qualified Properties.TraversableProp as TraversableProp
 
 main :: IO ()
 main = do
@@ -15,4 +16,5 @@ main = do
   defaultMain . testGroup "Liqwid Plutarch Extra Tests" $
     [ OrdProp.tests
     , NumericProp.tests
+    , TraversableProp.tests
     ]
