@@ -64,7 +64,8 @@ import PlutusLedgerApi.V2 (
     txInfoOutputs,
     txInfoRedeemers,
     txInfoReferenceInputs,
-    txInfoSignatories
+    txInfoSignatories,
+    txInfoWdrl
   ),
   TxOutRef (..),
   fromList,
@@ -206,7 +207,6 @@ buildSpending' builder@(unpack -> bb) =
       extraDat = yieldExtraDatums . view #datums $ bb
       base = yieldBaseTxInfo builder
       redeemerMap = yieldRedeemerMap (view #inputs bb) (view #mints bb)
-
       txinfo =
         base
           { txInfoInputs = ins
@@ -216,6 +216,7 @@ buildSpending' builder@(unpack -> bb) =
           , txInfoMint = mintedValue
           , txInfoSignatories = toList . view #signatures $ bb
           , txInfoRedeemers = fromList $ toList (view #redeemers bb) <> redeemerMap
+          , txInfoWdrl = fromList $ toList (view #withdrawals bb)
           }
       vInRef = case view #validatorInput builder >>= yieldValidatorInput ins of
         Nothing -> TxOutRef "" 0

@@ -31,6 +31,7 @@ module Plutarch.Context.Base (
   credential,
   pubKey,
   script,
+  withdrawal,
   withStakingCredential,
   withRefTxId,
   withDatum,
@@ -231,8 +232,9 @@ instance
   (k ~ A_Lens, a ~ Maybe Credential, b ~ Maybe Credential) =>
   LabelOptic "credential" k UTXO UTXO a b
   where
-  labelOptic = lens (\(UTXO x _ _ _ _ _ _ _) -> coerce x) $ \(UTXO _ scred val dat rs ti tix red) cred' ->
-    UTXO (coerce cred') scred val dat rs ti tix red
+  labelOptic = lens (\(UTXO x _ _ _ _ _ _ _) -> coerce x) $
+    \(UTXO _ scred val dat rs ti tix red) cred' ->
+      UTXO (coerce cred') scred val dat rs ti tix red
 
 -- | @since 2.5.0
 instance
@@ -496,7 +498,7 @@ unpack = view _bb
  'ScriptContext' creation, leaving specific builders only with
  minimal logical checkings.
 
- @since 2.5.0
+ @since 2.7.0
 -}
 data BaseBuilder
   = BB
@@ -510,6 +512,7 @@ data BaseBuilder
       (Interval POSIXTime)
       TxId
       (Acc (ScriptPurpose, Redeemer))
+      (Acc (StakingCredential, Integer))
   deriving stock (Show)
 
 -- | @since 2.5.0
@@ -517,85 +520,110 @@ instance
   (k ~ A_Lens, a ~ Acc UTXO, b ~ Acc UTXO) =>
   LabelOptic "inputs" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB x _ _ _ _ _ _ _ _ _) -> x) $ \(BB _ rins outs sigs dats ms f tr txi reds) ins' ->
-    BB ins' rins outs sigs dats ms f tr txi reds
+  labelOptic = lens (\(BB x _ _ _ _ _ _ _ _ _ _) -> x) $
+    \(BB _ rins outs sigs dats ms f tr txi reds wdrls) ins' ->
+      BB ins' rins outs sigs dats ms f tr txi reds wdrls
 
 -- | @since 2.5.0
 instance
   (k ~ A_Lens, a ~ Acc UTXO, b ~ Acc UTXO) =>
   LabelOptic "referenceInputs" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB _ x _ _ _ _ _ _ _ _) -> x) $ \(BB ins _ outs sigs dats ms f tr txi reds) rins' ->
-    BB ins rins' outs sigs dats ms f tr txi reds
+  labelOptic = lens (\(BB _ x _ _ _ _ _ _ _ _ _) -> x) $
+    \(BB ins _ outs sigs dats ms f tr txi reds wdrls) rins' ->
+      BB ins rins' outs sigs dats ms f tr txi reds wdrls
 
 -- | @since 2.5.0
 instance
   (k ~ A_Lens, a ~ Acc UTXO, b ~ Acc UTXO) =>
   LabelOptic "outputs" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB _ _ x _ _ _ _ _ _ _) -> x) $ \(BB ins rins _ sigs dats ms f tr txi reds) outs' ->
-    BB ins rins outs' sigs dats ms f tr txi reds
+  labelOptic = lens (\(BB _ _ x _ _ _ _ _ _ _ _) -> x) $
+    \(BB ins rins _ sigs dats ms f tr txi reds wdrls) outs' ->
+      BB ins rins outs' sigs dats ms f tr txi reds wdrls
 
 -- | @since 2.5.0
 instance
   (k ~ A_Lens, a ~ Acc PubKeyHash, b ~ Acc PubKeyHash) =>
   LabelOptic "signatures" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB _ _ _ x _ _ _ _ _ _) -> x) $ \(BB ins rins outs _ dats ms f tr txi reds) sigs' ->
-    BB ins rins outs sigs' dats ms f tr txi reds
+  labelOptic = lens (\(BB _ _ _ x _ _ _ _ _ _ _) -> x) $
+    \(BB ins rins outs _ dats ms f tr txi reds wdrls) sigs' ->
+      BB ins rins outs sigs' dats ms f tr txi reds wdrls
 
 -- | @since 2.5.0
 instance
   (k ~ A_Lens, a ~ Acc Data, b ~ Acc Data) =>
   LabelOptic "datums" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB _ _ _ _ x _ _ _ _ _) -> x) $ \(BB ins rins outs sigs _ ms f tr txi reds) dats' ->
-    BB ins rins outs sigs dats' ms f tr txi reds
+  labelOptic = lens (\(BB _ _ _ _ x _ _ _ _ _ _) -> x) $
+    \(BB ins rins outs sigs _ ms f tr txi reds wdrls) dats' ->
+      BB ins rins outs sigs dats' ms f tr txi reds wdrls
 
 -- | @since 2.5.0
 instance
   (k ~ A_Lens, a ~ Acc Mint, b ~ Acc Mint) =>
   LabelOptic "mints" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB _ _ _ _ _ x _ _ _ _) -> x) $ \(BB ins rins outs sigs dats _ f tr txi reds) ms' ->
-    BB ins rins outs sigs dats ms' f tr txi reds
+  labelOptic = lens (\(BB _ _ _ _ _ x _ _ _ _ _) -> x) $
+    \(BB ins rins outs sigs dats _ f tr txi reds wdrls) ms' ->
+      BB ins rins outs sigs dats ms' f tr txi reds wdrls
 
 -- | @since 2.5.0
 instance
   (k ~ A_Lens, a ~ Value, b ~ Value) =>
   LabelOptic "fee" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB _ _ _ _ _ _ x _ _ _) -> x) $ \(BB ins rins outs sigs dats ms _ tr txi reds) f' ->
-    BB ins rins outs sigs dats ms f' tr txi reds
+  labelOptic = lens (\(BB _ _ _ _ _ _ x _ _ _ _) -> x) $
+    \(BB ins rins outs sigs dats ms _ tr txi reds wdrls) f' ->
+      BB ins rins outs sigs dats ms f' tr txi reds wdrls
 
 -- | @since 2.5.0
 instance
   (k ~ A_Lens, a ~ Interval POSIXTime, b ~ Interval POSIXTime) =>
   LabelOptic "timeRange" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB _ _ _ _ _ _ _ x _ _) -> x) $ \(BB ins rins outs sigs dats ms f _ txi reds) tr' ->
-    BB ins rins outs sigs dats ms f tr' txi reds
+  labelOptic = lens (\(BB _ _ _ _ _ _ _ x _ _ _) -> x) $
+    \(BB ins rins outs sigs dats ms f _ txi reds wdrls) tr' ->
+      BB ins rins outs sigs dats ms f tr' txi reds wdrls
 
 -- | @since 2.5.0
 instance
   (k ~ A_Lens, a ~ TxId, b ~ TxId) =>
   LabelOptic "txId" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB _ _ _ _ _ _ _ _ x _) -> x) $ \(BB ins rins outs sigs dats ms f tr _ reds) txi' ->
-    BB ins rins outs sigs dats ms f tr txi' reds
+  labelOptic = lens (\(BB _ _ _ _ _ _ _ _ x _ _) -> x) $
+    \(BB ins rins outs sigs dats ms f tr _ reds wdrls) txi' ->
+      BB ins rins outs sigs dats ms f tr txi' reds wdrls
+
+-- | @since 2.7.0
+instance
+  ( k ~ A_Lens
+  , a ~ Acc (ScriptPurpose, Redeemer)
+  , b ~ Acc (ScriptPurpose, Redeemer)
+  ) =>
+  LabelOptic "redeemers" k BaseBuilder BaseBuilder a b
+  where
+  labelOptic = lens (\(BB _ _ _ _ _ _ _ _ _ x _) -> x) $
+    \(BB ins rins outs sigs dats ms f tr txi _ wdrls) reds' ->
+      BB ins rins outs sigs dats ms f tr txi reds' wdrls
 
 -- | @since 2.5.0
 instance
-  (k ~ A_Lens, a ~ Acc (ScriptPurpose, Redeemer), b ~ Acc (ScriptPurpose, Redeemer)) =>
-  LabelOptic "redeemers" k BaseBuilder BaseBuilder a b
+  ( k ~ A_Lens
+  , a ~ Acc (StakingCredential, Integer)
+  , b ~ Acc (StakingCredential, Integer)
+  ) =>
+  LabelOptic "withdrawals" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB _ _ _ _ _ _ _ _ _ x) -> x) $ \(BB ins rins outs sigs dats ms f tr txi _) reds' ->
-    BB ins rins outs sigs dats ms f tr txi reds'
+  labelOptic = lens (\(BB _ _ _ _ _ _ _ _ _ _ x) -> x) $
+    \(BB ins rins outs sigs dats ms f tr txi reds _) wdrls' ->
+      BB ins rins outs sigs dats ms f tr txi reds wdrls'
 
 -- | @since 1.1.0
 instance Semigroup BaseBuilder where
-  BB ins refIns outs sigs dats ms fval range tid rs
-    <> BB ins' refIns' outs' sigs' dats' ms' fval' range' tid' rs' =
+  BB ins refIns outs sigs dats ms fval range tid rs wdrls
+    <> BB ins' refIns' outs' sigs' dats' ms' fval' range' tid' rs' wdrls' =
       BB
         (ins <> ins')
         (refIns <> refIns')
@@ -607,6 +635,7 @@ instance Semigroup BaseBuilder where
         (choose #timeRange range range')
         (choose #txId tid tid')
         (rs <> rs')
+        (wdrls <> wdrls')
       where
         choose ::
           forall (a :: Type).
@@ -621,7 +650,19 @@ instance Semigroup BaseBuilder where
 
 -- | @since 1.1.0
 instance Monoid BaseBuilder where
-  mempty = BB mempty mempty mempty mempty mempty mempty mempty always (TxId "") mempty
+  mempty =
+    BB
+      mempty
+      mempty
+      mempty
+      mempty
+      mempty
+      mempty
+      mempty
+      always
+      (TxId "")
+      mempty
+      mempty
 
 -- | @since 2.1.0
 instance Builder BaseBuilder where
@@ -718,6 +759,20 @@ extraRedeemer p r =
   pack
     . set #redeemers (pure (p, Redeemer . BuiltinData . datafy $ r))
     $ (mempty :: BaseBuilder)
+
+{- | Specify a withdrawal for the script context
+
+ @since 2.7.0
+-}
+withdrawal ::
+  forall (a :: Type).
+  (Builder a) =>
+  StakingCredential ->
+  Integer ->
+  a
+withdrawal stakingCred withdrawalAmount =
+  pack . set #withdrawals (pure (stakingCred, withdrawalAmount)) $
+    (mempty :: BaseBuilder)
 
 {- | Specify `TxId` of a script context.
 

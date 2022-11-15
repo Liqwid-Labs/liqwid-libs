@@ -2,6 +2,20 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 2.7.0 -- 2022-11-11
+
+Added "withdrawal" capabilities.
+
+### Added
+
+* Added a `withdrawal :: Builder a => StakingCredential -> Integer -> a` function to 
+  `Plutarch.Context`. 
+
+### Modified 
+
+* Added a `withdrawals` field to the base builder, along with updating the relevant
+  optics.
+
 ## 2.6.2 -- 2022-11-1
 
 ### Modified
