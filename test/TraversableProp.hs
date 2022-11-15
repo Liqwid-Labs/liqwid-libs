@@ -2,7 +2,7 @@
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Properties.TraversableProp (tests) where
+module TraversableProp (tests) where
 
 import Plutarch.Api.V1.Maybe (PMaybeData)
 import Plutarch.Extra.Functor (PSubcategory)

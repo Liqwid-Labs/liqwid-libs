@@ -1,7 +1,7 @@
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Properties.OrdProp (tests) where
+module OrdProp (tests) where
 
 import Plutarch.Extra.Maybe (pisJust, ptraceIfNothing)
 import Plutarch.Extra.Ord (
