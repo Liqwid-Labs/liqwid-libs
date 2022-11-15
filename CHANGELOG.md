@@ -6,7 +6,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### Added
 
-* `PWrapLam`, `PUnLamHask`, and `FromPFun` constraints are added.
+* `NotPLam`, `PWrapLam`, `PUnLamHask`, and `FromPFun` constraints are added.
 
 ## 2.1.6 -- 2022-11-10
 

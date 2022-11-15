@@ -33,7 +33,9 @@ module Plutarch.Test.QuickCheck (
   Partiality (..),
   PWrapLam,
   PUnLamHask,
+  PLamWrapped,
   FromPFun,
+  NotPLam,
   shouldCrash,
   shouldRun,
 ) where
@@ -164,6 +166,13 @@ type family IsLam (h :: Type) :: Bool where
 type family IsLast (h :: Type) :: Bool where
   IsLast (_ -> _) = 'False
   IsLast _ = 'True
+
+{- | Ensure given 'PType'('S -> Type') ir not an arrow. This is very useful
+     when using ambiguous type variable.
+
+ @since 2.2.0
+-}
+type NotPLam (p :: S -> Type) = IsLam (TestableTerm p) ~ 'False
 
 -- Helper for type error.
 -- Empty constraint when all arguments/return are TestableTerm
