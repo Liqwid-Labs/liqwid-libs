@@ -24,7 +24,7 @@
     };
 
     plutarch-quickcheck.url =
-      "github:liqwid-labs/plutarch-quickcheck?ref=main";
+      "github:liqwid-labs/plutarch-quickcheck?ref=seungheonoh/constraints";
     plutarch-numeric.url =
       "github:liqwid-labs/plutarch-numeric?ref=main";
     plutarch-context-builder.url =
