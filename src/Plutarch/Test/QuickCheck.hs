@@ -31,6 +31,11 @@ module Plutarch.Test.QuickCheck (
   uplcEq,
   Equality (..),
   Partiality (..),
+  PWrapLam,
+  PUnLamHask,
+  PLamWrapped,
+  FromPFun,
+  NotPLam,
   shouldCrash,
   shouldRun,
 ) where
@@ -161,6 +166,13 @@ type family IsLam (h :: Type) :: Bool where
 type family IsLast (h :: Type) :: Bool where
   IsLast (_ -> _) = 'False
   IsLast _ = 'True
+
+{- | Ensure given 'PType'('S -> Type') ir not an arrow. This is very useful
+     when using ambiguous type variable.
+
+ @since 2.2.0
+-}
+type NotPLam (p :: S -> Type) = IsLam (TestableTerm p) ~ 'False
 
 -- Helper for type error.
 -- Empty constraint when all arguments/return are TestableTerm
@@ -314,6 +326,15 @@ punlam ::
   PUnLamHask fin p
 punlam pf = punlam' @fin (loudEval pf)
 
+{- | Constraint for 'fromPFun'.
+
+ @since 2.2.0
+-}
+type FromPFun (end :: S -> Type) (a :: S -> Type) =
+  ( PUnLam end a
+  , PWrapLam (PUnLamHask end a)
+  )
+
 {- | "Converts a Plutarch function into a Haskell function on
      'TestableTerm's, then wraps functions into 'PFun' as
      necessary. The result will be 'Quickcheck-compatible' if all
@@ -323,9 +344,7 @@ punlam pf = punlam' @fin (loudEval pf)
 -}
 fromPFun ::
   forall (p :: S -> Type).
-  ( PUnLam PBool p
-  , PWrapLam (PUnLamHask PBool p)
-  ) =>
+  FromPFun PBool p =>
   ClosedTerm p ->
   PLamWrapped (PUnLamHask PBool p)
 fromPFun pf = pwrapLam $ punlam @PBool pf
@@ -337,9 +356,7 @@ fromPFun pf = pwrapLam $ punlam @PBool pf
 -}
 fromPPartial ::
   forall (p :: S -> Type).
-  ( PUnLam POpaque p
-  , PWrapLam (PUnLamHask POpaque p)
-  ) =>
+  FromPFun POpaque p =>
   ClosedTerm p ->
   PLamWrapped (PUnLamHask POpaque p)
 fromPPartial pf = pwrapLam $ punlam @POpaque pf
