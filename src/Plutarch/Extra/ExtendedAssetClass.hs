@@ -21,6 +21,8 @@ module Plutarch.Extra.ExtendedAssetClass (
 
   -- ** Haskell
   isExtendedAdaClass,
+  eqClasses,
+  unsafeToAssetClass,
 
   -- ** Plutarch
   pisExtendedAdaClass,
@@ -204,6 +206,46 @@ instance
     AnyToken x -> AssetClass x ""
     FixedToken x -> x
 
+{- | A 'FixedToken' wrapper around 'adaClass'. Provided mostly for convenience.
+
+ @since 3.15.1
+-}
+extendedAdaClass :: ExtendedAssetClass
+extendedAdaClass = FixedToken . unTagged $ adaClass
+
+{- | Compare an 'ExtendedAssetClass' to an 'AssetClass'.
+
+ @since 3.15.3
+-}
+eqClasses :: ExtendedAssetClass -> AssetClass -> Bool
+eqClasses eac ac = case eac of
+  AnyToken cs -> cs == view #symbol ac
+  FixedToken ac' -> ac == ac'
+
+{- | Convert to an 'AssetClass'. We do this by either \'unwrapping\' a
+ 'FixedToken', or \'stubbing in\' an empty 'TokenName' for an 'AnyToken'.
+
+ = Note
+
+ This is /not/ a safe conversion in general (hence its name). For example:
+
+ > cls = AnyTokenType sym
+ >
+ > v = assetClassValueOf (unsafeToAssetClass cls)
+ >                       (singleton x "" 1 <> singleton x "a" 1)
+
+ Then @v@ would equal @1@, when it's supposed to be @2@.
+
+ There are some legitimate uses for this conversion, which is why it exists,
+ but it should be used with care.
+
+ @since 3.15.3
+-}
+unsafeToAssetClass :: ExtendedAssetClass -> AssetClass
+unsafeToAssetClass = \case
+  AnyToken cs -> AssetClass cs ""
+  FixedToken ac -> ac
+
 {- | Plutarch equivalent to 'ExtendedAssetClass'.
 
  @since 3.14.2
@@ -278,7 +320,8 @@ peqClasses = phoistAcyclic $ plam $ \eac acd ->
       pfromData (pfield @"_0" # t) #== pfromData (pfield @"symbol" # acd)
     PFixedToken t -> pfromData (pfield @"_0" # t) #== acd
 
-{- | Convert to a 'PAssetClass'.
+{- | Convert to a 'PAssetClass'. We do this by either \'unwrapping\' a
+ 'PFixedToken', or \'stubbing in\' an empty 'PTokenName' for 'PAnyToken'.
 
  = Note
 
@@ -286,7 +329,7 @@ peqClasses = phoistAcyclic $ plam $ \eac acd ->
 
  > cls = pcon $ PAnyTokenType sym
  >
- > passetClassValueOf # (punsafeToAssetClass cls) #
+ > v = passetClassValueOf # (punsafeToAssetClass cls) #
  >  pconstant (singleton x "" 1 <> singleton x "a" 1)
 
  Then @v@ would equal @1@, when it's supposed to be @2@.
@@ -325,13 +368,6 @@ punsafeToAssetClassData = phoistAcyclic $ plam $ \eac ->
         . PAssetClassData
         $ pdcons # (pfield @"_0" # t) #$ pdcons # (pdata . pconstant $ "") # pdnil
     PFixedToken t -> pfield @"_0" # t
-
-{- | A 'FixedToken' wrapper around 'adaClass'. Provided mostly for convenience.
-
- @since 3.15.1
--}
-extendedAdaClass :: ExtendedAssetClass
-extendedAdaClass = FixedToken . unTagged $ adaClass
 
 {- | Plutarch equivalent to 'extendedAdaClass'.
 

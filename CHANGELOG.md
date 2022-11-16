@@ -2,6 +2,13 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.15.3 -- 2022-11-17
+
+### Added
+
+* `eqClasses`, a Haskell equivalent to `peqClasses`.
+* `unsafeToAssetClass`, a Haskell equivalent to `punsafeToAssetClass`.
+
 ## 3.15.2 -- 2022-11-15
 
 ### Added
