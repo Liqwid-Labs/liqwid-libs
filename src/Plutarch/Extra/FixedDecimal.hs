@@ -21,6 +21,7 @@ module Plutarch.Extra.FixedDecimal (
   punsafeMkFixedDecimal,
 ) where
 
+import qualified Data.Aeson as Aeson
 import Data.Proxy (Proxy (Proxy))
 import Data.Ratio ((%))
 import GHC.Real (Ratio ((:%)))
@@ -65,6 +66,12 @@ import qualified PlutusLedgerApi.V1 as PlutusTx
 -}
 newtype FixedDecimal (exp :: Natural) = FixedDecimal {numerator :: Integer}
   deriving stock (Generic, Eq, Ord, Show)
+  deriving newtype
+    ( -- | @since 3.15.4
+      Aeson.ToJSON
+    , -- | @since 3.15.4
+      Aeson.FromJSON
+    )
 
 {- | Integer numerator of 'FixedDecimal'
 

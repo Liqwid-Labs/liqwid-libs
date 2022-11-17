@@ -6,7 +6,8 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### Added
 
-* Derived Aeson `ToJSON` & `FromJSON` instances for `PubKeyHash`, `Credential` & `StakingCredential`
+* Derived Aeson `ToJSON` & `FromJSON` instances for `PubKeyHash`, `Credential`, `StakingCredential`
+* Derived Aeson `ToJSON` & `FromJSON` instances for `FixedDecimal`
 
 ## 3.15.3 -- 2022-11-17
 
