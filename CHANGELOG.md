@@ -2,16 +2,26 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 2.8.0 -- 2022-11-16
+
+Added builders for `Rewarding` and `Certifying` contexts.
+
+### Added
+
+* Added `RewardingBuilder`, `withRewarding`, and `buildRewarding'`.
+
+* Added `CertifyingBuilder`, `withCertifying`, and `buildCertifying'`.
+
 ## 2.7.0 -- 2022-11-11
 
 Added "withdrawal" capabilities.
 
 ### Added
 
-* Added a `withdrawal :: Builder a => StakingCredential -> Integer -> a` function to 
-  `Plutarch.Context`. 
+* Added a `withdrawal :: Builder a => StakingCredential -> Integer -> a` function to
+  `Plutarch.Context`.
 
-### Modified 
+### Modified
 
 * Added a `withdrawals` field to the base builder, along with updating the relevant
   optics.
