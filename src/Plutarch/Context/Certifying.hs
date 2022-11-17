@@ -96,6 +96,7 @@ instance Builder CertifyingBuilder where
   _bb = #inner
   pack x = set #inner x (mempty :: CertifyingBuilder)
 
+-- | @since 2.8.0
 instance Normalizer CertifyingBuilder where
   mkNormalized' (CB bb cs) =
     CB (mkNormalized bb) cs
