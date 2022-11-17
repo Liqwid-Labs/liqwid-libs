@@ -97,6 +97,7 @@ instance Builder RewardingBuilder where
   _bb = #inner
   pack x = set #inner x (mempty :: RewardingBuilder)
 
+-- | @since 2.8.0
 instance Normalizer RewardingBuilder where
   mkNormalized' (RB bb cs) =
     RB (mkNormalized bb) cs
