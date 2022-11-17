@@ -29,15 +29,18 @@ import PlutusLedgerApi.V1.Bytes (bytes, encodeByteString, fromHex)
 import PlutusLedgerApi.V2 (
   BuiltinByteString,
   BuiltinData (BuiltinData),
+  Credential,
   CurrencySymbol (CurrencySymbol),
   Data (I, List),
   LedgerBytes (LedgerBytes),
   MintingPolicy (MintingPolicy),
   POSIXTime (POSIXTime),
+  PubKeyHash (PubKeyHash),
   Script,
   ScriptHash (ScriptHash),
   StakeValidator (StakeValidator),
   StakeValidatorHash (StakeValidatorHash),
+  StakingCredential,
   TokenName (TokenName),
   TxId (TxId),
   TxOutRef,
@@ -171,6 +174,12 @@ deriving anyclass instance Aeson.ToJSON TxOutRef
 -- @ since 3.6.1
 deriving anyclass instance Aeson.FromJSON TxOutRef
 
+-- @ since 3.15.4
+deriving anyclass instance Aeson.ToJSON Credential
+
+-- @ since 3.15.4
+deriving anyclass instance Aeson.FromJSON Credential
+
 -- @ since 3.6.1
 deriving via
   (AsBase16Bytes CurrencySymbol)
@@ -231,6 +240,12 @@ deriving via
   instance
     (Aeson.FromJSON StakeValidator)
 
+-- @ since 3.15.4
+deriving anyclass instance (Aeson.ToJSON StakingCredential)
+
+-- @ since 3.15.4
+deriving anyclass instance (Aeson.FromJSON StakingCredential)
+
 -- @ since 3.6.1
 deriving via
   (AsBase16Bytes ScriptHash)
@@ -242,6 +257,16 @@ deriving via
   (AsBase16Bytes ScriptHash)
   instance
     (Aeson.FromJSON ScriptHash)
+
+deriving via
+  (AsBase16Bytes PubKeyHash)
+  instance
+    (Aeson.ToJSON PubKeyHash)
+
+deriving via
+  (AsBase16Bytes PubKeyHash)
+  instance
+    (Aeson.FromJSON PubKeyHash)
 
 -- @ since 3.6.1
 deriving via
