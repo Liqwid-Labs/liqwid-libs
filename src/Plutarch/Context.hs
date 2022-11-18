@@ -62,6 +62,12 @@ module Plutarch.Context (
   M.buildMinting,
   M.tryBuildMinting,
   M.checkMinting,
+  R.RewardingBuilder,
+  R.withRewarding,
+  R.buildRewarding',
+  CE.CertifyingBuilder,
+  CE.withCertifying,
+  CE.buildCertifying',
   T.TxInfoBuilder (..),
   T.spends,
   T.mints,
@@ -106,8 +112,10 @@ module Plutarch.Context (
 ) where
 
 import Plutarch.Context.Base qualified as B
+import Plutarch.Context.Certifying qualified as CE
 import Plutarch.Context.Check qualified as C
 import Plutarch.Context.Minting qualified as M
+import Plutarch.Context.Rewarding qualified as R
 import Plutarch.Context.Spending qualified as S
 import Plutarch.Context.SubBuilder qualified as Sub
 import Plutarch.Context.TxInfo qualified as T
