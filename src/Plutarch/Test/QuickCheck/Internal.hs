@@ -26,7 +26,7 @@ import Plutarch (
   PlutusType,
   S,
   Term,
-  TracingMode (DoTracing),
+  TracingMode (DoTracing, NoTracing),
   compile,
   pcon,
   pmatch,
@@ -68,7 +68,7 @@ import Plutarch.Extra.Maybe (
   pisDJust,
   pisJust,
  )
-import Plutarch.Lift (PUnsafeLiftDecl (PLifted), plift)
+import Plutarch.Lift (PUnsafeLiftDecl (PLifted), plift, plift')
 import Plutarch.Maybe (pfromJust)
 import Plutarch.Positive (PPositive, ptryPositive)
 import Plutarch.Prelude (
@@ -141,9 +141,27 @@ data TestableTerm (a :: S -> Type)
 data FailingTestableTerm (a :: S -> Type)
   = FailingTestableTerm (TestableTerm a)
 
--- | @since 2.0.0
+-- | @since 2.2.1
 instance Testable (TestableTerm PBool) where
-  property (TestableTerm t) = property (plift t)
+  property (TestableTerm t) =
+    case plift' (Config {tracingMode = NoTracing}) t of
+      Right p -> property p
+      Left _ ->
+        case compile (Config {tracingMode = DoTracing}) t of
+          Left err ->
+            counterexample ("Script failed to compile:\n" <> show err) $
+              property False
+          Right s ->
+            case evalScriptHuge s of
+              (Left err, _, trace) ->
+                counterexample
+                  ( "Script evaluated with an error:\n"
+                      <> show err
+                      <> "\nTrace:\n"
+                      <> show trace
+                  )
+                  $ property False
+              _ -> error "Unreachable"
 
 -- | @since 2.1.6
 instance Testable (TestableTerm POpaque) where
