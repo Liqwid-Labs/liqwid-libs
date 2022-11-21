@@ -2,6 +2,13 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 2.9.0 -- 2022-11-21
+
+### Modified
+
+* Made `buildTxInInfo` return `TxOutRef` with default value instead of Nothing
+  when given no TxId or TxIdx.
+
 ## 2.8.0 -- 2022-11-16
 
 Added builders for `Rewarding` and `Certifying` contexts.

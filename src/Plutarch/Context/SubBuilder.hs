@@ -10,7 +10,7 @@ module Plutarch.Context.SubBuilder (
 ) where
 
 import Data.Foldable (Foldable (toList))
-import Data.Maybe (mapMaybe)
+import Data.Maybe (fromMaybe, mapMaybe)
 import Optics (lens, view)
 import Plutarch.Context.Base (
   BaseBuilder,
@@ -61,15 +61,16 @@ instance Normalizer SubBuilder where
 buildTxOut :: UTXO -> TxOut
 buildTxOut = utxoToTxOut
 
-{- | Builds TxInInfo from `UTXO`.
+{- | Builds 'TxInInfo' from `UTXO`. If TxId or TxIdx is not set, this will use
+     a default value("" and 0, respectfully) to create the 'TxInInfo'.
 
- @since 2.0.0
+ @since 2.9.0
 -}
-buildTxInInfo :: UTXO -> Maybe TxInInfo
-buildTxInInfo u = do
-  txid <- view #txId u
-  txidx <- view #txIdx u
-  return $ TxInInfo (TxOutRef txid txidx) (utxoToTxOut u)
+buildTxInInfo :: UTXO -> TxInInfo
+buildTxInInfo u =
+  let txid = fromMaybe "" $ view #txId u
+      txidx = fromMaybe 0 $ view #txIdx u
+   in TxInInfo (TxOutRef txid txidx) (utxoToTxOut u)
 
 {- | Builds all TxOuts from given builder.
 
