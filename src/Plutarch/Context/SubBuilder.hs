@@ -62,7 +62,7 @@ buildTxOut :: UTXO -> TxOut
 buildTxOut = utxoToTxOut
 
 {- | Builds 'TxInInfo' from `UTXO`. If TxId or TxIdx is not set, this will use
-     a default value("" and 0, respectfully) to create the 'TxInInfo'.
+     a default value ("" and 0, respectively) to create the 'TxInInfo'.
 
  @since 2.9.0
 -}
