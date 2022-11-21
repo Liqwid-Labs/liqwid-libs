@@ -19,6 +19,10 @@ module Plutarch.Extra.Ord (
 
   -- * Functions
 
+  -- ** POrd functions
+  pmax,
+  pmin,
+
   -- ** Creating comparators
   pfromOrd,
   pfromOrdBy,
@@ -36,6 +40,8 @@ module Plutarch.Extra.Ord (
   plessThanBy,
   pgeqBy,
   pgreaterThanBy,
+  pmaxBy,
+  pminBy,
 
   -- *** Data structures
 
@@ -84,6 +90,7 @@ import Plutarch.Api.V1.Value (
   PTokenName,
   PValue,
  )
+import Plutarch.Bool (pif')
 import Plutarch.Extra.List (phandleList, precListLookahead)
 import Plutarch.Extra.Map (phandleMin)
 import Plutarch.Extra.Maybe (ptraceIfNothing)
@@ -99,6 +106,34 @@ import Plutarch.Lift (
  )
 import Plutarch.List (pconvertLists)
 import Plutarch.Unsafe (punsafeCoerce)
+
+{- | Return the minimum of two arguments.
+
+  @since 3.15.4
+-}
+pmin ::
+  forall (a :: S -> Type) (s :: S).
+  POrd a =>
+  Term s (a :--> a :--> a)
+pmin = phoistAcyclic $ plam $ \x y ->
+  pif'
+    # (x #<= y)
+    # x
+    # y
+
+{- | Return the maximum of two arguments.
+
+  @since 3.15.4
+-}
+pmax ::
+  forall (a :: S -> Type) (s :: S).
+  POrd a =>
+  Term s (a :--> a :--> a)
+pmax = phoistAcyclic $ plam $ \x y ->
+  pif'
+    # (x #<= y)
+    # y
+    # x
 
 {- | A representation of a comparison at the Plutarch level. Equivalent to
  'Ordering' in Haskell.
@@ -333,6 +368,36 @@ pgreaterThanBy = phoistAcyclic $
   plam $ \cmp x y ->
     pmatch cmp $ \(PComparator peq ple) ->
       pnot #$ (peq # x # y) #|| (ple # x # y)
+
+{- | Uses a 'PComparator' to return the minimum of two arguments
+
+   @since 3.15.4
+-}
+pminBy ::
+  forall (a :: S -> Type) (s :: S).
+  Term s (PComparator a :--> a :--> a :--> a)
+pminBy = phoistAcyclic $
+  plam $ \cmp x y ->
+    pmatch cmp $ \(PComparator _ ple) ->
+      pif'
+        # (ple # x # y)
+        # x
+        # y
+
+{- | Uses a 'PComparator' to return the maximum of two arguments
+
+     @since 3.15.4
+-}
+pmaxBy ::
+  forall (a :: S -> Type) (s :: S).
+  Term s (PComparator a :--> a :--> a :--> a)
+pmaxBy = phoistAcyclic $
+  plam $ \cmp x y ->
+    pmatch cmp $ \(PComparator _ ple) ->
+      pif'
+        # (ple # x # y)
+        # y
+        # x
 
 {- | Compares two sorted 'PMap's using a 'PComparator' on their values.
  Specifically, this returns 'PTrue' if, for any key in both argument 'PMap's,

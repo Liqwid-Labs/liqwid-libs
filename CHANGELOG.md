@@ -2,6 +2,13 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.15.4 -- 2022-11-21
+
+### Added
+
+* `pmax`, `pmin` operating on two terms with a `POrd` instance
+* `pmaxBy`, `pminBy`, taking a `PComparator` directly
+
 ## 3.15.3 -- 2022-11-17
 
 ### Added
