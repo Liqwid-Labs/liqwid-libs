@@ -2,6 +2,12 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.16.0 -- 2022-11-21
+
+### Added
+
+* `ToJSON` and `FromJSON` orphan instances for `PubKeyHash`.
+
 ## 3.15.4 -- 2022-11-21
 
 ### Added

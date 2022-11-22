@@ -34,6 +34,7 @@ import PlutusLedgerApi.V2 (
   LedgerBytes (LedgerBytes),
   MintingPolicy (MintingPolicy),
   POSIXTime (POSIXTime),
+  PubKeyHash (PubKeyHash),
   Script,
   ScriptHash (ScriptHash),
   StakeValidator (StakeValidator),
@@ -302,3 +303,15 @@ deriving via
   (AsBase16Codec Script)
   instance
     (Aeson.FromJSON Script)
+
+-- @ since 3.16.0
+deriving via
+  BuiltinByteString
+  instance
+    (Aeson.ToJSON PubKeyHash)
+
+-- @ since 3.16.0
+deriving via
+  BuiltinByteString
+  instance
+    (Aeson.FromJSON PubKeyHash)
