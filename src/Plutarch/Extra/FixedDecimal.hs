@@ -1,3 +1,5 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+
 module Plutarch.Extra.FixedDecimal (
   FixedDecimal (..),
   fixedNumerator,
@@ -21,6 +23,7 @@ module Plutarch.Extra.FixedDecimal (
   punsafeMkFixedDecimal,
 ) where
 
+import Control.Monad (guard)
 import Data.Proxy (Proxy (Proxy))
 import Data.Ratio ((%))
 import GHC.Real (Ratio ((:%)))
@@ -64,7 +67,44 @@ import qualified PlutusLedgerApi.V1 as PlutusTx
  @since 3.12.0
 -}
 newtype FixedDecimal (exp :: Natural) = FixedDecimal {numerator :: Integer}
-  deriving stock (Generic, Eq, Ord, Show)
+  deriving stock
+    ( -- | @since 3.12.0
+      Generic
+    , -- | @since 3.12.0
+      Eq
+    , -- | @since 3.12.0
+      Ord
+    , -- | @since 3.12.0
+      Show
+    )
+
+-- | @since 3.17.0
+instance (KnownNat exp) => PlutusTx.ToData (FixedDecimal exp) where
+  toBuiltinData (FixedDecimal n) =
+    PlutusTx.toBuiltinData
+      [ PlutusTx.toBuiltinData (integerVal @exp)
+      , PlutusTx.toBuiltinData n
+      ]
+
+-- | @since 3.17.0
+instance (KnownNat exp) => PlutusTx.FromData (FixedDecimal exp) where
+  fromBuiltinData dat = do
+    [tag, n] :: [PlutusTx.BuiltinData] <- PlutusTx.fromBuiltinData dat
+    let expected = integerVal @exp
+    tag' :: Integer <- PlutusTx.fromBuiltinData tag
+    guard (tag' == expected)
+    n' :: Integer <- PlutusTx.fromBuiltinData n
+    pure . FixedDecimal $ n'
+
+{- | This bypasses the check of @exp@ for speed. Only use this if you are
+ absolutely sure that you are deserializing with the right exponent.
+
+ @since 3.17.0
+-}
+instance PlutusTx.UnsafeFromData (FixedDecimal exp) where
+  unsafeFromBuiltinData dat = case PlutusTx.unsafeFromBuiltinData dat of
+    [_, n] -> FixedDecimal . PlutusTx.unsafeFromBuiltinData $ n
+    _ -> error "unsafeFromBuiltinData: Wrong form for FixedDecimal"
 
 {- | Integer numerator of 'FixedDecimal'
 
@@ -162,7 +202,7 @@ instance KnownNat n => Real (FixedDecimal n) where
      `1.23456 (123456 * 10 ^ -5)`. `PFixedDecimal 0` will be identical to `PInteger`.
 
      Note, `exp` is the negative exponent to base 10. 'PFixed' does not support
-     positive expoent.
+     positive exponent.
 
      Compared to 'PRational', 'PFixed' gives addition and subtraction
      as fast as regular 'PInteger', allows negative values, and does
@@ -197,23 +237,16 @@ newtype PFixedDecimal (exp :: Natural) (s :: S)
 instance forall (exp :: Natural). DerivePlutusType (PFixedDecimal exp) where
   type DPTStrat _ = PlutusTypeNewtype
 
-instance PUnsafeLiftDecl (PFixedDecimal unit) where
+-- | @since 3.17.0
+instance (KnownNat unit) => PUnsafeLiftDecl (PFixedDecimal unit) where
   type PLifted (PFixedDecimal unit) = FixedDecimal unit
 
-instance PConstantDecl (FixedDecimal unit) where
-  type PConstantRepr (FixedDecimal unit) = PConstantRepr Integer
+-- | @since 3.17.0
+instance (KnownNat unit) => PConstantDecl (FixedDecimal unit) where
+  type PConstantRepr (FixedDecimal unit) = PlutusTx.Data
   type PConstanted (FixedDecimal unit) = PFixedDecimal unit
-  pconstantToRepr (FixedDecimal x) = pconstantToRepr x
-  pconstantFromRepr x = FixedDecimal <$> pconstantFromRepr x
-
-deriving newtype instance
-  PlutusTx.ToData (FixedDecimal unit)
-
-deriving newtype instance
-  PlutusTx.FromData (FixedDecimal unit)
-
-deriving newtype instance
-  PlutusTx.UnsafeFromData (FixedDecimal unit)
+  pconstantToRepr = PlutusTx.toData
+  pconstantFromRepr = PlutusTx.fromData
 
 -- | @since 3.12.0
 instance forall (exp :: Natural). KnownNat exp => PShow (PFixedDecimal exp) where
@@ -453,3 +486,11 @@ punsafeMkFixedDecimal ::
   forall (exp :: Natural) (s :: S).
   Term s (PInteger :--> PFixedDecimal exp)
 punsafeMkFixedDecimal = plam punsafeCoerce
+
+-- Helpers
+
+integerVal ::
+  forall (n :: Natural).
+  (KnownNat n) =>
+  Integer
+integerVal = fromIntegral . natVal $ Proxy @n
