@@ -258,16 +258,6 @@ deriving via
   instance
     (Aeson.FromJSON ScriptHash)
 
-deriving via
-  (AsBase16Bytes PubKeyHash)
-  instance
-    (Aeson.ToJSON PubKeyHash)
-
-deriving via
-  (AsBase16Bytes PubKeyHash)
-  instance
-    (Aeson.FromJSON PubKeyHash)
-
 -- @ since 3.6.1
 deriving via
   Integer
