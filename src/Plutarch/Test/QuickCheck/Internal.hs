@@ -62,7 +62,7 @@ import Plutarch.Api.V2 (
   PPubKeyHash (PPubKeyHash),
   PStakingCredential (PStakingHash, PStakingPtr),
  )
-import Plutarch.Evaluate (evalScriptHuge)
+import Plutarch.Evaluate (evalScriptHuge, evalTerm)
 import Plutarch.Extra.Maybe (
   pfromDJust,
   pisDJust,
@@ -166,13 +166,11 @@ instance Testable (TestableTerm PBool) where
 -- | @since 2.1.6
 instance Testable (TestableTerm POpaque) where
   property (TestableTerm t) =
-    case compile (Config {tracingMode = DoTracing}) t of
-      Left err ->
-        counterexample ("Script failed to compile:\n" <> show err) $
-          property False
-      Right script ->
-        case evalScriptHuge script of
-          (Left err, _, trace) ->
+    case evalTerm (Config {tracingMode = NoTracing}) t of
+      Right (Right _, _, _) -> property True
+      Right (Left _, _, _) ->
+        case evalTerm (Config {tracingMode = DoTracing}) t of
+          Right (Left err, _, trace) ->
             counterexample
               ( "Script evaluated with an error:\n"
                   <> show err
@@ -180,22 +178,22 @@ instance Testable (TestableTerm POpaque) where
                   <> show trace
               )
               $ property False
-          (Right _, _, _) ->
-            property True
+          _ -> error "Unreachable"
+      Left err ->
+        counterexample ("Script failed to compile:\n" <> show err) $
+          property False
 
 -- | @since 2.1.6
 instance Testable (FailingTestableTerm a) where
   property (FailingTestableTerm (TestableTerm t)) =
-    case compile (Config {tracingMode = DoTracing}) t of
+    case evalTerm (Config {tracingMode = NoTracing}) t of
+      Right (Right _, _, _) ->
+        counterexample "Script ran successfully when it is expected to fail" $
+          property False
+      Right (Left _, _, _) -> property True
       Left err ->
         counterexample ("Script failed to compile:\n" <> show err) $
           property False
-      Right script ->
-        case evalScriptHuge script of
-          (Left _, _, _) -> property True
-          (Right _, _, _) ->
-            counterexample "Script ran successfully when it is expected to fail" $
-              property False
 
 {- | Converts a 'TestableTerm' into a 'ClosedTerm'.
 
