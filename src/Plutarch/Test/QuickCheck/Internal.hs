@@ -10,6 +10,7 @@
 module Plutarch.Test.QuickCheck.Internal (
   TestableTerm (..),
   unTestableTerm,
+  FailingTestableTerm (..),
   PArbitrary (..),
   PCoArbitrary (..),
   pconstantT,
@@ -18,13 +19,15 @@ module Plutarch.Test.QuickCheck.Internal (
 
 import Data.ByteString (ByteString)
 import qualified Data.Text as T (intercalate, pack, unpack)
+import Data.Word (Word8)
 import qualified GHC.Exts as Exts (IsList (fromList, toList))
 import Plutarch (
-  Config (..),
+  Config (Config, tracingMode),
+  POpaque,
   PlutusType,
   S,
   Term,
-  TracingMode (DoTracing),
+  TracingMode (DoTracing, NoTracing),
   compile,
   pcon,
   pmatch,
@@ -56,17 +59,20 @@ import Plutarch.Api.V2 (
   AmountGuarantees (NoGuarantees),
   KeyGuarantees (Unsorted),
   PAddress (PAddress),
+  PDatumHash (PDatumHash),
   PMaybeData (PDJust, PDNothing),
   PPubKeyHash (PPubKeyHash),
   PStakingCredential (PStakingHash, PStakingPtr),
+  PTxId (PTxId),
+  PTxOutRef (PTxOutRef),
  )
-import Plutarch.Evaluate (evalScript)
+import Plutarch.Evaluate (evalScriptHuge, evalTerm)
 import Plutarch.Extra.Maybe (
   pfromDJust,
   pisDJust,
   pisJust,
  )
-import Plutarch.Lift (PUnsafeLiftDecl (PLifted), plift)
+import Plutarch.Lift (PUnsafeLiftDecl (PLifted), plift, plift')
 import Plutarch.Maybe (pfromJust)
 import Plutarch.Num (pabs)
 import Plutarch.Positive (PPositive, ptryPositive)
@@ -111,17 +117,16 @@ import Test.QuickCheck (
   Gen,
   Testable (property),
   chooseInt,
+  chooseInteger,
+  counterexample,
   elements,
   frequency,
   functionMap,
+  listOf,
   sized,
   variant,
   vectorOf,
  )
-
--- | @since 2.0.0
-instance Testable (TestableTerm PBool) where
-  property (TestableTerm t) = property (plift t)
 
 {- | TestableTerm is a wrapper for closed Plutarch terms. This
      abstraction allows Plutarch values to be generated via QuickCheck
@@ -135,6 +140,67 @@ instance Testable (TestableTerm PBool) where
 -}
 data TestableTerm (a :: S -> Type)
   = TestableTerm (forall (s :: S). Term s a)
+
+{- | Wrapper around the 'TestableTerm' that expect failure.
+
+ @since 2.1.6
+-}
+data FailingTestableTerm (a :: S -> Type)
+  = FailingTestableTerm (TestableTerm a)
+
+-- | @since 2.2.1
+instance Testable (TestableTerm PBool) where
+  property (TestableTerm t) =
+    case plift' (Config {tracingMode = NoTracing}) t of
+      Right p -> property p
+      Left _ ->
+        case compile (Config {tracingMode = DoTracing}) t of
+          Left err ->
+            counterexample ("Script failed to compile:\n" <> show err) $
+              property False
+          Right s ->
+            case evalScriptHuge s of
+              (Left err, _, trace) ->
+                counterexample
+                  ( "Script evaluated with an error:\n"
+                      <> show err
+                      <> "\nTrace:\n"
+                      <> show trace
+                  )
+                  $ property False
+              _ -> error "Unreachable"
+
+-- | @since 2.1.6
+instance Testable (TestableTerm POpaque) where
+  property (TestableTerm t) =
+    case evalTerm (Config {tracingMode = NoTracing}) t of
+      Right (Right _, _, _) -> property True
+      Right (Left _, _, _) ->
+        case evalTerm (Config {tracingMode = DoTracing}) t of
+          Right (Left err, _, trace) ->
+            counterexample
+              ( "Script evaluated with an error:\n"
+                  <> show err
+                  <> "\nTrace:\n"
+                  <> show trace
+              )
+              $ property False
+          _ -> error "Unreachable"
+      Left err ->
+        counterexample ("Script failed to compile:\n" <> show err) $
+          property False
+
+-- | @since 2.1.6
+instance Testable (FailingTestableTerm a) where
+  property (FailingTestableTerm (TestableTerm t)) =
+    case evalTerm (Config {tracingMode = NoTracing}) t of
+      Right (Right _, _, _) ->
+        counterexample "Script ran successfully when it is expected to fail" $
+          property False
+      Right (Left _, _, _) -> property True
+      Left err ->
+        counterexample ("Script failed to compile:\n" <> show err) $
+          property False
 
 {- | Converts a 'TestableTerm' into a 'ClosedTerm'.
 
@@ -168,7 +234,7 @@ instance PShow a => Show (TestableTerm a) where
       ptraceError
         (pshow term) of
       Left err -> show err
-      Right (evalScript -> (_, _, trace)) ->
+      Right (evalScriptHuge -> (_, _, trace)) ->
         T.unpack . T.intercalate " " $ trace
 
 {- | PArbitrary is the Plutarch equivalent of the `Arbitrary` typeclass from
@@ -315,10 +381,10 @@ instance PArbitrary a => PArbitrary (PMaybe a) where
       ]
   pshrink (TestableTerm x)
     | plift $ pisJust # x =
-        TestableTerm (pcon PNothing) :
-          [ TestableTerm $ pcon $ PJust a
-          | (TestableTerm a) <- shrink (TestableTerm $ pfromJust # x)
-          ]
+        TestableTerm (pcon PNothing)
+          : [ TestableTerm $ pcon $ PJust a
+            | (TestableTerm a) <- shrink (TestableTerm $ pfromJust # x)
+            ]
     | otherwise = []
 
 instance PCoArbitrary a => PCoArbitrary (PMaybe a) where
@@ -339,10 +405,10 @@ instance (PIsData a, PArbitrary a) => PArbitrary (PMaybeData a) where
       ]
   pshrink (TestableTerm x)
     | plift $ pisDJust # x =
-        pconT (PDNothing pdnil) :
-          [ TestableTerm $ pcon $ PDJust $ pdcons @"_0" # pdata a # pdnil
-          | (TestableTerm a) <- shrink (TestableTerm $ pfromDJust # x)
-          ]
+        pconT (PDNothing pdnil)
+          : [ TestableTerm $ pcon $ PDJust $ pdcons @"_0" # pdata a # pdnil
+            | (TestableTerm a) <- shrink (TestableTerm $ pfromDJust # x)
+            ]
     | otherwise = []
 
 instance (PIsData a, PCoArbitrary a) => PCoArbitrary (PMaybeData a) where
@@ -545,7 +611,7 @@ instance
     where
       unMap = flip pmatchT $ \(PMap a) -> a
 
--- | @since 2.0.0
+-- | @since 2.2.2
 instance PArbitrary PPOSIXTime where
   parbitrary = do
     TestableTerm x <- parbitrary
@@ -610,6 +676,13 @@ instance
         PInterval $
           pdcons @"from" # pdata lo #$ pdcons @"to" # pdata up # pdnil
 
+-- | @since 2.2.2
+instance PArbitrary PDatumHash where
+  parbitrary = do
+    -- PDatumHash should be 32 bytes long
+    bs <- genByteString 32
+    return . pconT $ PDatumHash $ pconstant bs
+
 -- | @since 2.0.0
 instance PArbitrary PPubKeyHash where
   parbitrary = do
@@ -641,21 +714,54 @@ instance PArbitrary PCredential where
       , pconT $ PPubKeyCredential $ pdcons @"_0" # pdata pk # pdnil
       ]
 
--- | @since 2.0.0
+-- | @since 2.2.2
+instance PArbitrary PTxId where
+  parbitrary = do
+    -- PTxId should be 32 bytes long
+    bs <- genByteString 32
+    pure . pconT $ PTxId $ pdcons @"_0" # pdata (pconstant bs) # pdnil
+
+-- | @since 2.2.2
+instance PArbitrary PTxOutRef where
+  parbitrary = do
+    TestableTerm id' <- parbitrary
+    TestableTerm idx <- abs <$> parbitrary
+    pure . pconT $ PTxOutRef $ pdcons # pdata id' #$ pdcons # pdata idx # pdnil
+  pshrink ref = do
+    let (TestableTerm ref') = ref
+    TestableTerm idx' <- pshrink $ TestableTerm $ pfield @"idx" # ref'
+    pure . pconT $
+      PTxOutRef $
+        pdcons
+          # (pfield @"id" # ref')
+          #$ pdcons
+          # idx'
+          # pdnil
+
+-- | @since 2.2.2
 instance PArbitrary PStakingCredential where
   parbitrary = do
     (TestableTerm cred) <- parbitrary
-    (TestableTerm x) <- parbitrary
-    (TestableTerm y) <- parbitrary
-    (TestableTerm z) <- parbitrary
+    (TestableTerm x) <- go
+    (TestableTerm y) <- go
+    (TestableTerm z) <- go
     elements
       [ pconT $ PStakingHash $ pdcons @"_0" # pdata cred # pdnil
       , pconT $
           PStakingPtr $
-            pdcons @"_0" # pdata x
-              #$ pdcons @"_1" # pdata y
-              #$ pdcons @"_2" # pdata z # pdnil
+            pdcons @"_0"
+              # pdata x
+              #$ pdcons @"_1"
+              # pdata y
+              #$ pdcons @"_2"
+              # pdata z
+              # pdnil
       ]
+    where
+      -- This is needed because StakingPtr indexes are meant to be bounded to the
+      -- Word64 range.
+      go :: Gen (TestableTerm PInteger)
+      go = pconstantT <$> chooseInteger (0, 18_446_744_073_709_551_615)
 
 -- | @since 2.0.0
 instance PArbitrary PAddress where
@@ -665,8 +771,11 @@ instance PArbitrary PAddress where
     return $
       pconT $
         PAddress $
-          pdcons @"credential" # pdata cred
-            #$ pdcons @"stakingCredential" # pdata scred # pdnil
+          pdcons @"credential"
+            # pdata cred
+            #$ pdcons @"stakingCredential"
+            # pdata scred
+            # pdnil
 
 -- | @since 2.0.0
 instance PArbitrary PCurrencySymbol where
@@ -674,12 +783,26 @@ instance PArbitrary PCurrencySymbol where
     (TestableTerm cs) <- parbitrary
     return $ pconT $ PCurrencySymbol cs
 
--- | @since 2.0.0
+{- | This generates only those 'PTokenName's that correspond to ASCII strings.
+ This is somewhat limited, but otherwise would require UTF-8 encoding as part
+ of the generator.
+
+ Unlike the equivalent Haskell type generator, this instance does not shrink.
+ While somewhat suboptimal, this would require either a lot of lifting or
+ \'lowering\' back into Haskell for the shrink.
+
+ @since 2.2.2
+-}
 instance PArbitrary PTokenName where
   parbitrary = do
-    len <- chooseInt (1, 32)
-    tn <- genByteString len
-    return $ pconT $ PTokenName $ pconstant tn
+    asList <- listOf genAsciiByte
+    let bs = Exts.fromList asList
+    pure . pconT $ PTokenName $ pconstant bs
+    where
+      -- This generates only those bytes which are readable (so, not control
+      -- sequences)
+      genAsciiByte :: Gen Word8
+      genAsciiByte = fromIntegral <$> chooseInt (32, 126)
 
 -- | @since 2.0.0
 instance PArbitrary (PValue 'Unsorted 'NoGuarantees) where
@@ -860,5 +983,6 @@ coArbitraryPListLike ::
 coArbitraryPListLike (TestableTerm x)
   | plift (pnull # x) = variant (0 :: Integer)
   | otherwise =
-      variant (1 :: Integer) . pcoarbitrary (TestableTerm $ phead # x)
+      variant (1 :: Integer)
+        . pcoarbitrary (TestableTerm $ phead # x)
         . pcoarbitrary (TestableTerm $ ptail # x)

@@ -15,6 +15,9 @@ module Plutarch.Test.QuickCheck (
   punlam',
   punlam,
   fromPFun,
+  fromPPartial,
+  fromFailingPPartial,
+  pexpectFailure,
   haskEquiv',
   haskEquiv,
   shrinkPLift,
@@ -28,6 +31,11 @@ module Plutarch.Test.QuickCheck (
   uplcEq,
   Equality (..),
   Partiality (..),
+  PWrapLam,
+  PUnLamHask,
+  PLamWrapped,
+  FromPFun,
+  NotPLam,
   shouldCrash,
   shouldRun,
 ) where
@@ -49,6 +57,7 @@ import Plutarch.Prelude (
   PInteger,
   PIsData,
   PLift,
+  POpaque,
   POrd,
   PPartialOrd,
   PlutusType,
@@ -71,6 +80,7 @@ import Plutarch.Test.QuickCheck.Function (
  )
 import Plutarch.Test.QuickCheck.Helpers (loudEval)
 import Plutarch.Test.QuickCheck.Internal (
+  FailingTestableTerm (..),
   PArbitrary (..),
   PCoArbitrary (..),
   TestableTerm (..),
@@ -156,6 +166,13 @@ type family IsLam (h :: Type) :: Bool where
 type family IsLast (h :: Type) :: Bool where
   IsLast (_ -> _) = 'False
   IsLast _ = 'True
+
+{- | Ensure given 'PType'('S -> Type') ir not an arrow. This is very useful
+     when using ambiguous type variable.
+
+ @since 2.2.0
+-}
+type NotPLam (p :: S -> Type) = IsLam (TestableTerm p) ~ 'False
 
 -- Helper for type error.
 -- Empty constraint when all arguments/return are TestableTerm
@@ -248,10 +265,10 @@ type family CheckReturn (fin :: S -> Type) (p :: S -> Type) :: Constraint where
     , TypeError
         ( 'Text "Return type does not match:"
             ':$$: 'Text "\tExpected \""
-            ':<>: 'ShowType a
-            ':<>: 'Text "\" but given function returns \""
-            ':<>: 'ShowType b
-            ':<>: 'Text "\""
+              ':<>: 'ShowType a
+              ':<>: 'Text "\" but given function returns \""
+              ':<>: 'ShowType b
+              ':<>: 'Text "\""
         )
     )
 
@@ -309,6 +326,15 @@ punlam ::
   PUnLamHask fin p
 punlam pf = punlam' @fin (loudEval pf)
 
+{- | Constraint for 'fromPFun'.
+
+ @since 2.2.0
+-}
+type FromPFun (end :: S -> Type) (a :: S -> Type) =
+  ( PUnLam end a
+  , PWrapLam (PUnLamHask end a)
+  )
+
 {- | "Converts a Plutarch function into a Haskell function on
      'TestableTerm's, then wraps functions into 'PFun' as
      necessary. The result will be 'Quickcheck-compatible' if all
@@ -318,12 +344,74 @@ punlam pf = punlam' @fin (loudEval pf)
 -}
 fromPFun ::
   forall (p :: S -> Type).
-  ( PUnLam PBool p
-  , PWrapLam (PUnLamHask PBool p)
-  ) =>
+  FromPFun PBool p =>
   ClosedTerm p ->
   PLamWrapped (PUnLamHask PBool p)
 fromPFun pf = pwrapLam $ punlam @PBool pf
+
+{- | Same as 'fromPFun' but it expects 'POpaque' as the return type. It is
+     helpful testing partial functions like 'PValidator'.
+
+ @since 2.1.6
+-}
+fromPPartial ::
+  forall (p :: S -> Type).
+  FromPFun POpaque p =>
+  ClosedTerm p ->
+  PLamWrapped (PUnLamHask POpaque p)
+fromPPartial pf = pwrapLam $ punlam @POpaque pf
+
+-- Makes return type 'FailingTestableTerm' to make QC look for fails instead
+-- of successes.
+type family PExpectingFail (a :: Type) where
+  PExpectingFail (TestableTerm a) = FailingTestableTerm a
+  PExpectingFail (TestableTerm a -> b) = TestableTerm a -> PExpectingFail b
+
+class PExpectFailure' (a :: Type) (last :: Bool) where
+  pexpectFailure' :: a -> PExpectingFail a
+
+instance PExpectFailure' (TestableTerm a) 'True where
+  pexpectFailure' = FailingTestableTerm
+
+instance
+  forall (a :: Type) (b :: Type).
+  ( PExpectFailure' b (IsLast b)
+  , PExpectingFail (a -> b) ~ (a -> PExpectingFail b)
+  ) =>
+  PExpectFailure' (a -> b) 'False
+  where
+  pexpectFailure' f x = pexpectFailure' @b @(IsLast b) $ f x
+
+type PExpectFailure a = (PExpectFailure' a (IsLast a))
+
+{- | Mark testable function to expect failing case. Unlike `expectFailure` from
+     QC, this will *not* abort after encountering one failing. Instead, it will
+     run for all cases and make sure all cases fail. This can accept any
+     Plutarch types.
+
+ @since 2.1.6
+-}
+pexpectFailure ::
+  forall (a :: Type).
+  PExpectFailure a =>
+  a ->
+  PExpectingFail a
+pexpectFailure =
+  pexpectFailure' @a @(IsLast a)
+
+{- | Same as 'fromPPartial' but it test for failure instead of successes.
+
+ @since 2.1.6
+-}
+fromFailingPPartial ::
+  forall (p :: S -> Type).
+  ( PUnLam POpaque p
+  , PWrapLam (PUnLamHask POpaque p)
+  , PExpectFailure (PLamWrapped (PUnLamHask POpaque p))
+  ) =>
+  ClosedTerm p ->
+  PExpectingFail (PLamWrapped (PUnLamHask POpaque p))
+fromFailingPPartial pf = pexpectFailure $ pwrapLam $ punlam @POpaque pf
 
 {- | Ways an Plutarch terms can be compared.
      @OnPEq@ uses Plutarch `PEq` instance to compare give terms. This
@@ -442,7 +530,9 @@ instance
   where
   haskEquiv h (TestableTerm p) _ =
     counterexample "Comparison by PEq Failed" $
-      property $ plift $ p #== pconstant h
+      property $
+        plift $
+          p #== pconstant h
 
 -- | @since 2.1.0
 instance
@@ -452,7 +542,8 @@ instance
   where
   haskEquiv h (TestableTerm p) _ =
     counterexample "Comparison by PData Failed" $
-      property $ plift (pdata p #== pdata (pconstant h))
+      property $
+        plift (pdata p #== pdata (pconstant h))
 
 -- | @since 2.1.0
 instance
