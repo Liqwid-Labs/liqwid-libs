@@ -2,6 +2,28 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 2.2.2 -- 2022-10-27
+
+### Added
+
+* `PArbitrary` for `PDatumHash`, which agrees with the `DatumHash` instance in
+  `Instances`.
+* `PArbitrary` for `PTxId`, which agrees with the `TxId` instance in
+  `Instances`.
+* `PArbitrary` for `PTxOutRef`, which agrees with the `TxOutRef` instance in
+  `Instances`.
+
+### Modified
+
+* `PArbitrary` for `PPOSIXTime` now generates only non-negative values, in
+  agreement with the `POSIXTime` instance in `Instances`.
+* `PArbitrary` for `PStakingCredential` now ensures that `PStakingPtr` values
+  are bounded to the `Word64` range, in agreement with the `StakingCredential`
+  instance in `Instances`.
+* `PArbitrary` for `PTokenName` now emits only ASCII strings, in agreement with
+  the `TokenName` instance in `Instances`. Unlike the `TokenName` instance,
+  `PArbitrary` for `PTokenName` does not shrink.
+
 ## 2.2.1 -- 2022-11-21
 
 ## Modified
