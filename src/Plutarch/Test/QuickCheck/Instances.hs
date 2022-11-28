@@ -31,7 +31,6 @@ import PlutusLedgerApi.V2 (
   TxId (TxId),
   TxOut (TxOut, txOutAddress, txOutDatum, txOutReferenceScript, txOutValue),
   TxOutRef (TxOutRef, txOutRefId, txOutRefIdx),
-  ValidatorHash (ValidatorHash),
   builtinDataToData,
   dataToBuiltinData,
   fromBuiltin,
@@ -48,7 +47,7 @@ import Test.QuickCheck (
   functionMap,
   getNonNegative,
  )
-import qualified Test.QuickCheck.Gen as Gen
+import Test.QuickCheck.Gen qualified as Gen
 
 -- | @since 2.1.3
 instance Arbitrary BuiltinByteString where
@@ -287,7 +286,7 @@ instance Function Credential where
     Left pkh -> PubKeyCredential pkh
     Right vh -> ScriptCredential vh
     where
-      into :: Credential -> Either PubKeyHash ValidatorHash
+      into :: Credential -> Either PubKeyHash ScriptHash
       into = \case
         PubKeyCredential pkh -> Left pkh
         ScriptCredential vh -> Right vh
@@ -304,21 +303,6 @@ deriving via DatumHash instance CoArbitrary TxId
 
 -- | @since 2.1.3
 instance Function TxId where
-  {-# INLINEABLE function #-}
-  function = functionMap (coerce @_ @BuiltinByteString) coerce
-
-{- | This is based on 'ValidatorHash' being a Blake2b-224 hash, which is 28 bytes
- long. This type does not shrink, as it wouldn't really make much sense to.
-
- @since 2.1.3
--}
-deriving via PubKeyHash instance Arbitrary ValidatorHash
-
--- | @since 2.1.3
-deriving via PubKeyHash instance CoArbitrary ValidatorHash
-
--- | @since 2.1.3
-instance Function ValidatorHash where
   {-# INLINEABLE function #-}
   function = functionMap (coerce @_ @BuiltinByteString) coerce
 

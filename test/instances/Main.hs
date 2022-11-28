@@ -5,7 +5,7 @@ import GHC.IO.Encoding (setLocaleEncoding, utf8)
 import Plutarch.Test.QuickCheck.Instances ()
 import Test.Tasty (adjustOption, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (QuickCheckTests)
-import qualified Value
+import Value qualified
 
 main :: IO ()
 main = do

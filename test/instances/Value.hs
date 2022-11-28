@@ -3,7 +3,7 @@ module Value (properties) where
 import Helpers (failProperty, sortedUnique)
 import Plutarch.Test.QuickCheck.Modifiers (GenValue (GenValue))
 import PlutusLedgerApi.V2 (TokenName, Value (Value))
-import qualified PlutusTx.AssocMap as AssocMap
+import PlutusTx.AssocMap qualified as AssocMap
 import Test.QuickCheck (
   Arbitrary (arbitrary, shrink),
   NonNegative (NonNegative),

@@ -76,16 +76,16 @@ hreverse [] = []
 propCorrect :: Property
 propCorrect =
   haskEquiv'
-    @( 'OnPEq)
-    @( 'ByComplete)
+    @('OnPEq)
+    @('ByComplete)
     hreverse
     (preverseCorrect @PBuiltinList @PInteger)
 
 propWrong :: Property
 propWrong =
   haskEquiv'
-    @( 'OnPEq)
-    @( 'ByComplete)
+    @('OnPEq)
+    @('ByComplete)
     hreverse
     (preverseWrong @PBuiltinList @PInteger)
 
@@ -96,8 +96,8 @@ propWrong =
 propCustom :: Property
 propCustom =
   haskEquiv
-    @( 'OnPEq)
-    @( 'ByComplete)
+    @('OnPEq)
+    @('ByComplete)
     hreverse
     (TestableTerm preverseCorrect)
     (genList :* Nil)
