@@ -727,13 +727,12 @@ instance PArbitrary PTxOutRef where
     TestableTerm id' <- parbitrary
     TestableTerm idx <- abs <$> parbitrary
     pure . pconT $ PTxOutRef $ pdcons # pdata id' #$ pdcons # pdata idx # pdnil
-  pshrink ref = do
-    let (TestableTerm ref') = ref
-    TestableTerm idx' <- pshrink $ TestableTerm $ pfield @"idx" # ref'
+  pshrink (TestableTerm ref) = do
+    TestableTerm idx' <- pshrink $ TestableTerm $ pfield @"idx" # ref
     pure . pconT $
       PTxOutRef $
         pdcons
-          # (pfield @"id" # ref')
+          # (pfield @"id" # ref)
           #$ pdcons
           # idx'
           # pdnil
