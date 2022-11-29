@@ -28,7 +28,7 @@ import Plutarch.Lift (
 import Plutarch.Num (PNum)
 import Plutarch.TryFrom (PTryFrom (PTryFromExcess, ptryFrom'))
 import Plutarch.Unsafe (punsafeCoerce)
-import qualified PlutusTx
+import PlutusTx qualified
 
 {- | Plutarch-level 'Tagged'. @PTagged@ allows one to "tag" a given type at the type level.
  Typically, @tag@ will be a 'Symbol', or some other custom kind. Since @PTagged@s only act

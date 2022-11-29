@@ -3,11 +3,11 @@ import Test.Tasty (defaultMain, testGroup)
 
 --------------------------------------------------------------------------------
 
-import qualified Spec.Extra.List as List
-import qualified Spec.Extra.Map as Map
+import Spec.Extra.List qualified as List
+import Spec.Extra.Map qualified as Map
 
 -- import qualified Spec.Extra.MultiSig as MultiSig
-import qualified Spec.Extra.Traversable as Traversable
+import Spec.Extra.Traversable qualified as Traversable
 
 --------------------------------------------------------------------------------
 

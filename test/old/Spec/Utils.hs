@@ -12,11 +12,11 @@ module Spec.Utils (
   genValue,
 ) where
 
-import qualified Data.Bifunctor as Bifunctor
-import qualified Data.ByteString.Char8 as C (ByteString, pack)
+import Data.Bifunctor qualified as Bifunctor
+import Data.ByteString.Char8 qualified as C (ByteString, pack)
 import Data.ByteString.Hash (sha2_256)
 import Data.List (sortBy)
-import qualified Data.Set as S
+import Data.Set qualified as S
 import PlutusLedgerApi.V1 (
   BuiltinByteString,
   CurrencySymbol (..),
@@ -25,8 +25,8 @@ import PlutusLedgerApi.V1 (
   toBuiltin,
  )
 import PlutusLedgerApi.V1.Value (AssetClass (..))
-import qualified PlutusLedgerApi.V1.Value as Value
-import qualified PlutusTx.AssocMap as AssocMap
+import PlutusLedgerApi.V1.Value qualified as Value
+import PlutusTx.AssocMap qualified as AssocMap
 import Test.QuickCheck (
   Arbitrary (arbitrary, shrink),
   Gen,

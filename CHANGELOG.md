@@ -2,12 +2,17 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.20.0 -- 2022-12-03
+
+### Modified
+
+* Bumped Plutarch to 1.3.0.
 
 ## 3.19.1 -- 2022-12-05
 
 ### Added
 
-- `AsBase16Codec`-based `ToJSON`, `FromJSON` instances for `Datum` 
+- `AsBase16Codec`-based `ToJSON`, `FromJSON` instances for `Datum`
 
 ### Modified
 
@@ -31,7 +36,7 @@ confusion.
 * `pcurrentTime` -> `pgetFullyBoundedTimeRange`
 * `currentTime` -> `fullyBoundedTimeRangeFromValidRange`
 * `passertCurrentTime` -> `passertFullyBoundedTimeRange`
-* `pisWithinCurrentTime` -> `pisWithinTimeRange` 
+* `pisWithinCurrentTime` -> `pisWithinTimeRange`
 * `pisCurrentTimeWithin` -> `pisTimeRangeWithin`
 * `pcurrentTimeDuration` -> `ptimeRangeDuration`
 

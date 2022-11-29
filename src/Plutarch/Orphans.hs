@@ -11,8 +11,8 @@ module Plutarch.Orphans () where
 
 import Codec.Serialise (Serialise, deserialiseOrFail, serialise)
 import Data.Aeson ((.:), (.=), (<?>))
-import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (JSONPathElement (Key), Parser, parserThrowError)
+import Data.Aeson qualified as Aeson
 import Data.ByteString.Lazy (fromStrict, toStrict)
 import Data.Coerce (Coercible, coerce)
 import Data.Ratio (Ratio, denominator, numerator, (%))
@@ -27,6 +27,9 @@ import Plutarch.Unsafe (punsafeCoerce)
 
 --------------------------------------------------------------------------------
 
+import Data.ByteString.Short (fromShort, toShort)
+import Data.Functor ((<&>))
+import Plutarch.Script (Script, deserialiseScript, serialiseScript)
 import PlutusLedgerApi.V1.Bytes (bytes, encodeByteString, fromHex)
 import PlutusLedgerApi.V2 (
   BuiltinByteString,
@@ -36,10 +39,8 @@ import PlutusLedgerApi.V2 (
   Data (I, List),
   Datum,
   LedgerBytes (LedgerBytes),
-  MintingPolicy (MintingPolicy),
   POSIXTime (POSIXTime),
   PubKeyHash (PubKeyHash),
-  Script,
   ScriptHash (ScriptHash),
   StakeValidator (StakeValidator),
   StakeValidatorHash (StakeValidatorHash),
@@ -47,8 +48,6 @@ import PlutusLedgerApi.V2 (
   TokenName (TokenName),
   TxId (TxId),
   TxOutRef,
-  Validator (Validator),
-  ValidatorHash (ValidatorHash),
  )
 import PlutusTx (FromData (fromBuiltinData), ToData (toBuiltinData))
 
@@ -74,19 +73,6 @@ instance PTryFrom PData (PAsData PDatumHash) where
 
 -- | @since 3.0.3
 instance PTryFrom PData (PAsData PUnit)
-
--- | @since 3.0.3
-instance PTryFrom PData (PAsData PScriptHash) where
-  type PTryFromExcess PData (PAsData PScriptHash) = Flip Term PScriptHash
-  ptryFrom' opq = runTermCont $ do
-    unwrapped <- pfromData . fst <$> ptryFromC @(PAsData PByteString) opq
-    tcont $ \f ->
-      pif
-        -- Blake2b_224 hash: 224 bits/28 bytes.
-        (plengthBS # unwrapped #== 28)
-        (f ())
-        (ptraceError "ptryFrom(PScriptHash): must be 28 bytes long")
-    pure (punsafeCoerce opq, pcon $ PScriptHash unwrapped)
 
 ----------------------------------------
 -- Instances for Ratios
@@ -225,42 +211,6 @@ deriving via
 
 -- @ since 3.6.1
 deriving via
-  (AsBase16Bytes ValidatorHash)
-  instance
-    (Aeson.ToJSON ValidatorHash)
-
--- @ since 3.6.1
-deriving via
-  (AsBase16Bytes ValidatorHash)
-  instance
-    (Aeson.FromJSON ValidatorHash)
-
--- @ since 3.6.1
-deriving via
-  (AsBase16Bytes StakeValidatorHash)
-  instance
-    (Aeson.ToJSON StakeValidatorHash)
-
--- @ since 3.6.1
-deriving via
-  (AsBase16Bytes StakeValidatorHash)
-  instance
-    (Aeson.FromJSON StakeValidatorHash)
-
--- @ since 3.6.1
-deriving via
-  (AsBase16Codec StakeValidator)
-  instance
-    (Aeson.ToJSON StakeValidator)
-
--- @ since 3.6.1
-deriving via
-  (AsBase16Codec StakeValidator)
-  instance
-    (Aeson.FromJSON StakeValidator)
-
--- @ since 3.6.1
-deriving via
   (AsBase16Bytes ScriptHash)
   instance
     (Aeson.ToJSON ScriptHash)
@@ -296,40 +246,20 @@ deriving via
     (Aeson.FromJSON BuiltinByteString)
 
 -- @ since 3.6.1
-deriving via
-  (AsBase16Codec Validator)
-  instance
-    (Aeson.ToJSON Validator)
+instance Aeson.ToJSON Script where
+  toJSON =
+    Aeson.String
+      . encodeByteString
+      . fromShort
+      . serialiseScript
 
 -- @ since 3.6.1
-deriving via
-  (AsBase16Codec Validator)
-  instance
-    (Aeson.FromJSON Validator)
-
--- @ since 3.6.1
-deriving via
-  (AsBase16Codec MintingPolicy)
-  instance
-    (Aeson.ToJSON MintingPolicy)
-
--- @ since 3.6.1
-deriving via
-  (AsBase16Codec MintingPolicy)
-  instance
-    (Aeson.FromJSON MintingPolicy)
-
--- @ since 3.6.1
-deriving via
-  (AsBase16Codec Script)
-  instance
-    (Aeson.ToJSON Script)
-
--- @ since 3.6.1
-deriving via
-  (AsBase16Codec Script)
-  instance
-    (Aeson.FromJSON Script)
+instance Aeson.FromJSON Script where
+  parseJSON v =
+    Aeson.parseJSON @Text v
+      <&> deserialiseScript
+        . toShort
+        . encodeUtf8
 
 -- @ since 3.16.0
 deriving via

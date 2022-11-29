@@ -44,7 +44,7 @@ import Plutarch.Num (
 import Plutarch.Rational (PFractional (pfromRational, precip, (#/)))
 import Plutarch.Show (pshow')
 import Plutarch.Unsafe (punsafeCoerce)
-import qualified PlutusLedgerApi.V1 as PlutusTx
+import PlutusLedgerApi.V1 qualified as PlutusTx
 
 ------ Haskell
 

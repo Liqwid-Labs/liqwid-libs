@@ -5,13 +5,13 @@ module Plutarch.Extra.Compile (
   mustCompileTracing,
 ) where
 
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Plutarch (
   Config (Config, tracingMode),
+  Script,
   TracingMode (DetTracing),
   compile,
  )
-import PlutusLedgerApi.V2 (Script)
 
 {- | Compile a 'ClosedTerm', throwing an error if unsuccessful.
 

@@ -9,7 +9,7 @@ Property model and tests for 'MultiSig' functions
 -}
 module Spec.Extra.MultiSig (tests) where
 
-import qualified Data.ByteString.Char8 as C (ByteString, pack)
+import Data.ByteString.Char8 qualified as C (ByteString, pack)
 import Data.ByteString.Hash (sha2_256)
 import Data.Tagged (Tagged (Tagged))
 import Data.Universe (Finite (..), Universe (..))

@@ -16,12 +16,12 @@ import Test.Tasty.QuickCheck (
 
 --------------------------------------------------------------------------------
 
-import qualified Data.Map as M
-import qualified Data.Set as S
+import Data.Map qualified as M
+import Data.Set qualified as S
 
 --------------------------------------------------------------------------------
 
-import qualified PlutusTx.AssocMap as AssocMap
+import PlutusTx.AssocMap qualified as AssocMap
 
 --------------------------------------------------------------------------------
 
@@ -30,7 +30,7 @@ import Control.Monad.Cont (cont, runCont)
 --------------------------------------------------------------------------------
 
 import Plutarch.Extra.Map (pupdate)
-import qualified Spec.Extra.Map.Sorted as Sorted
+import Spec.Extra.Map.Sorted qualified as Sorted
 
 --------------------------------------------------------------------------------
 
