@@ -10,6 +10,7 @@
 module Plutarch.Orphans () where
 
 import Codec.Serialise (Serialise, deserialiseOrFail, serialise)
+import Data.Aeson ((.=))
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (parserThrowError)
 import Data.ByteString.Lazy (fromStrict, toStrict)
@@ -17,6 +18,7 @@ import Data.Coerce (Coercible, coerce)
 import Data.Ratio (Ratio, denominator, numerator, (%))
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
+import qualified Data.Vector as Vector
 import Plutarch.Api.V2 (PDatumHash (PDatumHash), PScriptHash (PScriptHash))
 import Plutarch.Builtin (PIsData (pdataImpl, pfromDataImpl))
 import Plutarch.Extra.TermCont (ptryFromC)
@@ -29,7 +31,7 @@ import PlutusLedgerApi.V1.Bytes (bytes, encodeByteString, fromHex)
 import PlutusLedgerApi.V2 (
   BuiltinByteString,
   BuiltinData (BuiltinData),
-  Credential,
+  Credential (PubKeyCredential, ScriptCredential),
   CurrencySymbol (CurrencySymbol),
   Data (I, List),
   LedgerBytes (LedgerBytes),
@@ -40,7 +42,7 @@ import PlutusLedgerApi.V2 (
   ScriptHash (ScriptHash),
   StakeValidator (StakeValidator),
   StakeValidatorHash (StakeValidatorHash),
-  StakingCredential,
+  StakingCredential (StakingHash, StakingPtr),
   TokenName (TokenName),
   TxId (TxId),
   TxOutRef,
@@ -240,11 +242,36 @@ deriving via
   instance
     (Aeson.FromJSON StakeValidator)
 
--- @ since 3.15.4
-deriving anyclass instance (Aeson.ToJSON StakingCredential)
+-- @ since 3.16.0
+instance Aeson.ToJSON StakingCredential where
+  toJSON (StakingHash cred) =
+    Aeson.object
+      [ "contents" .= Aeson.toJSON cred
+      , "tag" .= Aeson.String "StakingHash"
+      ]
+  toJSON (StakingPtr x y z) =
+    Aeson.object
+      [ "contents"
+          .= Aeson.Array
+            ( Vector.fromList
+                (Aeson.toJSON <$> [x, y, z])
+            )
+      ]
 
--- @ since 3.15.4
-deriving anyclass instance (Aeson.FromJSON StakingCredential)
+  toEncoding (StakingHash cred) =
+    Aeson.pairs
+      ( "contents"
+          .= cred
+          <> "tag"
+          .= Aeson.String "StakingHash"
+      )
+  toEncoding (StakingPtr x y z) =
+    Aeson.pairs
+      ( "contents"
+          .= [x, y, z]
+          <> "tag"
+          .= Aeson.String "StakingHash"
+      )
 
 -- @ since 3.6.1
 deriving via

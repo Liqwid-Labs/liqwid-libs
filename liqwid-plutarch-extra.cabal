@@ -155,6 +155,7 @@ library
     , serialise
     , tagged
     , text
+    , vector
 
   hs-source-dirs:  src
 
