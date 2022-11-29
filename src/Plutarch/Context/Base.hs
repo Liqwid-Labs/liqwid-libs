@@ -136,7 +136,6 @@ import PlutusLedgerApi.V2 (
   ),
   TxOut (TxOut),
   TxOutRef (TxOutRef),
-  ValidatorHash,
   Value (getValue),
   adaSymbol,
   adaToken,
@@ -468,11 +467,11 @@ pubKey :: PubKeyHash -> UTXO
 pubKey (PubKeyCredential -> cred) =
   set #credential (pure cred) (mempty :: UTXO)
 
-{- | Specify `ValidatorHash` of a UTXO.
+{- | Specify `ScriptHash` of a UTXO.
 
- @since 2.0.0
+ @since 2.10.0
 -}
-script :: ValidatorHash -> UTXO
+script :: ScriptHash -> UTXO
 script (ScriptCredential -> cred) =
   set #credential (pure cred) (mempty :: UTXO)
 

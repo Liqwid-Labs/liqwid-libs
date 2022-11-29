@@ -61,8 +61,8 @@ import PlutusLedgerApi.V2 (
   CurrencySymbol,
   LedgerBytes (LedgerBytes),
   PubKeyHash (PubKeyHash),
+  ScriptHash (ScriptHash),
   TokenName,
-  ValidatorHash (ValidatorHash),
   Value (Value, getValue),
   adaSymbol,
   adaToken,
@@ -87,7 +87,7 @@ data CheckerErrorType e
   | NonPositiveValue Value
   | NonNormalizedValue Value
   | NoZeroSum Value
-  | MissingRedeemer ValidatorHash
+  | MissingRedeemer ScriptHash
   | SpecifyRedeemerForNonValidatorInput
   | OtherError e
   deriving stock (Show, Eq)
@@ -323,7 +323,7 @@ checkCredential :: Checker e Credential
 checkCredential = contramap classif $ checkBSLength 28
   where
     classif (PubKeyCredential (PubKeyHash x)) = x
-    classif (ScriptCredential (ValidatorHash x)) = x
+    classif (ScriptCredential (ScriptHash x)) = x
 
 {- | Check if a validator output has a redeemer attached.
 

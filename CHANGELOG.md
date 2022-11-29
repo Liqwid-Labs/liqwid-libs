@@ -2,6 +2,12 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 2.10.0 -- 2022-11-29
+
+### Modified
+
+* Bump to liqwid-nix 2.0 and Plutarch 1.3.0.
+
 ## 2.9.0 -- 2022-11-21
 
 ### Modified
