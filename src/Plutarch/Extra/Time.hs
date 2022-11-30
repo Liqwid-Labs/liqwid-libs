@@ -1,13 +1,13 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Plutarch.Extra.Time (
-  PCurrentTime (..),
-  pcurrentTime,
-  currentTime,
-  passertCurrentTime,
-  pisWithinCurrentTime,
-  pisCurrentTimeWithin,
-  pcurrentTimeDuration,
+  PFullyBoundedTimeRange (..),
+  pgetFullyBoundedTimeRange,
+  fullyBoundedTimeRangeFromValidRange,
+  passertFullyBoundedTimeRange,
+  pisWithinTimeRange,
+  pisTimeRangeWithin,
+  ptimeRangeDuration,
 ) where
 
 import Control.Composition ((.*))
@@ -27,14 +27,14 @@ import Plutarch.Extra.TermCont (pmatchC)
 
 {- | Represent a fully bounded time range.
 
-     Note: 'PCurrentTime' doesn't need a Haskell-level equivalent because it
-     is only used in scripts, and does not go in datums. It is also
+     Note: 'PFullyBoundedTimeRange' doesn't need a Haskell-level equivalent
+     because it is only used in scripts, and does not go in datums. It is also
      Scott-encoded.
 
      @since 3.3.0
 -}
-data PCurrentTime (s :: S)
-  = PCurrentTime
+data PFullyBoundedTimeRange (s :: S)
+  = PFullyBoundedTimeRange
       (Term s PPOSIXTime)
       -- ^ The lower bound.
       (Term s PPOSIXTime)
@@ -51,7 +51,7 @@ data PCurrentTime (s :: S)
     )
 
 -- | @since 3.3.0
-instance DerivePlutusType PCurrentTime where
+instance DerivePlutusType PFullyBoundedTimeRange where
   type DPTStrat _ = PlutusTypeScott
 
 {- | Get the current time, given a 'PPOSIXTimeRange'.
@@ -61,14 +61,14 @@ instance DerivePlutusType PCurrentTime where
 
      @since 3.3.0
 -}
-pcurrentTime ::
+pgetFullyBoundedTimeRange ::
   forall (s :: S).
   Term
     s
     ( PPOSIXTimeRange
-        :--> PMaybe PCurrentTime
+        :--> PMaybe PFullyBoundedTimeRange
     )
-pcurrentTime = phoistAcyclic $
+pgetFullyBoundedTimeRange = phoistAcyclic $
   plam $ \iv -> unTermCont $ do
     PInterval iv' <- pmatchC iv
     ivf <- pletAllC iv'
@@ -92,7 +92,7 @@ pcurrentTime = phoistAcyclic $
         lb' = getBound # lb
         ub' = getBound # ub
 
-        mkTime = phoistAcyclic $ plam $ pcon .* PCurrentTime
+        mkTime = phoistAcyclic $ plam $ pcon .* PFullyBoundedTimeRange
     pure $ pliftA2 # mkTime # lb' # ub'
 
 {- | Calculate the current time by providing the @validRange@ field,
@@ -100,45 +100,47 @@ pcurrentTime = phoistAcyclic $
 
      @since 3.3.0
 -}
-currentTime ::
+fullyBoundedTimeRangeFromValidRange ::
   forall r (s :: S).
   (HasField "validRange" r (Term s PPOSIXTimeRange)) =>
   r ->
-  Term s (PMaybe PCurrentTime)
-currentTime x = pcurrentTime # getField @"validRange" x
+  Term s (PMaybe PFullyBoundedTimeRange)
+fullyBoundedTimeRangeFromValidRange x =
+  pgetFullyBoundedTimeRange
+    # getField @"validRange" x
 
 {- | Calculate the current time, and error out with the given message if we can't
      get it.
 
      @since 3.3.0
 -}
-passertCurrentTime ::
+passertFullyBoundedTimeRange ::
   forall (s :: S).
   Term
     s
     ( PString
         :--> PPOSIXTimeRange
-        :--> PCurrentTime
+        :--> PFullyBoundedTimeRange
     )
-passertCurrentTime = phoistAcyclic $
+passertFullyBoundedTimeRange = phoistAcyclic $
   plam $
-    \msg iv -> passertPJust # msg #$ pcurrentTime # iv
+    \msg iv -> passertPJust # msg #$ pgetFullyBoundedTimeRange # iv
 
 {- | Retutn 'PTrue' if a `PPOSIXTime` is in the current time range.
 
      @since 3.3.0
 -}
-pisWithinCurrentTime ::
+pisWithinTimeRange ::
   forall (s :: S).
   Term
     s
     ( PPOSIXTime
-        :--> PCurrentTime
+        :--> PFullyBoundedTimeRange
         :--> PBool
     )
-pisWithinCurrentTime = phoistAcyclic $
+pisWithinTimeRange = phoistAcyclic $
   plam $ \time ctr ->
-    pmatch ctr $ \(PCurrentTime lb ub) ->
+    pmatch ctr $ \(PFullyBoundedTimeRange lb ub) ->
       lb #<= time #&& time #<= ub
 
 {- | Return 'PTrue' if current time is within the given time range.
@@ -148,32 +150,32 @@ pisWithinCurrentTime = phoistAcyclic $
 
      @since 3.3.0
 -}
-pisCurrentTimeWithin ::
+pisTimeRangeWithin ::
   forall (s :: S).
   Term
     s
     ( PPOSIXTime
         :--> PPOSIXTime
-        :--> PCurrentTime
+        :--> PFullyBoundedTimeRange
         :--> PBool
     )
-pisCurrentTimeWithin = phoistAcyclic $
+pisTimeRangeWithin = phoistAcyclic $
   plam $ \lb' ub' ctr ->
-    pmatch ctr $ \(PCurrentTime lb ub) ->
+    pmatch ctr $ \(PFullyBoundedTimeRange lb ub) ->
       lb' #<= lb #&& ub #<= ub'
 
 {- | Return the duration of current time.
 
      @since 3.14.1
 -}
-pcurrentTimeDuration ::
+ptimeRangeDuration ::
   forall (s :: S).
   Term
     s
-    ( PCurrentTime
+    ( PFullyBoundedTimeRange
         :--> PPOSIXTime
     )
-pcurrentTimeDuration = phoistAcyclic $
+ptimeRangeDuration = phoistAcyclic $
   plam $
     flip pmatch $
-      \(PCurrentTime lb ub) -> ub - lb
+      \(PFullyBoundedTimeRange lb ub) -> ub - lb
