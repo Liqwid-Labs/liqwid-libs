@@ -2,6 +2,33 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.18.0 -- 2022-11-30
+
+### Modified
+
+Rename types and functions in module `Plutarch.Extra.Time` in order to avoid
+confusion.
+
+* `PCurrentTime` -> `PFullyBoundedTimeRange`
+* `pcurrentTime` -> `pgetFullyBoundedTimeRange`
+* `currentTime` -> `fullyBoundedTimeRangeFromValidRange`
+* `passertCurrentTime` -> `passertFullyBoundedTimeRange`
+* `pisWithinCurrentTime` -> `pisWithinTimeRange` 
+* `pisCurrentTimeWithin` -> `pisTimeRangeWithin`
+* `pcurrentTimeDuration` -> `ptimeRangeDuration`
+
+## 3.17.0 -- 2022-11-25
+
+### Modified
+
+* `ToData` instance for `FixedDecimal` now also serializes its type-level tag.
+* `FromData` and `UnsafeFromData` instances for `FixedDecimal` now inspect the
+  serialized type-level tag to ensure it matches safely.
+* `PConstantDecl` for `FixedDecimal` and `PUnsafeLiftDecl` for `PFixedDecimal`
+  gain `KnownNat` constraints.
+* `PConstantRepr (FixedDecimal unit)` is now `Data`, and `pconstantFromRepr` and
+  `pconstantToRepr` defer to the `Data` representation.
+
 ## 3.16.0 -- 2022-11-21
 
 ### Added
