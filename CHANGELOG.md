@@ -2,6 +2,15 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 2.2.0 -- 2022-11-29
+
+### Modified
+
+- Now supports subcommand system
+- File export reqires user to select specific builder to use.
+- Add a subcommand to list all builders
+- Dropped Git revesion support that was broken
+
 ## 2.1.0 -- 2022-11-02
 
 ### Added

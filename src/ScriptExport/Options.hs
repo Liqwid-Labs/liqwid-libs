@@ -21,16 +21,15 @@ import Data.Text (Text)
 import GHC.Generics qualified as GHC
 import Network.Wai.Handler.Warp qualified as Warp
 import Optics.TH (makeFieldLabelsNoPrefix)
-import Options.Applicative ((<**>), (<|>))
+import Options.Applicative ((<**>))
 import Options.Applicative qualified as Opt
 
 {- | Information about the exporter.
 
-     @since 2.0.0
+     @since 2.2.0
 -}
-data ExporterInfo = ExporterInfo
-  { revision :: Text
-  , exposedBuilders :: [Text]
+newtype ExporterInfo = ExporterInfo
+  { exposedBuilders :: [Text]
   }
   deriving anyclass
     ( -- | @since 1.0.0
@@ -49,11 +48,12 @@ data ExporterInfo = ExporterInfo
 
 {- | Command line options for the export server.
 
-     @since 2.0.0
+     @since 2.2.0
 -}
 data Options
   = ServerOption ServerOptions
   | FileOption FileOptions
+  | ListBuilders
   deriving stock
     ( -- | @since 1.0.0
       Show
@@ -83,6 +83,8 @@ data FileOptions = FileOptions
   -- ^ Where to write files to.
   , param :: FilePath
   -- ^ Script parameter.
+  , builder :: Text
+  -- ^ Builder to use.
   }
   deriving stock
     ( -- | @since 1.0.0
@@ -108,6 +110,13 @@ fileOpt =
           <> Opt.value ""
           <> Opt.help "Parameters to apply"
       )
+    <*> Opt.strOption
+      ( Opt.long "builder"
+          <> Opt.short 'b'
+          <> Opt.metavar "BUILDER"
+          <> Opt.help "Bulider to use"
+      )
+    <**> Opt.helper
 
 serverOpt :: Opt.Parser ServerOptions
 serverOpt =
@@ -138,19 +147,23 @@ serverOpt =
           <> Opt.value 3600
           <> Opt.help "How many seconds should the server keep cached results available for."
       )
-
-opt :: Opt.Parser Options
-opt =
-  FileOption <$> fileOpt
-    <|> ServerOption <$> serverOpt
+    <**> Opt.helper
 
 {- | Parse 'Options' from the command line arguments.
 
-     @since 2.0.0
+     @since 2.2.0
 -}
 parseOptions :: IO Options
 parseOptions = Opt.execParser p
   where
+    opt =
+      Opt.subparser . foldMap mkSubcommand $
+        [ (FileOption <$> fileOpt, "file", "Complie scripts using file IO")
+        , (ServerOption <$> serverOpt, "server", "Start script server")
+        , (pure ListBuilders, "list", "List out all builders")
+        ]
+    mkSubcommand (p, n, d) =
+      Opt.command n $ Opt.info p $ Opt.fullDesc <> Opt.progDesc d
     p =
       Opt.info
         (opt <**> Opt.helper)
