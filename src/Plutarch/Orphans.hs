@@ -352,7 +352,7 @@ instance Aeson.ToJSON StakingCredential where
       ( "contents"
           .= [x, y, z]
           <> "tag"
-          .= Aeson.String "StakingHash"
+          .= Aeson.String "StakingPtr"
       )
 
 -- @since 3.16.0
