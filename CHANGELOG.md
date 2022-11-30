@@ -2,6 +2,21 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.18.0 -- 2022-11-30
+
+### Modified
+
+Rename types and functions in module `Plutarch.Extra.Time` in order to avoid
+confusion.
+
+* `PCurrentTime` -> `PFullyBoundedTimeRange`
+* `pcurrentTime` -> `pgetFullyBoundedTimeRange`
+* `currentTime` -> `fullyBoundedTimeRangeFromValidRange`
+* `passertCurrentTime` -> `passertFullyBoundedTimeRange`
+* `pisWithinCurrentTime` -> `pisWithinTimeRange` 
+* `pisCurrentTimeWithin` -> `pisTimeRangeWithin`
+* `pcurrentTimeDuration` -> `ptimeRangeDuration`
+
 ## 3.17.0 -- 2022-11-25
 
 ### Modified
