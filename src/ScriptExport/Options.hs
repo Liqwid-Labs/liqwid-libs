@@ -159,7 +159,7 @@ parseOptions = Opt.execParser p
     opt =
       Opt.subparser . foldMap mkSubcommand $
         [ (FileOption <$> fileOpt, "file", "Complie scripts using file IO")
-        , (ServerOption <$> serverOpt, "server", "Start script server")
+        , (ServerOption <$> serverOpt, "serve", "Start script server")
         , (pure ListBuilders, "list", "List out all builders")
         ]
     mkSubcommand (p, n, d) =
