@@ -11,15 +11,15 @@ module Plutarch.Orphans () where
 
 import Codec.Serialise (Serialise, deserialiseOrFail, serialise)
 import Data.Aeson ((.:), (.=), (<?>))
-import Data.Aeson.Types (JSONPathElement (Key), Parser, parserThrowError)
 import Data.Aeson qualified as Aeson
+import Data.Aeson.Types (JSONPathElement (Key), Parser, parserThrowError)
 import Data.ByteString.Lazy (fromStrict, toStrict)
 import Data.Coerce (Coercible, coerce)
 import Data.Ratio (Ratio, denominator, numerator, (%))
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
-import qualified Data.Vector as Vector
-import Plutarch.Api.V2 (PDatumHash (PDatumHash), PScriptHash (PScriptHash))
+import Data.Vector qualified as Vector
+import Plutarch.Api.V2 (PDatumHash (PDatumHash))
 import Plutarch.Builtin (PIsData (pdataImpl, pfromDataImpl))
 import Plutarch.Extra.TermCont (ptryFromC)
 import Plutarch.TryFrom (PTryFrom (ptryFrom'), PTryFromExcess)
@@ -42,8 +42,6 @@ import PlutusLedgerApi.V2 (
   POSIXTime (POSIXTime),
   PubKeyHash (PubKeyHash),
   ScriptHash (ScriptHash),
-  StakeValidator (StakeValidator),
-  StakeValidatorHash (StakeValidatorHash),
   StakingCredential (StakingHash, StakingPtr),
   TokenName (TokenName),
   TxId (TxId),

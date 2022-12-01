@@ -23,7 +23,7 @@ module Plutarch.Extra.FixedDecimal (
 
 import Control.Monad (unless)
 import Data.Aeson ((.:), (.=), (<?>))
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Data.Aeson.Types (JSONPathElement (Key), Parser)
 import Data.Proxy (Proxy (Proxy))
 import Data.Ratio ((%))
