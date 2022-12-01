@@ -61,10 +61,10 @@ type API =
 
 {- | Run a Warp server that exposes a script generation endpoint.
 
-     @since 2.0.0
+     @since 2.2.0
 -}
-runServer :: MonadIO m => Text -> Builders -> ServerOptions -> m ()
-runServer revision builders options = do
+runServer :: MonadIO m => Builders -> ServerOptions -> m ()
+runServer builders options = do
   let logger req status _maybeFileSize =
         putStrLn . renderString . layoutPretty defaultLayoutOptions $
           hsep
@@ -88,10 +88,7 @@ runServer revision builders options = do
       corsMiddleware = cors . const $ Just corsPolicy
 
       serverInfo =
-        ExporterInfo
-          { revision = revision
-          , exposedBuilders = Builders.toList builders
-          }
+        ExporterInfo $ Builders.toList builders
 
   -- Scripts stay cached for the amount of time specified by the `cacheLifetime` option.
   query <- cachedForM (Just $ TimeSpec (view #cacheLifetime options) 0) (`runQuery` builders)

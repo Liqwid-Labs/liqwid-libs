@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               liqwid-script-export
-version:            2.1.0
+version:            2.2.0
 extra-source-files: CHANGELOG.md
 author:             Emily Martins <emi@haskell.fyi>
 license:            Apache-2.0
@@ -68,7 +68,6 @@ common deps
     , data-default-class
     , filepath
     , generics-sop
-    , gitrev
     , hashable
     , http-types
     , liqwid-plutarch-extra
