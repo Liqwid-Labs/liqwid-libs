@@ -18,9 +18,9 @@ module Plutarch.Test.QuickCheck.Internal (
 ) where
 
 import Data.ByteString (ByteString)
-import qualified Data.Text as T (intercalate, pack, unpack)
+import Data.Text qualified as T (intercalate, pack, unpack)
 import Data.Word (Word8)
-import qualified GHC.Exts as Exts (IsList (fromList, toList))
+import GHC.Exts qualified as Exts (IsList (fromList, toList))
 import Plutarch (
   Config (Config, tracingMode),
   POpaque,
