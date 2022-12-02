@@ -10,13 +10,15 @@
 module Plutarch.Orphans () where
 
 import Codec.Serialise (Serialise, deserialiseOrFail, serialise)
+import Data.Aeson ((.:), (.=), (<?>))
 import qualified Data.Aeson as Aeson
-import Data.Aeson.Types (parserThrowError)
+import Data.Aeson.Types (JSONPathElement (Key), Parser, parserThrowError)
 import Data.ByteString.Lazy (fromStrict, toStrict)
 import Data.Coerce (Coercible, coerce)
 import Data.Ratio (Ratio, denominator, numerator, (%))
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
+import qualified Data.Vector as Vector
 import Plutarch.Api.V2 (PDatumHash (PDatumHash), PScriptHash (PScriptHash))
 import Plutarch.Builtin (PIsData (pdataImpl, pfromDataImpl))
 import Plutarch.Extra.TermCont (ptryFromC)
@@ -29,15 +31,18 @@ import PlutusLedgerApi.V1.Bytes (bytes, encodeByteString, fromHex)
 import PlutusLedgerApi.V2 (
   BuiltinByteString,
   BuiltinData (BuiltinData),
+  Credential (PubKeyCredential, ScriptCredential),
   CurrencySymbol (CurrencySymbol),
   Data (I, List),
   LedgerBytes (LedgerBytes),
   MintingPolicy (MintingPolicy),
   POSIXTime (POSIXTime),
+  PubKeyHash (PubKeyHash),
   Script,
   ScriptHash (ScriptHash),
   StakeValidator (StakeValidator),
   StakeValidatorHash (StakeValidatorHash),
+  StakingCredential (StakingHash, StakingPtr),
   TokenName (TokenName),
   TxId (TxId),
   TxOutRef,
@@ -302,3 +307,107 @@ deriving via
   (AsBase16Codec Script)
   instance
     (Aeson.FromJSON Script)
+
+-- @ since 3.16.0
+deriving via
+  BuiltinByteString
+  instance
+    (Aeson.ToJSON PubKeyHash)
+
+-- @ since 3.16.0
+deriving via
+  BuiltinByteString
+  instance
+    (Aeson.FromJSON PubKeyHash)
+
+--------------------------------------------------------------------------------
+-- manual instances
+
+-- @ since 3.16.0
+instance Aeson.ToJSON StakingCredential where
+  toJSON (StakingHash cred) =
+    Aeson.object
+      [ "contents" .= Aeson.toJSON cred
+      , "tag" .= Aeson.String "StakingHash"
+      ]
+  toJSON (StakingPtr x y z) =
+    Aeson.object
+      [ "contents"
+          .= Aeson.Array
+            ( Vector.fromList
+                (Aeson.toJSON <$> [x, y, z])
+            )
+      , "tag" .= Aeson.String "StakingPtr"
+      ]
+
+  toEncoding (StakingHash cred) =
+    Aeson.pairs
+      ( "contents"
+          .= cred
+          <> "tag"
+          .= Aeson.String "StakingHash"
+      )
+  toEncoding (StakingPtr x y z) =
+    Aeson.pairs
+      ( "contents"
+          .= [x, y, z]
+          <> "tag"
+          .= Aeson.String "StakingPtr"
+      )
+
+-- @since 3.16.0
+instance Aeson.FromJSON StakingCredential where
+  parseJSON = Aeson.withObject "StakingCredential" $ \v -> do
+    contents <- v .: "contents" <?> Key "contents"
+    tag <- v .: "tag" <?> Key "tag"
+    case tag of
+      "StakingHash" -> StakingHash <$> Aeson.parseJSON contents
+      "StakingPtr" -> parseStakingPtr contents
+      _ -> fail $ "Expected StakingHash or StakingPtr, got " <> tag
+    where
+      parseStakingPtr :: Aeson.Value -> Parser StakingCredential
+      parseStakingPtr v =
+        Aeson.parseJSONList v >>= \case
+          [x, y, z] -> pure $ StakingPtr x y z
+          xs ->
+            fail $
+              "expected an array of length 3, but got length "
+                <> show (length xs)
+
+-- @since 3.16.0
+instance Aeson.ToJSON Credential where
+  toJSON (PubKeyCredential cred) =
+    Aeson.object
+      [ "contents" .= Aeson.toJSON cred
+      , "tag" .= Aeson.String "PubKeyCredential"
+      ]
+  toJSON (ScriptCredential cred) =
+    Aeson.object
+      [ "contents" .= Aeson.toJSON cred
+      , "tag" .= Aeson.String "ScriptCredential"
+      ]
+
+  toEncoding (PubKeyCredential cred) =
+    Aeson.pairs
+      ( "contents"
+          .= cred
+          <> "tag"
+          .= Aeson.String "PubKeyCredential"
+      )
+  toEncoding (ScriptCredential cred) =
+    Aeson.pairs
+      ( "contents"
+          .= cred
+          <> "tag"
+          .= Aeson.String "ScriptCredential"
+      )
+
+-- @since 3.16.0
+instance Aeson.FromJSON Credential where
+  parseJSON = Aeson.withObject "Credential" $ \v -> do
+    contents <- v .: "contents" <?> Key "contents"
+    tag <- v .: "tag" <?> Key "tag"
+    case tag of
+      "PubKeyCredential" -> PubKeyCredential <$> Aeson.parseJSON contents
+      "ScriptCredential" -> ScriptCredential <$> Aeson.parseJSON contents
+      _ -> fail $ "Expected PubKeyCredential or ScriptCredential, got " <> tag

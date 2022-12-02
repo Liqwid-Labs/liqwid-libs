@@ -2,12 +2,45 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-## 3.16.0 -- 2022-12-02
+## 3.19.0 -- 2022-12-02
 
 ### Modified
 
 * Fixed a bug allowing state tokens with non-empty names to be minted or
   burned.
+
+## 3.18.0 -- 2022-11-30
+
+### Modified
+
+Rename types and functions in module `Plutarch.Extra.Time` in order to avoid
+confusion.
+
+* `PCurrentTime` -> `PFullyBoundedTimeRange`
+* `pcurrentTime` -> `pgetFullyBoundedTimeRange`
+* `currentTime` -> `fullyBoundedTimeRangeFromValidRange`
+* `passertCurrentTime` -> `passertFullyBoundedTimeRange`
+* `pisWithinCurrentTime` -> `pisWithinTimeRange` 
+* `pisCurrentTimeWithin` -> `pisTimeRangeWithin`
+* `pcurrentTimeDuration` -> `ptimeRangeDuration`
+
+## 3.17.0 -- 2022-11-25
+
+### Modified
+
+* `ToData` instance for `FixedDecimal` now also serializes its type-level tag.
+* `FromData` and `UnsafeFromData` instances for `FixedDecimal` now inspect the
+  serialized type-level tag to ensure it matches safely.
+* `PConstantDecl` for `FixedDecimal` and `PUnsafeLiftDecl` for `PFixedDecimal`
+  gain `KnownNat` constraints.
+* `PConstantRepr (FixedDecimal unit)` is now `Data`, and `pconstantFromRepr` and
+  `pconstantToRepr` defer to the `Data` representation.
+
+## 3.16.0 -- 2022-11-21
+
+### Added
+
+* `ToJSON` and `FromJSON` orphan instances for `PubKeyHash`.
 
 ## 3.15.4 -- 2022-11-21
 
@@ -15,6 +48,13 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 * `pmax`, `pmin` operating on two terms with a `POrd` instance
 * `pmaxBy`, `pminBy`, taking a `PComparator` directly
+
+## 3.15.4 -- 2022-11-17
+
+### Added
+
+* Derived Aeson `ToJSON` & `FromJSON` instances for `PubKeyHash`, `Credential`, `StakingCredential`
+* Derived Aeson `ToJSON` & `FromJSON` instances for `FixedDecimal`
 
 ## 3.15.3 -- 2022-11-17
 

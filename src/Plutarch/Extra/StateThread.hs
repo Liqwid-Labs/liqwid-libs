@@ -21,7 +21,7 @@ import Plutarch.Extra.Maybe (pfromJust)
 {- | Adds a state thread to a minting policy.
  Parameterized at the Haskell level.
 
- @since 3.16.0
+ @since 3.19.0
 -}
 withStateThread ::
   forall (s :: S).
@@ -47,7 +47,7 @@ withStateThread mp ref = plam $ \red ctx -> pletAll ctx $ \ctx' ->
 {- | Adds a state thread to a minting policy.
  Parameterized at the Plutarch level
 
- @since 3.16.0
+ @since 3.19.0
 -}
 pwithStateThread ::
   forall (s :: S).
