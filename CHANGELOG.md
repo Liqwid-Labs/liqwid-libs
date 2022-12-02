@@ -2,6 +2,13 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.19.0 -- 2022-12-02
+
+### Modified
+
+* Fixed a bug allowing state tokens with non-empty names to be minted or
+  burned.
+
 ## 3.18.0 -- 2022-11-30
 
 ### Modified
