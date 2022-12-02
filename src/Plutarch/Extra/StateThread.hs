@@ -4,6 +4,7 @@ module Plutarch.Extra.StateThread (
 ) where
 
 import Plutarch.Api.V1 (PCurrencySymbol, PValue)
+import Plutarch.Api.V1.AssocMap (plookup)
 import Plutarch.Api.V1.Value (pvalueOf)
 import Plutarch.Api.V2 (
   AmountGuarantees,
@@ -14,11 +15,13 @@ import Plutarch.Api.V2 (
   PTxOutRef,
  )
 import Plutarch.Extra.Field (pletAll)
+import Plutarch.Extra.List (pisSingleton)
+import Plutarch.Extra.Maybe (pfromJust)
 
 {- | Adds a state thread to a minting policy.
  Parameterized at the Haskell level.
 
- @since 3.11.0
+ @since 3.16.0
 -}
 withStateThread ::
   forall (s :: S).
@@ -44,7 +47,7 @@ withStateThread mp ref = plam $ \red ctx -> pletAll ctx $ \ctx' ->
 {- | Adds a state thread to a minting policy.
  Parameterized at the Plutarch level
 
- @since 3.11.0
+ @since 3.16.0
 -}
 pwithStateThread ::
   forall (s :: S).
@@ -59,7 +62,13 @@ uniqueStateTokenMint ::
   Term s (PValue keys amounts) ->
   Term s PBool
 uniqueStateTokenMint thisPolicy mint =
-  pvalueOf # mint # thisPolicy # pconstant "" #== pconstant 1
+  pisSingleton
+    # pto (pfromJust #$ plookup # thisPolicy # pto mint)
+    #&& pvalueOf
+    # mint
+    # thisPolicy
+    # pconstant ""
+    #== pconstant 1
 
 hasUniqueInput ::
   forall (s :: S).
