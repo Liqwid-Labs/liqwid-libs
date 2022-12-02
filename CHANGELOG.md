@@ -42,6 +42,13 @@ confusion.
 * `pmax`, `pmin` operating on two terms with a `POrd` instance
 * `pmaxBy`, `pminBy`, taking a `PComparator` directly
 
+## 3.15.4 -- 2022-11-17
+
+### Added
+
+* Derived Aeson `ToJSON` & `FromJSON` instances for `PubKeyHash`, `Credential`, `StakingCredential`
+* Derived Aeson `ToJSON` & `FromJSON` instances for `FixedDecimal`
+
 ## 3.15.3 -- 2022-11-17
 
 ### Added

@@ -21,6 +21,10 @@ module Plutarch.Extra.FixedDecimal (
   punsafeMkFixedDecimal,
 ) where
 
+import Control.Monad (unless)
+import Data.Aeson ((.:), (.=), (<?>))
+import qualified Data.Aeson as Aeson
+import Data.Aeson.Types (JSONPathElement (Key), Parser)
 import Data.Proxy (Proxy (Proxy))
 import Data.Ratio ((%))
 import GHC.Real (Ratio ((:%)))
@@ -65,6 +69,47 @@ import qualified PlutusLedgerApi.V1 as PlutusTx
 -}
 newtype FixedDecimal (exp :: Natural) = FixedDecimal {numerator :: Integer}
   deriving stock (Generic, Eq, Ord, Show)
+
+-- | @since 3.16.0
+instance
+  forall (exp :: Natural).
+  (KnownNat exp) =>
+  Aeson.ToJSON (FixedDecimal exp)
+  where
+  toJSON (FixedDecimal num) =
+    Aeson.object
+      [ "numerator" .= num
+      , "exponent" .= natVal (Proxy @exp)
+      ]
+
+  toEncoding (FixedDecimal num) =
+    Aeson.pairs ("numerator" .= num <> "exponent" .= natVal (Proxy @exp))
+
+-- | @since 3.16.0
+instance
+  forall (exp :: Natural).
+  (KnownNat exp) =>
+  Aeson.FromJSON (FixedDecimal exp)
+  where
+  parseJSON = Aeson.withObject "FixedDecimal" $ \v -> do
+    num <- v .: "numerator" <?> Key "numerator"
+
+    _ <-
+      ((v .: "exponent") >>= checkExponent)
+        <?> Key "exponent"
+    pure $ FixedDecimal num
+    where
+      expectedExponent :: Integer
+      expectedExponent = natVal (Proxy @exp)
+
+      checkExponent :: Integer -> Parser ()
+      checkExponent e =
+        unless (e == expectedExponent) $
+          fail $
+            "expected: "
+              <> show expectedExponent
+              <> ", but encountered "
+              <> show e
 
 {- | Integer numerator of 'FixedDecimal'
 
@@ -162,7 +207,7 @@ instance KnownNat n => Real (FixedDecimal n) where
      `1.23456 (123456 * 10 ^ -5)`. `PFixedDecimal 0` will be identical to `PInteger`.
 
      Note, `exp` is the negative exponent to base 10. 'PFixed' does not support
-     positive expoent.
+     positive exponent.
 
      Compared to 'PRational', 'PFixed' gives addition and subtraction
      as fast as regular 'PInteger', allows negative values, and does
@@ -206,14 +251,23 @@ instance PConstantDecl (FixedDecimal unit) where
   pconstantToRepr (FixedDecimal x) = pconstantToRepr x
   pconstantFromRepr x = FixedDecimal <$> pconstantFromRepr x
 
-deriving newtype instance
-  PlutusTx.ToData (FixedDecimal unit)
+-- | @since 3.16.0
+deriving via
+  Integer
+  instance
+    PlutusTx.ToData (FixedDecimal unit)
 
-deriving newtype instance
-  PlutusTx.FromData (FixedDecimal unit)
+-- | @since 3.16.0
+deriving via
+  Integer
+  instance
+    PlutusTx.FromData (FixedDecimal unit)
 
-deriving newtype instance
-  PlutusTx.UnsafeFromData (FixedDecimal unit)
+-- | @since 3.16.0
+deriving via
+  Integer
+  instance
+    PlutusTx.UnsafeFromData (FixedDecimal unit)
 
 -- | @since 3.12.0
 instance forall (exp :: Natural). KnownNat exp => PShow (PFixedDecimal exp) where
