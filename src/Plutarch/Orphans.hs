@@ -169,14 +169,17 @@ instance (Serialise a) => Aeson.ToJSON (AsBase16Codec a) where
 
 -- @ since 3.6.1
 instance (Serialise a) => Aeson.FromJSON (AsBase16Codec a) where
-  parseJSON v =
-    Aeson.parseJSON @Text v
-      >>= either
-        (parserThrowError [] . show)
-        (pure . AsBase16Codec)
-        . deserialiseOrFail
-        . fromStrict
-        . encodeUtf8
+  parseJSON v = do
+    eitherLedgerBytes <-
+      fromHex . encodeUtf8
+        <$> Aeson.parseJSON @Text v
+
+    b <- case eitherLedgerBytes of
+      (Left err) -> parserThrowError [] $ show err
+      (Right lb) -> pure $ bytes lb
+    case deserialiseOrFail (fromStrict b) of
+      (Left err) -> parserThrowError [] $ show err
+      (Right r) -> pure $ AsBase16Codec r
 
 -- @since X.Y.Z
 deriving via (AsBase16Codec Datum) instance Aeson.ToJSON Datum
