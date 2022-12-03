@@ -18,8 +18,6 @@ module Plutarch.Extra.DebuggableScript (
   mustEvalD,
 ) where
 
-import Control.Lens (over)
-import Data.Functor qualified as Haskell
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Optics.Getter (A_Getter, to, view)
@@ -31,11 +29,10 @@ import Plutarch (
  )
 import Plutarch.Evaluate (EvalError, evalScript)
 import Plutarch.Extra.Compile (mustCompile, mustCompileTracing)
+import Plutarch.Extra.Script (applyArguments)
 import Plutarch.Script (
   Script (Script),
  )
-import PlutusCore.Data qualified as PLC
-import PlutusCore.MkPlc qualified as PLC
 import PlutusLedgerApi.V1 (Data, ExBudget)
 import UntypedPlutusCore (
   Program (
@@ -45,7 +42,6 @@ import UntypedPlutusCore (
     _progVer
   ),
  )
-import UntypedPlutusCore qualified as UPLC
 import UntypedPlutusCore.Core.Type qualified as UplcType
 import UntypedPlutusCore.Evaluation.Machine.Cek (
   CekUserError (CekEvaluationFailure, CekOutOfExError),
@@ -107,13 +103,6 @@ applyScript f a =
   where
     (Script Program {_progTerm = fTerm, _progVer = fVer}) = f
     (Script Program {_progTerm = aTerm, _progVer = aVer}) = a
-
--- This was dropped in Plutus.
-applyArguments :: Script -> [PLC.Data] -> Script
-applyArguments (Script p) args =
-  let termArgs = Haskell.fmap (PLC.mkConstant ()) args
-      applied t = PLC.mkIterApp () t termArgs
-   in Script $ over UPLC.progTerm applied p
 
 {- | Apply given arguments to 'DebuggableScript'.
 

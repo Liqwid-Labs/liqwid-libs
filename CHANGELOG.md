@@ -8,6 +8,10 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 * Bumped Plutarch to 1.3.0.
 
+### Added
+
+* `applyArguments` to `Plutarch.Extra.Script` since it was dropped on Plutus.
+
 ## 3.19.1 -- 2022-12-05
 
 ### Added
