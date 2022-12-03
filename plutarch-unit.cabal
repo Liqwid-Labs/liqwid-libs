@@ -118,6 +118,7 @@ library
     , optics-core
     , optics-extra
     , optics-th
+    , plutus-core
     , plutus-ledger-api
     , plutus-tx
     , ply-core

@@ -49,7 +49,7 @@ import Plutarch.Extra.DebuggableScript (
   mustCompileD,
  )
 import Plutarch.Prelude (ClosedTerm, S, Type)
-import PlutusLedgerApi.V1.Scripts (Script)
+import Plutarch.Script (Script)
 import PlutusLedgerApi.V2 (Data)
 import Test.Tasty (testGroup)
 import Test.Tasty.Providers (IsTest, Result, TestTree, run, singleTest, testFailed, testOptions, testPassed)
