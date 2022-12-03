@@ -6,7 +6,6 @@
     extra-substituters = [ "https://cache.iog.io" "https://public-plutonomicon.cachix.org" "https://mlabs.cachix.org" ];
     extra-trusted-public-keys = [ "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" "public-plutonomicon.cachix.org-1:3AKJMhCLn32gri1drGuaZmFrmnue+KkKrhhubQk/CWc=" ];
     allow-import-from-derivation = "true";
-    bash-prompt = "\\[\\e[0m\\][\\[\\e[0;2m\\]liqwid-nix \\e[0;5m\\]2.0 \\[\\e[0;93m\\]\\w\\[\\e[0m\\]]\\[\\e[0m\\]$ \\[\\e[0m\\]";
     max-jobs = "auto";
     auto-optimise-store = "true";
   };
@@ -16,14 +15,13 @@
     nixpkgs-latest.url = "github:NixOS/nixpkgs";
 
     liqwid-nix = {
-      url = "github:Liqwid-Labs/liqwid-nix/liqwid-nix-2.0";
+      url = "github:Liqwid-Labs/liqwid-nix/v2.0.0";
       inputs.nixpkgs-latest.follows = "nixpkgs-latest";
     };
 
-    liqwid-plutarch-extra.url = "github:Liqwid-Labs/liqwid-plutarch-extra/emiflake/liqwid-nix-2.0";
-    plutarch-quickcheck.url = "github:Liqwid-Labs/plutarch-quickcheck/emiflake/liqwid-nix-2.0";
-    plutarch-numeric.url = "github:Liqwid-Labs/plutarch-numeric/emiflake/liqwid-nix-2.0";
-    ply.url = "github:mlabs-haskell/ply?ref=master";
+    liqwid-plutarch-extra.url = "github:Liqwid-Labs/liqwid-plutarch-extra";
+    plutarch-quickcheck.url = "github:Liqwid-Labs/plutarch-quickcheck";
+    ply.url = "github:mlabs-haskell/ply";
   };
 
   outputs = { self, liqwid-nix, flake-parts, ... }:
@@ -45,7 +43,6 @@
                   enableBuildChecks = true;
                   extraHackageDeps = [
                     "${self.inputs.plutarch-quickcheck}"
-                    "${self.inputs.plutarch-numeric}"
                     "${self.inputs.liqwid-plutarch-extra}"
                     "${self.inputs.ply}/ply-core"
                     "${self.inputs.ply}/ply-plutarch"
