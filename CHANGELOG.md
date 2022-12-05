@@ -2,6 +2,17 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+
+## 3.19.1 -- 2022-12-05
+
+### Added
+
+- `AsBase16Codec`-based `ToJSON`, `FromJSON` instances for `Datum` 
+
+### Modified
+
+- Added `toEncoding` implementation for `AsBase16Bytes` & `AsBase16Codec` `ToJSON` instances
+
 ## 3.19.0 -- 2022-12-02
 
 ### Modified

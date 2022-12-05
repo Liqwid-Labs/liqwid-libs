@@ -34,6 +34,7 @@ import PlutusLedgerApi.V2 (
   Credential (PubKeyCredential, ScriptCredential),
   CurrencySymbol (CurrencySymbol),
   Data (I, List),
+  Datum,
   LedgerBytes (LedgerBytes),
   MintingPolicy (MintingPolicy),
   POSIXTime (POSIXTime),
@@ -128,6 +129,12 @@ instance
       . bytes
       . coerce @(AsBase16Bytes a) @LedgerBytes
 
+  toEncoding =
+    Aeson.toEncoding @Text
+      . encodeByteString
+      . bytes
+      . coerce @(AsBase16Bytes a) @LedgerBytes
+
 -- @ since 3.6.1
 instance
   (Coercible LedgerBytes a) =>
@@ -153,16 +160,32 @@ instance (Serialise a) => Aeson.ToJSON (AsBase16Codec a) where
       . serialise @a
       $ x
 
+  toEncoding (AsBase16Codec x) =
+    Aeson.toEncoding @Text
+      . encodeByteString
+      . toStrict
+      . serialise @a
+      $ x
+
 -- @ since 3.6.1
 instance (Serialise a) => Aeson.FromJSON (AsBase16Codec a) where
-  parseJSON v =
-    Aeson.parseJSON @Text v
-      >>= either
-        (parserThrowError [] . show)
-        (pure . AsBase16Codec)
-        . deserialiseOrFail
-        . fromStrict
-        . encodeUtf8
+  parseJSON v = do
+    eitherLedgerBytes <-
+      fromHex . encodeUtf8
+        <$> Aeson.parseJSON @Text v
+
+    b <- case eitherLedgerBytes of
+      (Left err) -> parserThrowError [] $ show err
+      (Right lb) -> pure $ bytes lb
+    case deserialiseOrFail (fromStrict b) of
+      (Left err) -> parserThrowError [] $ show err
+      (Right r) -> pure $ AsBase16Codec r
+
+-- @since X.Y.Z
+deriving via (AsBase16Codec Datum) instance Aeson.ToJSON Datum
+
+-- @since X.Y.Z
+deriving via (AsBase16Codec Datum) instance Aeson.FromJSON Datum
 
 -- @ since 3.6.1
 deriving via (AsBase16Bytes TxId) instance Aeson.ToJSON TxId
