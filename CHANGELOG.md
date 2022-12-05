@@ -2,7 +2,8 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-## 3.18.1 -- 2022-12-02
+
+## 3.19.1 -- 2022-12-05
 
 ### Added
 
@@ -11,6 +12,13 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 ### Modified
 
 - Added `toEncoding` implementation for `AsBase16Bytes` & `AsBase16Codec` `ToJSON` instances
+
+## 3.19.0 -- 2022-12-02
+
+### Modified
+
+* Fixed a bug allowing state tokens with non-empty names to be minted or
+  burned.
 
 ## 3.18.0 -- 2022-11-30
 
