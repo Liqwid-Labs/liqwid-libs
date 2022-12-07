@@ -32,7 +32,7 @@ import PlutusLedgerApi.V2 (
   BuiltinByteString,
   BuiltinData (BuiltinData),
   Credential (PubKeyCredential, ScriptCredential),
-  CurrencySymbol (CurrencySymbol),
+  CurrencySymbol,
   Data (I, List),
   Datum,
   LedgerBytes (LedgerBytes),
@@ -44,7 +44,7 @@ import PlutusLedgerApi.V2 (
   StakeValidator (StakeValidator),
   StakeValidatorHash (StakeValidatorHash),
   StakingCredential (StakingHash, StakingPtr),
-  TokenName (TokenName),
+  TokenName,
   TxId (TxId),
   TxOutRef,
   Validator (Validator),
@@ -199,29 +199,17 @@ deriving anyclass instance Aeson.ToJSON TxOutRef
 -- @ since 3.6.1
 deriving anyclass instance Aeson.FromJSON TxOutRef
 
--- @ since 3.6.1
-deriving via
-  (AsBase16Bytes CurrencySymbol)
-  instance
-    (Aeson.ToJSON CurrencySymbol)
+-- @ since 3.19.2
+deriving anyclass instance Aeson.ToJSON CurrencySymbol
 
--- @ since 3.6.1
-deriving via
-  (AsBase16Bytes CurrencySymbol)
-  instance
-    (Aeson.FromJSON CurrencySymbol)
+-- @ since 3.19.2
+deriving anyclass instance Aeson.FromJSON CurrencySymbol
 
--- @ since 3.6.1
-deriving via
-  (AsBase16Bytes TokenName)
-  instance
-    (Aeson.ToJSON TokenName)
+-- @ since 3.19.2
+deriving anyclass instance Aeson.ToJSON TokenName
 
--- @ since 3.6.1
-deriving via
-  (AsBase16Bytes TokenName)
-  instance
-    (Aeson.FromJSON TokenName)
+-- @ since 3.19.2
+deriving anyclass instance Aeson.FromJSON TokenName
 
 -- @ since 3.6.1
 deriving via

@@ -2,12 +2,18 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.19.2 -- 2022-12-07
+
+### Modified
+
+- `Plutarch.Orphans`: `FromJSON` and `ToJSON` of `CurrencySymbol` and
+  `TokenName` are now derived, to match the JSON representation that CTL uses.
 
 ## 3.19.1 -- 2022-12-05
 
 ### Added
 
-- `AsBase16Codec`-based `ToJSON`, `FromJSON` instances for `Datum` 
+- `AsBase16Codec`-based `ToJSON`, `FromJSON` instances for `Datum`
 
 ### Modified
 
@@ -31,7 +37,7 @@ confusion.
 * `pcurrentTime` -> `pgetFullyBoundedTimeRange`
 * `currentTime` -> `fullyBoundedTimeRangeFromValidRange`
 * `passertCurrentTime` -> `passertFullyBoundedTimeRange`
-* `pisWithinCurrentTime` -> `pisWithinTimeRange` 
+* `pisWithinCurrentTime` -> `pisWithinTimeRange`
 * `pisCurrentTimeWithin` -> `pisTimeRangeWithin`
 * `pcurrentTimeDuration` -> `ptimeRangeDuration`
 
