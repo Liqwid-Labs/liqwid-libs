@@ -43,7 +43,7 @@ module Plutarch.Test.QuickCheck (
 import Data.Kind (Constraint, Type)
 import GHC.TypeLits
 import Generics.SOP (All, HPure (hcpure), NP (Nil, (:*)), Proxy (Proxy))
-import Plutarch (Config (Config), TracingMode (DoTracing, NoTracing), compile, tracingMode)
+import Plutarch (Config (Config), Script, TracingMode (DoTracing, NoTracing), compile, tracingMode)
 import Plutarch.Evaluate (evalScript, evalScriptHuge, evalTerm)
 import Plutarch.Lift (DerivePConstantViaNewtype (..), PConstantDecl, PUnsafeLiftDecl (PLifted))
 import Plutarch.Num (PNum)
@@ -87,7 +87,6 @@ import Plutarch.Test.QuickCheck.Internal (
   pconstantT,
   pliftT,
  )
-import PlutusLedgerApi.V2 (Script)
 import Test.QuickCheck (
   Arbitrary (..),
   Gen,
@@ -519,7 +518,7 @@ instance
           Nothing -> property True
       Right (Right p', _, t) ->
         case h of
-          Just h' -> haskEquiv @e @( 'ByComplete) h' (TestableTerm p') Nil
+          Just h' -> haskEquiv @e @'ByComplete h' (TestableTerm p') Nil
           Nothing -> failWith $ "Haskell expected failure, but Plutarch succeed.\n" <> show t
 
 -- | @since 2.1.0
@@ -552,8 +551,8 @@ instance
   HaskEquiv 'OnBoth 'ByComplete h p '[]
   where
   haskEquiv h p _ =
-    haskEquiv @( 'OnPEq) @( 'ByComplete) h p Nil
-      .&&. haskEquiv @( 'OnPData) @( 'ByComplete) h p Nil
+    haskEquiv @'OnPEq @'ByComplete h p Nil
+      .&&. haskEquiv @'OnPData @'ByComplete h p Nil
 
 {- | Simplified version of `haskEquiv`. It will use arbitrary instead of
      asking custom generators.

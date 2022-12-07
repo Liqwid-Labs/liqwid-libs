@@ -18,9 +18,9 @@ module Plutarch.Test.QuickCheck.Internal (
 ) where
 
 import Data.ByteString (ByteString)
-import qualified Data.Text as T (intercalate, pack, unpack)
+import Data.Text qualified as T (intercalate, pack, unpack)
 import Data.Word (Word8)
-import qualified GHC.Exts as Exts (IsList (fromList, toList))
+import GHC.Exts qualified as Exts (IsList (fromList, toList))
 import Plutarch (
   Config (Config, tracingMode),
   POpaque,
@@ -42,11 +42,12 @@ import Plutarch.Api.V1 (
   PInterval (PInterval),
   PLowerBound (PLowerBound),
   PMap (PMap),
-  PStakeValidatorHash (PStakeValidatorHash),
   PTokenName (PTokenName),
   PUpperBound (PUpperBound),
-  PValidatorHash (PValidatorHash),
   PValue (PValue),
+ )
+import Plutarch.Api.V1.Scripts (
+  PScriptHash (PScriptHash),
  )
 import Plutarch.Api.V1.Time (PPOSIXTime (PPOSIXTime))
 import Plutarch.Api.V1.Tuple (
@@ -691,18 +692,11 @@ instance PArbitrary PPubKeyHash where
     return $ pconT $ PPubKeyHash $ pconstant bs
 
 -- | @since 2.0.0
-instance PArbitrary PValidatorHash where
-  parbitrary = do
-    -- ValidatorHash should be 28 bytes long
-    bs <- genByteString 28
-    return $ pconT $ PValidatorHash $ pconstant bs
-
--- | @since 2.0.0
-instance PArbitrary PStakeValidatorHash where
+instance PArbitrary PScriptHash where
   parbitrary = do
     -- StakeValidatorHash should be 28 bytes long
     bs <- genByteString 28
-    return $ pconT $ PStakeValidatorHash $ pconstant bs
+    return $ pconT $ PScriptHash $ pconstant bs
 
 -- | @since 2.0.0
 instance PArbitrary PCredential where

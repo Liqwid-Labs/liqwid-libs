@@ -34,7 +34,7 @@ import PlutusLedgerApi.V2 (
   fromBuiltin,
   toBuiltin,
  )
-import qualified PlutusTx.AssocMap as AssocMap
+import PlutusTx.AssocMap qualified as AssocMap
 import Test.QuickCheck (
   ASCIIString (ASCIIString),
   Arbitrary (arbitrary, shrink),
@@ -52,7 +52,7 @@ import Test.QuickCheck (
   shrinkList,
  )
 import Test.QuickCheck.Function (functionMap)
-import qualified Test.QuickCheck.Gen as Gen
+import Test.QuickCheck.Gen qualified as Gen
 
 {- | Type-level marker to indicate whether a 'GenCurrencySymbol' can have an ADA
  'CurrencySymbol' inside it or not.
