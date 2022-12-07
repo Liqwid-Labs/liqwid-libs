@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutarch-context-builder
-version:            2.9.0
+version:            2.10.0
 synopsis:           A builder for ScriptContexts
 description:
   Defines a builder for ScriptContexts, with helpers for commonly-needed uses.
@@ -19,7 +19,7 @@ maintainer:
 copyright:          (C) 2022 Liqwid Labs
 category:           Plutarch
 build-type:         Simple
-tested-with:        GHC ==9.2.1
+tested-with:        GHC ==9.2.5
 extra-source-files: README.md
 
 -- LICENSE
