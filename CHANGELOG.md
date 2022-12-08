@@ -2,12 +2,23 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-## 3.19.2 -- 2022-12-07
+## 3.20.1 -- 2022-12-08
 
 ### Modified
 
 - `Plutarch.Orphans`: `FromJSON` and `ToJSON` of `CurrencySymbol` and
   `TokenName` are now derived, to match the JSON representation that CTL uses.
+
+## 3.20.0 -- 2022-12-03
+
+### Modified
+
+* Bumped Plutarch to 1.3.0.
+
+### Added
+
+* `applyArguments` to `Plutarch.Extra.Script` since it was dropped on Plutus.
+* `Plutarch.Numeric.Additiv` is moved from `plutarch-numeric`.
 
 ## 3.19.1 -- 2022-12-05
 

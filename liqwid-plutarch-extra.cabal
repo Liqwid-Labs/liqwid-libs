@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               liqwid-plutarch-extra
-version:            3.19.2
+version:            3.20.1
 synopsis:           A collection of Plutarch extras from Liqwid Labs
 description:        Several useful data types and functions for Plutarch.
 homepage:           https://github.com/Liqwid-Labs/liqwid-plutarch-extra
@@ -12,7 +12,7 @@ maintainer:         Koz Ross <koz@mlabs.city>
 copyright:          (C) 2022 Liqwid Labs
 category:           Test
 build-type:         Simple
-tested-with:        GHC ==9.2.1
+tested-with:        GHC ==9.2.5
 extra-source-files:
   LICENSE
   README.md
@@ -58,6 +58,7 @@ common common-lang
     FlexibleInstances
     GeneralisedNewtypeDeriving
     HexFloatLiterals
+    ImportQualifiedPost
     InstanceSigs
     KindSignatures
     LambdaCase
@@ -119,6 +120,7 @@ library
     Plutarch.Extra.Profunctor
     Plutarch.Extra.Rational
     Plutarch.Extra.Record
+    Plutarch.Extra.Script
     Plutarch.Extra.ScriptContext
     Plutarch.Extra.Star
     Plutarch.Extra.State
@@ -131,6 +133,7 @@ library
     Plutarch.Extra.Traversable
     Plutarch.Extra.Tuple
     Plutarch.Extra.Value
+    Plutarch.Numeric.Additive
     Plutarch.Orphans
 
   build-depends:
@@ -146,7 +149,6 @@ library
     , optics-core
     , optics-th
     , plutarch-extra
-    , plutarch-numeric
     , plutarch-quickcheck
     , plutus-core
     , ply-core

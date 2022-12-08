@@ -25,7 +25,7 @@ module Plutarch.Extra.Precompile (
 ) where
 
 import Data.Text (Text)
-import qualified Data.Text as Text
+import Data.Text qualified as Text
 import GHC.Stack (HasCallStack)
 import Optics.Getter (view)
 import Plutarch.Evaluate (evalScript)
@@ -54,9 +54,9 @@ import Plutarch.Lift (
   PUnsafeLiftDecl (PLifted),
   plift',
  )
+import Plutarch.Script (Script (Script))
 import PlutusCore.Builtin (KnownTypeError (KnownTypeEvaluationFailure, KnownTypeUnliftingError))
-import PlutusLedgerApi.V1.Scripts (Script (Script))
-import qualified UntypedPlutusCore as UPLC
+import UntypedPlutusCore qualified as UPLC
 
 {- | Type-safe wrapper for compiled Plutarch functions.
 

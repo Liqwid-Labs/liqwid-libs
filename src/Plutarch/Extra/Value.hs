@@ -40,7 +40,7 @@ module Plutarch.Extra.Value (
 
 import Data.List (nub, sort)
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
+import Data.Map.Strict qualified as Map
 import Data.Tagged (Tagged (Tagged))
 import GHC.TypeLits (Symbol)
 import Optics.Getter (A_Getter, view)
@@ -54,8 +54,8 @@ import Plutarch.Api.V1 (
   PValue (PValue),
  )
 import Plutarch.Api.V1.AssocMap (plookup)
-import qualified Plutarch.Api.V1.AssocMap as AssocMap
-import qualified Plutarch.Api.V1.Value as Value
+import Plutarch.Api.V1.AssocMap qualified as AssocMap
+import Plutarch.Api.V1.Value qualified as Value
 import Plutarch.Api.V2 (
   AmountGuarantees (NoGuarantees, Positive),
   KeyGuarantees (Sorted),

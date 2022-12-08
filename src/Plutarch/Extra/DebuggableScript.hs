@@ -18,9 +18,8 @@ module Plutarch.Extra.DebuggableScript (
   mustEvalD,
 ) where
 
-import Control.DeepSeq (NFData)
 import Data.Text (Text)
-import qualified Data.Text as Text
+import Data.Text qualified as Text
 import Optics.Getter (A_Getter, to, view)
 import Optics.Label (LabelOptic (labelOptic))
 import Plutarch (
@@ -30,8 +29,11 @@ import Plutarch (
  )
 import Plutarch.Evaluate (EvalError, evalScript)
 import Plutarch.Extra.Compile (mustCompile, mustCompileTracing)
-import PlutusLedgerApi.V1 (Data, ExBudget, Script)
-import PlutusLedgerApi.V1.Scripts (Script (Script), applyArguments)
+import Plutarch.Extra.Script (applyArguments)
+import Plutarch.Script (
+  Script (Script),
+ )
+import PlutusLedgerApi.V1 (Data, ExBudget)
 import UntypedPlutusCore (
   Program (
     Program,
@@ -40,7 +42,7 @@ import UntypedPlutusCore (
     _progVer
   ),
  )
-import qualified UntypedPlutusCore.Core.Type as UplcType
+import UntypedPlutusCore.Core.Type qualified as UplcType
 import UntypedPlutusCore.Evaluation.Machine.Cek (
   CekUserError (CekEvaluationFailure, CekOutOfExError),
   ErrorWithCause (ErrorWithCause),
@@ -59,10 +61,6 @@ data DebuggableScript = DebuggableScript Script Script
       Show
     , -- | @since 3.0.2
       Generic
-    )
-  deriving anyclass
-    ( -- | @since 3.0.2
-      NFData
     )
 
 {- | Retrieves the non-debugging 'Script'. This is read-only, as allowing it to

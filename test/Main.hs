@@ -5,10 +5,10 @@ module Main (main) where
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
 import Test.Tasty (defaultMain, testGroup)
 
-import qualified FunctorProp
-import qualified NumericProp
-import qualified OrdProp
-import qualified TraversableProp
+import FunctorProp qualified
+import NumericProp qualified
+import OrdProp qualified
+import TraversableProp qualified
 
 main :: IO ()
 main = do
