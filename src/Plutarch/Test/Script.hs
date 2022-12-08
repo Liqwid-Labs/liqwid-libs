@@ -39,9 +39,7 @@ import Test.Tasty.Providers (
 --------------------------------------------------------------------------------
 
 import Plutarch.Evaluate (evalScript)
-import PlutusLedgerApi.V2 (
-  Script,
- )
+import Plutarch.Script (Script)
 import Test.Tasty (testGroup)
 
 --------------------------------------------------------------------------------

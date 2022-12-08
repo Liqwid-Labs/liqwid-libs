@@ -40,7 +40,8 @@ import Plutarch.Prelude (
   pconstantData,
   (#),
  )
-import PlutusLedgerApi.V2 (Script, ScriptContext)
+import Plutarch.Script (Script)
+import PlutusLedgerApi.V2 (ScriptContext)
 import PlutusTx.IsData.Class (ToData)
 import Test.Tasty (TestTree)
 import Test.Tasty.Providers (

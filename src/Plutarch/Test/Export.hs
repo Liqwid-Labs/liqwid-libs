@@ -57,10 +57,10 @@ import Optics.Optic ((%), (%%))
 import Optics.Setter (over)
 import Optics.TH (makeFieldLabelsNoPrefix)
 import Plutarch.Evaluate (evalScriptHuge)
-import PlutusLedgerApi.V1.Scripts (applyArguments)
+import Plutarch.Extra.Script (applyArguments)
+import Plutarch.Script (Script)
 import PlutusLedgerApi.V2 (
   Data,
-  Script,
   ScriptContext,
   ToData,
   toData,
