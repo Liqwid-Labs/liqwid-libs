@@ -10,9 +10,9 @@
 module Plutarch.Orphans () where
 
 import Codec.Serialise (Serialise, deserialiseOrFail, serialise)
-import Data.Aeson ((.:), (.=), (<?>))
+import Data.Aeson ((.:), (.=))
 import Data.Aeson qualified as Aeson
-import Data.Aeson.Types (JSONPathElement (Key), Parser, parserThrowError)
+import Data.Aeson.Types (Parser, parserThrowError)
 import Data.ByteString.Lazy (fromStrict, toStrict)
 import Data.Coerce (Coercible, coerce)
 import Data.Ratio (Ratio, denominator, numerator, (%))
@@ -35,7 +35,7 @@ import PlutusLedgerApi.V2 (
   BuiltinByteString,
   BuiltinData (BuiltinData),
   Credential (PubKeyCredential, ScriptCredential),
-  CurrencySymbol (CurrencySymbol),
+  CurrencySymbol,
   Data (I, List),
   Datum,
   LedgerBytes (LedgerBytes),
@@ -43,7 +43,7 @@ import PlutusLedgerApi.V2 (
   PubKeyHash (PubKeyHash),
   ScriptHash (ScriptHash),
   StakingCredential (StakingHash, StakingPtr),
-  TokenName (TokenName),
+  TokenName,
   TxId (TxId),
   TxOutRef,
  )
@@ -183,29 +183,17 @@ deriving anyclass instance Aeson.ToJSON TxOutRef
 -- @ since 3.6.1
 deriving anyclass instance Aeson.FromJSON TxOutRef
 
--- @ since 3.6.1
-deriving via
-  (AsBase16Bytes CurrencySymbol)
-  instance
-    (Aeson.ToJSON CurrencySymbol)
+-- @ since 3.20.1
+deriving anyclass instance Aeson.ToJSON CurrencySymbol
 
--- @ since 3.6.1
-deriving via
-  (AsBase16Bytes CurrencySymbol)
-  instance
-    (Aeson.FromJSON CurrencySymbol)
+-- @ since 3.20.1
+deriving anyclass instance Aeson.FromJSON CurrencySymbol
 
--- @ since 3.6.1
-deriving via
-  (AsBase16Bytes TokenName)
-  instance
-    (Aeson.ToJSON TokenName)
+-- @ since 3.20.1
+deriving anyclass instance Aeson.ToJSON TokenName
 
--- @ since 3.6.1
-deriving via
-  (AsBase16Bytes TokenName)
-  instance
-    (Aeson.FromJSON TokenName)
+-- @ since 3.20.1
+deriving anyclass instance Aeson.FromJSON TokenName
 
 -- @ since 3.6.1
 deriving via
@@ -309,8 +297,8 @@ instance Aeson.ToJSON StakingCredential where
 -- @since 3.16.0
 instance Aeson.FromJSON StakingCredential where
   parseJSON = Aeson.withObject "StakingCredential" $ \v -> do
-    contents <- v .: "contents" <?> Key "contents"
-    tag <- v .: "tag" <?> Key "tag"
+    contents <- v .: "contents"
+    tag <- v .: "tag"
     case tag of
       "StakingHash" -> StakingHash <$> Aeson.parseJSON contents
       "StakingPtr" -> parseStakingPtr contents
@@ -356,8 +344,8 @@ instance Aeson.ToJSON Credential where
 -- @since 3.16.0
 instance Aeson.FromJSON Credential where
   parseJSON = Aeson.withObject "Credential" $ \v -> do
-    contents <- v .: "contents" <?> Key "contents"
-    tag <- v .: "tag" <?> Key "tag"
+    contents <- v .: "contents"
+    tag <- v .: "tag"
     case tag of
       "PubKeyCredential" -> PubKeyCredential <$> Aeson.parseJSON contents
       "ScriptCredential" -> ScriptCredential <$> Aeson.parseJSON contents

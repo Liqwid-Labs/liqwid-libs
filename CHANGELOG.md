@@ -2,6 +2,13 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.20.1 -- 2022-12-08
+
+### Modified
+
+- `Plutarch.Orphans`: `FromJSON` and `ToJSON` of `CurrencySymbol` and
+  `TokenName` are now derived, to match the JSON representation that CTL uses.
+
 ## 3.20.0 -- 2022-12-03
 
 ### Modified
