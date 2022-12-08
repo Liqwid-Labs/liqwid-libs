@@ -10,9 +10,9 @@
 module Plutarch.Orphans () where
 
 import Codec.Serialise (Serialise, deserialiseOrFail, serialise)
-import Data.Aeson ((.:), (.=), (<?>))
+import Data.Aeson ((.:), (.=))
 import Data.Aeson qualified as Aeson
-import Data.Aeson.Types (JSONPathElement (Key), Parser, parserThrowError)
+import Data.Aeson.Types (Parser, parserThrowError)
 import Data.ByteString.Lazy (fromStrict, toStrict)
 import Data.Coerce (Coercible, coerce)
 import Data.Ratio (Ratio, denominator, numerator, (%))
