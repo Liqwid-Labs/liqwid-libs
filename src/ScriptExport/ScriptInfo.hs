@@ -31,24 +31,25 @@ module ScriptExport.ScriptInfo (
   mkValidatorInfo,
   mkPolicyInfo,
   mkStakeValidatorInfo,
+  toScript,
 
   -- * Re-exports
   ScriptRole (..),
 ) where
 
 import Cardano.Binary qualified as CBOR
-import Codec.Serialise qualified as Codec
 import Control.Monad.Except (Except, MonadError, runExcept, throwError)
 import Control.Monad.Reader (MonadReader, ReaderT, ask, asks, runReaderT)
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Types qualified as Aeson
 import Data.ByteString qualified as BS
 import Data.ByteString.Base16 qualified as Base16
-import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
+import Data.Coerce (coerce)
 import Data.Kind (Type)
 import Data.Map (Map, (!?))
 import Data.Text (Text, pack)
+import Data.Text qualified as T
 import Data.Text.Encoding qualified as Text
 import GHC.Generics qualified as GHC
 import Optics (view)
@@ -57,30 +58,23 @@ import Plutarch (
   ClosedTerm,
   Config (Config, tracingMode),
   TracingMode (NoTracing),
+  compile,
  )
 import Plutarch.Api.V2 (
   PMintingPolicy,
   PStakeValidator,
   PValidator,
-  mkMintingPolicy,
-  mkStakeValidator,
-  mkValidator,
   scriptHash,
  )
 import Plutarch.Orphans ()
-import PlutusLedgerApi.V2 (
-  MintingPolicy (getMintingPolicy),
-  Script,
-  StakeValidator (getStakeValidator),
-  Validator (getValidator),
- )
+import Plutarch.Script (Script (Script), deserialiseScript, serialiseScript)
 import Ply (
   ScriptRole (MintingPolicyRole, ValidatorRole),
-  TypedScript,
+  TypedScript (TypedScript),
   TypedScriptEnvelope,
-  toScript,
  )
 import Ply.Core.TypedReader (TypedReader, mkTypedScript)
+import Unsafe.Coerce (unsafeCoerce)
 
 {- | Type for holding parameterized scripts. This type represents the
      raw scripts which needs to be linked in order to be deployed.
@@ -213,6 +207,13 @@ fetchTS t = do
         Left err -> throwError $ ScriptTypeMismatch $ pack $ show err
     Nothing -> throwError $ ScriptNotFound t
 
+{- | Convert a TypedScript to Script.
+
+     @since 2.1.0
+-}
+toScript :: forall r x. TypedScript r x -> Script
+toScript s = let TypedScript _ a = unsafeCoerce s in coerce a
+
 -- | @since 2.0.0
 getParam :: forall (lparam :: Type). Linker lparam lparam
 getParam = asks snd
@@ -250,9 +251,7 @@ instance CBOR.FromCBOR CBORSerializedScript where
 
 cborToScript :: BS.ByteString -> Either CBOR.DecoderError Script
 cborToScript x =
-  Codec.deserialise
-    . LBS.fromStrict
-    . SBS.fromShort
+  deserialiseScript
     . (\(CBORSerializedScript x) -> x)
     <$> CBOR.decodeFull' x
 
@@ -260,7 +259,7 @@ cborToScript x =
 instance Aeson.ToJSON RoledScript where
   toJSON s =
     let scr = view #script s
-        raw = LBS.toStrict $ Codec.serialise scr
+        raw = SBS.fromShort $ serialiseScript scr
         cbor = CBOR.serialize' $ SBS.toShort raw
      in Aeson.toJSON $
           Aeson.object
@@ -342,11 +341,11 @@ data ScriptInfo = ScriptInfo
 
 mkScriptInfo :: Script -> ScriptInfo
 mkScriptInfo script =
-  let scriptRaw = LBS.toStrict $ Codec.serialise script
-      scriptCBOR = CBOR.serialize' $ SBS.toShort scriptRaw
+  let scriptRaw = serialiseScript script
+      scriptCBOR = CBOR.serialize' scriptRaw
    in ScriptInfo
         { cborHex = Base16.encodeBase16 scriptCBOR
-        , rawHex = Base16.encodeBase16 scriptRaw
+        , rawHex = Base16.encodeBase16 $ SBS.fromShort scriptRaw
         }
 
 exportConfig :: Config
@@ -361,7 +360,7 @@ exportConfig =
 -}
 mkPolicyInfo :: ClosedTerm PMintingPolicy -> ScriptInfo
 mkPolicyInfo term =
-  mkScriptInfo (getMintingPolicy $ mkMintingPolicy exportConfig term)
+  mkScriptInfo (either (error . T.unpack) id $ compile exportConfig term)
 
 {- | Create a 'ScriptInfo' given a Plutarch term of a validator.
 
@@ -369,7 +368,7 @@ mkPolicyInfo term =
 -}
 mkValidatorInfo :: ClosedTerm PValidator -> ScriptInfo
 mkValidatorInfo term =
-  mkScriptInfo (getValidator $ mkValidator exportConfig term)
+  mkScriptInfo (either (error . T.unpack) id $ compile exportConfig term)
 
 {- | Create a 'ScriptInfo' given a Plutarch term of a stake validator.
 
@@ -377,7 +376,7 @@ mkValidatorInfo term =
 -}
 mkStakeValidatorInfo :: ClosedTerm PStakeValidator -> ScriptInfo
 mkStakeValidatorInfo term =
-  mkScriptInfo (getStakeValidator $ mkStakeValidator exportConfig term)
+  mkScriptInfo (either (error . T.unpack) id $ compile exportConfig term)
 
 ----------------------------------------
 -- Field Labels
