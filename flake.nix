@@ -15,13 +15,12 @@
     nixpkgs-latest.url = "github:NixOS/nixpkgs";
 
     liqwid-nix = {
-      url = "github:Liqwid-Labs/liqwid-nix/liqwid-nix-2.0";
+      url = "github:Liqwid-Labs/liqwid-nix/v2.0.0";
       inputs.nixpkgs-latest.follows = "nixpkgs-latest";
     };
 
-    plutarch-numeric.url = "github:Liqwid-Labs/plutarch-numeric/emiflake/liqwid-nix-2.0";
-    plutarch-quickcheck.url = "github:Liqwid-Labs/plutarch-quickcheck/emiflake/liqwid-nix-2.0";
-    plutarch-context-builder.url = "github:Liqwid-Labs/plutarch-context-builder/emiflake/liqwid-nix-2.0";
+    plutarch-quickcheck.url = "github:Liqwid-Labs/plutarch-quickcheck";
+    plutarch-context-builder.url = "github:Liqwid-Labs/plutarch-context-builder";
 
     ply.url = "github:mlabs-haskell/ply?ref=master";
   };
@@ -44,7 +43,6 @@
             enableBuildChecks = true;
             extraHackageDeps = [
               "${self.inputs.plutarch-quickcheck}"
-              "${self.inputs.plutarch-numeric}"
               "${self.inputs.plutarch-context-builder}"
               "${self.inputs.ply}/ply-core"
               "${self.inputs.ply}/ply-plutarch"

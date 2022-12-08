@@ -11,6 +11,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 ### Added
 
 * `applyArguments` to `Plutarch.Extra.Script` since it was dropped on Plutus.
+* `Plutarch.Numeric.Additiv` is moved from `plutarch-numeric`.
 
 ## 3.19.1 -- 2022-12-05
 

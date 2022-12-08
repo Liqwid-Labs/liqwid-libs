@@ -12,7 +12,7 @@ maintainer:         Koz Ross <koz@mlabs.city>
 copyright:          (C) 2022 Liqwid Labs
 category:           Test
 build-type:         Simple
-tested-with:        GHC ==9.2.1
+tested-with:        GHC ==9.2.5
 extra-source-files:
   LICENSE
   README.md
@@ -133,6 +133,7 @@ library
     Plutarch.Extra.Traversable
     Plutarch.Extra.Tuple
     Plutarch.Extra.Value
+    Plutarch.Numeric.Additive
     Plutarch.Orphans
 
   build-depends:
@@ -148,7 +149,6 @@ library
     , optics-core
     , optics-th
     , plutarch-extra
-    , plutarch-numeric
     , plutarch-quickcheck
     , plutus-core
     , ply-core
