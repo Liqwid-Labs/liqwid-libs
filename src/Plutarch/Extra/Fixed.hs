@@ -15,11 +15,11 @@ import Data.Bifunctor (first)
 import Data.Proxy (Proxy (Proxy))
 import GHC.TypeLits (KnownNat, Nat, natVal)
 import Plutarch.Api.V1 (AmountGuarantees (NonZero), PValue)
-import qualified Plutarch.Api.V1.Value as Value
+import Plutarch.Api.V1.Value qualified as Value
 import Plutarch.Api.V2 (KeyGuarantees (Sorted))
 import Plutarch.Extra.Function (pflip)
 import Plutarch.Num (PNum (pfromInteger, (#*)))
-import qualified Plutarch.Numeric.Additive as A (
+import Plutarch.Numeric.Additive qualified as A (
   AdditiveMonoid (zero),
   AdditiveSemigroup ((+)),
  )

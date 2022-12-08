@@ -46,7 +46,7 @@ import Data.Aeson (
   ToJSONKey,
  )
 import Data.Tagged (Tagged (Tagged, unTagged), untag)
-import qualified Generics.SOP as SOP
+import Generics.SOP qualified as SOP
 import Optics.Getter (A_Getter, view)
 import Optics.Label (LabelOptic, LabelOptic', labelOptic)
 import Optics.Lens (A_Lens)
@@ -73,8 +73,8 @@ import Plutarch.Test.QuickCheck.Modifiers (
   GenCurrencySymbol (GenCurrencySymbol),
  )
 import PlutusLedgerApi.V1.Value (CurrencySymbol, TokenName)
-import qualified PlutusLedgerApi.V1.Value as Value
-import qualified PlutusTx
+import PlutusLedgerApi.V1.Value qualified as Value
+import PlutusTx qualified
 import Ply.Core.Class (
   PlyArg (
     UPLCRep,

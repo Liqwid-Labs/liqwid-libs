@@ -1,7 +1,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Plutarch.Extra.ScriptContext (
-  paddressFromValidatorHash,
+  paddressFromScriptHash,
   paddressFromPubKeyHash,
   pownTxOutRef,
   pownTxInfo,
@@ -13,7 +13,6 @@ module Plutarch.Extra.ScriptContext (
   pvalueSpent,
   ptxSignedBy,
   pfindTxInByTxOutRef,
-  pvalidatorHashFromAddress,
   pscriptHashFromAddress,
   pisScriptAddress,
   pisPubKey,
@@ -26,8 +25,6 @@ module Plutarch.Extra.ScriptContext (
   ptryFromOutputDatum,
   ptryFromDatumHash,
   ptryFromInlineDatum,
-  validatorHashToTokenName,
-  pvalidatorHashToTokenName,
   scriptHashToTokenName,
   pscriptHashToTokenName,
   ptryFromRedeemer,
@@ -39,11 +36,10 @@ import Plutarch.Api.V1 (
   PCredential (PPubKeyCredential, PScriptCredential),
   PMap,
   PTokenName,
-  PValidatorHash,
   PValue,
  )
 import Plutarch.Api.V1.AssocMap (plookup)
-import qualified Plutarch.Api.V1.AssocMap as AssocMap
+import Plutarch.Api.V1.AssocMap qualified as AssocMap
 import Plutarch.Api.V1.Scripts (PRedeemer)
 import Plutarch.Api.V2 (
   KeyGuarantees (Sorted, Unsorted),
@@ -70,7 +66,7 @@ import Plutarch.Extra.Maybe (pfromJust, pisJust, pjust, pnothing, ptraceIfNothin
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.Extra.Value (passetClassValueOf)
 import Plutarch.Unsafe (punsafeCoerce)
-import PlutusLedgerApi.V1 (TokenName (TokenName), ValidatorHash (ValidatorHash))
+import PlutusLedgerApi.V1 (TokenName (TokenName))
 import PlutusLedgerApi.V2 (ScriptHash (ScriptHash))
 
 -- | @since 3.13.0
@@ -319,28 +315,15 @@ ptryFromInlineDatum = phoistAcyclic $
       POutputDatum ((pfield @"outputDatum" #) -> datum) -> datum
       _ -> ptraceError "not an inline datum"
 
-{- | Find a validatorhash from a given address.
+{- | Construct an address from a @PScriptHash@ and maybe a
+     @PStakingCredential@.
 
-    @since 1.1.0
+     @since 3.20.0
 -}
-pvalidatorHashFromAddress ::
+paddressFromScriptHash ::
   forall (s :: S).
-  Term s (PAddress :--> PMaybe PValidatorHash)
-pvalidatorHashFromAddress = phoistAcyclic $
-  plam $ \addr ->
-    pmatch (pfromData $ pfield @"credential" # addr) $ \case
-      PScriptCredential ((pfield @"_0" #) -> vh) -> pcon $ PJust vh
-      _ -> pcon PNothing
-
-{- | Construct an address from a @PValidatorHash@ and maybe a
-@PStakingCredential@
-
-    @since 1.1.0
--}
-paddressFromValidatorHash ::
-  forall (s :: S).
-  Term s (PValidatorHash :--> PMaybeData PStakingCredential :--> PAddress)
-paddressFromValidatorHash = plam $ \valHash stakingCred ->
+  Term s (PScriptHash :--> PMaybeData PStakingCredential :--> PAddress)
+paddressFromScriptHash = plam $ \valHash stakingCred ->
   pcon . PAddress $
     pdcons
       # pdata (pcon $ PScriptCredential (pdcons # pdata valHash # pdnil))
@@ -367,7 +350,7 @@ paddressFromPubKeyHash = plam $ \pkh stakingCred ->
 {- | Get script hash from an Address.
      @since 1.3.0
 -}
-pscriptHashFromAddress :: forall (s :: S). Term s (PAddress :--> PMaybe PValidatorHash)
+pscriptHashFromAddress :: forall (s :: S). Term s (PAddress :--> PMaybe PScriptHash)
 pscriptHashFromAddress = phoistAcyclic $
   plam $ \addr ->
     pmatch (pfromData $ pfield @"credential" # addr) $ \case
@@ -451,25 +434,6 @@ pfindOwnInput = phoistAcyclic $
     matches = phoistAcyclic $
       plam $ \outref txininfo ->
         outref #== pfield @"outRef" # txininfo
-
-{- | Safely convert a 'ValidatorHash' into a 'TokenName'. This can be useful for tagging
-     tokens for extra safety.
-
-     @since 3.14.1
--}
-validatorHashToTokenName :: ValidatorHash -> TokenName
-validatorHashToTokenName = coerce
-
-{- | Safely convert a 'PValidatorHash' into a 'PTokenName'. This can be useful for tagging
-     tokens for extra safety.
-
-     @since 3.14.1
--}
-pvalidatorHashToTokenName ::
-  forall (s :: S).
-  Term s PValidatorHash ->
-  Term s PTokenName
-pvalidatorHashToTokenName = punsafeCoerce
 
 {- | Safely convert a 'PScriptHash' into a 'PTokenName'. This can be useful for tagging
      tokens for extra safety.

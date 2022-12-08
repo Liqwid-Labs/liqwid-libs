@@ -54,7 +54,7 @@ import Plutarch.Api.V1.AssocMap (
 import Plutarch.Builtin (ppairDataBuiltin)
 import Plutarch.Extra.List (phandleList)
 import Plutarch.Extra.Maybe (passertPJust)
-import qualified Plutarch.List as PList
+import Plutarch.List qualified as PList
 
 {- | Eliminates a sorted 'PMap', similarly to 'pelimList'. The function
  argument, if used, will be given the smallest key in the 'PMap', with its

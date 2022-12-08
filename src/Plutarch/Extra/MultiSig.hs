@@ -31,7 +31,7 @@ import Plutarch.Extra.Function (pflip)
 import Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Lift (PConstantDecl, PLifted, PUnsafeLiftDecl)
 import PlutusLedgerApi.V1.Crypto (PubKeyHash)
-import qualified PlutusTx (makeLift, unstableMakeIsData)
+import PlutusTx qualified (makeLift, unstableMakeIsData)
 
 {- | A 'MultiSig' represents a proof that a particular set of signatures
      are present on a transaction.

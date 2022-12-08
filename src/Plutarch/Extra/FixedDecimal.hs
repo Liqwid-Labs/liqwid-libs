@@ -23,7 +23,7 @@ module Plutarch.Extra.FixedDecimal (
 
 import Control.Monad (unless)
 import Data.Aeson ((.:), (.=), (<?>))
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Data.Aeson.Types (JSONPathElement (Key), Parser)
 import Data.Proxy (Proxy (Proxy))
 import Data.Ratio ((%))
@@ -44,7 +44,7 @@ import Plutarch.Num (
 import Plutarch.Rational (PFractional (pfromRational, precip, (#/)))
 import Plutarch.Show (pshow')
 import Plutarch.Unsafe (punsafeCoerce)
-import qualified PlutusLedgerApi.V1 as PlutusTx
+import PlutusLedgerApi.V1 qualified as PlutusTx
 
 ------ Haskell
 

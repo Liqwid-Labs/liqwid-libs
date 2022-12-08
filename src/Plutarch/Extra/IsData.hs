@@ -40,7 +40,7 @@ import Generics.SOP (
   productTypeTo,
   unI,
  )
-import qualified Generics.SOP as SOP
+import Generics.SOP qualified as SOP
 import Plutarch.Builtin (pasInt)
 import Plutarch.Extra.TermCont (pletC)
 import Plutarch.Internal.Generic (PCode, PGeneric, gpfrom, gpto)
