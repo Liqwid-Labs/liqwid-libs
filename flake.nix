@@ -20,8 +20,6 @@
     };
 
     liqwid-plutarch-extra.url = "github:Liqwid-Labs/liqwid-plutarch-extra";
-    plutarch-quickcheck.url = "github:Liqwid-Labs/plutarch-quickcheck";
-    ply.url = "github:mlabs-haskell/ply";
   };
 
   outputs = { self, liqwid-nix, flake-parts, ... }:
@@ -42,10 +40,10 @@
                   shell = { };
                   enableBuildChecks = true;
                   extraHackageDeps = [
-                    "${self.inputs.plutarch-quickcheck}"
+                    "${self.inputs.liqwid-plutarch-extra.inputs.plutarch-quickcheck}"
                     "${self.inputs.liqwid-plutarch-extra}"
-                    "${self.inputs.ply}/ply-core"
-                    "${self.inputs.ply}/ply-plutarch"
+                    "${self.inputs.liqwid-plutarch-extra.inputs.ply}/ply-core"
+                    "${self.inputs.liqwid-plutarch-extra.inputs.ply}/ply-plutarch"
                   ];
                 };
                 ci.required = [ "all_onchain" ];
