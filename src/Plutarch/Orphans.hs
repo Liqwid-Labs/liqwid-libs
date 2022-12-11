@@ -13,11 +13,17 @@ import Codec.Serialise (Serialise, deserialiseOrFail, serialise)
 import Data.Aeson ((.:), (.=))
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Types (Parser, parserThrowError)
+import Data.ByteString qualified as ByteStringStrict
+import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Lazy (fromStrict, toStrict)
+import Data.ByteString.Short (fromShort, toShort)
 import Data.Coerce (Coercible, coerce)
+import Data.Functor ((<&>))
 import Data.Ratio (Ratio, denominator, numerator, (%))
 import Data.Text (Text)
+import Data.Text qualified as Text
 import Data.Text.Encoding (encodeUtf8)
+import Data.Text.Encoding qualified as Text.Encoding
 import Data.Vector qualified as Vector
 import Plutarch.Api.V2 (PDatumHash (PDatumHash))
 import Plutarch.Builtin (PIsData (pdataImpl, pfromDataImpl))
@@ -27,15 +33,14 @@ import Plutarch.Unsafe (punsafeCoerce)
 
 --------------------------------------------------------------------------------
 
-import Data.ByteString.Short (fromShort, toShort)
-import Data.Functor ((<&>))
 import Plutarch.Script (Script, deserialiseScript, serialiseScript)
 import PlutusLedgerApi.V1.Bytes (bytes, encodeByteString, fromHex)
+import PlutusLedgerApi.V1.Value (tokenName)
 import PlutusLedgerApi.V2 (
   BuiltinByteString,
   BuiltinData (BuiltinData),
   Credential (PubKeyCredential, ScriptCredential),
-  CurrencySymbol,
+  CurrencySymbol (CurrencySymbol, unCurrencySymbol),
   Data (I, List),
   Datum,
   LedgerBytes (LedgerBytes),
@@ -43,11 +48,24 @@ import PlutusLedgerApi.V2 (
   PubKeyHash (PubKeyHash),
   ScriptHash (ScriptHash),
   StakingCredential (StakingHash, StakingPtr),
-  TokenName,
+  TokenName (TokenName),
   TxId (TxId),
   TxOutRef,
+  fromBuiltin,
+  toBuiltin,
  )
+
 import PlutusTx (FromData (fromBuiltinData), ToData (toBuiltinData))
+
+--------------------------------------------------------------------------------
+
+tryDecode :: Text -> Either String ByteStringStrict.ByteString
+tryDecode = Base16.decode . encodeUtf8
+
+decodeByteString :: Aeson.Value -> Parser ByteStringStrict.ByteString
+decodeByteString = Aeson.withText "ByteString" (either fail pure . tryDecode)
+
+--------------------------------------------------------------------------------
 
 newtype Flip f a b = Flip (f b a) deriving stock (Generic)
 
@@ -183,17 +201,78 @@ deriving anyclass instance Aeson.ToJSON TxOutRef
 -- @ since 3.6.1
 deriving anyclass instance Aeson.FromJSON TxOutRef
 
--- @ since 3.20.1
-deriving anyclass instance Aeson.ToJSON CurrencySymbol
+-- @ since 3.20.2
+instance Aeson.ToJSON CurrencySymbol where
+  toJSON c =
+    Aeson.object
+      [
+        ( "unCurrencySymbol"
+        , Aeson.String
+            . encodeByteString
+            . fromBuiltin
+            . unCurrencySymbol
+            $ c
+        )
+      ]
 
--- @ since 3.20.1
-deriving anyclass instance Aeson.FromJSON CurrencySymbol
+-- @ since 3.20.2
+instance Aeson.FromJSON CurrencySymbol where
+  parseJSON =
+    Aeson.withObject "CurrencySymbol" $ \object -> do
+      raw <- object .: "unCurrencySymbol"
+      bytes' <- decodeByteString raw
+      pure $ CurrencySymbol $ toBuiltin bytes'
 
--- @ since 3.20.1
-deriving anyclass instance Aeson.ToJSON TokenName
+{- Copied from an old version of Plutarch:
+https://github.com/input-output-hk/plutus/blob/4fd86930f1dc628a816adf5f5d854b3fec578312/plutus-ledger-api/src/Plutus/V1/Ledger/Value.hs#L155
 
--- @ since 3.20.1
-deriving anyclass instance Aeson.FromJSON TokenName
+note [Roundtripping token names]
+
+How to properly roundtrip a token name that is not valid UTF-8 through PureScript
+without a big rewrite of the API?
+We prefix it with a zero byte so we can recognize it when we get a bytestring value back,
+and we serialize it base16 encoded, with 0x in front so it will look as a hex string.
+(Browsers don't render the zero byte.)
+-}
+
+-- @ since 3.20.2
+instance Aeson.ToJSON TokenName where
+  toJSON =
+    Aeson.object
+      . pure
+      . (,) "unTokenName"
+      . Aeson.toJSON
+      . fromTokenName
+        (Text.cons '\NUL' . asBase16)
+        ( \t -> case Text.take 1 t of
+            "\NUL" -> Text.concat ["\NUL\NUL", t]
+            _ -> t
+        )
+    where
+      fromTokenName ::
+        (ByteStringStrict.ByteString -> r) ->
+        (Text -> r) ->
+        TokenName ->
+        r
+      fromTokenName handleBytestring handleText (TokenName bs) =
+        either (\_ -> handleBytestring $ fromBuiltin bs) handleText $
+          Text.Encoding.decodeUtf8' (fromBuiltin bs)
+
+      asBase16 :: ByteStringStrict.ByteString -> Text
+      asBase16 bs = Text.concat ["0x", encodeByteString bs]
+
+-- @ since 3.20.2
+instance Aeson.FromJSON TokenName where
+  parseJSON =
+    Aeson.withObject "TokenName" $ \object -> do
+      raw <- object .: "unTokenName"
+      fromJSONText raw
+    where
+      fromJSONText t = case Text.take 3 t of
+        "\NUL0x" -> either fail (pure . tokenName) . tryDecode . Text.drop 3 $ t
+        "\NUL\NUL\NUL" ->
+          pure . tokenName . Text.Encoding.encodeUtf8 . Text.drop 2 $ t
+        _ -> pure . tokenName . Text.Encoding.encodeUtf8 $ t
 
 -- @ since 3.6.1
 deriving via
