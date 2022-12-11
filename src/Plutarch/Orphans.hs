@@ -25,7 +25,7 @@ import Data.Text qualified as Text
 import Data.Text.Encoding (encodeUtf8)
 import Data.Text.Encoding qualified as Text.Encoding
 import Data.Vector qualified as Vector
-import Plutarch.Api.V2 (PDatumHash (PDatumHash), PScriptHash (PScriptHash))
+import Plutarch.Api.V2 (PDatumHash (PDatumHash))
 import Plutarch.Builtin (PIsData (pdataImpl, pfromDataImpl))
 import Plutarch.Extra.TermCont (ptryFromC)
 import Plutarch.TryFrom (PTryFrom (ptryFrom'), PTryFromExcess)
@@ -51,11 +51,10 @@ import PlutusLedgerApi.V2 (
   TokenName (TokenName),
   TxId (TxId),
   TxOutRef,
-  Validator (Validator),
-  ValidatorHash (ValidatorHash),
   fromBuiltin,
   toBuiltin,
  )
+
 import PlutusTx (FromData (fromBuiltinData), ToData (toBuiltinData))
 
 --------------------------------------------------------------------------------
