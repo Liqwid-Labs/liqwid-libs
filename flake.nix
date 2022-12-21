@@ -15,21 +15,18 @@
     nixpkgs-latest.url = "github:NixOS/nixpkgs";
 
     liqwid-nix = {
-      url = "github:Liqwid-Labs/liqwid-nix/v2.0.0";
+      url = "github:Liqwid-Labs/liqwid-nix/v2.1.0";
       inputs.nixpkgs-latest.follows = "nixpkgs-latest";
     };
   };
 
-  outputs = { self, liqwid-nix, flake-parts, ... }:
-    flake-parts.lib.mkFlake { inherit self; } {
-      imports = liqwid-nix.allModules;
+  outputs = inputs@{ flake-parts, ... }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      imports = [
+        inputs.liqwid-nix.flakeModule
+      ];
       systems = [ "x86_64-linux" "aarch64-darwin" "x86_64-darwin" "aarch64-linux" ];
       perSystem = { config, self', inputs', pkgs, system, ... }:
-        let
-          pkgs = import self.inputs.nixpkgs {
-            inherit system;
-          };
-        in
         {
           onchain.default = {
             src = ./.;
