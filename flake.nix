@@ -15,42 +15,34 @@
     nixpkgs-latest.url = "github:NixOS/nixpkgs";
 
     liqwid-nix = {
-      url = "github:Liqwid-Labs/liqwid-nix/v2.0.0";
+      url = "github:Liqwid-Labs/liqwid-nix/v2.1.1";
       inputs.nixpkgs-latest.follows = "nixpkgs-latest";
     };
 
     liqwid-plutarch-extra.url = "github:Liqwid-Labs/liqwid-plutarch-extra";
   };
 
-  outputs = { self, liqwid-nix, flake-parts, ... }:
-    flake-parts.lib.mkFlake { inherit self; } {
-      imports = liqwid-nix.allModules ++ [
-        ({ self, ... }:
-          {
-            perSystem = { config, pkgs', self', inputs, system, ... }:
-              let
-                pkgs = import self.inputs.nixpkgs {
-                  inherit system;
-                };
-              in
-              {
-                onchain.default = {
-                  src = ./.;
-                  ghc.version = "ghc925";
-                  shell = { };
-                  enableBuildChecks = true;
-                  extraHackageDeps = [
-                    "${self.inputs.liqwid-plutarch-extra.inputs.plutarch-quickcheck}"
-                    "${self.inputs.liqwid-plutarch-extra}"
-                    "${self.inputs.liqwid-plutarch-extra.inputs.ply}/ply-core"
-                    "${self.inputs.liqwid-plutarch-extra.inputs.ply}/ply-plutarch"
-                  ];
-                };
-                ci.required = [ "all_onchain" ];
-              };
-          })
+  outputs = inputs@{ flake-parts, ... }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      imports = [
+        inputs.liqwid-nix.flakeModule
       ];
       systems = [ "x86_64-linux" "aarch64-darwin" "x86_64-darwin" "aarch64-linux" ];
-      perSystem = { config, self', inputs', pkgs, system, ... }: { };
+      perSystem = { config, pkgs', self', inputs', system, ... }:
+        {
+          onchain.default = {
+            src = ./.;
+            ghc.version = "ghc925";
+            shell = { };
+            enableBuildChecks = true;
+            extraHackageDeps = [
+              "${inputs.liqwid-plutarch-extra.inputs.plutarch-quickcheck}"
+              "${inputs.liqwid-plutarch-extra}"
+              "${inputs.liqwid-plutarch-extra.inputs.ply}/ply-core"
+              "${inputs.liqwid-plutarch-extra.inputs.ply}/ply-plutarch"
+            ];
+          };
+          ci.required = [ "all_onchain" ];
+        };
     };
 }
