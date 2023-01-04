@@ -753,11 +753,11 @@
         "nixpkgs-lib": "nixpkgs-lib"
       },
       "locked": {
-        "lastModified": 1671575600,
-        "narHash": "sha256-Wmbb7vEOHMFvGjqn/Jgck+fTwZ/N3k80bMG2yT+RZeg=",
+        "lastModified": 1672616755,
+        "narHash": "sha256-dvwU2ORLpiP6ZMXL3CJ/qrqmtLBLF6VAc+Fois7Qfew=",
         "owner": "hercules-ci",
         "repo": "flake-parts",
-        "rev": "0f13f0455740c3dabee986eb86a976073e31f4de",
+        "rev": "87673d7c13a799d95ce25ff5dc7b9e15f01af2ea",
         "type": "github"
       },
       "original": {
@@ -1579,16 +1579,16 @@
         "plutarch": "plutarch"
       },
       "locked": {
-        "lastModified": 1672673536,
-        "narHash": "sha256-ORm28dhrlJhXB44v4vGehRNcSmPzxojHxvHqVWWU/XU=",
+        "lastModified": 1672762905,
+        "narHash": "sha256-RmGJPiCTZVGB/7W+9wk2wHdsRY9HCihgFCXBVURlnD0=",
         "owner": "Liqwid-Labs",
         "repo": "liqwid-nix",
-        "rev": "dabb2319b609774360c124e02c354387ec9e2592",
+        "rev": "737112114094a2326c82531a784157c0cebbbd5a",
         "type": "github"
       },
       "original": {
         "owner": "Liqwid-Labs",
-        "ref": "v2.1.1",
+        "ref": "v2.2.0",
         "repo": "liqwid-nix",
         "type": "github"
       }
@@ -2282,11 +2282,11 @@
     },
     "nixpkgs-latest": {
       "locked": {
-        "lastModified": 1669639772,
-        "narHash": "sha256-eiy6Zr0omoRZCxn7WOffTeLSZzQGiGrKcN4ErmTqzow=",
+        "lastModified": 1672761287,
+        "narHash": "sha256-Wb9B9yqU7nYaQ65UpkP3ofL35xa4zSizvvqT86SYDEM=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "a2494bf2042d605ca1c4a679401bdc4971da54fb",
+        "rev": "2bd27f69f7bedb05a8089d1d8c33bb0b43f39975",
         "type": "github"
       },
       "original": {
@@ -2298,11 +2298,11 @@
     "nixpkgs-lib": {
       "locked": {
         "dir": "lib",
-        "lastModified": 1665349835,
-        "narHash": "sha256-UK4urM3iN80UXQ7EaOappDzcisYIuEURFRoGQ/yPkug=",
+        "lastModified": 1672350804,
+        "narHash": "sha256-jo6zkiCabUBn3ObuKXHGqqORUMH27gYDIFFfLq5P4wg=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "34c5293a71ffdb2fe054eb5288adc1882c1eb0b1",
+        "rev": "677ed08a50931e38382dbef01cba08a8f7eac8f6",
         "type": "github"
       },
       "original": {
