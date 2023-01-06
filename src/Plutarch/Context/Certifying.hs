@@ -25,8 +25,6 @@ module Plutarch.Context.Certifying (
 ) where
 
 import Data.Foldable (Foldable (toList))
-import Data.List (nub, sort)
-import Data.Maybe (fromMaybe)
 import Optics (A_Lens, LabelOptic (labelOptic), lens, set, view)
 import Plutarch.Context.Base (
   BaseBuilder,
@@ -137,7 +135,9 @@ buildCertifying' builder@(unpack -> bb) =
           , txInfoRedeemers = fromList $ toList (view #redeemers bb) <> redeemerMap
           , txInfoSignatories = toList . view #signatures $ bb
           , txInfoWdrl = fromList $ toList (view #withdrawals bb)
-          , txInfoDCert = nub $ sort $ toList (view #dcerts bb) <> pure rewardCred
+          , txInfoDCert = toList (view #dcerts bb)
           }
-      rewardCred = fromMaybe DCertGenesis (view #certifyingDCert builder)
-   in ScriptContext txinfo (Certifying rewardCred)
+      rewardCred = case view #certifyingDCert builder of
+        Just dcert -> Certifying dcert
+        Nothing -> Certifying DCertGenesis
+   in ScriptContext txinfo rewardCred

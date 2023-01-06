@@ -5,7 +5,6 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 ## 2.11.0 -- 2023-01-06
 
 * Added `dcert`
-* `buildCertifying'` now includes `DCert` in `TxInfo`
 
 ## 2.10.0 -- 2022-11-29
 
