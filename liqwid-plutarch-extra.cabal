@@ -42,7 +42,6 @@ common common-lang
     , pprelude
 
   default-extensions:
-    NoFieldSelectors
     NoStarIsType
     BangPatterns
     BinaryLiterals
@@ -73,6 +72,7 @@ common common-lang
     TypeFamilies
     TypeOperators
     UndecidableInstances
+    NoFieldSelectors
 
   default-language:   Haskell2010
 
