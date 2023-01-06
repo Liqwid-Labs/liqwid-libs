@@ -54,6 +54,7 @@ module Plutarch.Context.Base (
   txId,
   fee,
   timeRange,
+  dcert,
 
   -- * Builder components
   utxoToTxOut,
@@ -82,7 +83,7 @@ import Acc (Acc, fromReverseList)
 import Control.Arrow (Arrow ((&&&)))
 import Data.Foldable (Foldable (toList))
 import Data.Kind (Type)
-import Data.List (sortBy, sortOn)
+import Data.List (nub, sort, sortBy, sortOn)
 import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Monoid (Last (Last))
 import GHC.Exts (coerce, fromList)
@@ -105,6 +106,7 @@ import PlutusLedgerApi.V2 (
   BuiltinData (BuiltinData),
   Credential (PubKeyCredential, ScriptCredential),
   CurrencySymbol,
+  DCert,
   Data,
   Datum (Datum),
   DatumHash,
@@ -512,6 +514,7 @@ data BaseBuilder
       TxId
       (Acc (ScriptPurpose, Redeemer))
       (Acc (StakingCredential, Integer))
+      (Acc DCert)
   deriving stock (Show)
 
 -- | @since 2.5.0
@@ -519,81 +522,81 @@ instance
   (k ~ A_Lens, a ~ Acc UTXO, b ~ Acc UTXO) =>
   LabelOptic "inputs" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB x _ _ _ _ _ _ _ _ _ _) -> x) $
-    \(BB _ rins outs sigs dats ms f tr txi reds wdrls) ins' ->
-      BB ins' rins outs sigs dats ms f tr txi reds wdrls
+  labelOptic = lens (\(BB x _ _ _ _ _ _ _ _ _ _ _) -> x) $
+    \(BB _ rins outs sigs dats ms f tr txi reds wdrls dcerts) ins' ->
+      BB ins' rins outs sigs dats ms f tr txi reds wdrls dcerts
 
 -- | @since 2.5.0
 instance
   (k ~ A_Lens, a ~ Acc UTXO, b ~ Acc UTXO) =>
   LabelOptic "referenceInputs" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB _ x _ _ _ _ _ _ _ _ _) -> x) $
-    \(BB ins _ outs sigs dats ms f tr txi reds wdrls) rins' ->
-      BB ins rins' outs sigs dats ms f tr txi reds wdrls
+  labelOptic = lens (\(BB _ x _ _ _ _ _ _ _ _ _ _) -> x) $
+    \(BB ins _ outs sigs dats ms f tr txi reds wdrls dcerts) rins' ->
+      BB ins rins' outs sigs dats ms f tr txi reds wdrls dcerts
 
 -- | @since 2.5.0
 instance
   (k ~ A_Lens, a ~ Acc UTXO, b ~ Acc UTXO) =>
   LabelOptic "outputs" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB _ _ x _ _ _ _ _ _ _ _) -> x) $
-    \(BB ins rins _ sigs dats ms f tr txi reds wdrls) outs' ->
-      BB ins rins outs' sigs dats ms f tr txi reds wdrls
+  labelOptic = lens (\(BB _ _ x _ _ _ _ _ _ _ _ _) -> x) $
+    \(BB ins rins _ sigs dats ms f tr txi reds wdrls dcerts) outs' ->
+      BB ins rins outs' sigs dats ms f tr txi reds wdrls dcerts
 
 -- | @since 2.5.0
 instance
   (k ~ A_Lens, a ~ Acc PubKeyHash, b ~ Acc PubKeyHash) =>
   LabelOptic "signatures" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB _ _ _ x _ _ _ _ _ _ _) -> x) $
-    \(BB ins rins outs _ dats ms f tr txi reds wdrls) sigs' ->
-      BB ins rins outs sigs' dats ms f tr txi reds wdrls
+  labelOptic = lens (\(BB _ _ _ x _ _ _ _ _ _ _ _) -> x) $
+    \(BB ins rins outs _ dats ms f tr txi reds wdrls dcerts) sigs' ->
+      BB ins rins outs sigs' dats ms f tr txi reds wdrls dcerts
 
 -- | @since 2.5.0
 instance
   (k ~ A_Lens, a ~ Acc Data, b ~ Acc Data) =>
   LabelOptic "datums" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB _ _ _ _ x _ _ _ _ _ _) -> x) $
-    \(BB ins rins outs sigs _ ms f tr txi reds wdrls) dats' ->
-      BB ins rins outs sigs dats' ms f tr txi reds wdrls
+  labelOptic = lens (\(BB _ _ _ _ x _ _ _ _ _ _ _) -> x) $
+    \(BB ins rins outs sigs _ ms f tr txi reds wdrls dcerts) dats' ->
+      BB ins rins outs sigs dats' ms f tr txi reds wdrls dcerts
 
 -- | @since 2.5.0
 instance
   (k ~ A_Lens, a ~ Acc Mint, b ~ Acc Mint) =>
   LabelOptic "mints" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB _ _ _ _ _ x _ _ _ _ _) -> x) $
-    \(BB ins rins outs sigs dats _ f tr txi reds wdrls) ms' ->
-      BB ins rins outs sigs dats ms' f tr txi reds wdrls
+  labelOptic = lens (\(BB _ _ _ _ _ x _ _ _ _ _ _) -> x) $
+    \(BB ins rins outs sigs dats _ f tr txi reds wdrls dcerts) ms' ->
+      BB ins rins outs sigs dats ms' f tr txi reds wdrls dcerts
 
 -- | @since 2.5.0
 instance
   (k ~ A_Lens, a ~ Value, b ~ Value) =>
   LabelOptic "fee" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB _ _ _ _ _ _ x _ _ _ _) -> x) $
-    \(BB ins rins outs sigs dats ms _ tr txi reds wdrls) f' ->
-      BB ins rins outs sigs dats ms f' tr txi reds wdrls
+  labelOptic = lens (\(BB _ _ _ _ _ _ x _ _ _ _ _) -> x) $
+    \(BB ins rins outs sigs dats ms _ tr txi reds wdrls dcerts) f' ->
+      BB ins rins outs sigs dats ms f' tr txi reds wdrls dcerts
 
 -- | @since 2.5.0
 instance
   (k ~ A_Lens, a ~ Interval POSIXTime, b ~ Interval POSIXTime) =>
   LabelOptic "timeRange" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB _ _ _ _ _ _ _ x _ _ _) -> x) $
-    \(BB ins rins outs sigs dats ms f _ txi reds wdrls) tr' ->
-      BB ins rins outs sigs dats ms f tr' txi reds wdrls
+  labelOptic = lens (\(BB _ _ _ _ _ _ _ x _ _ _ _) -> x) $
+    \(BB ins rins outs sigs dats ms f _ txi reds wdrls dcerts) tr' ->
+      BB ins rins outs sigs dats ms f tr' txi reds wdrls dcerts
 
 -- | @since 2.5.0
 instance
   (k ~ A_Lens, a ~ TxId, b ~ TxId) =>
   LabelOptic "txId" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB _ _ _ _ _ _ _ _ x _ _) -> x) $
-    \(BB ins rins outs sigs dats ms f tr _ reds wdrls) txi' ->
-      BB ins rins outs sigs dats ms f tr txi' reds wdrls
+  labelOptic = lens (\(BB _ _ _ _ _ _ _ _ x _ _ _) -> x) $
+    \(BB ins rins outs sigs dats ms f tr _ reds wdrls dcerts) txi' ->
+      BB ins rins outs sigs dats ms f tr txi' reds wdrls dcerts
 
 -- | @since 2.7.0
 instance
@@ -603,9 +606,9 @@ instance
   ) =>
   LabelOptic "redeemers" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB _ _ _ _ _ _ _ _ _ x _) -> x) $
-    \(BB ins rins outs sigs dats ms f tr txi _ wdrls) reds' ->
-      BB ins rins outs sigs dats ms f tr txi reds' wdrls
+  labelOptic = lens (\(BB _ _ _ _ _ _ _ _ _ x _ _) -> x) $
+    \(BB ins rins outs sigs dats ms f tr txi _ wdrls dcerts) reds' ->
+      BB ins rins outs sigs dats ms f tr txi reds' wdrls dcerts
 
 -- | @since 2.5.0
 instance
@@ -615,14 +618,23 @@ instance
   ) =>
   LabelOptic "withdrawals" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB _ _ _ _ _ _ _ _ _ _ x) -> x) $
-    \(BB ins rins outs sigs dats ms f tr txi reds _) wdrls' ->
-      BB ins rins outs sigs dats ms f tr txi reds wdrls'
+  labelOptic = lens (\(BB _ _ _ _ _ _ _ _ _ _ x _) -> x) $
+    \(BB ins rins outs sigs dats ms f tr txi reds _ dcerts) wdrls' ->
+      BB ins rins outs sigs dats ms f tr txi reds wdrls' dcerts
+
+-- | @since 2.11.0
+instance
+  (k ~ A_Lens, a ~ Acc DCert, b ~ Acc DCert) =>
+  LabelOptic "dcerts" k BaseBuilder BaseBuilder a b
+  where
+  labelOptic = lens (\(BB _ _ _ _ _ _ _ _ _ _ _ x) -> x) $
+    \(BB ins rins outs sigs dats ms f tr txi reds wdrls _) dcerts' ->
+      BB ins rins outs sigs dats ms f tr txi reds wdrls dcerts'
 
 -- | @since 1.1.0
 instance Semigroup BaseBuilder where
-  BB ins refIns outs sigs dats ms fval range tid rs wdrls
-    <> BB ins' refIns' outs' sigs' dats' ms' fval' range' tid' rs' wdrls' =
+  BB ins refIns outs sigs dats ms fval range tid rs wdrls dcerts
+    <> BB ins' refIns' outs' sigs' dats' ms' fval' range' tid' rs' wdrls' dcerts' =
       BB
         (ins <> ins')
         (refIns <> refIns')
@@ -635,6 +647,7 @@ instance Semigroup BaseBuilder where
         (choose #txId tid tid')
         (rs <> rs')
         (wdrls <> wdrls')
+        (dcerts <> dcerts')
       where
         choose ::
           forall (a :: Type).
@@ -660,6 +673,7 @@ instance Monoid BaseBuilder where
       mempty
       always
       (TxId "")
+      mempty
       mempty
       mempty
 
@@ -805,6 +819,17 @@ timeRange ::
   Interval POSIXTime ->
   a
 timeRange r = pack . set #timeRange r $ (mempty :: BaseBuilder)
+
+{- | Specify a 'DCert' to be included in the transaction.
+
+ @since 2.11.0
+-}
+dcert ::
+  forall (a :: Type).
+  (Builder a) =>
+  DCert ->
+  a
+dcert d = pack . set #dcerts (pure d) $ (mempty :: BaseBuilder)
 
 {- | Specify an output of a script context.
 
@@ -1160,3 +1185,4 @@ mkNormalizedBase = over _bb go
         . over #referenceInputs (fmap normalizeUTXO)
         . over #outputs (fmap normalizeUTXO)
         . over #mints (fmap normalizeMint)
+        . over #dcerts (fromList . nub . sort . toList)

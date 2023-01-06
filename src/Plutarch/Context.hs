@@ -40,6 +40,7 @@ module Plutarch.Context (
   B.unpack,
   B.withdrawal,
   B.timeRange,
+  B.dcert,
   B.mkOutRefIndices,
   B.combinePair,
   B.combineMap,

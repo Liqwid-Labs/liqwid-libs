@@ -43,6 +43,7 @@ import PlutusLedgerApi.V2 (
   ScriptContext (ScriptContext),
   ScriptPurpose (Certifying),
   TxInfo (
+    txInfoDCert,
     txInfoData,
     txInfoInputs,
     txInfoMint,
@@ -134,6 +135,7 @@ buildCertifying' builder@(unpack -> bb) =
           , txInfoRedeemers = fromList $ toList (view #redeemers bb) <> redeemerMap
           , txInfoSignatories = toList . view #signatures $ bb
           , txInfoWdrl = fromList $ toList (view #withdrawals bb)
+          , txInfoDCert = toList (view #dcerts bb)
           }
       rewardCred = case view #certifyingDCert builder of
         Just dcert -> Certifying dcert

@@ -44,6 +44,7 @@ import PlutusLedgerApi.V2 (
   ScriptPurpose (Rewarding),
   StakingCredential (StakingHash),
   TxInfo (
+    txInfoDCert,
     txInfoData,
     txInfoInputs,
     txInfoMint,
@@ -135,6 +136,7 @@ buildRewarding' builder@(unpack -> bb) =
           , txInfoRedeemers = fromList $ toList (view #redeemers bb) <> redeemerMap
           , txInfoSignatories = toList . view #signatures $ bb
           , txInfoWdrl = fromList $ toList (view #withdrawals bb)
+          , txInfoDCert = toList (view #dcerts bb)
           }
       rewardCred = case view #rewardingCred builder of
         Just cred -> Rewarding cred

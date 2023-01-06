@@ -58,6 +58,7 @@ import PlutusLedgerApi.V2 (
   TxId,
   TxInInfo (txInInfoOutRef, txInInfoResolved),
   TxInfo (
+    txInfoDCert,
     txInfoData,
     txInfoInputs,
     txInfoMint,
@@ -217,6 +218,7 @@ buildSpending' builder@(unpack -> bb) =
           , txInfoSignatories = toList . view #signatures $ bb
           , txInfoRedeemers = fromList $ toList (view #redeemers bb) <> redeemerMap
           , txInfoWdrl = fromList $ toList (view #withdrawals bb)
+          , txInfoDCert = toList (view #dcerts bb)
           }
       vInRef = case view #validatorInput builder >>= yieldValidatorInput ins of
         Nothing -> TxOutRef "" 0
