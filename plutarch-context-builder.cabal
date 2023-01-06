@@ -40,7 +40,6 @@ common common-lang
     , plutarch
 
   default-extensions:
-    NoFieldSelectors
     BangPatterns
     BinaryLiterals
     ConstraintKinds
@@ -70,6 +69,7 @@ common common-lang
     TypeApplications
     TypeFamilies
     TypeOperators
+    NoFieldSelectors
 
   default-language:   Haskell2010
 
