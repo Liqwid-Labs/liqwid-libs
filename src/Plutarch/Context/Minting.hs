@@ -60,6 +60,7 @@ import PlutusLedgerApi.V2 (
   ScriptContext (ScriptContext),
   ScriptPurpose (Minting),
   TxInfo (
+    txInfoDCert,
     txInfoData,
     txInfoInputs,
     txInfoMint,
@@ -152,6 +153,7 @@ buildMinting' builder@(unpack -> bb) =
           , txInfoRedeemers = fromList $ toList (view #redeemers bb) <> redeemerMap
           , txInfoSignatories = toList . view #signatures $ bb
           , txInfoWdrl = fromList $ toList (view #withdrawals bb)
+          , txInfoDCert = toList (view #dcerts bb)
           }
       mintcs = case view #mintingCS builder of
         Just cs ->
