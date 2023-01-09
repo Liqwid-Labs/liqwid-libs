@@ -1,3 +1,9 @@
+# :warning: Archival notice
+
+As of Jan 9 2023, this repository has been archived, and has been replaced by the [liqwid-libs](https://github.com/Liqwid-Labs/liqwid-libs) monorepo. Please use that instead.
+
+---
+
 # `plutarch-context-builder`
 Public discussion and assistance can be found on [discord](https://discord.gg/yGkjxrYueB) @ #liqwid-plutarch-extra.
 Issues and project-management-related information are tracked on [Notion](https://www.notion.so/liqwid/).
