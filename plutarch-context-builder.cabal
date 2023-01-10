@@ -1,0 +1,133 @@
+cabal-version:      3.0
+name:               plutarch-context-builder
+version:            2.11.0
+synopsis:           A builder for ScriptContexts
+description:
+  Defines a builder for ScriptContexts, with helpers for commonly-needed uses.
+
+homepage:           https://github.com/Liqwid-Labs/plutarch-context-builder
+bug-reports:
+  https://github.com/Liqwid-Labs/plutarch-context-builder/issues
+
+license:
+
+-- license-file:       LICENSE
+author:             Koz Ross, Seungheon Oh
+maintainer:
+  Koz Ross <koz@mlabs.city>, Seungheon Oh <seungheon.ooh@gmail.com>
+
+copyright:          (C) 2022 Liqwid Labs
+category:           Plutarch
+build-type:         Simple
+tested-with:        GHC ==9.2.5
+extra-source-files: README.md
+
+-- LICENSE
+source-repository head
+  type:     git
+  location: https://github.com/Liqwid-Labs/plutarch-context-builder
+
+-- Common sections
+
+common common-lang
+  ghc-options:
+    -Wall -Wcompat -Wincomplete-uni-patterns
+    -Wincomplete-record-updates -Wredundant-constraints
+    -Wmissing-export-lists -Wmissing-deriving-strategies -Werror
+
+  build-depends:
+    , base      ^>=4.16
+    , plutarch
+
+  default-extensions:
+    BangPatterns
+    BinaryLiterals
+    ConstraintKinds
+    DataKinds
+    DeriveAnyClass
+    DeriveFunctor
+    DeriveGeneric
+    DeriveTraversable
+    DerivingStrategies
+    DerivingVia
+    EmptyCase
+    FlexibleContexts
+    FlexibleInstances
+    GeneralisedNewtypeDeriving
+    HexFloatLiterals
+    ImportQualifiedPost
+    InstanceSigs
+    KindSignatures
+    LambdaCase
+    MultiParamTypeClasses
+    NumericUnderscores
+    OverloadedLabels
+    OverloadedStrings
+    ScopedTypeVariables
+    StandaloneDeriving
+    TupleSections
+    TypeApplications
+    TypeFamilies
+    TypeOperators
+    NoFieldSelectors
+
+  default-language:   Haskell2010
+
+common common-tests
+  import:        common-lang
+  ghc-options:   -O2 -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+    , bytestring
+    , contravariant
+    , plutarch
+    , plutarch-context-builder
+    , plutus-core
+    , plutus-ledger-api
+    , plutus-tx
+    , prettyprinter
+    , QuickCheck
+    , tasty
+    , tasty-hunit
+    , tasty-quickcheck
+
+-- Libraries
+
+library
+  import:          common-lang
+  exposed-modules: Plutarch.Context
+  other-modules:
+    Plutarch.Context.Base
+    Plutarch.Context.Certifying
+    Plutarch.Context.Check
+    Plutarch.Context.Internal
+    Plutarch.Context.Minting
+    Plutarch.Context.Rewarding
+    Plutarch.Context.Spending
+    Plutarch.Context.SubBuilder
+    Plutarch.Context.TxInfo
+
+  build-depends:
+    , acc
+    , bytestring
+    , contravariant
+    , mtl
+    , optics
+    , plutus-core
+    , plutus-ledger-api
+    , plutus-tx
+    , prettyprinter
+
+  hs-source-dirs:  src
+
+-- Tests
+
+test-suite sample
+  import:         common-tests
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  other-modules:
+    MintingBuilder
+    SpendingBuilder
+
+  build-depends:  optics
+  hs-source-dirs: sample/
