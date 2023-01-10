@@ -1,0 +1,141 @@
+cabal-version:      3.0
+name:               plutarch-unit
+version:            1.3.0
+synopsis:           Unit checks for Plutarch
+description:
+  An independent unitcheck library for constructing unit checks for Plutarch.
+
+homepage:           https://github.com/Liqwid-Labs/plutarch-unit
+bug-reports:        https://github.com/Liqwid-Labs/plutarch-unit/issues
+author:             Seungheon Oh
+maintainer:         Seungheon Oh <seungheon.ooh@gmail.com>
+copyright:          (C) 2022 Liqwid Labs
+category:           Plutarch
+build-type:         Simple
+tested-with:        GHC ==9.2.3
+extra-source-files: README.md
+
+-- LICENSE
+source-repository head
+  type:     git
+  location: https://github.com/Liqwid-Labs/plutrach-unit
+
+-- Flags
+
+flag development
+  description: Disable -Werror during development mode
+  default:     False
+  manual:      True
+
+-- Common sections
+
+common common-lang
+  ghc-options:
+    -Wall -Wcompat -Wincomplete-uni-patterns
+    -Wincomplete-record-updates -Wredundant-constraints
+    -Wmissing-export-lists -Wmissing-deriving-strategies
+    -Wno-partial-type-signatures
+
+  -- TODO, 2022-10-07: We should rely on LPE's pprelude,
+  -- but I'm not totally sure how to make this happen
+  -- in nix.
+  --  mixins:
+  --    base hiding (Prelude),
+  --    pprelude (PPrelude as Prelude)
+
+  if !flag(development)
+    ghc-options: -Werror
+
+  build-depends:
+    , base      ^>=4.16
+    , plutarch
+
+  default-extensions:
+    NoFieldSelectors
+    NoStarIsType
+    BangPatterns
+    BinaryLiterals
+    ConstraintKinds
+    DataKinds
+    DeriveAnyClass
+    DeriveGeneric
+    DeriveTraversable
+    DerivingVia
+    DuplicateRecordFields
+    EmptyCase
+    FlexibleContexts
+    FlexibleInstances
+    GeneralisedNewtypeDeriving
+    HexFloatLiterals
+    ImportQualifiedPost
+    InstanceSigs
+    KindSignatures
+    LambdaCase
+    MultiParamTypeClasses
+    NumericUnderscores
+    OverloadedLabels
+    OverloadedStrings
+    ScopedTypeVariables
+    StandaloneDeriving
+    TupleSections
+    TypeApplications
+    TypeFamilies
+    TypeOperators
+    UndecidableInstances
+
+  default-language:   Haskell2010
+
+common common-tests
+  import:        common-lang
+  ghc-options:   -O2 -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+    , bytestring
+    , liqwid-plutarch-extra
+    , plutarch
+    , plutarch-unit
+    , plutus-core
+    , plutus-tx
+    , QuickCheck
+    , tasty
+    , tasty-hunit
+    , tasty-quickcheck
+
+library
+  import:          common-lang
+  exposed-modules:
+    Plutarch.Test.Export
+    Plutarch.Test.Precompiled
+    Plutarch.Test.Script
+    Plutarch.Test.Unit
+
+  other-modules:
+  build-depends:
+    , acc
+    , containers
+    , liqwid-plutarch-extra
+    , liqwid-script-export
+    , mtl
+    , optics-core
+    , optics-extra
+    , optics-th
+    , plutus-core
+    , plutus-ledger-api
+    , plutus-tx
+    , ply-core
+    , pretty
+    , pretty-show
+    , selective
+    , semigroupoids
+    , tagged
+    , tasty
+    , tasty-hunit
+    , text
+    , transformers
+
+  hs-source-dirs:  src
+
+test-suite sample
+  import:         common-lang, common-tests
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  hs-source-dirs: sample
