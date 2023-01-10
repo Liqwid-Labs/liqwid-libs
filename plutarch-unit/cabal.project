@@ -1,6 +1,0 @@
-packages: ./plutarch-unit.cabal
-
-tests: true
-
--- Important! Without this, you will get very limited output from any tests.
-test-show-details: direct

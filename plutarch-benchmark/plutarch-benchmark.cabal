@@ -56,11 +56,13 @@ common common-lang
     FlexibleInstances
     GeneralisedNewtypeDeriving
     HexFloatLiterals
+    ImportQualifiedPost
     InstanceSigs
     KindSignatures
     LambdaCase
     MultiParamTypeClasses
     NumericUnderscores
+    OverloadedLabels
     OverloadedStrings
     PackageImports
     ScopedTypeVariables

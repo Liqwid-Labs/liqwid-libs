@@ -22,13 +22,13 @@ import Data.Tagged (Tagged)
 import GHC.Stack (HasCallStack)
 import Plutarch.Builtin (pforgetData)
 import Plutarch.Extra.Tagged (PTagged)
+import "plutarch-extra" Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Num (PNum (pabs, pfromInteger, pnegate, psignum, (#*), (#+), (#-)))
 import Plutarch.Orphans ()
 import Plutarch.Positive (PPositive)
 import Plutarch.Rational (preduce)
 import Plutarch.Unsafe (punsafeCoerce, punsafeDowncast)
 import PlutusTx (fromData)
-import "plutarch-extra" Plutarch.Extra.TermCont (pmatchC)
 
 -------------------------------------------------------------------------------
 

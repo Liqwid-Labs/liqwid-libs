@@ -29,10 +29,10 @@ module Plutarch.Benchmark.Cost (
   writeComparisonPerAxisCSVs,
 ) where
 
-import qualified Control.Foldl as Foldl
+import Control.Foldl qualified as Foldl
 import Control.Monad (forM_, void)
 import Control.Parallel.Strategies (NFData)
-import qualified Data.ByteString.Lazy as ByteString
+import Data.ByteString.Lazy qualified as ByteString
 import Data.Csv (
   DefaultOrdered (headerOrder),
   EncodeOptions (encUseCrLf),
@@ -48,7 +48,7 @@ import Data.Csv (
  )
 import Data.Foldable (foldl')
 import Data.Function (on)
-import qualified Data.HashMap.Strict as HashMap
+import Data.HashMap.Strict qualified as HashMap
 import Data.Kind (Type)
 import Data.List (sortBy)
 import Data.List.NonEmpty (NonEmpty ((:|)), groupAllWith)
@@ -57,7 +57,7 @@ import Data.String (IsString (fromString))
 import Data.Text (Text, pack, unpack)
 import Data.Text.Encoding (encodeUtf8)
 import Data.Vector.Unboxed (Vector)
-import qualified Data.Vector.Unboxed as Vector
+import Data.Vector.Unboxed qualified as Vector
 import GHC.Generics (Generic)
 import Optics (sequenceOf, traversed, (%%))
 import Optics.TH (makeFieldLabelsNoPrefix)

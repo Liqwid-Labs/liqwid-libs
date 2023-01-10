@@ -3,7 +3,7 @@
 module Plutarch.Benchmark.Main (benchMain) where
 
 import Options.Applicative ((<**>))
-import qualified Options.Applicative as Opt
+import Options.Applicative qualified as Opt
 import Path (Dir, Path, Rel, parseRelDir)
 import System.Directory (createDirectoryIfMissing)
 

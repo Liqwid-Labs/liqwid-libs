@@ -22,15 +22,15 @@ module Plutarch.Benchmark.Plutus (
   statsByAxis,
 ) where
 
-import Codec.Serialise (serialise)
 import Control.Parallel.Strategies (NFData)
-import qualified Data.ByteString.Lazy as LBS
+import Data.ByteString.Short qualified as SBS
 import Data.Text (Text)
-import qualified Data.Text as Text
+import Data.Text qualified as Text
 import Data.Vector.Unboxed (Vector)
-import qualified Data.Vector.Unboxed as Vector
+import Data.Vector.Unboxed qualified as Vector
 import Data.Vector.Unboxed.Base (Vector (V_2))
 import GHC.Generics (Generic)
+import Optics (view)
 import Optics.TH (makeFieldLabelsNoPrefix)
 import Plutarch.Benchmark.Common (ImplData)
 import Plutarch.Benchmark.Cost (
@@ -45,10 +45,9 @@ import Plutarch.Benchmark.Cost (
 import Plutarch.Benchmark.Sized (SSample)
 import Plutarch.Evaluate (evalScript)
 import Plutarch.Extra.DebuggableScript (
-  DebuggableScript (DebuggableScript),
-  debugScript,
-  script,
+  DebuggableScript,
  )
+import Plutarch.Script (Script (Script), serialiseScript)
 import PlutusCore.Evaluation.Machine.ExBudget (
   ExRestrictingBudget (ExRestrictingBudget),
  )
@@ -60,10 +59,8 @@ import PlutusLedgerApi.V1 (
   ExBudget (ExBudget),
   ExCPU (..),
   ExMemory (..),
-  Script,
  )
-import PlutusLedgerApi.V1.Scripts (Script (Script))
-import qualified UntypedPlutusCore as UPLC
+import UntypedPlutusCore qualified as UPLC
 import UntypedPlutusCore.Evaluation.Machine.Cek (
   CekUserError (CekEvaluationFailure, CekOutOfExError),
  )
@@ -101,7 +98,7 @@ mkScriptImplMetaData name script =
   where
     Script uplcProg = script
     scriptSize = UPLC.programSize uplcProg
-    scriptSizeBytes = fromIntegral . LBS.length . serialise $ script
+    scriptSizeBytes = fromIntegral . SBS.length . serialiseScript $ script
 
 -- | @since 1.0.0
 data PlutusCostAxis = CPU | Mem
@@ -158,12 +155,12 @@ sampleDebuggableScript ::
   Either
     (BudgetExceeded PlutusCostAxis)
     Costs
-sampleDebuggableScript DebuggableScript {script, debugScript} =
-  case sampleScript' script of
+sampleDebuggableScript debuggableScript =
+  case sampleScript' (view #script debuggableScript) of
     Right costs -> Right costs
     Left failure ->
       case failure of
-        Left _ -> sampleScript debugScript
+        Left _ -> sampleScript (view #debugScript debuggableScript)
         Right budgetExceeded -> Left budgetExceeded
 
 -- | @since 1.0.0

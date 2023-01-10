@@ -1,10 +1,10 @@
 {
-  description = "liqwid-plutarch-extra";
+  description = "liqwid-libs: A monorepo for Liqwid Labs maintained libraries";
 
   nixConfig = {
-    extra-experimental-features = [ "nix-command" "flakes" "ca-derivations" ];
-    extra-substituters = [ "https://cache.iog.io" "https://public-plutonomicon.cachix.org" "https://mlabs.cachix.org" ];
-    extra-trusted-public-keys = [ "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" "public-plutonomicon.cachix.org-1:3AKJMhCLn32gri1drGuaZmFrmnue+KkKrhhubQk/CWc=" ];
+    extra-experimental-features = [ "nix-command" "flakes" ];
+    extra-substituters = [ "https://cache.iog.io" "https://mlabs.cachix.org" ];
+    extra-trusted-public-keys = [ "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" ];
     allow-import-from-derivation = "true";
     max-jobs = "auto";
     auto-optimise-store = "true";
@@ -12,15 +12,12 @@
 
   inputs = {
     nixpkgs.follows = "liqwid-nix/nixpkgs";
-    nixpkgs-latest.url = "github:NixOS/nixpkgs";
+    nixpkgs-latest.url = "github:NixOS/nixpkgs?rev=a2494bf2042d605ca1c4a679401bdc4971da54fb";
 
     liqwid-nix = {
-      url = "github:Liqwid-Labs/liqwid-nix/v2.2.0";
+      url = "github:Liqwid-Labs/liqwid-nix/v2.2.1";
       inputs.nixpkgs-latest.follows = "nixpkgs-latest";
     };
-
-    plutarch-quickcheck.url = "github:Liqwid-Labs/plutarch-quickcheck";
-    plutarch-context-builder.url = "github:Liqwid-Labs/plutarch-context-builder";
 
     ply.url = "github:mlabs-haskell/ply?ref=master";
   };
@@ -31,7 +28,7 @@
         inputs.liqwid-nix.flakeModule
       ];
       systems = [ "x86_64-linux" "aarch64-darwin" "x86_64-darwin" "aarch64-linux" ];
-      perSystem = { config, self', inputs', pkgs, system, ... }:
+      perSystem = { config, self', inputs', system, ... }:
         let
           pkgs = import inputs.nixpkgs-latest { inherit system; };
         in
@@ -39,7 +36,7 @@
           onchain.default = {
             src = ./.;
             ghc.version = "ghc925";
-            fourmolu.package = pkgs.haskell.packages.ghc943.fourmolu_0_10_1_0;
+            fourmolu.package = pkgs.haskell.packages.ghc924.fourmolu_0_9_0_0;
             hlint = { };
             cabalFmt = { };
             hasktags = { };
@@ -47,8 +44,6 @@
             shell = { };
             enableBuildChecks = true;
             extraHackageDeps = [
-              "${inputs.plutarch-context-builder}"
-              "${inputs.plutarch-quickcheck}"
               "${inputs.ply}/ply-core"
               "${inputs.ply}/ply-plutarch"
             ];

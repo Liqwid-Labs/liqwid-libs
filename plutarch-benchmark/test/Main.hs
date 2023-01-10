@@ -5,7 +5,7 @@ module Main (main) where
 import Control.Monad (replicateM)
 import Control.Monad.Loops (iterateUntilM)
 import Data.IntSet (IntSet)
-import qualified Data.IntSet as IntSet
+import Data.IntSet qualified as IntSet
 import Data.List (find, sort)
 import Data.Maybe (isJust)
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
@@ -52,9 +52,11 @@ exhaustiveProps =
                  in isJust $ find (== set) sets
            in forAll gen prop
       , testProperty "exhGenBags over-demand" $
-          expectFailure $ seq (exhGenBags 1 []) ()
+          expectFailure $
+            seq (exhGenBags 1 []) ()
       , testProperty "exhGenSets over-demand" $
-          expectFailure $ seq (exhGenSets 1 []) ()
+          expectFailure $
+            seq (exhGenSets 1 []) ()
       , testProperty "exhGenBags zero" $
           exhGenBags 0 [1 :: Int] === [[]]
       , testProperty "exhGenSets zero" $

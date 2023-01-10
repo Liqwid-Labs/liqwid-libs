@@ -68,7 +68,7 @@ import Data.Csv (
   toNamedRecord,
   (.=),
  )
-import qualified Data.HashTable.ST.Basic as HashTable
+import Data.HashTable.ST.Basic qualified as HashTable
 import Data.Hashable (Hashable)
 import Data.Kind (Type)
 import Data.Maybe (fromMaybe, isNothing)
