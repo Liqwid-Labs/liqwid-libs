@@ -1,0 +1,7 @@
+packages: ./liqwid-plutarch-extra.cabal
+
+tests: true
+benchmarks: true
+
+-- Important! Without this, you will get very limited output from any tests.
+test-show-details: direct
