@@ -1,0 +1,12 @@
+packages: ./.
+
+tests: true
+
+benchmarks: true
+
+test-show-details: direct
+
+package plutarch
+  flags: +development
+
+package plutarch-benchmark

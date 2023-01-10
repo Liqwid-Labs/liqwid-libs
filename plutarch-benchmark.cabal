@@ -1,0 +1,187 @@
+cabal-version:      3.0
+name:               plutarch-benchmark
+version:            0.1
+synopsis:           Benchmark plutarch code and compare implementations
+description:
+  A library containing utilities to concurrently compare
+  several implementations of plutarch functions across
+  different metrics such as Min/Max/Mean CPU or Mem usage.
+
+homepage:           https://github.com/Liqwid-Labs/plutarch-benchmark
+bug-reports:        https://github.com/Liqwid-Labs/plutarch-benchmark
+license:            Apache-2.0
+license-file:       LICENSE
+author:             johannes@mlabs.city
+maintainer:         koz@mlabs.city
+copyright:          (C) 2022 Liqwid Labs
+category:           Benchmark
+build-type:         Simple
+tested-with:        GHC ==9.2.1
+extra-source-files:
+  LICENSE
+  README.md
+
+source-repository head
+  type:     git
+  location: https://github.com/Liqwid-Labs/plutarch-benchmark
+
+-- Common sections
+
+common common-lang
+  ghc-options:
+    -Wall -Wcompat -Wincomplete-uni-patterns -Wno-unused-do-bind
+    -Wno-partial-type-signatures -Wmissing-export-lists
+    -Wincomplete-record-updates -Wmissing-deriving-strategies
+    -Wno-name-shadowing -Wunused-foralls -fprint-explicit-foralls
+    -fprint-explicit-kinds
+
+  if !flag(development)
+    ghc-options: -Werror
+
+  build-depends:
+    , base               >=4.16
+    , plutarch
+    , plutus-core
+    , plutus-ledger-api
+
+  default-extensions:
+    BangPatterns
+    BinaryLiterals
+    ConstraintKinds
+    DataKinds
+    DeriveTraversable
+    DerivingVia
+    EmptyCase
+    FlexibleContexts
+    FlexibleInstances
+    GeneralisedNewtypeDeriving
+    HexFloatLiterals
+    InstanceSigs
+    KindSignatures
+    LambdaCase
+    MultiParamTypeClasses
+    NumericUnderscores
+    OverloadedStrings
+    PackageImports
+    ScopedTypeVariables
+    StandaloneDeriving
+    TupleSections
+    TypeOperators
+
+  default-language:   Haskell2010
+
+common common-test
+  import:        common-lang
+  build-depends:
+    , pretty-show
+    , tasty
+
+  ghc-options:   -O2 -threaded -rtsopts -with-rtsopts=-N
+
+-- Flags
+
+flag development
+  description: Disable -Werror during development mode
+  default:     False
+  manual:      True
+
+-- Libraries
+
+library
+  import:          common-lang
+  exposed-modules:
+    Plutarch.Benchmark.Common
+    Plutarch.Benchmark.Cost
+    Plutarch.Benchmark.Exhaustive
+    Plutarch.Benchmark.Main
+    Plutarch.Benchmark.Plutarch
+    Plutarch.Benchmark.Plutus
+    Plutarch.Benchmark.QuickCheck
+    Plutarch.Benchmark.Sized
+
+  build-depends:
+    , acc
+    , bytestring
+    , cassava
+    , deepseq
+    , directory
+    , foldl
+    , hashable
+    , hashtables
+    , lens
+    , liqwid-plutarch-extra
+    , math-functions
+    , monad-loops
+    , mtl
+    , optics
+    , optparse-applicative
+    , parallel
+    , path
+    , prettyprinter
+    , primitive
+    , QuickCheck
+    , random
+    , serialise
+    , text
+    , transformers
+    , unordered-containers
+    , vector
+
+  hs-source-dirs:  src
+  ghc-options:     -O2
+
+benchmark plutarch-benchmark-example
+  import:         common-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  build-depends:
+    , bytestring
+    , cassava
+    , directory
+    , hashable
+    , hashtables
+    , liqwid-plutarch-extra
+    , monad-loops
+    , mtl
+    , optparse-applicative
+    , path
+    , plutarch-benchmark
+    , prettyprinter
+    , random
+    , serialise
+    , text
+    , transformers
+    , vector
+
+  hs-source-dirs: example
+  ghc-options:    -O2 -threaded -rtsopts -with-rtsopts=-N
+
+test-suite plutarch-benchmark-test
+  import:         common-test
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  build-depends:
+    , acc
+    , bytestring
+    , cassava
+    , containers
+    , directory
+    , hashable
+    , hashtables
+    , liqwid-plutarch-extra
+    , monad-loops
+    , mtl
+    , optparse-applicative
+    , path
+    , plutarch-benchmark
+    , prettyprinter
+    , QuickCheck
+    , quickcheck-instances
+    , random
+    , serialise
+    , tasty-quickcheck
+    , text
+    , transformers
+    , vector
+
+  hs-source-dirs: test
