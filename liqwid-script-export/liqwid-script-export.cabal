@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               liqwid-script-export
-version:            2.2.0
+version:            2.3.0
 extra-source-files: CHANGELOG.md
 author:             Emily Martins <emi@haskell.fyi>
 license:            Apache-2.0
@@ -104,6 +104,7 @@ library
     ScriptExport.File
     ScriptExport.Options
     ScriptExport.ScriptInfo
+    ScriptExport.Stdout
     ScriptExport.Types
 
   other-modules:

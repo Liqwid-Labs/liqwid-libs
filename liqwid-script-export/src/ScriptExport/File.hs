@@ -18,13 +18,18 @@ import System.Exit (die)
 
 {- | Exports 'Builders' into file.
 
- @since 2.2.0
+ @since 2.3.0
 -}
 runFile :: Builders -> FileOptions -> IO ()
 runFile builders options = do
   paramFile <- optional $ BS.readFile (view #param options)
   let param = paramFile >>= Aeson.decodeStrict'
       builder = view #builder options
+
+  maybe
+    (putStrLn "Warning: Failed to open the given parameter file, proceeding to generate without a parameter")
+    (const $ pure ())
+    param
 
   case getBuilders builders !? builder of
     Just b ->

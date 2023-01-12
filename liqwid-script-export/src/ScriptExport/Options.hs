@@ -1,3 +1,4 @@
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -11,6 +12,7 @@ module ScriptExport.Options (
   Options (..),
   ServerOptions (..),
   FileOptions (..),
+  StdoutOptions (..),
   ExporterInfo (..),
   parseOptions,
 ) where
@@ -53,6 +55,7 @@ newtype ExporterInfo = ExporterInfo
 data Options
   = ServerOption ServerOptions
   | FileOption FileOptions
+  | StdoutOption StdoutOptions
   | ListBuilders
   deriving stock
     ( -- | @since 1.0.0
@@ -61,7 +64,7 @@ data Options
       Eq
     )
 
--- | @since 2.0.0
+-- | @since 2.3.0
 data ServerOptions = ServerOptions
   { port :: Warp.Port
   -- ^ Which port to listen on.
@@ -69,6 +72,7 @@ data ServerOptions = ServerOptions
   -- ^ Should we enable CORS middleware for debugging purposes?
   , cacheLifetime :: Int64
   -- ^ How long to keep cached items alive for.
+  , timeout :: Int
   }
   deriving stock
     ( -- | @since 1.0.0
@@ -93,6 +97,20 @@ data FileOptions = FileOptions
       Eq
     )
 
+-- | @since 2.3.0
+data StdoutOptions = StdoutOptions
+  { param :: Maybe FilePath
+  -- ^ Script parameter.
+  , builder :: Text
+  -- ^ Builder to use.
+  }
+  deriving stock
+    ( -- | @since 2.3.0
+      Show
+    , -- | @since 2.3.0
+      Eq
+    )
+
 fileOpt :: Opt.Parser FileOptions
 fileOpt =
   FileOptions
@@ -109,6 +127,25 @@ fileOpt =
           <> Opt.metavar "PARAM"
           <> Opt.value ""
           <> Opt.help "Parameters to apply"
+      )
+    <*> Opt.strOption
+      ( Opt.long "builder"
+          <> Opt.short 'b'
+          <> Opt.metavar "BUILDER"
+          <> Opt.help "Bulider to use"
+      )
+    <**> Opt.helper
+
+stdoutOpt :: Opt.Parser StdoutOptions
+stdoutOpt =
+  StdoutOptions
+    <$> Opt.optional
+      ( Opt.strOption
+          ( Opt.long "param"
+              <> Opt.short 'p'
+              <> Opt.metavar "PARAM"
+              <> Opt.help "Parameters to apply. If none is given, will expect stdin"
+          )
       )
     <*> Opt.strOption
       ( Opt.long "builder"
@@ -147,6 +184,13 @@ serverOpt =
           <> Opt.value 3600
           <> Opt.help "How many seconds should the server keep cached results available for."
       )
+    <*> Opt.option
+      Opt.auto
+      ( Opt.long "timeout"
+          <> Opt.metavar "TIMEOUT"
+          <> Opt.value 6000
+          <> Opt.help "Script export server timeout in seconds. (default: 10 minuates)"
+      )
     <**> Opt.helper
 
 {- | Parse 'Options' from the command line arguments.
@@ -160,6 +204,7 @@ parseOptions = Opt.execParser p
       Opt.subparser . foldMap mkSubcommand $
         [ (FileOption <$> fileOpt, "file", "Complie scripts using file IO")
         , (ServerOption <$> serverOpt, "serve", "Start script server")
+        , (StdoutOption <$> stdoutOpt, "stdout", "Print export to stdout")
         , (pure ListBuilders, "list", "List out all builders")
         ]
     mkSubcommand (p, n, d) =
@@ -182,3 +227,6 @@ makeFieldLabelsNoPrefix ''ServerOptions
 
 -- | @since 2.0.0
 makeFieldLabelsNoPrefix ''FileOptions
+
+-- | @since 2.3.0
+makeFieldLabelsNoPrefix ''StdoutOptions

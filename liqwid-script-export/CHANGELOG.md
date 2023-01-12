@@ -2,6 +2,17 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 2.3.0 -- 2023-01-11
+
+### Added
+
+- `stdout` exporter added. It is helpful as it doesn't require file IO.
+
+### Modified
+
+- `timeout` option added for `serve` option, default timeout is updated to 10 minuates.
+- `file` option will now warn if it fails to look up the given file.
+
 ## 2.2.0 -- 2022-11-29
 
 ### Modified
