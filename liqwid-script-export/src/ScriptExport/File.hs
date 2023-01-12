@@ -6,12 +6,14 @@ import ScriptExport.Options (FileOptions)
 import ScriptExport.Types (Builders, getBuilders, handleServe)
 
 import Control.Applicative (optional)
+import Control.Monad (when)
 import Control.Monad.Except (runExcept)
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as LBS
 import Data.Map ((!?))
+import Data.Maybe (isNothing)
 import Data.Text (unpack)
 import Optics (view)
 import System.Exit (die)
@@ -26,10 +28,8 @@ runFile builders options = do
   let param = paramFile >>= Aeson.decodeStrict'
       builder = view #builder options
 
-  maybe
-    (putStrLn "Warning: Failed to open the given parameter file, proceeding to generate without a parameter")
-    (const $ pure ())
-    param
+  when (isNothing param) $
+    putStrLn "Warning: Failed to open the given parameter file, proceeding to generate without a parameter"
 
   case getBuilders builders !? builder of
     Just b ->

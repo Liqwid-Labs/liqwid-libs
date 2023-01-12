@@ -25,7 +25,7 @@ runStdout :: Builders -> StdoutOptions -> IO ()
 runStdout builders options = do
   param <-
     Aeson.decodeStrict'
-      <$> (maybe BS.getContents BS.readFile $ view #param options)
+      <$> maybe BS.getContents BS.readFile (view #param options)
 
   let builder = view #builder options
 

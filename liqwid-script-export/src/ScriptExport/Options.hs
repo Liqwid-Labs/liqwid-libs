@@ -73,6 +73,7 @@ data ServerOptions = ServerOptions
   , cacheLifetime :: Int64
   -- ^ How long to keep cached items alive for.
   , timeout :: Int
+  -- ^ Timeout for Warp web server, in seconds.
   }
   deriving stock
     ( -- | @since 1.0.0
@@ -132,7 +133,7 @@ fileOpt =
       ( Opt.long "builder"
           <> Opt.short 'b'
           <> Opt.metavar "BUILDER"
-          <> Opt.help "Bulider to use"
+          <> Opt.help "Builder to use"
       )
     <**> Opt.helper
 
@@ -151,7 +152,7 @@ stdoutOpt =
       ( Opt.long "builder"
           <> Opt.short 'b'
           <> Opt.metavar "BUILDER"
-          <> Opt.help "Bulider to use"
+          <> Opt.help "Builder to use"
       )
     <**> Opt.helper
 
@@ -189,7 +190,7 @@ serverOpt =
       ( Opt.long "timeout"
           <> Opt.metavar "TIMEOUT"
           <> Opt.value 6000
-          <> Opt.help "Script export server timeout in seconds. (default: 10 minuates)"
+          <> Opt.help "Script export server timeout in seconds. (default: 10 minutes)"
       )
     <**> Opt.helper
 
