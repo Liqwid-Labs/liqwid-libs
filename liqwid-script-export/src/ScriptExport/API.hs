@@ -78,6 +78,7 @@ runServer builders options = do
         Warp.defaultSettings
           & Warp.setPort (view #port options)
           & Warp.setLogger logger
+          & Warp.setTimeout (view #timeout options)
 
       corsPolicy =
         simpleCorsResourcePolicy
