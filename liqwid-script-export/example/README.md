@@ -1,6 +1,6 @@
 # Example setup and usage.
                                                                       
-Running this server, using `cabal run example` will spin up a server.
+Running this server, using `cabal run example serve` will spin up a server.
                                                                       
 Using `curl`, we can now query it:
 ``` sh
