@@ -2,12 +2,17 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-## 3.21.0 -- 2023-01-17
+## 3.21.0 -- 2023-01-27
 
 ### Modified 
 
 - 'Plutarch.Extra.Value': 'phasOnlyOneTokenOfCurrencySymbol' now correctly
   disallows negative tokens when ensuring presence of only one token.
+
+### Added
+
+- `pwithStateThreadMulti` and `withStateThreadMulti` policies allowing
+  to mint more than one state thread token
 
 ## 3.20.2 -- 2022-12-10
 
