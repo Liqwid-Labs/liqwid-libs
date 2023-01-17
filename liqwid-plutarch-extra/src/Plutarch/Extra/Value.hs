@@ -568,21 +568,23 @@ type family AddGuarantees (a :: AmountGuarantees) (b :: AmountGuarantees) where
   AddGuarantees _ _ = 'NoGuarantees
 
 {- | Returns 'PTrue' if the entire argument 'PValue' contains /exactly/ one
- token of the argument 'PCurrencySymbol' (and contains no other assets).
+     token of the argument 'PCurrencySymbol' (and contains no other assets).
 
- @since 1.3.0
+     @since 3.21.0
 -}
 phasOnlyOneTokenOfCurrencySymbol ::
   forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
   Term s (PCurrencySymbol :--> PValue keys amounts :--> PBool)
 phasOnlyOneTokenOfCurrencySymbol = phoistAcyclic $
   plam $ \cs vs ->
-    psymbolValueOf
-      # cs
-      # vs
-      #== 1
-      #&& (plength #$ pto $ pto $ pto vs)
-      #== 1
+    pmatch
+      ( psymbolValueOf'
+          # cs
+          # vs
+      )
+      $ \case
+        PNothing -> pcon PFalse
+        PJust r -> r #== pcon (PPair 1 0) #&& (plength #$ pto $ pto $ pto vs) #== 1
 
 {- | Returns 'PTrue' if the argument 'PValue' contains /exactly/
   one token of the argument 'PAssetClass'.
