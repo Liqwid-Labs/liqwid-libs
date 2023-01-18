@@ -36,6 +36,7 @@ module Plutarch.Extra.Value (
   phasOnlyOneTokenOfCurrencySymbol,
   phasOneTokenOfCurrencySymbol,
   phasOneTokenOfAssetClass,
+  pcountNonZeroes,
 ) where
 
 import Data.List (nub, sort)
@@ -584,7 +585,33 @@ phasOnlyOneTokenOfCurrencySymbol = phoistAcyclic $
       )
       $ \case
         PNothing -> pcon PFalse
-        PJust r -> r #== pcon (PPair 1 0) #&& (plength #$ pto $ pto $ pto vs) #== 1
+        PJust r -> r #== pcon (PPair 1 0) #&& (pcountNonZeroes # vs) #== 1
+
+{- | Returns the count of non-zero currency symbols in a 'PValue'.
+
+     So, for a value of the following shape:
+
+     @
+       [("", [("", 0)]), ("feed", [("foo", 7)]), ("deed", [("bar", 1)])]
+     @
+
+     We get the result @2@.
+
+     @since 3.21.0
+-}
+pcountNonZeroes :: forall (kg :: KeyGuarantees) (ag :: AmountGuarantees) (s :: S). Term s (PValue kg ag :--> PInteger)
+pcountNonZeroes = plam $ \value ->
+  let
+    nonZero :: Term s ((PBuiltinPair (PAsData PCurrencySymbol) (PAsData (PMap kg PTokenName PInteger))) :--> PBool)
+    nonZero = plam $ \currencySymbolPair ->
+      plet (pto $ pfromData $ psndBuiltin # currencySymbolPair) $ \tokens ->
+        pall
+          # plam (\tokenNamePair -> pnot #$ (pfromData $ psndBuiltin # tokenNamePair) #== 0)
+          # tokens
+            #&& pnot
+          # (pnull # tokens)
+   in
+    plength #$ pfilter # nonZero #$ pto $ pto value
 
 {- | Returns 'PTrue' if the argument 'PValue' contains /exactly/
   one token of the argument 'PAssetClass'.
