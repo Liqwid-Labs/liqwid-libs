@@ -629,13 +629,13 @@ phasOnlyOneTokenOfCurrencySymbol =
                   zeroAda = ptraceIfFalse "Non zero ada" $ count #== 0
                in isAda #&& zeroAda
 
-            isNonAdaEntrValid ::
+            isNonAdaEntryValid ::
               Term
                 s
                 ( PBuiltinPair (PAsData PCurrencySymbol) (PAsData (PMap kg PTokenName PInteger))
                     :--> PBool
                 )
-            isNonAdaEntrValid = plam $ \pair ->
+            isNonAdaEntryValid = plam $ \pair ->
               let cs' = pfromData $ pfstBuiltin # pair
                   validCs = ptraceIfFalse "Unknown symbol" $ cs' #== cs
 
@@ -649,7 +649,7 @@ phasOnlyOneTokenOfCurrencySymbol =
 
             go ::
               Term
-                (s :: S)
+                s
                 ( ( PState
                       :--> PBuiltinList
                             ( PBuiltinPair
@@ -666,25 +666,26 @@ phasOnlyOneTokenOfCurrencySymbol =
                           )
                     :--> PState
                 )
-            go = plam $ \self lastState ->
-              pelimList
-                ( \x xs -> pif
-                    (isZeroAdaEntry # x)
-                    (self # lastState # xs)
-                    $ pmatch lastState
-                    $ \case
-                      PInitial ->
-                        pif
-                          (isNonAdaEntrValid # x)
-                          (self # pcon PFound # xs)
-                          (pcon PFailed)
-                      PFound -> pcon PFailed
-                      PFailed -> ptraceError "unreachable"
-                )
-                ( pmatch lastState $ \case
-                    PFound -> lastState
-                    _ -> pcon PFailed
-                )
+            go =
+              plam $ \self lastState ->
+                pelimList
+                  ( \x xs -> pif
+                      (isZeroAdaEntry # x)
+                      (self # lastState # xs)
+                      $ pmatch lastState
+                      $ \case
+                        PInitial ->
+                          pif
+                            (isNonAdaEntryValid # x)
+                            (self # pcon PFound # xs)
+                            (pcon PFailed)
+                        PFound -> pcon PFailed
+                        PFailed -> ptraceError "unreachable"
+                  )
+                  ( pmatch lastState $ \case
+                      PFound -> lastState
+                      _ -> pcon PFailed
+                  )
          in pmatch (pfix # go # pcon PInitial # l) $
               \case
                 PFound -> pcon PTrue
