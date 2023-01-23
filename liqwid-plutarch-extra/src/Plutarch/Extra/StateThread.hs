@@ -70,7 +70,7 @@ withStateThreadMulti = withStateThreadGeneric uniqueStateTokensMint
 pwithStateThreadMulti ::
   forall (s :: S).
   Term s (PMintingPolicy :--> PTxOutRef :--> PMintingPolicy)
-pwithStateThreadMulti = plam withStateThread
+pwithStateThreadMulti = plam withStateThreadMulti
 
 -- Helpers
 
