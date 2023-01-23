@@ -1,5 +1,6 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Plutarch.Extra.Value (
   -- * Creation
@@ -36,6 +37,7 @@ module Plutarch.Extra.Value (
   phasOnlyOneTokenOfCurrencySymbol,
   phasOneTokenOfCurrencySymbol,
   phasOneTokenOfAssetClass,
+  pcountNonZeroes,
 ) where
 
 import Data.List (nub, sort)
@@ -55,6 +57,7 @@ import Plutarch.Api.V1 (
  )
 import Plutarch.Api.V1.AssocMap (plookup)
 import Plutarch.Api.V1.AssocMap qualified as AssocMap
+import Plutarch.Api.V1.Value (padaSymbol)
 import Plutarch.Api.V1.Value qualified as Value
 import Plutarch.Api.V2 (
   AmountGuarantees (NoGuarantees, Positive),
@@ -70,7 +73,8 @@ import Plutarch.Extra.AssetClass (
  )
 import Plutarch.Extra.Comonad (pextract)
 import Plutarch.Extra.Functor (PFunctor (pfmap))
-import Plutarch.Extra.List (pfromList, plookupAssoc, ptryElimSingle)
+import Plutarch.Extra.IsData (PlutusTypeEnumData)
+import Plutarch.Extra.List (pfromList, pfromSingleton, plookupAssoc, ptryElimSingle, ptryFromSingleton)
 import Plutarch.Extra.Map (phandleMin)
 import Plutarch.Extra.Maybe (pexpectJustC)
 import Plutarch.Extra.Ord (PComparator, pfromOrdBy)
@@ -567,22 +571,151 @@ type family AddGuarantees (a :: AmountGuarantees) (b :: AmountGuarantees) where
   AddGuarantees 'Positive 'Positive = 'Positive
   AddGuarantees _ _ = 'NoGuarantees
 
-{- | Returns 'PTrue' if the entire argument 'PValue' contains /exactly/ one
- token of the argument 'PCurrencySymbol' (and contains no other assets).
+-- Used internally only in 'phasOnlyOneTokenOfCurrencySymbol'
+data PState (s :: S)
+  = PInitial
+  | PFound
+  | PFailed
+  deriving stock
+    ( Generic
+    , Enum
+    , Bounded
+    )
+  deriving anyclass
+    ( PlutusType
+    )
 
- @since 1.3.0
+instance DerivePlutusType PState where
+  type DPTStrat _ = PlutusTypeEnumData
+
+{- | Returns 'PTrue' if the entire argument 'PValue' contains /exactly/ one
+     token of the argument 'PCurrencySymbol' (and contains no other assets).
+
+     This implementation makes a special case for ADA, where it allows
+     zero-ada entries in the given 'PValue'.
+
+     @since 3.21.0
 -}
 phasOnlyOneTokenOfCurrencySymbol ::
-  forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).
-  Term s (PCurrencySymbol :--> PValue keys amounts :--> PBool)
-phasOnlyOneTokenOfCurrencySymbol = phoistAcyclic $
-  plam $ \cs vs ->
-    psymbolValueOf
-      # cs
-      # vs
-      #== 1
-      #&& (plength #$ pto $ pto $ pto vs)
-      #== 1
+  forall (kg :: KeyGuarantees) (ag :: AmountGuarantees) (s :: S).
+  Term s (PCurrencySymbol :--> PValue kg ag :--> PBool)
+phasOnlyOneTokenOfCurrencySymbol =
+  {- Implementation notes:
+
+      This is implemented using a state machine with three states: 'PInitial', 'PFound', 'PFailed'.
+
+      See this comment for the state transition graph:
+      https://gist.github.com/chfanghr/c3ef2f0ed1561e7b17dd11c1df609479?permalink_comment_id=4443620#gistcomment-4443620
+
+      This implementation makes a special case for ADA, where it allows zero-ada entries in the 'PValue'.
+  -}
+  plam $
+    \cs
+     ( (pto . pto) ->
+        l
+      ) ->
+        let isZeroAdaEntry ::
+              Term
+                s
+                ( PBuiltinPair (PAsData PCurrencySymbol) (PAsData (PMap kg PTokenName PInteger))
+                    :--> PBool
+                )
+            isZeroAdaEntry = plam $ \pair ->
+              let cs' = pfromData $ pfstBuiltin # pair
+                  isAda = ptraceIfFalse "Not ada" $ cs' #== padaSymbol
+
+                  tnMap = pfromData $ psndBuiltin # pair
+                  count = pfromData $ psndBuiltin # (ptryFromSingleton # pto tnMap)
+                  zeroAda = ptraceIfFalse "Non zero ada" $ count #== 0
+               in isAda #&& zeroAda
+
+            isNonAdaEntryValid ::
+              Term
+                s
+                ( PBuiltinPair (PAsData PCurrencySymbol) (PAsData (PMap kg PTokenName PInteger))
+                    :--> PBool
+                )
+            isNonAdaEntryValid = plam $ \pair ->
+              let cs' = pfromData $ pfstBuiltin # pair
+                  validCs = ptraceIfFalse "Unknown symbol" $ cs' #== cs
+
+                  tnMap = pfromData $ psndBuiltin # pair
+                  validTnMap = ptraceIfFalse "More than one token names or tokens" $
+                    pmatch (pfromSingleton # pto tnMap) $ \case
+                      PNothing -> pcon PFalse
+                      PJust ((pfromData . (psndBuiltin #)) -> tokenCount) ->
+                        tokenCount #== 1
+               in validCs #&& validTnMap
+
+            go ::
+              Term
+                s
+                ( ( PState
+                      :--> PBuiltinList
+                            ( PBuiltinPair
+                                (PAsData PCurrencySymbol)
+                                (PAsData (PMap kg PTokenName PInteger))
+                            )
+                      :--> PState
+                  )
+                    :--> PState
+                    :--> PBuiltinList
+                          ( PBuiltinPair
+                              (PAsData PCurrencySymbol)
+                              (PAsData (PMap kg PTokenName PInteger))
+                          )
+                    :--> PState
+                )
+            go =
+              plam $ \self lastState ->
+                pelimList
+                  ( \x xs -> pif
+                      (isZeroAdaEntry # x)
+                      (self # lastState # xs)
+                      $ pmatch lastState
+                      $ \case
+                        PInitial ->
+                          pif
+                            (isNonAdaEntryValid # x)
+                            (self # pcon PFound # xs)
+                            (pcon PFailed)
+                        PFound -> pcon PFailed
+                        PFailed -> ptraceError "unreachable"
+                  )
+                  ( pmatch lastState $ \case
+                      PFound -> lastState
+                      _ -> pcon PFailed
+                  )
+         in pmatch (pfix # go # pcon PInitial # l) $
+              \case
+                PFound -> pcon PTrue
+                _ -> pcon PFalse
+
+{- | Returns the count of non-zero currency symbols in a 'PValue'.
+
+     So, for a value of the following shape:
+
+     @
+       [("", [("", 0)]), ("feed", [("foo", 7)]), ("deed", [("bar", 1)])]
+     @
+
+     We get the result @2@.
+
+     @since 3.21.0
+-}
+pcountNonZeroes :: forall (kg :: KeyGuarantees) (ag :: AmountGuarantees) (s :: S). Term s (PValue kg ag :--> PInteger)
+pcountNonZeroes = plam $ \value ->
+  let
+    nonZero :: Term s ((PBuiltinPair (PAsData PCurrencySymbol) (PAsData (PMap kg PTokenName PInteger))) :--> PBool)
+    nonZero = plam $ \currencySymbolPair ->
+      plet (pto $ pfromData $ psndBuiltin # currencySymbolPair) $ \tokens ->
+        pall
+          # plam (\tokenNamePair -> pnot #$ (pfromData $ psndBuiltin # tokenNamePair) #== 0)
+          # tokens
+            #&& pnot
+          # (pnull # tokens)
+   in
+    plength #$ pfilter # nonZero #$ pto $ pto value
 
 {- | Returns 'PTrue' if the argument 'PValue' contains /exactly/
   one token of the argument 'PAssetClass'.

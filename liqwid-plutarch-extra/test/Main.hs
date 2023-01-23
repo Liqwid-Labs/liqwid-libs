@@ -9,6 +9,7 @@ import FunctorProp qualified
 import NumericProp qualified
 import OrdProp qualified
 import TraversableProp qualified
+import ValueProp qualified
 
 main :: IO ()
 main = do
@@ -18,4 +19,5 @@ main = do
     , NumericProp.tests
     , TraversableProp.tests
     , FunctorProp.tests
+    , ValueProp.tests
     ]

@@ -173,6 +173,7 @@ test-suite test
     NumericProp
     OrdProp
     TraversableProp
+    ValueProp
 
   build-depends:
     , liqwid-plutarch-extra
