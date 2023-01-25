@@ -38,7 +38,7 @@ import Test.Tasty.Providers (
 
 --------------------------------------------------------------------------------
 
-import Plutarch.Evaluate (evalScript)
+import Plutarch.Evaluate (evalScript, evalScriptHuge)
 import Plutarch.Script (Script)
 import Test.Tasty (testGroup)
 
@@ -150,7 +150,7 @@ runScript script debug onSuccess = case scriptResult of
   (Left err, _, _) -> (ScriptFailure, showError dTrace (show err))
   where
     scriptResult = evalScript script
-    (_, _, dTrace) = evalScript debug
+    (_, _, dTrace) = evalScriptHuge debug
 
 showError :: [Text] -> String -> String
 showError traces err =
