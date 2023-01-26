@@ -102,9 +102,9 @@ instance Arbitrary Data where
             Gen.oneof
               [ B . fromList <$> vectorOfUpTo 64 arbitrary
               , I <$> arbitrary
-              , List <$> Gen.listOf (go $ size `quot` 2)
-              , Map <$> Gen.listOf ((,) <$> go (size `quot` 2) <*> go (size `quot` 2))
-              , Constr <$> (getNonNegative <$> arbitrary) <*> Gen.listOf (go $ size `quot` 2)
+              , List <$> Gen.listOf (go $ size `quot` 4)
+              , Map <$> Gen.listOf ((,) <$> go (size `quot` 4) <*> go (size `quot` 4))
+              , Constr <$> (getNonNegative <$> arbitrary) <*> Gen.listOf (go $ size `quot` 4)
               ]
   {-# INLINEABLE shrink #-}
   shrink = \case
