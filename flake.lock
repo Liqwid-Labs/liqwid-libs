@@ -2011,16 +2011,16 @@
         "plutarch": "plutarch"
       },
       "locked": {
-        "lastModified": 1673280604,
-        "narHash": "sha256-H/Zj4F0Up/mLx+bDHfnhvMbDj9C4aQ3++X41YXOd41I=",
+        "lastModified": 1674651955,
+        "narHash": "sha256-MvVaFcPPXNR+xEFcPRcQdU1GK6annFN6x4GrjMlJFiM=",
         "owner": "Liqwid-Labs",
         "repo": "liqwid-nix",
-        "rev": "36e5f15ce614fe9781189471c731bd79642d080a",
+        "rev": "72d18a5166235347ec2f435422ee5a062bbd16d6",
         "type": "github"
       },
       "original": {
         "owner": "Liqwid-Labs",
-        "ref": "v2.2.1",
+        "ref": "v2.3.0",
         "repo": "liqwid-nix",
         "type": "github"
       }
