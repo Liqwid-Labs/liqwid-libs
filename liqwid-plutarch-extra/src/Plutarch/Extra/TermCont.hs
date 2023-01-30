@@ -49,6 +49,7 @@ pguardWithC tracer checker object =
 
   @since 1.1.0
 -}
+{-# DEPRECATED pguardShowC "This is very heavy on-chain." #-}
 pguardShowC ::
   forall (r :: S -> Type) (pt :: S -> Type) (s :: S).
   PShow pt =>
