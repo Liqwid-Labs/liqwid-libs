@@ -84,7 +84,7 @@ instance PTryFrom PData (PAsData PDatumHash) where
         -- Blake2b_256 hash: 256 bits/32 bytes.
         (plengthBS # unwrapped #== 32)
         (f ())
-        (ptraceError "ptryFrom(PDatumHash): must be 32 bytes long")
+        perror -- (ptraceError "ptryFrom(PDatumHash): must be 32 bytes long")
     pure (punsafeCoerce opq, pcon $ PDatumHash unwrapped)
 
 -- | @since 3.0.3

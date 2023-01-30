@@ -62,7 +62,7 @@ import Plutarch.Extra.AssetClass (PAssetClass)
 import Plutarch.Extra.Function ((#.*))
 import Plutarch.Extra.Functor (PFunctor (pfmap))
 import Plutarch.Extra.List (pfindJust)
-import Plutarch.Extra.Maybe (pfromJust, pisJust, pjust, pnothing, ptraceIfNothing)
+import Plutarch.Extra.Maybe (pfromJust, pisJust, pjust, pnothing)
 import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.Extra.Value (passetClassValueOf)
 import Plutarch.Unsafe (punsafeCoerce)
@@ -113,7 +113,7 @@ ptryOwnInput = phoistAcyclic $
     txInInfos <- pletC (pfromData $ pfield @"inputs" # txInfo)
     res <- pmatchC (pfind # (go # txOutRef) # txInInfos)
     pure $ case res of
-      PNothing -> ptraceError "ptryOwnInput: Could not find my own input"
+      PNothing -> perror -- ptraceError "ptryOwnInput: Could not find my own input"
       PJust res' -> res'
   where
     go ::
@@ -237,12 +237,15 @@ presolveOutputDatum ::
     )
 presolveOutputDatum = phoistAcyclic $
   plam $ \od m -> pmatch od $ \case
-    PNoOutputDatum _ ->
-      ptrace "no datum" pnothing
+    PNoOutputDatum _ -> pnothing
+    -- ptrace "no datum" pnothing
     POutputDatum ((pfield @"outputDatum" #) -> datum) ->
-      ptrace "inline datum" pjust # datum
+      pjust # datum
+    -- ptrace "inline datum" pjust # datum
     POutputDatumHash ((pfield @"datumHash" #) -> hash) ->
-      ptrace "datum hash" $ AssocMap.plookup # hash # m
+      AssocMap.plookup # hash # m
+
+-- ptrace "datum hash" $ AssocMap.plookup # hash # m
 
 {- | As 'presolveOutputDatum', but error if there's no 'PDatum' to be had.
 
@@ -252,8 +255,10 @@ ptryResolveOutputDatum ::
   forall (keys :: KeyGuarantees) (s :: S).
   Term s (POutputDatum :--> PMap keys PDatumHash PDatum :--> PDatum)
 ptryResolveOutputDatum = phoistAcyclic $
-  plam $ \od m ->
-    ptraceIfNothing "ptryResolveOutputDatum: no PDatum" $ presolveOutputDatum # od # m
+  plam $
+    \od m -> pfromJust #$ presolveOutputDatum # od # m
+
+-- ptraceIfNothing "ptryResolveOutputDatum: no PDatum" $ presolveOutputDatum # od # m
 
 {- | Extract the datum from a 'POutputDatum' and convert it to the given type.
 
@@ -301,7 +306,7 @@ ptryFromDatumHash = phoistAcyclic $
   plam $
     flip pmatch $ \case
       POutputDatumHash ((pfield @"datumHash" #) -> hash) -> hash
-      _ -> ptraceError "not a datum hash"
+      _ -> perror -- ptraceError "not a datum hash"
 
 {- | Extract the inline datum from a 'POutputDatum', throw an error if the given
      'POuptutDatum' is not an inline datum.
@@ -313,7 +318,7 @@ ptryFromInlineDatum = phoistAcyclic $
   plam $
     flip pmatch $ \case
       POutputDatum ((pfield @"outputDatum" #) -> datum) -> datum
-      _ -> ptraceError "not an inline datum"
+      _ -> perror -- ptraceError "not an inline datum"
 
 {- | Construct an address from a @PScriptHash@ and maybe a
      @PStakingCredential@.

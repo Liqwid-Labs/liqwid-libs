@@ -42,10 +42,10 @@ pcompare t1 t2 ifLT ifEQ ifGT =
 pcond :: forall (s :: S) (a :: S -> Type). [Term s a -> Term s a] -> Term s a -> Term s a
 pcond = appEndo . foldMap Endo
 
-{- | If the condition evaluated to true, return the third argument. Otherwise error
-     out with the error message.
+{- | If the condition evaluates to 'PTrue', return the third argument;
+ otherwise, error out.
 
-     @since 3.14.1
+ @since 3.21.1
 -}
 passert ::
   forall (a :: PType) (s :: S).
@@ -56,4 +56,4 @@ passert ::
   -- | The result.
   Term s a ->
   Term s a
-passert msg cond x = pif cond x $ ptraceError msg
+passert _ cond x = pif cond x perror -- ptraceError msg

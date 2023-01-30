@@ -66,17 +66,19 @@ ptryElimSingle ::
   (Term s a -> Term s r) ->
   Term s (ell a) ->
   Term s r
-ptryElimSingle f = pelimList go (ptraceError emptyErr)
+ptryElimSingle f = pelimList go perror -- (ptraceError emptyErr)
   where
     go ::
       Term s a ->
       Term s (ell a) ->
       Term s r
-    go h t = pif (pnull # t) (f h) (ptraceError nonSingleErr)
+    go h t = pif (pnull # t) (f h) perror -- (ptraceError nonSingleErr)
+    {-
     emptyErr :: Term s PString
     emptyErr = "ptryElimSingle: Found empty list-like."
     nonSingleErr :: Term s PString
     nonSingleErr = "ptryElimSingle: Found non-singleton list-like."
+    -}
 
 {- | Similar to 'pmap', but allows elements to be thrown out. More precisely,
  for elements where the function argument returns 'PNothing', the
@@ -304,7 +306,9 @@ ptryDeleteFirstBy = phoistAcyclic $
             t
             (pcons # h #$ self # t)
       )
-      (const $ ptraceError "Cannot delete element")
+      (const $ perror)
+
+-- (const $ ptraceError "Cannot delete element")
 
 {- | Special version of 'pdeleteBy', for types with 'PEq' instance.
 
@@ -377,6 +381,9 @@ ptryFromSingleton =
           pif
             (pnull # t)
             h
-            (ptraceError "More than one element")
+            perror
+            -- (ptraceError "More than one element")
       )
-      (const $ ptraceError "Empty list")
+      (const $ perror)
+
+-- (const $ ptraceError "Empty list")

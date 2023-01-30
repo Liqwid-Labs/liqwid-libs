@@ -82,12 +82,14 @@ pgetFullyBoundedTimeRange = phoistAcyclic $
                 (getField @"_1" f)
                 ( pmatch (getField @"_0" f) $ \case
                     PFinite (pfromData . (pfield @"_0" #) -> d) -> pjust # d
-                    _ ->
+                    _ -> pnothing
+                    {-
                       ptrace
                         "pcurrentTime: time range should be bounded"
-                        pnothing
+                        pnothing -}
                 )
-                (ptrace "pcurrentTime: time range should be inclusive" pnothing)
+                pnothing
+        -- (ptrace "pcurrentTime: time range should be inclusive" pnothing)
 
         lb' = getBound # lb
         ub' = getBound # ub

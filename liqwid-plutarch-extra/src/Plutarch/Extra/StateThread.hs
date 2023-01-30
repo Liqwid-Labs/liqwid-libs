@@ -101,10 +101,12 @@ withStateThreadGeneric checkMint mp ref = plam $ \red ctx -> pletAll ctx $ \ctx'
           ( pif
               (pany # (hasUniqueInput # ref) # getField @"inputs" txInfo)
               (mp # red # ctx)
-              (ptraceError "stateThread: Unique input not found")
+              perror
+              -- (ptraceError "stateThread: Unique input not found")
           )
-          (ptraceError "stateThread: Not minting a unique state token")
-      _ -> ptraceError "stateThread: Not a minting script purpose"
+          perror
+      -- (ptraceError "stateThread: Not minting a unique state token")
+      _ -> perror -- ptraceError "stateThread: Not a minting script purpose"
 
 uniqueStateTokenMint ::
   forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).

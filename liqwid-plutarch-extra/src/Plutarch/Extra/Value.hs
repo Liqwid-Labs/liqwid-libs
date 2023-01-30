@@ -99,7 +99,7 @@ passetClassDataValue = phoistAcyclic $
   plam $ \ac i ->
     pif
       (i #== 0)
-      (ptraceError "passetClassDataValue: given zero argument, expecting nonzero.")
+      perror -- (ptraceError "passetClassDataValue: given zero argument, expecting nonzero.")
       ( let cs = pfield @"symbol" # ac
             tn = pfield @"name" # ac
          in Value.psingleton # pfromData cs # pfromData tn # i
@@ -622,11 +622,10 @@ phasOnlyOneTokenOfCurrencySymbol =
                 )
             isZeroAdaEntry = plam $ \pair ->
               let cs' = pfromData $ pfstBuiltin # pair
-                  isAda = ptraceIfFalse "Not ada" $ cs' #== padaSymbol
-
+                  isAda = cs' #== padaSymbol -- ptraceIfFalse "Not ada" $ cs' #== padaSymbol
                   tnMap = pfromData $ psndBuiltin # pair
                   count = pfromData $ psndBuiltin # (ptryFromSingleton # pto tnMap)
-                  zeroAda = ptraceIfFalse "Non zero ada" $ count #== 0
+                  zeroAda = count #== 0 -- ptraceIfFalse "Non zero ada" $ count #== 0
                in isAda #&& zeroAda
 
             isNonAdaEntryValid ::
@@ -637,15 +636,19 @@ phasOnlyOneTokenOfCurrencySymbol =
                 )
             isNonAdaEntryValid = plam $ \pair ->
               let cs' = pfromData $ pfstBuiltin # pair
-                  validCs = ptraceIfFalse "Unknown symbol" $ cs' #== cs
-
+                  validCs = cs' #== cs -- ptraceIfFalse "Unknown symbol" $ cs' #== cs
                   tnMap = pfromData $ psndBuiltin # pair
+                  validTnMap = pmatch (pfromSingleton # pto tnMap) $ \case
+                    PNothing -> pcon PFalse
+                    PJust ((pfromData . (psndBuiltin #)) -> tokenCount) ->
+                      tokenCount #== 1
+               in {-
                   validTnMap = ptraceIfFalse "More than one token names or tokens" $
                     pmatch (pfromSingleton # pto tnMap) $ \case
                       PNothing -> pcon PFalse
                       PJust ((pfromData . (psndBuiltin #)) -> tokenCount) ->
-                        tokenCount #== 1
-               in validCs #&& validTnMap
+                        tokenCount #== 1 -}
+                  validCs #&& validTnMap
 
             go ::
               Term
@@ -680,7 +683,7 @@ phasOnlyOneTokenOfCurrencySymbol =
                             (self # pcon PFound # xs)
                             (pcon PFailed)
                         PFound -> pcon PFailed
-                        PFailed -> ptraceError "unreachable"
+                        PFailed -> perror -- ptraceError "unreachable"
                   )
                   ( pmatch lastState $ \case
                       PFound -> lastState
@@ -794,7 +797,7 @@ findValue sym tk self x xs = plet x $ \pair ->
       pif
         (pfstBuiltin # kv #== tk)
         (pfromData $ psndBuiltin # kv)
-        (ptraceError "findValue: Unexpectedly missing result.")
+        perror -- (ptraceError "findValue: Unexpectedly missing result.")
 
 unsafeMatchValueAssetsInternal ::
   forall (k :: KeyGuarantees) (s :: S).

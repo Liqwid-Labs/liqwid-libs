@@ -93,7 +93,9 @@ import Plutarch.Api.V1.Value (
 import Plutarch.Bool (pif')
 import Plutarch.Extra.List (phandleList, precListLookahead)
 import Plutarch.Extra.Map (phandleMin)
-import Plutarch.Extra.Maybe (ptraceIfNothing)
+import Plutarch.Maybe (pfromJust)
+
+-- import Plutarch.Extra.Maybe (ptraceIfNothing)
 import Plutarch.Internal.PlutusType (PlutusType (pcon', pmatch'))
 import Plutarch.Lift (
   PConstantDecl (
@@ -611,8 +613,10 @@ ptryAllUniqueBy ::
   (PElemConstraint ell a, PListLike ell) =>
   Term s (PComparator a :--> ell a :--> PBool)
 ptryAllUniqueBy = phoistAcyclic $
-  plam $ \cmp xs ->
-    ptraceIfNothing "ptryAllUniqueBy: argument is unordered" $ pallUniqueBy # cmp # xs
+  plam $
+    \cmp xs -> pfromJust #$ pallUniqueBy # cmp # xs
+
+-- ptraceIfNothing "ptryAllUniqueBy: argument is unordered" $ pallUniqueBy # cmp # xs
 
 {- | Merge two list-like structures, whose contents are sorted by the 'POrd'
  instance for their contents, into one sorted list-like structure. This will
@@ -1001,7 +1005,11 @@ passertSortedLookahead = phoistAcyclic $
       unorderedError
 
 unorderedError :: forall (a :: S -> Type) (s :: S). Term s a
+unorderedError = perror
+
+{-
 unorderedError = ptraceError "ptryMergeBy: argument list-like out of order"
+-}
 
 -- Helper for dragging a comparator through a map. We hide this away to ensure
 -- that people actually use the comparator as intended.
@@ -1116,7 +1124,8 @@ pinsertUniqueBy = phoistAcyclic $
               let ensureUniqueness =
                     pif
                       (eq # x # h)
-                      (ptraceError "inserted value already exists")
+                      perror
+                  -- (ptraceError "inserted value already exists")
                   next =
                     pif
                       (lt # x # h)
