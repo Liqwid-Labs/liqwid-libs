@@ -2,6 +2,12 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.21.1 -- 2023-01-27
+
+### Modified
+
+- `pguardShowC` is deprecated, due to its on-chain impact for size.
+
 ## 3.21.0 -- 2023-01-27
 
 ### Modified 
