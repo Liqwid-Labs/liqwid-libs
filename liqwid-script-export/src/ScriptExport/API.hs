@@ -10,6 +10,7 @@ module ScriptExport.API (
 ) where
 
 import Codec.Serialise.Orphans ()
+import Control.Monad (void)
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.Aeson qualified as Aeson
 import Data.Cache.Cached (cachedForM)
@@ -39,6 +40,7 @@ import ScriptExport.Types qualified as Builders
 import Servant.API (Capture, Get, JSON, Post, ReqBody, (:<|>) (..), type (:>))
 import Servant.Server qualified as Servant
 import System.Clock (TimeSpec (TimeSpec))
+import System.Posix.Signals (Handler (Catch), installHandler, sigKILL, sigTERM)
 import Text.Printf (printf)
 
 {- | Servant API type for script generation.
@@ -79,6 +81,7 @@ runServer builders options = do
           & Warp.setPort (view #port options)
           & Warp.setLogger logger
           & Warp.setTimeout (view #timeout options)
+          & Warp.setInstallShutdownHandler shutdownHandler
 
       corsPolicy =
         simpleCorsResourcePolicy
@@ -105,3 +108,8 @@ runServer builders options = do
     & (if view #enableCorsMiddleware options then corsMiddleware else id)
     & Warp.runSettings settings
     & liftIO
+  where
+    shutdownHandler :: IO () -> IO ()
+    shutdownHandler closeSocket = do
+      void $ installHandler sigTERM (Catch closeSocket) Nothing
+      void $ installHandler sigKILL (Catch closeSocket) Nothing

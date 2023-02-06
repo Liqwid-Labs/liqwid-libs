@@ -89,6 +89,7 @@ common deps
     , tagged
     , template-haskell
     , text
+    , unix
     , wai
     , wai-cors
     , warp
