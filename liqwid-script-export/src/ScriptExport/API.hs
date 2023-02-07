@@ -40,7 +40,7 @@ import ScriptExport.Types qualified as Builders
 import Servant.API (Capture, Get, JSON, Post, ReqBody, (:<|>) (..), type (:>))
 import Servant.Server qualified as Servant
 import System.Clock (TimeSpec (TimeSpec))
-import System.Posix.Signals (Handler (Catch), installHandler, sigKILL, sigTERM)
+import System.Posix.Signals (Handler (CatchOnce), installHandler, sigKILL, sigTERM)
 import Text.Printf (printf)
 
 {- | Servant API type for script generation.
@@ -111,5 +111,5 @@ runServer builders options = do
   where
     shutdownHandler :: IO () -> IO ()
     shutdownHandler closeSocket = do
-      void $ installHandler sigTERM (Catch closeSocket) Nothing
-      void $ installHandler sigKILL (Catch closeSocket) Nothing
+      void $ installHandler sigTERM (CatchOnce closeSocket) Nothing
+      void $ installHandler sigKILL (CatchOnce closeSocket) Nothing
