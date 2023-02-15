@@ -76,10 +76,10 @@ pgetFullyBoundedTimeRange = phoistAcyclic $
     PUpperBound ub <- pmatchC (getField @"to" ivf)
 
     let getBound = phoistAcyclic $
-          plam $
+          plam $ \dontCheckInclusive ->
             flip pletAll $ \f ->
               pif
-                (getField @"_1" f)
+                (dontCheckInclusive #|| getField @"_1" f)
                 ( pmatch (getField @"_0" f) $ \case
                     PFinite (pfromData . (pfield @"_0" #) -> d) -> pjust # d
                     _ ->
@@ -89,8 +89,8 @@ pgetFullyBoundedTimeRange = phoistAcyclic $
                 )
                 (ptrace "pcurrentTime: time range should be inclusive" pnothing)
 
-        lb' = getBound # lb
-        ub' = getBound # ub
+        lb' = getBound # pcon PFalse # lb
+        ub' = getBound # pcon PTrue # ub
 
         mkTime = phoistAcyclic $ plam $ pcon .* PFullyBoundedTimeRange
     pure $ pliftA2 # mkTime # lb' # ub'

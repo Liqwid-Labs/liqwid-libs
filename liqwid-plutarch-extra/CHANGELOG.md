@@ -2,6 +2,12 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.21.2 -- 2023-02-15
+
+### Fixed
+
+- Fix `pgetFullyBoundedTimeRange` always returns nothing
+
 ## 3.21.1 -- 2023-01-27
 
 ### Modified
