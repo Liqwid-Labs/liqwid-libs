@@ -33,6 +33,12 @@ with lib;
             default = true;
           };
 
+          openFirewall = mkOption {
+            description = "Open firewall for the selected port";
+            type = bool;
+            default = false;
+          };
+
           user = mkOption {
             description = "User to run LSE service as.";
             type = str;
@@ -56,6 +62,12 @@ with lib;
       })
       enabledInstnaces;
     users.groups = mapAttrs' (name: conf: nameValuePair (genName name) { }) enabledInstnaces;
+
+    networking.firewall.allowedTCPPorts = concatMap
+      (conf:
+        optional conf.openFirewall conf.port
+      )
+      (attrValues enabledInstnaces);
 
     systemd.services = mapAttrs'
       (name: conf: nameValuePair (genName name) {
