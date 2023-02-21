@@ -51,6 +51,9 @@
           ci.required = [ "all_onchain" ];
         };
 
+      flake.nixosModules.liqwid-script-export = { ... }: {
+        imports = [ ./liqwid-script-export/nixos-module.nix ];
+      };
       flake.hydraJobs.x86_64-linux = (
         self.checks.x86_64-linux
         // self.packages.x86_64-linux
