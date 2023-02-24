@@ -19,7 +19,7 @@
       inputs.nixpkgs-latest.follows = "nixpkgs-latest";
     };
 
-    ply.url = "github:mlabs-haskell/ply?ref=master";
+    ply.url = "github:liqwid-labs/ply?ref=seungheonoh/purs";
   };
 
   outputs = inputs@{ self, flake-parts, ... }:

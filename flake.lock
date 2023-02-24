@@ -799,6 +799,23 @@
         "type": "github"
       }
     },
+    "easy-purescript-nix": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1666686938,
+        "narHash": "sha256-/UOLRdnEhIOcxcm5ouOipOiSgHRzJde0ccAx4xB1dnU=",
+        "owner": "justinwoo",
+        "repo": "easy-purescript-nix",
+        "rev": "da7acb2662961fd355f0a01a25bd32bf33577fa8",
+        "type": "github"
+      },
+      "original": {
+        "owner": "justinwoo",
+        "repo": "easy-purescript-nix",
+        "rev": "da7acb2662961fd355f0a01a25bd32bf33577fa8",
+        "type": "github"
+      }
+    },
     "ema": {
       "flake": false,
       "locked": {
@@ -3497,6 +3514,7 @@
     "ply": {
       "inputs": {
         "CHaP": "CHaP_2",
+        "easy-purescript-nix": "easy-purescript-nix",
         "flake-utils": "flake-utils_13",
         "haskellNix": "haskellNix",
         "nixpkgs": [
@@ -3507,16 +3525,16 @@
         "pre-commit-hooks": "pre-commit-hooks"
       },
       "locked": {
-        "lastModified": 1672869303,
-        "narHash": "sha256-hX2nxIpyJWTqQnllc9bLIqQH3LXtLxof56TYkMPSOZ0=",
-        "owner": "mlabs-haskell",
+        "lastModified": 1676952116,
+        "narHash": "sha256-BuiXDtCxOZQCs0hHhBtHGNBIxFTZxbSSp+f0U8kP/+c=",
+        "owner": "liqwid-labs",
         "repo": "ply",
-        "rev": "2cda3b44f87c659980bea2bc0b4a822d1e9eaef4",
+        "rev": "623c017d2867147022283c6d4f6886a77bced09e",
         "type": "github"
       },
       "original": {
-        "owner": "mlabs-haskell",
-        "ref": "master",
+        "owner": "liqwid-labs",
+        "ref": "seungheonoh/purs",
         "repo": "ply",
         "type": "github"
       }
