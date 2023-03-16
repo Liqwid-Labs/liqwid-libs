@@ -276,7 +276,7 @@ instance forall (exp :: Natural). KnownNat exp => PShow (PFixedDecimal exp) wher
       "PFixedDecimal "
         <> pshow (pquot # pto z # base)
         <> "."
-        <> (replicateStr # pconstant baseExp #- (places # decimal) # "0")
+        <> (replicateStr # (pconstant baseExp #- (places # decimal)) # "0")
         <> pshow decimal
     where
       baseExp = natVal (Proxy @exp)

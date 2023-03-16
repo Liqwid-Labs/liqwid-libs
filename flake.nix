@@ -15,7 +15,7 @@
     nixpkgs-latest.url = "github:NixOS/nixpkgs?rev=a2494bf2042d605ca1c4a679401bdc4971da54fb";
 
     liqwid-nix = {
-      url = "github:Liqwid-Labs/liqwid-nix/v2.3.0";
+      url = "github:liqwid-labs/liqwid-nix/v2.7.0";
       inputs.nixpkgs-latest.follows = "nixpkgs-latest";
     };
 
@@ -43,6 +43,7 @@
             applyRefact = { };
             shell = { };
             enableBuildChecks = true;
+            hoogleImage.enable = false;
             extraHackageDeps = [
               "${inputs.ply}/ply-core"
               "${inputs.ply}/ply-plutarch"
