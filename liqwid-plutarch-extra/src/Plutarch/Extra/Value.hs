@@ -18,6 +18,8 @@ module Plutarch.Extra.Value (
   passetClassValueOf,
   passetClassValueOfT',
   passetClassValueOfT,
+  passetClassDataValueOf,
+  passetClassDataValueOfT,
   pmatchValueAssets,
   psplitValue,
 
@@ -306,6 +308,39 @@ passetClassValueOfT ::
 passetClassValueOfT = phoistAcyclic $
   plam $ \cls val -> pmatch (pextract # cls) $ \(PAssetClass sym tk) ->
     ppure #$ precList (findValue sym tk) (const 0) #$ pto $ pto val
+
+{- | Given a 'PAssetClassData' and a 'PValue', look up the amount corresponding
+ to that 'PAssetClassData'.
+
+ @since 0.0.0
+-}
+passetClassDataValueOf ::
+  forall
+    (key :: KeyGuarantees)
+    (amount :: AmountGuarantees)
+    (s :: S).
+  Term s (PAssetClassData :--> PValue key amount :--> PInteger)
+passetClassDataValueOf = phoistAcyclic $
+  plam $ \cls val ->
+    let cs = pfield @"symbol" # cls
+        tn = pfield @"name" # cls
+     in precList (findValue cs tn) (const 0) #$ pto $ pto val
+
+{- | Tagged version of `passetClassDataValueOf`.
+
+ @since 0.0.0
+-}
+passetClassDataValueOfT ::
+  forall
+    {k :: Type}
+    (key :: KeyGuarantees)
+    (amount :: AmountGuarantees)
+    (unit :: k)
+    (s :: S).
+  Term s (PTagged unit PAssetClassData :--> PValue key amount :--> PTagged unit PInteger)
+passetClassDataValueOfT = phoistAcyclic $
+  plam $ \cls val ->
+    ppure #$ passetClassDataValueOf # (pextract # cls) # val
 
 {- | Extracts the amount given by the 'PAssetClass' from (the internal
  representation of) a 'PValue'.

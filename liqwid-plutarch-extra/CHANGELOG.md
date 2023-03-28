@@ -2,6 +2,12 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 0.0.0 --- 2023-03-28
+
+### Added
+
+- `passetClassDataValueOf` and `passetClassDataValueOfT`
+
 ## 3.21.2 -- 2023-02-15
 
 ### Fixed
