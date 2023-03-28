@@ -312,7 +312,7 @@ passetClassValueOfT = phoistAcyclic $
 {- | Given a 'PAssetClassData' and a 'PValue', look up the amount corresponding
  to that 'PAssetClassData'.
 
- @since 0.0.0
+ @since 3.21.3
 -}
 passetClassDataValueOf ::
   forall
@@ -328,7 +328,7 @@ passetClassDataValueOf = phoistAcyclic $
 
 {- | Tagged version of `passetClassDataValueOf`.
 
- @since 0.0.0
+ @since 3.21.3
 -}
 passetClassDataValueOfT ::
   forall
