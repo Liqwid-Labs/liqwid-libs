@@ -2,6 +2,10 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.21.3 -- 2023-03-28
+
+- Add `PTryFrom PData` instance for `PAssetClassData`
+
 ## 3.21.2 -- 2023-02-15
 
 ### Fixed
