@@ -318,6 +318,9 @@ instance DerivePlutusType PAssetClassData where
 instance Plutarch.Lift.PUnsafeLiftDecl PAssetClassData where
   type PLifted PAssetClassData = AssetClass
 
+-- | @since 3.21.3
+instance PTryFrom PData (PAsData PAssetClassData)
+
 -- | @since 3.10.0
 passetClassData ::
   forall (s :: S).

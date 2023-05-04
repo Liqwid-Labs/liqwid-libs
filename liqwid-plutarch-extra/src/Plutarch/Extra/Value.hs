@@ -313,7 +313,7 @@ passetClassValueOfT = phoistAcyclic $
 {- | Given a 'PAssetClassData' and a 'PValue', look up the amount corresponding
  to that 'PAssetClassData'.
 
- @since 3.21.3
+ @since 3.21.4
 -}
 passetClassDataValueOf ::
   forall
@@ -329,7 +329,7 @@ passetClassDataValueOf = phoistAcyclic $
 
 {- | Tagged version of `passetClassDataValueOf`.
 
- @since 3.21.3
+ @since 3.21.4
 -}
 passetClassDataValueOfT ::
   forall
@@ -759,7 +759,7 @@ pcountNonZeroes = plam $ \value ->
  Note: unlike `phasOnlyOneTokenOfCurrencySymbol` this may
  still return 'PTrue' if there are other assets in the 'PValue'.
 
- @since 3.21.3
+ @since 3.21.4
 -}
 phasOneTokenOfAssetClassData ::
   forall
