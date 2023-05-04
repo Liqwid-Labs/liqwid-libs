@@ -18,6 +18,8 @@ module Plutarch.Extra.Value (
   passetClassValueOf,
   passetClassValueOfT',
   passetClassValueOfT,
+  passetClassDataValueOf,
+  passetClassDataValueOfT,
   pmatchValueAssets,
   psplitValue,
 
@@ -37,6 +39,7 @@ module Plutarch.Extra.Value (
   phasOnlyOneTokenOfCurrencySymbol,
   phasOneTokenOfCurrencySymbol,
   phasOneTokenOfAssetClass,
+  phasOneTokenOfAssetClassData,
   pcountNonZeroes,
 ) where
 
@@ -306,6 +309,39 @@ passetClassValueOfT ::
 passetClassValueOfT = phoistAcyclic $
   plam $ \cls val -> pmatch (pextract # cls) $ \(PAssetClass sym tk) ->
     ppure #$ precList (findValue sym tk) (const 0) #$ pto $ pto val
+
+{- | Given a 'PAssetClassData' and a 'PValue', look up the amount corresponding
+ to that 'PAssetClassData'.
+
+ @since 3.21.4
+-}
+passetClassDataValueOf ::
+  forall
+    (key :: KeyGuarantees)
+    (amount :: AmountGuarantees)
+    (s :: S).
+  Term s (PAssetClassData :--> PValue key amount :--> PInteger)
+passetClassDataValueOf = phoistAcyclic $
+  plam $ \cls val ->
+    let cs = pfield @"symbol" # cls
+        tn = pfield @"name" # cls
+     in precList (findValue cs tn) (const 0) #$ pto $ pto val
+
+{- | Tagged version of `passetClassDataValueOf`.
+
+ @since 3.21.4
+-}
+passetClassDataValueOfT ::
+  forall
+    {k :: Type}
+    (key :: KeyGuarantees)
+    (amount :: AmountGuarantees)
+    (unit :: k)
+    (s :: S).
+  Term s (PTagged unit PAssetClassData :--> PValue key amount :--> PTagged unit PInteger)
+passetClassDataValueOfT = phoistAcyclic $
+  plam $ \cls val ->
+    ppure #$ passetClassDataValueOf # (pextract # cls) # val
 
 {- | Extracts the amount given by the 'PAssetClass' from (the internal
  representation of) a 'PValue'.
@@ -716,6 +752,24 @@ pcountNonZeroes = plam $ \value ->
           # (pnull # tokens)
    in
     plength #$ pfilter # nonZero #$ pto $ pto value
+
+{- | Returns 'PTrue' if the argument 'PValue' contains /exactly/
+  one token of the argument 'PAssetClassData'.
+
+ Note: unlike `phasOnlyOneTokenOfCurrencySymbol` this may
+ still return 'PTrue' if there are other assets in the 'PValue'.
+
+ @since 3.21.4
+-}
+phasOneTokenOfAssetClassData ::
+  forall
+    (keys :: KeyGuarantees)
+    (amounts :: AmountGuarantees)
+    (s :: S).
+  Term s (PAssetClassData :--> PValue keys amounts :--> PBool)
+phasOneTokenOfAssetClassData = phoistAcyclic $
+  plam $ \cls v ->
+    passetClassDataValueOf # cls # v #== 1
 
 {- | Returns 'PTrue' if the argument 'PValue' contains /exactly/
   one token of the argument 'PAssetClass'.
