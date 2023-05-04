@@ -39,6 +39,7 @@ module Plutarch.Extra.Value (
   phasOnlyOneTokenOfCurrencySymbol,
   phasOneTokenOfCurrencySymbol,
   phasOneTokenOfAssetClass,
+  phasOneTokenOfAssetClassData,
   pcountNonZeroes,
 ) where
 
@@ -751,6 +752,24 @@ pcountNonZeroes = plam $ \value ->
           # (pnull # tokens)
    in
     plength #$ pfilter # nonZero #$ pto $ pto value
+
+{- | Returns 'PTrue' if the argument 'PValue' contains /exactly/
+  one token of the argument 'PAssetClassData'.
+
+ Note: unlike `phasOnlyOneTokenOfCurrencySymbol` this may
+ still return 'PTrue' if there are other assets in the 'PValue'.
+
+ @since 3.21.3
+-}
+phasOneTokenOfAssetClassData ::
+  forall
+    (keys :: KeyGuarantees)
+    (amounts :: AmountGuarantees)
+    (s :: S).
+  Term s (PAssetClassData :--> PValue keys amounts :--> PBool)
+phasOneTokenOfAssetClassData = phoistAcyclic $
+  plam $ \cls v ->
+    passetClassDataValueOf # cls # v #== 1
 
 {- | Returns 'PTrue' if the argument 'PValue' contains /exactly/
   one token of the argument 'PAssetClass'.

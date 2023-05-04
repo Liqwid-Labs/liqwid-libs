@@ -9,6 +9,9 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 - `passetClassDataValueOf` and `passetClassDataValueOfT` to look up the amount 
   of a value corresponding to a `PAssetClassData`.
 
+- `phasOneTokenOfAssetClassData` function for checking that a `PValue` contains
+  exactly one of a `PAssetClassData`.
+
 ## 3.21.2 -- 2023-02-15
 
 ### Fixed
