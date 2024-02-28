@@ -33,7 +33,7 @@ common common-lang
     -Wredundant-constraints -Wmissing-export-lists -Werror
 
   build-depends:
-    , base      ^>=4.16
+    , base
     , plutarch
 
   default-extensions:

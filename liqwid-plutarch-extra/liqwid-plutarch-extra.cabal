@@ -35,7 +35,7 @@ common common-lang
     pprelude (PPrelude as Prelude)
 
   build-depends:
-    , base               ^>=4.16
+    , base
     , plutarch
     , plutus-ledger-api
     , plutus-tx
