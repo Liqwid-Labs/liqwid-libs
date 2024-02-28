@@ -47,7 +47,7 @@ common common-lang
     ghc-options: -Werror
 
   build-depends:
-    , base      ^>=4.16
+    , base
     , plutarch
 
   default-extensions:

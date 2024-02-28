@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RoleAnnotations #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Plutarch.Test.QuickCheck.Modifiers (
   -- * Types

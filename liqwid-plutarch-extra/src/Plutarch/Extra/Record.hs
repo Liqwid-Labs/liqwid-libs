@@ -1,4 +1,5 @@
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Plutarch.Extra.Record (
   mkRecord,
@@ -17,7 +18,7 @@ import GHC.TypeLits (Symbol)
 import Plutarch (PlutusType, S, Term, pcon, (#))
 import Plutarch.Builtin (PAsData)
 import Plutarch.DataRepr (PDataRecord, PLabeledType ((:=)), pdcons, pdnil)
-import Prelude (($))
+import Prelude (($), type (~))
 
 {- | Like 'Data.Proxy.Proxy' but local to this module.
 
