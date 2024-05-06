@@ -96,11 +96,11 @@ library
     Plutarch.Benchmark.Cost
     Plutarch.Benchmark.Exhaustive
     Plutarch.Benchmark.Main
+    Plutarch.Benchmark.Orphans
     Plutarch.Benchmark.Plutarch
     Plutarch.Benchmark.Plutus
     Plutarch.Benchmark.QuickCheck
     Plutarch.Benchmark.Sized
-    Plutarch.Benchmark.Orphans
 
   build-depends:
     , acc

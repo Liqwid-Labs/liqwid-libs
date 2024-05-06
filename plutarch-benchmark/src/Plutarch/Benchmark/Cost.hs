@@ -82,10 +82,10 @@ import Plutarch.Benchmark.Sized (
   sampleSize,
  )
 
-class Eq (a :: Type) => CostAxis a where
+class (Eq (a :: Type)) => CostAxis a where
   axisName :: a -> Text
   axes :: [a]
-  default axisName :: Show a => a -> Text
+  default axisName :: (Show a) => a -> Text
   axisName a = pack $ show a
   default axes :: (Bounded a, Enum a) => [a]
   axes = [minBound .. maxBound]
@@ -162,7 +162,7 @@ instance DefaultOrdered SimpleStats where
 -- | @since 1.0.0
 instance
   forall (axis :: Type).
-  CostAxis axis =>
+  (CostAxis axis) =>
   ToNamedRecord (SSample (Either (BudgetExceeded axis) SimpleStats))
   where
   toNamedRecord ssample@(SSample {sample = Left (BudgetExceeded axis)}) =
@@ -208,7 +208,7 @@ instance
 -- | @since 1.0.0
 instance
   forall (axis :: Type).
-  CostAxis axis =>
+  (CostAxis axis) =>
   DefaultOrdered (SSample (Either (BudgetExceeded axis) SimpleStats))
   where
   headerOrder ssample =

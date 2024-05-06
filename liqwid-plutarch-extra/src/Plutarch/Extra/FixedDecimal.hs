@@ -194,7 +194,7 @@ instance (KnownNat exp) => Fractional (FixedDecimal exp) where
   (FixedDecimal a) / (FixedDecimal b) = FixedDecimal $ a * 10 ^ natVal (Proxy @exp) `div` b
 
 -- | @since 3.14.4
-instance KnownNat n => Real (FixedDecimal n) where
+instance (KnownNat n) => Real (FixedDecimal n) where
   toRational f = fixedNumerator f % fixedDenominator f
 
 ------ Plutarch
@@ -270,7 +270,7 @@ deriving via
     PlutusTx.UnsafeFromData (FixedDecimal unit)
 
 -- | @since 3.12.0
-instance forall (exp :: Natural). KnownNat exp => PShow (PFixedDecimal exp) where
+instance forall (exp :: Natural). (KnownNat exp) => PShow (PFixedDecimal exp) where
   pshow' wrap z =
     wrap' $
       "PFixedDecimal "
@@ -296,7 +296,7 @@ instance forall (exp :: Natural). KnownNat exp => PShow (PFixedDecimal exp) wher
           pif (0 #< x) (str <> (self # (x #- 1) # str)) ""
 
 -- | @since 3.12.0
-instance forall (exp :: Natural). KnownNat exp => PNum (PFixedDecimal exp) where
+instance forall (exp :: Natural). (KnownNat exp) => PNum (PFixedDecimal exp) where
   a' #* b' =
     phoistAcyclic
       ( plam $ \a b ->
@@ -312,7 +312,7 @@ instance forall (exp :: Natural). KnownNat exp => PNum (PFixedDecimal exp) where
       . (* (10 ^ natVal (Proxy @exp)))
 
 -- | @since 3.12.0
-instance forall (exp :: Natural). KnownNat exp => PIntegral (PFixedDecimal exp) where
+instance forall (exp :: Natural). (KnownNat exp) => PIntegral (PFixedDecimal exp) where
   pdiv =
     phoistAcyclic $
       plam $ \x y ->
@@ -452,7 +452,7 @@ pconvertExp = phoistAcyclic $
 -}
 pfromFixedDecimal ::
   forall (exp :: Natural) (s :: S).
-  KnownNat exp =>
+  (KnownNat exp) =>
   Term s (PFixedDecimal exp :--> PInteger)
 pfromFixedDecimal = phoistAcyclic $
   plam $ \z ->
@@ -470,7 +470,7 @@ pfromFixedDecimal = phoistAcyclic $
 -}
 ptoFixedDecimal ::
   forall (exp :: Natural) (s :: S).
-  KnownNat exp =>
+  (KnownNat exp) =>
   Term s (PInteger :--> PFixedDecimal exp)
 ptoFixedDecimal = phoistAcyclic $
   plam $ \z ->
@@ -490,7 +490,7 @@ ptoFixedDecimal = phoistAcyclic $
 -}
 ptoRational ::
   forall (exp :: Natural) (s :: S).
-  KnownNat exp =>
+  (KnownNat exp) =>
   Term s (PFixedDecimal exp :--> PRational)
 ptoRational = phoistAcyclic $
   plam $

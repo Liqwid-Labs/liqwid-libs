@@ -194,7 +194,8 @@ pvalidatedByMultisig =
 
       pure $
         getField @"minSigs" multiF
-          #<= ( plength #$ pfilter
+          #<= ( plength
+                  #$ pfilter
                   # (pflip # pelem # sigs)
                   # getField @"keys" multiF
               )

@@ -236,7 +236,7 @@ type PWrapLam (h :: Type) = (PWrapLam' h (IsLam h) (IsLast h), OnlyTestableTerm 
 -}
 pwrapLam ::
   forall (h :: Type).
-  PWrapLam h =>
+  (PWrapLam h) =>
   h ->
   PLamWrapped h
 pwrapLam = pwrapLam' @h @(IsLam h) @(IsLast h)
@@ -308,7 +308,7 @@ type PUnLam fin p = (PUnLam' fin p (IsFinal fin p), CheckReturn fin p)
 -}
 punlam' ::
   forall (fin :: S -> Type) (p :: S -> Type).
-  PUnLam fin p =>
+  (PUnLam fin p) =>
   (forall s. Term s p) ->
   PUnLamHask fin p
 punlam' = pUnLam' @fin @p @(IsFinal fin p)
@@ -320,7 +320,7 @@ punlam' = pUnLam' @fin @p @(IsFinal fin p)
 -}
 punlam ::
   forall (fin :: S -> Type) (p :: S -> Type).
-  PUnLam fin p =>
+  (PUnLam fin p) =>
   (forall s. Term s p) ->
   PUnLamHask fin p
 punlam pf = punlam' @fin (loudEval pf)
@@ -343,7 +343,7 @@ type FromPFun (end :: S -> Type) (a :: S -> Type) =
 -}
 fromPFun ::
   forall (p :: S -> Type).
-  FromPFun PBool p =>
+  (FromPFun PBool p) =>
   ClosedTerm p ->
   PLamWrapped (PUnLamHask PBool p)
 fromPFun pf = pwrapLam $ punlam @PBool pf
@@ -355,7 +355,7 @@ fromPFun pf = pwrapLam $ punlam @PBool pf
 -}
 fromPPartial ::
   forall (p :: S -> Type).
-  FromPFun POpaque p =>
+  (FromPFun POpaque p) =>
   ClosedTerm p ->
   PLamWrapped (PUnLamHask POpaque p)
 fromPPartial pf = pwrapLam $ punlam @POpaque pf
@@ -392,7 +392,7 @@ type PExpectFailure a = (PExpectFailure' a (IsLast a))
 -}
 pexpectFailure ::
   forall (a :: Type).
-  PExpectFailure a =>
+  (PExpectFailure a) =>
   a ->
   PExpectingFail a
 pexpectFailure =

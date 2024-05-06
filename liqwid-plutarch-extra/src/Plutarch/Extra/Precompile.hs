@@ -241,7 +241,7 @@ liftErrorMsg = \case
 -}
 pliftCompiled' ::
   forall (p :: S -> Type).
-  PUnsafeLiftDecl p =>
+  (PUnsafeLiftDecl p) =>
   CompiledTerm p ->
   Either (LiftError, [Text]) (PLifted p)
 pliftCompiled' ct =

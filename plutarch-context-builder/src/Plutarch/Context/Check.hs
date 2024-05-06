@@ -115,7 +115,7 @@ newtype CheckerError e
   deriving stock (Show)
 
 -- | @since 2.1.0
-instance P.Pretty e => P.Pretty (CheckerErrorType e) where
+instance (P.Pretty e) => P.Pretty (CheckerErrorType e) where
   pretty (IncorrectByteString lb) =
     "\"" <> P.pretty lb <> "\"" P.<+> "is an invalid bytestring"
   pretty NoSignature = "Signature not provided"
@@ -144,13 +144,13 @@ instance P.Pretty CheckerPos where
   pretty = P.pretty . drop 2 . show
 
 -- | @since 2.1.0
-instance P.Pretty e => P.Pretty (CheckerError e) where
+instance (P.Pretty e) => P.Pretty (CheckerError e) where
   pretty (CheckerError (err, at)) =
     "Error at"
       P.<+> P.pretty at
-        <> ":"
-        <> P.line
-        <> P.indent 4 (P.pretty err)
+      <> ":"
+      <> P.line
+      <> P.indent 4 (P.pretty err)
 
 {- | Checker that accumulates error.
 
@@ -205,7 +205,7 @@ renderErrors err =
 
  @since 2.1.0
 -}
-handleErrors :: P.Pretty e => Checker e a -> a -> a
+handleErrors :: (P.Pretty e) => Checker e a -> a -> a
 handleErrors checker x
   | null errs = x
   | otherwise = error $ renderErrors errs
@@ -241,7 +241,7 @@ checkAt at c = Checker (fmap (updatePos at) . runChecker c)
 
  @since 2.1.0
 -}
-checkFoldable :: Foldable t => Checker e a -> Checker e (t a)
+checkFoldable :: (Foldable t) => Checker e a -> Checker e (t a)
 checkFoldable c = Checker $ \y -> foldMap (runChecker c) y
 
 {- | Build checker with a predicate.
@@ -344,7 +344,7 @@ checkValidatorRedeemer =
 
  @since 2.1.0
 -}
-checkTxId :: Builder a => Checker e a
+checkTxId :: (Builder a) => Checker e a
 checkTxId =
   checkAt AtTxId $
     contramap (getTxId . view #txId . unpack) (checkBSLength 32)
@@ -353,7 +353,7 @@ checkTxId =
 
  @since 2.1.0
 -}
-checkSignatures :: Builder a => Checker e a
+checkSignatures :: (Builder a) => Checker e a
 checkSignatures =
   checkAt AtSignatories $
     mconcat
@@ -365,7 +365,7 @@ checkSignatures =
 
  @since 2.1.0
 -}
-checkZeroSum :: Builder a => Checker e a
+checkZeroSum :: (Builder a) => Checker e a
 checkZeroSum = Checker $
   \(unpack -> bb) ->
     let diff x (Value y) = x <> Value (AssocMap.mapMaybe (Just . AssocMap.mapMaybe (Just . negate)) y)
@@ -382,7 +382,7 @@ checkZeroSum = Checker $
 
  @since 2.1.0
 -}
-checkInputs :: Builder a => Checker e a
+checkInputs :: (Builder a) => Checker e a
 checkInputs =
   mconcat
     [ checkAt AtInput $
@@ -408,7 +408,7 @@ checkInputs =
           ]
     ]
   where
-    getDups :: Eq a => [a] -> [a]
+    getDups :: (Eq a) => [a] -> [a]
     getDups (x : xs)
       | x `elem` xs = if x `elem` dups then dups else x : dups
       | otherwise = dups
@@ -420,7 +420,7 @@ checkInputs =
 
  @since 2.1.0
 -}
-checkReferenceInputs :: Builder a => Checker e a
+checkReferenceInputs :: (Builder a) => Checker e a
 checkReferenceInputs =
   checkAt AtReferenceInput $
     mconcat
@@ -436,7 +436,7 @@ checkReferenceInputs =
 
  @since 2.6.2
 -}
-checkMints :: Builder a => Checker e a
+checkMints :: (Builder a) => Checker e a
 checkMints =
   checkAt AtMint $
     contramap (foldMap mintToValue . toList . view #mints . unpack) nullAda
@@ -458,7 +458,7 @@ checkMints =
 
  @since 2.1.0
 -}
-checkFee :: Builder a => Checker e a
+checkFee :: (Builder a) => Checker e a
 checkFee =
   checkAt AtFee $
     contramap (view #fee . unpack) onlyAda
@@ -473,7 +473,7 @@ checkFee =
 
  @since 2.1.0
 -}
-checkOutputs :: Builder a => Checker e a
+checkOutputs :: (Builder a) => Checker e a
 checkOutputs =
   checkAt AtOutput $
     mconcat
@@ -487,7 +487,7 @@ checkOutputs =
 
  @since 2.1.0
 -}
-checkDatumPairs :: Builder a => Checker e a
+checkDatumPairs :: (Builder a) => Checker e a
 checkDatumPairs =
   checkAt AtData $
     contramap (length . view #datums . unpack) (checkIf (== 0) OrphanDatum)
@@ -496,7 +496,7 @@ checkDatumPairs =
 
  @since 2.4.0
 -}
-checkNormalized :: Builder a => Checker e a
+checkNormalized :: (Builder a) => Checker e a
 checkNormalized =
   mconcat
     [ checkAt AtOutput $
@@ -518,7 +518,7 @@ checkNormalized =
 
  @since 2.1.0
 -}
-checkPhase1 :: Builder a => [Checker e a]
+checkPhase1 :: (Builder a) => [Checker e a]
 checkPhase1 =
   [ checkInputs
   , checkReferenceInputs

@@ -362,14 +362,14 @@ instance Aeson.ToJSON StakingCredential where
       ( "contents"
           .= cred
           <> "tag"
-          .= Aeson.String "StakingHash"
+            .= Aeson.String "StakingHash"
       )
   toEncoding (StakingPtr x y z) =
     Aeson.pairs
       ( "contents"
           .= [x, y, z]
           <> "tag"
-          .= Aeson.String "StakingPtr"
+            .= Aeson.String "StakingPtr"
       )
 
 -- @since 3.16.0
@@ -409,14 +409,14 @@ instance Aeson.ToJSON Credential where
       ( "contents"
           .= cred
           <> "tag"
-          .= Aeson.String "PubKeyCredential"
+            .= Aeson.String "PubKeyCredential"
       )
   toEncoding (ScriptCredential cred) =
     Aeson.pairs
       ( "contents"
           .= cred
           <> "tag"
-          .= Aeson.String "ScriptCredential"
+            .= Aeson.String "ScriptCredential"
       )
 
 -- @since 3.16.0

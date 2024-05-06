@@ -646,7 +646,7 @@ phasOnlyOneTokenOfCurrencySymbol =
   -}
   plam $
     \cs
-     ( (pto . pto) ->
+     ( pto . pto ->
         l
       ) ->
         let isZeroAdaEntry ::
@@ -741,13 +741,13 @@ phasOnlyOneTokenOfCurrencySymbol =
 pcountNonZeroes :: forall (kg :: KeyGuarantees) (ag :: AmountGuarantees) (s :: S). Term s (PValue kg ag :--> PInteger)
 pcountNonZeroes = plam $ \value ->
   let
-    nonZero :: Term s ((PBuiltinPair (PAsData PCurrencySymbol) (PAsData (PMap kg PTokenName PInteger))) :--> PBool)
+    nonZero :: Term s (PBuiltinPair (PAsData PCurrencySymbol) (PAsData (PMap kg PTokenName PInteger)) :--> PBool)
     nonZero = plam $ \currencySymbolPair ->
       plet (pto $ pfromData $ psndBuiltin # currencySymbolPair) $ \tokens ->
         pall
-          # plam (\tokenNamePair -> pnot #$ (pfromData $ psndBuiltin # tokenNamePair) #== 0)
+          # plam (\tokenNamePair -> pnot #$ pfromData (psndBuiltin # tokenNamePair) #== 0)
           # tokens
-            #&& pnot
+          #&& pnot
           # (pnull # tokens)
    in
     plength #$ pfilter # nonZero #$ pto $ pto value
@@ -883,7 +883,7 @@ instance HRecToList '[] (x :: Type) where
 -- Converts type level lists of tagged assets back to dynamic-typed assets
 instance
   forall (rest :: [(Symbol, Type)]) (name :: Symbol) (unit :: Symbol).
-  HRecToList rest AssetClass =>
+  (HRecToList rest AssetClass) =>
   HRecToList
     ('(name, Tagged unit AssetClass) ': rest)
     AssetClass
@@ -916,7 +916,7 @@ instance
     (classSymbol :: Symbol)
     (is :: [(Symbol, Type)])
     (s :: S).
-  MatchValueAssetReferences is s =>
+  (MatchValueAssetReferences is s) =>
   MatchValueAssetReferences
     ('(name, Tagged classSymbol AssetClass) ': is)
     s

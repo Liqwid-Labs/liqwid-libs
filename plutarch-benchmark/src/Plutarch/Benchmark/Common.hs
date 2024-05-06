@@ -47,7 +47,7 @@ instance forall (a :: Type). ToTitle (ImplData a) where
 -- | @since 1.0.0
 instance
   forall (v :: Type).
-  ToField v =>
+  (ToField v) =>
   ToField (ImplData v)
   where
   toField implData =

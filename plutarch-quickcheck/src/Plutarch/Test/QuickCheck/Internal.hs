@@ -229,7 +229,7 @@ instance (forall (s :: S). Num (Term s a)) => Num (TestableTerm a) where
 
  @since 2.0.0
 -}
-instance PShow a => Show (TestableTerm a) where
+instance (PShow a) => Show (TestableTerm a) where
   show (TestableTerm term) =
     case compile (Config {tracingMode = DoTracing}) $
       ptraceError
@@ -280,11 +280,11 @@ class PCoArbitrary (a :: S -> Type) where
 
  @since 2.0.0
 -}
-instance PArbitrary p => Arbitrary (TestableTerm p) where
+instance (PArbitrary p) => Arbitrary (TestableTerm p) where
   arbitrary = parbitrary
   shrink = pshrink . (\(TestableTerm x) -> TestableTerm $ loudEval x)
 
-instance PCoArbitrary p => CoArbitrary (TestableTerm p) where
+instance (PCoArbitrary p) => CoArbitrary (TestableTerm p) where
   coarbitrary = pcoarbitrary
 
 -- | @since 2.0.0
@@ -369,7 +369,7 @@ instance PCoArbitrary PString where
   pcoarbitrary = coarbitrary . T.unpack . pliftT
 
 -- | @since 2.0.0
-instance PArbitrary a => PArbitrary (PMaybe a) where
+instance (PArbitrary a) => PArbitrary (PMaybe a) where
   parbitrary = do
     (TestableTerm x) <- parbitrary
     frequency
@@ -388,7 +388,7 @@ instance PArbitrary a => PArbitrary (PMaybe a) where
             ]
     | otherwise = []
 
-instance PCoArbitrary a => PCoArbitrary (PMaybe a) where
+instance (PCoArbitrary a) => PCoArbitrary (PMaybe a) where
   pcoarbitrary (TestableTerm x)
     | plift $ pisJust # x =
         variant (1 :: Integer)
@@ -879,14 +879,14 @@ ppSndT = flip pmatchT $ \(PPair _ a) -> a
 
 pdataT ::
   forall {p :: S -> Type}.
-  PIsData p =>
+  (PIsData p) =>
   TestableTerm p ->
   TestableTerm (PAsData p)
 pdataT (TestableTerm x) = TestableTerm $ pdata x
 
 pfromDataT ::
   forall {p :: S -> Type}.
-  PIsData p =>
+  (PIsData p) =>
   TestableTerm (PAsData p) ->
   TestableTerm p
 pfromDataT (TestableTerm x) = TestableTerm $ pfromData x
@@ -907,14 +907,14 @@ pconstantT h = TestableTerm $ pconstant h
 
 pconT ::
   forall {p :: S -> Type}.
-  PlutusType p =>
+  (PlutusType p) =>
   (forall {s :: S}. p s) ->
   TestableTerm p
 pconT p = TestableTerm $ pcon p
 
 pmatchT ::
   forall {p :: S -> Type} {b :: S -> Type}.
-  PlutusType p =>
+  (PlutusType p) =>
   TestableTerm p ->
   (forall {s :: S}. p s -> Term s b) ->
   TestableTerm b

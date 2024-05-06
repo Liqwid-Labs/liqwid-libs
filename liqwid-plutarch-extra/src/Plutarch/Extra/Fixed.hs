@@ -59,7 +59,7 @@ instance DerivePlutusType (PFixed a) where
   type DPTStrat _ = PlutusTypeNewtype
 
 -- | @since 3.12.0
-instance KnownNat u => PNum (PFixed u) where
+instance (KnownNat u) => PNum (PFixed u) where
   (#*) =
     (pcon . PFixed)
       .* (pflip # pdiv # pconstant (natVal (Proxy @u)) #)
@@ -76,24 +76,24 @@ instance PTryFrom PData (PAsData (PFixed unit)) where
 class DivideSemigroup a where
   divide :: a -> a -> a
 
-class DivideSemigroup a => DivideMonoid a where
+class (DivideSemigroup a) => DivideMonoid a where
   one :: a
 
 -- | @since 3.12.0
-instance KnownNat u => DivideSemigroup (Term s (PFixed u)) where
+instance (KnownNat u) => DivideSemigroup (Term s (PFixed u)) where
   divide (pto -> x) (pto -> y) =
     pcon . PFixed $ pdiv # (x * pconstant (natVal (Proxy @u))) # y
 
 -- | @since 3.12.0
-instance KnownNat u => DivideMonoid (Term s (PFixed u)) where
+instance (KnownNat u) => DivideMonoid (Term s (PFixed u)) where
   one = 1
 
 -- | @since 3.12.0
-instance KnownNat u => A.AdditiveSemigroup (Term s (PFixed u)) where
+instance (KnownNat u) => A.AdditiveSemigroup (Term s (PFixed u)) where
   (+) = (+)
 
 -- | @since 3.12.0
-instance KnownNat u => A.AdditiveMonoid (Term s (PFixed u)) where
+instance (KnownNat u) => A.AdditiveMonoid (Term s (PFixed u)) where
   zero = pcon . PFixed $ pconstant 0
 
 {- | Convert given fixed into Ada value. Input should be Ada value with decimals; outputs
@@ -103,7 +103,7 @@ instance KnownNat u => A.AdditiveMonoid (Term s (PFixed u)) where
 -}
 fixedToAdaValue ::
   forall (s :: S) (unit :: Nat).
-  KnownNat unit =>
+  (KnownNat unit) =>
   Term s (PFixed unit :--> PValue 'Sorted 'NonZero)
 fixedToAdaValue =
   phoistAcyclic $
@@ -117,7 +117,7 @@ fixedToAdaValue =
 -}
 fromPInteger ::
   forall (unit :: Nat) (s :: S).
-  KnownNat unit =>
+  (KnownNat unit) =>
   Term s (PInteger :--> PFixed unit)
 fromPInteger =
   phoistAcyclic $ plam $ \z -> pcon . PFixed $ pconstant (natVal (Proxy @unit)) * z
@@ -128,7 +128,7 @@ fromPInteger =
 -}
 toPInteger ::
   forall (unit :: Nat) (s :: S).
-  KnownNat unit =>
+  (KnownNat unit) =>
   Term s (PFixed unit :--> PInteger)
 toPInteger =
   phoistAcyclic $ plam $ \d -> pdiv # pto d # pconstant (natVal (Proxy @unit))

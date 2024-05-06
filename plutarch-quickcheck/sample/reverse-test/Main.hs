@@ -55,7 +55,7 @@ import Test.Tasty.QuickCheck (
 -- This is the "correct" implmentation of reversing function.
 preverseCorrect ::
   forall (t :: (S -> Type) -> S -> Type) (a :: S -> Type) (s :: S).
-  PIsListLike t a =>
+  (PIsListLike t a) =>
   Term s (t a :--> t a)
 preverseCorrect = phoistAcyclic $ pfoldl # plam (\ys y -> pcons # y # ys) # pnil
 

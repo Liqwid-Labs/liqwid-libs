@@ -105,7 +105,6 @@ makeIsDataIndexed
   , ('FixedToken, 1)
   ]
 
-
 -- | @since 3.14.2
 deriving via
   (DerivePConstantViaData ExtendedAssetClass PExtendedAssetClass)

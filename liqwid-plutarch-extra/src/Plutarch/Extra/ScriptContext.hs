@@ -201,7 +201,7 @@ pfindTxInByTxOutRef = phoistAcyclic $
                 (pcon (PJust r))
                 (pcon PNothing)
         )
-        #$ inputs
+      #$ inputs
 
 {- | Check if a PubKeyHash signs this transaction.
 
@@ -218,7 +218,7 @@ ptxSignedBy = phoistAcyclic $
 -}
 pfromPDatum ::
   forall (a :: S -> Type) (s :: S).
-  PTryFrom PData a =>
+  (PTryFrom PData a) =>
   Term s (PDatum :--> a)
 pfromPDatum = phoistAcyclic $ plam $ flip ptryFrom fst . pto
 
@@ -260,7 +260,7 @@ ptryResolveOutputDatum = phoistAcyclic $
 -}
 pfromOutputDatum ::
   forall (a :: S -> Type) (s :: S).
-  PTryFrom PData a =>
+  (PTryFrom PData a) =>
   Term
     s
     ( POutputDatum
@@ -280,7 +280,7 @@ pfromOutputDatum =
 -}
 ptryFromOutputDatum ::
   forall (a :: S -> Type) (s :: S).
-  PTryFrom PData a =>
+  (PTryFrom PData a) =>
   Term
     s
     ( POutputDatum
@@ -326,9 +326,9 @@ paddressFromScriptHash = plam $ \valHash stakingCred ->
   pcon . PAddress $
     pdcons
       # pdata (pcon $ PScriptCredential (pdcons # pdata valHash # pdnil))
-        #$ pdcons
+      #$ pdcons
       # pdata stakingCred
-        #$ pdnil
+      #$ pdnil
 
 {- | Constuct an address (with a staking credential) from a @PPubKeyHash@
 and maybe a @PStakingCredential
@@ -342,9 +342,9 @@ paddressFromPubKeyHash = plam $ \pkh stakingCred ->
   pcon . PAddress $
     pdcons
       # pdata (pcon $ PPubKeyCredential (pdcons # pdata pkh # pdnil))
-        #$ pdcons
+      #$ pdcons
       # pdata stakingCred
-        #$ pdnil
+      #$ pdnil
 
 {- | Get script hash from an Address.
      @since 1.3.0

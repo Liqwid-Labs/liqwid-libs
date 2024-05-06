@@ -1,11 +1,10 @@
-{-# LANGUAGE PackageImports #-}
+
 {-# LANGUAGE PolyKinds #-}
 
 module Plutarch.Extra.TermCont (
   pguardWithC,
   pguardShowC,
 ) where
-
 
 {- | 'pguardC' but with type threading for better traces.
 
@@ -42,7 +41,7 @@ pguardWithC tracer checker object =
 {-# DEPRECATED pguardShowC "This is very heavy on-chain." #-}
 pguardShowC ::
   forall (r :: S -> Type) (pt :: S -> Type) (s :: S).
-  PShow pt =>
+  (PShow pt) =>
   Term s PString ->
   (Term s pt -> Term s PBool) ->
   Term s pt ->

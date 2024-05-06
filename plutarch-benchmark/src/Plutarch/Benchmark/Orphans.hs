@@ -2,7 +2,7 @@
 
 module Plutarch.Benchmark.Orphans () where
 
-import UntypedPlutusCore qualified as UPLC
 import Control.Parallel.Strategies (NFData)
+import UntypedPlutusCore qualified as UPLC
 
-deriving  newtype instance NFData UPLC.Size
+deriving newtype instance NFData UPLC.Size

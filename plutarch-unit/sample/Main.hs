@@ -20,11 +20,11 @@ import Plutarch.Prelude (
   plam,
   popaque,
   ptraceError,
+  ptryFromC,
   unTermCont,
   (#),
   (#==),
   (:-->),
-  ptryFromC
  )
 import Plutarch.Test.Precompiled (
   Expectation (Failure, Success),

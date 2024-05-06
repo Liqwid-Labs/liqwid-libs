@@ -12,13 +12,13 @@ module Plutarch.Extra.Record (
 import Control.Category (Category (id, (.)))
 import Data.Coerce (coerce)
 import Data.Kind (Type)
+import Data.Type.Equality (type (~))
 import GHC.OverloadedLabels (IsLabel (fromLabel))
 import GHC.TypeLits (Symbol)
 import Plutarch (PlutusType, S, Term, pcon, (#))
 import Plutarch.Builtin (PAsData)
 import Plutarch.DataRepr (PDataRecord, PLabeledType ((:=)), pdcons, pdnil)
 import Prelude (($))
-import Data.Type.Equality (type (~))
 
 {- | Like 'Data.Proxy.Proxy' but local to this module.
 
@@ -70,7 +70,7 @@ Is the same as
 -}
 mkRecordConstr ::
   forall (r :: [PLabeledType]) (s :: S) (pt :: S -> Type).
-  PlutusType pt =>
+  (PlutusType pt) =>
   -- | The constructor. This is just the Haskell-level constructor for the type.
   --   For 'Plutarch.Api.V2.Maybe.PMaybeData', this would
   --   be 'Plutarch.Api.V2.Maybe.PDJust', or 'Plutarch.Api.V2.Maybe.PNothing'.

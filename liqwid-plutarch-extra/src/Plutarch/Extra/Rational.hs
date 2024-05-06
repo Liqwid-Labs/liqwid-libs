@@ -1,4 +1,4 @@
-{-# LANGUAGE PackageImports #-}
+
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 
@@ -264,7 +264,7 @@ ptoPositiveCases n contNeg contPos =
 -- | `plift` for Tagged Rationals (kind polymorphic)
 pliftTaggedRational ::
   forall k (tag :: k).
-  HasCallStack =>
+  (HasCallStack) =>
   ClosedTerm (PTagged tag PRational) ->
   Tagged tag Rational
 pliftTaggedRational term =

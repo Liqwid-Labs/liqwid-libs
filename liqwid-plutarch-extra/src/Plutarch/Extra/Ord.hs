@@ -113,7 +113,7 @@ import Plutarch.Unsafe (punsafeCoerce)
 -}
 pmin ::
   forall (a :: S -> Type) (s :: S).
-  POrd a =>
+  (POrd a) =>
   Term s (a :--> a :--> a)
 pmin = phoistAcyclic $ plam $ \x y ->
   pif'
@@ -127,7 +127,7 @@ pmin = phoistAcyclic $ plam $ \x y ->
 -}
 pmax ::
   forall (a :: S -> Type) (s :: S).
-  POrd a =>
+  (POrd a) =>
   Term s (a :--> a :--> a)
 pmax = phoistAcyclic $ plam $ \x y ->
   pif'

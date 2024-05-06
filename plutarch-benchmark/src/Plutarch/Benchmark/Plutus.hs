@@ -23,7 +23,6 @@ module Plutarch.Benchmark.Plutus (
 ) where
 
 import Control.Parallel.Strategies (NFData)
-import Plutarch.Benchmark.Orphans ()
 import Data.ByteString.Short qualified as SBS
 import Data.SatInt (fromSatInt)
 import Data.Text (Text)
@@ -44,6 +43,7 @@ import Plutarch.Benchmark.Cost (
   samplesToPerAxisStats,
   vecSimpleStats,
  )
+import Plutarch.Benchmark.Orphans ()
 import Plutarch.Benchmark.Sized (SSample)
 import Plutarch.Evaluate (evalScript)
 import Plutarch.Extra.DebuggableScript (

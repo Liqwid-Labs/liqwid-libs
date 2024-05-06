@@ -34,10 +34,10 @@ import Plutarch.Extra.Maybe (passertPJust, pjust, pnothing)
 -}
 data PFullyBoundedTimeRange (s :: S)
   = PFullyBoundedTimeRange
+      -- | The lower bound.
       (Term s PPOSIXTime)
-      -- ^ The lower bound.
+      -- | The upper bound.
       (Term s PPOSIXTime)
-      -- ^ The upper bound.
   deriving stock
     ( -- | @since 3.3.0
       Generic

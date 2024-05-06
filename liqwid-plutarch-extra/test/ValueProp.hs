@@ -6,7 +6,6 @@ module ValueProp (tests) where
 import Data.Maybe (catMaybes)
 import Plutarch.Api.V2 (PMap (PMap))
 import Plutarch.Builtin (ppairDataBuiltin)
-import "liqwid-plutarch-extra" Plutarch.Extra.List (pfromList)
 import Plutarch.Extra.Value (phasOnlyOneTokenOfCurrencySymbol, pvalue)
 import Plutarch.Test.QuickCheck (fromPFun)
 import Test.QuickCheck (
@@ -17,6 +16,7 @@ import Test.QuickCheck (
  )
 import Test.Tasty (TestTree, adjustOption, testGroup)
 import Test.Tasty.QuickCheck (QuickCheckTests, testProperty)
+import "liqwid-plutarch-extra" Plutarch.Extra.List (pfromList)
 
 tests :: TestTree
 tests =
@@ -52,7 +52,7 @@ propOnlyOneToken =
                       # pdata
                         ( pcon . PMap $
                             pfromList
-                              [ ppairDataBuiltin # (pconstantData "") # pdata adaAmount
+                              [ ppairDataBuiltin # pconstantData "" # pdata adaAmount
                               ]
                         )
                 )
@@ -76,14 +76,14 @@ propOnlyOneToken =
             foldr
               (#&&)
               (pcon PTrue)
-              [ pnot #$ phasOnlyOneTokenOfCurrencySymbol # targetSym # (pfromData $ pvalue # pconstant [])
+              [ pnot #$ phasOnlyOneTokenOfCurrencySymbol # targetSym # pfromData (pvalue # pconstant [])
               , (targetAmount #== 1)
                   #== ( phasOnlyOneTokenOfCurrencySymbol
                           # targetSym
                           # buildScenario (targetSym, targetToken, targetAmount) Nothing Nothing
                       )
               , pif (targetSym #== pconstant "") (pcon PTrue) $
-                  ((targetAmount #== 1 #&& adaAmount #== 0))
+                  (targetAmount #== 1 #&& adaAmount #== 0)
                     #== ( phasOnlyOneTokenOfCurrencySymbol
                             # targetSym
                             # buildScenario (targetSym, targetToken, targetAmount) (Just adaAmount) Nothing
