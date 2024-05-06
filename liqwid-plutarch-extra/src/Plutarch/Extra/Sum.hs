@@ -8,7 +8,6 @@ import Plutarch.Extra.Applicative (PApplicative (ppure), PApply (pliftA2))
 import Plutarch.Extra.Boring (PBoring (pboring))
 import Plutarch.Extra.Comonad (PComonad (pextract), PExtend (pextend))
 import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap), Plut)
-import Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Num (PNum)
 
 {- | A \'numerical\' value which is monoidal over its addition.

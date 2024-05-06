@@ -18,6 +18,7 @@ import Plutarch (PlutusType, S, Term, pcon, (#))
 import Plutarch.Builtin (PAsData)
 import Plutarch.DataRepr (PDataRecord, PLabeledType ((:=)), pdcons, pdnil)
 import Prelude (($))
+import Data.Type.Equality (type (~))
 
 {- | Like 'Data.Proxy.Proxy' but local to this module.
 

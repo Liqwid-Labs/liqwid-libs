@@ -2,7 +2,6 @@
 
 module Plutarch.Extra.Numeric (peven, (#^)) where
 
-import Plutarch.Extra.TermCont (pletC)
 import Plutarch.Num (PNum)
 
 -- | @since 1.0.0

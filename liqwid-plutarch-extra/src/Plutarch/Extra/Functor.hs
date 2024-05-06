@@ -18,7 +18,6 @@ import Plutarch.Api.V1.Maybe (PMaybeData (PDJust, PDNothing))
 import Plutarch.Builtin (ppairDataBuiltin)
 import Plutarch.Extra.Boring (PBoring (pboring))
 import Plutarch.Extra.Function (pconst, pidentity)
-import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.Lift (PUnsafeLiftDecl)
 
 {- | Describes the entire category of Plutarch types, with arrows being Plutarch

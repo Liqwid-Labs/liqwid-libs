@@ -2,20 +2,10 @@
 {-# LANGUAGE PolyKinds #-}
 
 module Plutarch.Extra.TermCont (
-  module Extra,
   pguardWithC,
   pguardShowC,
 ) where
 
-import "plutarch-extra" Plutarch.Extra.TermCont as Extra (
-  pguardC,
-  pguardC',
-  pletC,
-  pletFieldsC,
-  pmatchC,
-  ptraceC,
-  ptryFromC,
- )
 
 {- | 'pguardC' but with type threading for better traces.
 

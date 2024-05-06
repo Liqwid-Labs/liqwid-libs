@@ -13,5 +13,5 @@ import UntypedPlutusCore qualified as UPLC
 applyArguments :: Script -> [PLC.Data] -> Script
 applyArguments (Script p) args =
   let termArgs = fmap (PLC.mkConstant ()) args
-      applied t = PLC.mkIterApp () t termArgs
+      applied t = PLC.mkIterAppNoAnn t termArgs
    in Script $ over UPLC.progTerm applied p

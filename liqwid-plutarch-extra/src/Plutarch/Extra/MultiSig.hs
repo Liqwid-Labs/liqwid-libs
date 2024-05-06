@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE ViewPatterns #-}
 
 {- |
 Module     : Plutarch.Extra.MultiSig
@@ -28,7 +29,6 @@ import Plutarch.DataRepr (
  )
 import Plutarch.Extra.Field (pletAllC)
 import Plutarch.Extra.Function (pflip)
-import Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Lift (PConstantDecl, PLifted, PUnsafeLiftDecl)
 import PlutusLedgerApi.V1.Crypto (PubKeyHash)
 import PlutusTx qualified (makeLift, unstableMakeIsData)

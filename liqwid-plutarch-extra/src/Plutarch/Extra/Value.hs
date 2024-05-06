@@ -82,7 +82,6 @@ import Plutarch.Extra.Map (phandleMin)
 import Plutarch.Extra.Maybe (pexpectJustC)
 import Plutarch.Extra.Ord (PComparator, pfromOrdBy)
 import Plutarch.Extra.Tagged (PTagged (PTagged))
-import Plutarch.Extra.TermCont (pmatchC)
 import PlutusLedgerApi.V2 (CurrencySymbol, TokenName)
 
 --------------------------------------------------------------------------------

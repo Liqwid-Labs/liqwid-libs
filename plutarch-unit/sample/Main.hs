@@ -10,7 +10,6 @@ import Plutarch (
   compile,
  )
 import Plutarch.Api.V1 (PValidator)
-import Plutarch.Extra.TermCont (ptryFromC)
 import Plutarch.Prelude (
   PAsData,
   PInteger,
@@ -25,6 +24,7 @@ import Plutarch.Prelude (
   (#),
   (#==),
   (:-->),
+  ptryFromC
  )
 import Plutarch.Test.Precompiled (
   Expectation (Failure, Success),

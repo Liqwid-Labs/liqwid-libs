@@ -35,7 +35,7 @@ common common-lang
     pprelude (PPrelude as Prelude)
 
   build-depends:
-    , base               ^>=4.16
+    , base               ^>=4.18.1.0
     , plutarch
     , plutus-ledger-api
     , plutus-tx
@@ -152,8 +152,6 @@ library
     , plutarch-extra
     , plutarch-quickcheck
     , plutus-core
-    , ply-core
-    , ply-plutarch
     , QuickCheck
     , serialise
     , tagged

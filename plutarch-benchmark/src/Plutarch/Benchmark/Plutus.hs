@@ -23,7 +23,9 @@ module Plutarch.Benchmark.Plutus (
 ) where
 
 import Control.Parallel.Strategies (NFData)
+import Plutarch.Benchmark.Orphans ()
 import Data.ByteString.Short qualified as SBS
+import Data.SatInt (fromSatInt)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Vector.Unboxed (Vector)
@@ -72,7 +74,7 @@ import UntypedPlutusCore.Evaluation.Machine.Cek (
 data ImplMetaData = ImplMetaData
   { name :: Text
   -- ^ Name of the implementation. Make sure it's unique.
-  , scriptSize :: Integer
+  , scriptSize :: UPLC.Size
   -- ^ Size of the script without inputs (number of AST nodes)
   , scriptSizeBytes :: Int
   -- ^ Size of the script without inputs (serialized in bytes)
@@ -194,8 +196,8 @@ sampleScript' script =
                           <> "neither negative CPU nor negative Memory!"
   where
     (res, ExBudget (ExCPU rawCpu) (ExMemory rawMem), traces) = evalScript script
-    cpuCost = Cost $ fromIntegral rawCpu
-    memCost = Cost $ fromIntegral rawMem
+    cpuCost = Cost $ fromSatInt rawCpu
+    memCost = Cost $ fromSatInt rawMem
 
 -- | @since 1.0.0
 plutusCostsToVecs :: Int -> [Costs] -> AxisMap PlutusCostAxis CostVector

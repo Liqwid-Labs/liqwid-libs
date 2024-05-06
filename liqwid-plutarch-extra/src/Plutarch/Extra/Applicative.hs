@@ -24,7 +24,6 @@ import Plutarch.Extra.Boring (PBoring (pboring))
 import Plutarch.Extra.Function (papply, pconst)
 import Plutarch.Extra.Functor (PFunctor (PSubcategory))
 import Plutarch.Extra.Maybe (pdnothing, pnothing)
-import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.List (puncons)
 
 -- | @since 1.0.0

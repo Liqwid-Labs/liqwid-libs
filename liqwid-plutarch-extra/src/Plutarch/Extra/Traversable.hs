@@ -40,7 +40,6 @@ import Plutarch.Extra.Monoid (
   pgetAny,
  )
 import Plutarch.Extra.Sum (PSum (PSum))
-import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.List (puncons)
 import Plutarch.Num (PNum)
 

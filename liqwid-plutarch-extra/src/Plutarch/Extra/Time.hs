@@ -23,7 +23,6 @@ import Plutarch.Api.V2 (PPOSIXTimeRange)
 import Plutarch.Extra.Applicative (pliftA2)
 import Plutarch.Extra.Field (pletAll, pletAllC)
 import Plutarch.Extra.Maybe (passertPJust, pjust, pnothing)
-import Plutarch.Extra.TermCont (pmatchC)
 
 {- | Represent a fully bounded time range.
 

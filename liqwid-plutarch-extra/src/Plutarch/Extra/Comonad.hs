@@ -4,7 +4,6 @@ module Plutarch.Extra.Comonad (
 ) where
 
 import Plutarch.Extra.Functor (PFunctor (PSubcategory))
-import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.List (puncons)
 
 -- | @since 1.0.0
