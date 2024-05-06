@@ -2,6 +2,23 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 4.0.0
+
+Internally:
+
+- Forked the library from [`liqwid-plutarch-extra`](https://github.com/Liqwid-Labs/liqwid-libs)
+- Updated to a newer version of plutarch, removing `Plutarch.Extra.TermCont` imports
+- Bumped `base` version from `^>=4.16` to `^>=4.18.1.0`.
+- The nix setup changed significantly, removing the dependency on `liqwid-nix`
+
+These should not have an effect on the public-facing API, but are mentioned for completeness.
+
+### Changed
+
+- Removed dependency on `ply-core` and `ply-plutarch`. This removes:
+  - `PlyArg` instance for `AssetClass` 
+  - `PlyArg` and `PlyArgOf` instances for `ExtendedAssetClass`
+
 ## 3.21.4 --- 2023-05-04
 
 ### Added

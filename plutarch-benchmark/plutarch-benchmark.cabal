@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutarch-benchmark
-version:            0.1
+version:            2.0.0
 synopsis:           Benchmark plutarch code and compare implementations
 description:
   A library containing utilities to concurrently compare
