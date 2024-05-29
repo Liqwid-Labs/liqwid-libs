@@ -25,7 +25,7 @@ import Plutarch.Prelude (
   pif,
   plam,
   popaque,
-  ptraceError,
+  ptraceInfoError,
   ptryFrom,
   tcont,
   unTermCont,
@@ -57,7 +57,7 @@ myValidator = plam $ \param dat _red -> unTermCont $ do
     pif
       (pfromData dat' + param #< 20)
       (popaque $ pconstant ())
-      (ptraceError "param + datum is larger than 20")
+      (ptraceInfoError "param + datum is larger than 20")
 
 -- Property test. This uses 'fromPPartial'; it will fail when the validator
 -- fails and will pass when validator succeed.

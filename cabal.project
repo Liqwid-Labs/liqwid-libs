@@ -12,10 +12,10 @@ repository cardano-haskell-packages
 source-repository-package
     type: git
     location: https://github.com/Plutonomicon/plutarch-plutus
-    tag: 7efbb9fc9f358cfbfd89ff245d85632a17ff3fb3
+    tag: a170ce4763891e24f59572209722edf2874a7d83
     subdir:
       .
-      plutarch-api
+      plutarch-ledger-api
       plutarch-extra
 
 packages:
