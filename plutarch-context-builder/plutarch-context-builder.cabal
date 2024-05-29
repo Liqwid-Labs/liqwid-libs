@@ -36,8 +36,9 @@ common common-lang
     -Wmissing-export-lists -Wmissing-deriving-strategies -Werror
 
   build-depends:
-    , base      ^>=4.18.1.0
+    , base                 ^>=4.18.1.0
     , plutarch
+    , plutarch-ledger-api
 
   default-extensions:
     BangPatterns
