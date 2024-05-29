@@ -51,19 +51,6 @@ import GHC.TypeLits (Symbol)
 import Optics.Getter (A_Getter, view)
 import Optics.Internal.Optic (Is)
 import Optics.Label (LabelOptic')
-import Plutarch.LedgerApi (
-  AmountGuarantees (NonZero),
-  PCurrencySymbol,
-  PMap (PMap),
-  PTokenName,
-  PValue (PValue),
-  AmountGuarantees (NoGuarantees, Positive),
-  KeyGuarantees (Sorted),
- )
-import Plutarch.LedgerApi.AssocMap (plookup)
-import Plutarch.LedgerApi.AssocMap qualified as AssocMap
-import Plutarch.LedgerApi.Value (padaSymbol)
-import Plutarch.LedgerApi.Value qualified as Value
 import Plutarch.Builtin (pforgetData, ppairDataBuiltin)
 import Plutarch.DataRepr.Internal.Field (HRec (HCons, HNil), Labeled (Labeled))
 import Plutarch.Extra.Applicative (ppure)
@@ -80,6 +67,18 @@ import Plutarch.Extra.Map (phandleMin)
 import Plutarch.Extra.Maybe (pexpectJustC)
 import Plutarch.Extra.Ord (PComparator, pfromOrdBy)
 import Plutarch.Extra.Tagged (PTagged (PTagged))
+import Plutarch.LedgerApi (
+  AmountGuarantees (NoGuarantees, NonZero, Positive),
+  KeyGuarantees (Sorted),
+  PCurrencySymbol,
+  PMap (PMap),
+  PTokenName,
+  PValue (PValue),
+ )
+import Plutarch.LedgerApi.AssocMap (plookup)
+import Plutarch.LedgerApi.AssocMap qualified as AssocMap
+import Plutarch.LedgerApi.Value (padaSymbol)
+import Plutarch.LedgerApi.Value qualified as Value
 import PlutusLedgerApi.V2 (CurrencySymbol, TokenName)
 
 --------------------------------------------------------------------------------

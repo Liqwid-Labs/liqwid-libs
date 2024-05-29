@@ -12,6 +12,9 @@ module Plutarch.Extra.Time (
 
 import Control.Composition ((.*))
 import GHC.Records (HasField)
+import Plutarch.Extra.Applicative (pliftA2)
+import Plutarch.Extra.Field (pletAll, pletAllC)
+import Plutarch.Extra.Maybe (passertPJust, pjust, pnothing)
 import Plutarch.LedgerApi (
   PExtended (PFinite),
   PInterval (PInterval),
@@ -19,9 +22,6 @@ import Plutarch.LedgerApi (
   PPosixTime,
   PUpperBound (PUpperBound),
  )
-import Plutarch.Extra.Applicative (pliftA2)
-import Plutarch.Extra.Field (pletAll, pletAllC)
-import Plutarch.Extra.Maybe (passertPJust, pjust, pnothing)
 
 {- | Represent a fully bounded time range.
 
@@ -98,7 +98,6 @@ pgetFullyBoundedTimeRange = phoistAcyclic $
 
      @since 3.3.0
 -}
-
 fullyBoundedTimeRangeFromValidRange ::
   forall r (s :: S).
   (HasField "validRange" r (Term s (PInterval PPosixTime))) =>

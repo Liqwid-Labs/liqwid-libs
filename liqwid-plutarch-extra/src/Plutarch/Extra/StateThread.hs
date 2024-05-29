@@ -7,14 +7,21 @@ module Plutarch.Extra.StateThread (
   pwithStateThreadMulti,
 ) where
 
-import Plutarch.LedgerApi (PTxOutRef, KeyGuarantees, AmountGuarantees,
-  PCurrencySymbol, PValue, PScriptPurpose(PMinting), 
-  PTxInInfo, PScriptContext)
-import Plutarch.LedgerApi.AssocMap (plookup)
 import Plutarch.Builtin (ppairDataBuiltin)
 import Plutarch.Extra.Field (pletAll)
 import Plutarch.Extra.List (ptryFromSingleton)
 import Plutarch.Extra.Maybe (pfromJust)
+import Plutarch.LedgerApi (
+  AmountGuarantees,
+  KeyGuarantees,
+  PCurrencySymbol,
+  PScriptContext,
+  PScriptPurpose (PMinting),
+  PTxInInfo,
+  PTxOutRef,
+  PValue,
+ )
+import Plutarch.LedgerApi.AssocMap (plookup)
 
 {- | Adds a state thread to a minting policy.
  Parameterized at the Haskell level.
@@ -37,9 +44,14 @@ withStateThread = withStateThreadGeneric uniqueStateTokenMint
 -}
 pwithStateThread ::
   forall (s :: S).
-  Term s ((PData :--> PScriptContext :--> POpaque) :--> 
-          PTxOutRef :--> 
-          PData :--> PScriptContext :--> POpaque)
+  Term
+    s
+    ( (PData :--> PScriptContext :--> POpaque)
+        :--> PTxOutRef
+        :--> PData
+        :--> PScriptContext
+        :--> POpaque
+    )
 pwithStateThread = plam withStateThread
 
 {- | Adds a state thread to a minting policy
@@ -65,9 +77,14 @@ withStateThreadMulti = withStateThreadGeneric uniqueStateTokensMint
 -}
 pwithStateThreadMulti ::
   forall (s :: S).
-  Term s ((PData :--> PScriptContext :--> POpaque) :--> 
-          PTxOutRef :--> 
-          PData :--> PScriptContext :--> POpaque)
+  Term
+    s
+    ( (PData :--> PScriptContext :--> POpaque)
+        :--> PTxOutRef
+        :--> PData
+        :--> PScriptContext
+        :--> POpaque
+    )
 pwithStateThreadMulti = plam withStateThreadMulti
 
 -- Helpers

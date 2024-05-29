@@ -29,9 +29,11 @@ import Data.Text (Text)
 import Plutarch.Builtin (pforgetData)
 import Plutarch.Evaluate (EvalError, evalScript)
 import Plutarch.Extra.Compile (mustCompile)
+import Plutarch.LedgerApi (PScriptContext)
 import Plutarch.Lift (PUnsafeLiftDecl (PLifted))
 import Plutarch.Prelude (
   PData,
+  POpaque,
   S,
   Term,
   Type,
@@ -39,8 +41,6 @@ import Plutarch.Prelude (
   pconstantData,
   (#),
   (:-->),
-  POpaque,
-
  )
 import Plutarch.Script (Script)
 import PlutusLedgerApi.V2 (ScriptContext)
@@ -63,7 +63,6 @@ import Text.PrettyPrint (
   vcat,
  )
 import Text.Show.Pretty (ppDoc)
-import Plutarch.LedgerApi(PScriptContext)
 
 {- | Ensure the given 'Script' executes without erroring.
  This is a low-level function: you probably don't need this, unless you're

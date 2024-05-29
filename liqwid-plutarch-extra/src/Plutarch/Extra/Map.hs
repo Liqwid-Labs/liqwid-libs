@@ -43,6 +43,9 @@ module Plutarch.Extra.Map (
 ) where
 
 import Data.Foldable (foldl')
+import Plutarch.Builtin (ppairDataBuiltin)
+import Plutarch.Extra.List (phandleList)
+import Plutarch.Extra.Maybe (passertPJust)
 import Plutarch.LedgerApi.AssocMap (
   KeyGuarantees (Sorted, Unsorted),
   PMap (PMap),
@@ -51,9 +54,6 @@ import Plutarch.LedgerApi.AssocMap (
   pinsert,
   plookup,
  )
-import Plutarch.Builtin (ppairDataBuiltin)
-import Plutarch.Extra.List (phandleList)
-import Plutarch.Extra.Maybe (passertPJust)
 import Plutarch.List qualified as PList
 
 {- | Eliminates a sorted 'PMap', similarly to 'pelimList'. The function

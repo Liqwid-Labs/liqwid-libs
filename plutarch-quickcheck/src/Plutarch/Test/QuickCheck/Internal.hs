@@ -17,13 +17,12 @@ module Plutarch.Test.QuickCheck.Internal (
   pliftT,
 ) where
 
-import Plutarch.Builtin (ppairDataBuiltin, pfstBuiltin, psndBuiltin)
 import Data.ByteString (ByteString)
 import Data.Text qualified as T (intercalate, pack, unpack)
 import Data.Word (Word8)
 import GHC.Exts qualified as Exts (IsList (fromList, toList))
 import Plutarch (
-  Config (Tracing, NoTracing),
+  Config (NoTracing, Tracing),
   LogLevel (LogInfo),
   POpaque,
   PlutusType,
@@ -37,18 +36,34 @@ import Plutarch (
   (#),
   (#$),
  )
-import Plutarch.LedgerApi (PMaybeData (PDJust, PDNothing), PMap (PMap), KeyGuarantees(Unsorted), 
-  AmountGuarantees (NoGuarantees), pisDJust, pfromDJust, 
-  PPosixTime (PPosixTime), PExtended (PNegInf, PFinite, PPosInf), PLowerBound (PLowerBound), 
-  PUpperBound (PUpperBound), 
-  PInterval (PInterval), PDatumHash (PDatumHash), PPubKeyHash (PPubKeyHash), 
-  PScriptHash (PScriptHash), PCredential (PScriptCredential, PPubKeyCredential), PTxId (PTxId),
-  PTxOutRef (PTxOutRef), PStakingCredential (PStakingHash, PStakingPtr), 
-  PAddress (PAddress), PCurrencySymbol (PCurrencySymbol), PTokenName (PTokenName),
-  PValue (PValue))
+import Plutarch.Builtin (pfstBuiltin, ppairDataBuiltin, psndBuiltin)
 import Plutarch.Evaluate (evalScriptHuge, evalTerm)
 import Plutarch.Extra.Maybe (
   pisJust,
+ )
+import Plutarch.LedgerApi (
+  AmountGuarantees (NoGuarantees),
+  KeyGuarantees (Unsorted),
+  PAddress (PAddress),
+  PCredential (PPubKeyCredential, PScriptCredential),
+  PCurrencySymbol (PCurrencySymbol),
+  PDatumHash (PDatumHash),
+  PExtended (PFinite, PNegInf, PPosInf),
+  PInterval (PInterval),
+  PLowerBound (PLowerBound),
+  PMap (PMap),
+  PMaybeData (PDJust, PDNothing),
+  PPosixTime (PPosixTime),
+  PPubKeyHash (PPubKeyHash),
+  PScriptHash (PScriptHash),
+  PStakingCredential (PStakingHash, PStakingPtr),
+  PTokenName (PTokenName),
+  PTxId (PTxId),
+  PTxOutRef (PTxOutRef),
+  PUpperBound (PUpperBound),
+  PValue (PValue),
+  pfromDJust,
+  pisDJust,
  )
 import Plutarch.Lift (PUnsafeLiftDecl (PLifted), plift, plift')
 import Plutarch.Maybe (pfromJust)
@@ -429,7 +444,8 @@ instance (PCoArbitrary a, PCoArbitrary b) => PCoArbitrary (PEither a b) where
 
  @since 2.0.0
 -}
-instance {-# OVERLAPPING #-}
+instance
+  {-# OVERLAPPING #-}
   ( PLift a
   , PLift b
   , Arbitrary (PLifted a, PLifted b)
@@ -441,7 +457,8 @@ instance {-# OVERLAPPING #-}
   pshrink = fmap pconstantT . shrink . pliftT
 
 -- | @since 2.0.0
-instance {-# OVERLAPPING #-}
+instance
+  {-# OVERLAPPING #-}
   ( PLift a
   , PLift b
   , CoArbitrary (PLifted a, PLifted b)
@@ -472,7 +489,8 @@ instance (PCoArbitrary a, PCoArbitrary b) => PCoArbitrary (PPair a b) where
   pcoarbitrary x = pcoarbitrary (ppFstT x) . pcoarbitrary (ppSndT x)
 
 -- | @since 2.0.0
-instance {-# OVERLAPPING #-}
+instance
+  {-# OVERLAPPING #-}
   forall (a :: S -> Type) (b :: S -> Type).
   ( PArbitrary a
   , PArbitrary b
@@ -493,7 +511,8 @@ instance {-# OVERLAPPING #-}
     ]
 
 -- | @since 2.0.0
-instance {-# OVERLAPPING #-}
+instance
+  {-# OVERLAPPING #-}
   forall (a :: S -> Type) (b :: S -> Type).
   ( PCoArbitrary a
   , PCoArbitrary b

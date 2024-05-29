@@ -14,10 +14,13 @@ import Control.Composition (on, (.*))
 import Data.Bifunctor (first)
 import Data.Proxy (Proxy (Proxy))
 import GHC.TypeLits (KnownNat, Nat, natVal)
-import Plutarch.LedgerApi (PValue, KeyGuarantees(Sorted), 
-  AmountGuarantees(NonZero))
-import Plutarch.LedgerApi.Value qualified as Value
 import Plutarch.Extra.Function (pflip)
+import Plutarch.LedgerApi (
+  AmountGuarantees (NonZero),
+  KeyGuarantees (Sorted),
+  PValue,
+ )
+import Plutarch.LedgerApi.Value qualified as Value
 import Plutarch.Num (PNum (pfromInteger, (#*)))
 import Plutarch.Numeric.Additive qualified as A (
   AdditiveMonoid (zero),

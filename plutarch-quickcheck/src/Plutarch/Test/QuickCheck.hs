@@ -43,8 +43,13 @@ module Plutarch.Test.QuickCheck (
 import Data.Kind (Constraint, Type)
 import GHC.TypeLits
 import Generics.SOP (All, HPure (hcpure), NP (Nil, (:*)), Proxy (Proxy))
-import Plutarch (Config (Tracing, NoTracing), 
-  LogLevel (LogInfo), Script, TracingMode (DoTracing), compile)
+import Plutarch (
+  Config (NoTracing, Tracing),
+  LogLevel (LogInfo),
+  Script,
+  TracingMode (DoTracing),
+  compile,
+ )
 import Plutarch.Evaluate (evalScript, evalScriptHuge, evalTerm)
 import Plutarch.Lift (DerivePConstantViaNewtype (..), PConstantDecl, PUnsafeLiftDecl (PLifted))
 import Plutarch.Num (PNum)

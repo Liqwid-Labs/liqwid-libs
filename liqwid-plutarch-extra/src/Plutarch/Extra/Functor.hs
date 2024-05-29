@@ -13,11 +13,14 @@ module Plutarch.Extra.Functor (
 ) where
 
 import Data.Kind (Constraint)
-import Plutarch.LedgerApi (PMaybeData (PDNothing, PDJust), KeyGuarantees,
-  PMap (PMap))
 import Plutarch.Builtin (ppairDataBuiltin)
 import Plutarch.Extra.Boring (PBoring (pboring))
 import Plutarch.Extra.Function (pconst, pidentity)
+import Plutarch.LedgerApi (
+  KeyGuarantees,
+  PMap (PMap),
+  PMaybeData (PDJust, PDNothing),
+ )
 import Plutarch.Lift (PUnsafeLiftDecl)
 
 {- | Describes the entire category of Plutarch types, with arrows being Plutarch

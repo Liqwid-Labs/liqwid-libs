@@ -25,8 +25,8 @@ import Data.Text qualified as Text
 import Data.Text.Encoding (encodeUtf8)
 import Data.Text.Encoding qualified as Text.Encoding
 import Data.Vector qualified as Vector
-import Plutarch.LedgerApi (PDatumHash (PDatumHash))
 import Plutarch.Builtin (PIsData (pdataImpl, pfromDataImpl))
+import Plutarch.LedgerApi (PDatumHash (PDatumHash))
 import Plutarch.TryFrom (PTryFrom (ptryFrom'), PTryFromExcess)
 import Plutarch.Unsafe (punsafeCoerce)
 

@@ -2,8 +2,12 @@
 
 module Plutarch.Test.QuickCheck.Helpers (loudEval) where
 
-import Plutarch (ClosedTerm, Config (Tracing), 
-  LogLevel (LogInfo), TracingMode (DoTracing))
+import Plutarch (
+  ClosedTerm,
+  Config (Tracing),
+  LogLevel (LogInfo),
+  TracingMode (DoTracing),
+ )
 import Plutarch.Evaluate (evalTerm)
 
 loudEval :: ClosedTerm p -> ClosedTerm p

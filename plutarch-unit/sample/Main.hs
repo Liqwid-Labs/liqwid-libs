@@ -8,9 +8,12 @@ import Plutarch (
   Config (NoTracing),
   compile,
  )
+import Plutarch.LedgerApi (PScriptContext)
 import Plutarch.Prelude (
   PAsData,
+  PData,
   PInteger,
+  POpaque,
   Term,
   pdata,
   pfromData,
@@ -23,10 +26,7 @@ import Plutarch.Prelude (
   (#),
   (#==),
   (:-->),
-  PData,
-  POpaque
  )
-import Plutarch.LedgerApi (PScriptContext)
 import Plutarch.Test.Precompiled (
   Expectation (Failure, Success),
   testEqualityCase,
@@ -91,10 +91,10 @@ sampleFunctionTest = tryFromPTerm "sample function" sampleFunction $ do
   where
     compiled1 =
       either (error . show) id $
-        compile ( NoTracing) $
+        compile NoTracing $
           sampleFunction # pdata 1
 
     compiled11 =
       either (error . show) id $
-        compile ( NoTracing) $
+        compile NoTracing $
           sampleFunction # pdata 1 # pdata 1

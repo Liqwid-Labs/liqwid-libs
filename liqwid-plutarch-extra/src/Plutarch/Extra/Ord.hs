@@ -83,6 +83,11 @@ module Plutarch.Extra.Ord (
 ) where
 
 import Data.Semigroup (Semigroup (stimes), stimesIdempotentMonoid)
+import Plutarch.Bool (pif')
+import Plutarch.Extra.List (phandleList, precListLookahead)
+import Plutarch.Extra.Map (phandleMin)
+import Plutarch.Extra.Maybe (ptraceIfNothing)
+import Plutarch.Internal.PlutusType (PlutusType (pcon', pmatch'))
 import Plutarch.LedgerApi.AssocMap (KeyGuarantees (Sorted), PMap)
 import Plutarch.LedgerApi.Value (
   AmountGuarantees,
@@ -90,11 +95,6 @@ import Plutarch.LedgerApi.Value (
   PTokenName,
   PValue,
  )
-import Plutarch.Bool (pif')
-import Plutarch.Extra.List (phandleList, precListLookahead)
-import Plutarch.Extra.Map (phandleMin)
-import Plutarch.Extra.Maybe (ptraceIfNothing)
-import Plutarch.Internal.PlutusType (PlutusType (pcon', pmatch'))
 import Plutarch.Lift (
   PConstantDecl (
     PConstantRepr,

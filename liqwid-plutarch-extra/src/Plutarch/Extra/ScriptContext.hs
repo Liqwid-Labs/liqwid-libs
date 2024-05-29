@@ -31,37 +31,37 @@ module Plutarch.Extra.ScriptContext (
 ) where
 
 import Data.Coerce (coerce)
-import Plutarch.LedgerApi (
-  AmountGuarantees (NoGuarantees, NonZero, Positive),
-  PCredential (PPubKeyCredential, PScriptCredential),
-  PMap,
-  PTokenName,
-  PValue,
-  PRedeemer,
-  KeyGuarantees (Sorted, Unsorted),
-  PAddress (PAddress),
-  PDatum,
-  PDatumHash,
-  PMaybeData,
-  POutputDatum (PNoOutputDatum, POutputDatum, POutputDatumHash),
-  PPubKeyHash,
-  PScriptContext,
-  PScriptHash,
-  PScriptPurpose (PSpending),
-  PStakingCredential,
-  PTxInInfo (PTxInInfo),
-  PTxInfo,
-  PTxOut (PTxOut),
-  PTxOutRef,
- )
-import Plutarch.LedgerApi.AssocMap (plookup)
-import Plutarch.LedgerApi.AssocMap qualified as AssocMap
 import Plutarch.Extra.AssetClass (PAssetClass)
 import Plutarch.Extra.Function ((#.*))
 import Plutarch.Extra.Functor (PFunctor (pfmap))
 import Plutarch.Extra.List (pfindJust)
 import Plutarch.Extra.Maybe (pfromJust, pisJust, pjust, pnothing, ptraceIfNothing)
 import Plutarch.Extra.Value (passetClassValueOf)
+import Plutarch.LedgerApi (
+  AmountGuarantees (NoGuarantees, NonZero, Positive),
+  KeyGuarantees (Sorted, Unsorted),
+  PAddress (PAddress),
+  PCredential (PPubKeyCredential, PScriptCredential),
+  PDatum,
+  PDatumHash,
+  PMap,
+  PMaybeData,
+  POutputDatum (PNoOutputDatum, POutputDatum, POutputDatumHash),
+  PPubKeyHash,
+  PRedeemer,
+  PScriptContext,
+  PScriptHash,
+  PScriptPurpose (PSpending),
+  PStakingCredential,
+  PTokenName,
+  PTxInInfo (PTxInInfo),
+  PTxInfo,
+  PTxOut (PTxOut),
+  PTxOutRef,
+  PValue,
+ )
+import Plutarch.LedgerApi.AssocMap (plookup)
+import Plutarch.LedgerApi.AssocMap qualified as AssocMap
 import Plutarch.Unsafe (punsafeCoerce)
 import PlutusLedgerApi.V1 (TokenName (TokenName))
 import PlutusLedgerApi.V2 (ScriptHash (ScriptHash))
