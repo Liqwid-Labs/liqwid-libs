@@ -49,12 +49,6 @@ import Optics.AffineTraversal (An_AffineTraversal, atraversal)
 import Optics.Getter (A_Getter, to, view)
 import Optics.Label (LabelOptic (labelOptic))
 import Optics.Setter (set)
-import Plutarch.Api.V1 (
-  AmountGuarantees,
-  KeyGuarantees,
-  PCurrencySymbol,
-  PValue,
- )
 import Plutarch.DataRepr (DerivePConstantViaData (DerivePConstantViaData))
 import Plutarch.Extra.AssetClass (
   AssetClass (AssetClass),
@@ -67,6 +61,12 @@ import Plutarch.Extra.Value (
   passetClassValueOf,
   passetClassValueOf',
   psymbolValueOf,
+ )
+import Plutarch.LedgerApi (
+  AmountGuarantees,
+  KeyGuarantees,
+  PCurrencySymbol,
+  PValue,
  )
 import Plutarch.Lift (
   PConstantDecl,

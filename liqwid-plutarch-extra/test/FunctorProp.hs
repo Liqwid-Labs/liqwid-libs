@@ -4,8 +4,8 @@
 
 module FunctorProp (tests) where
 
-import Plutarch.Api.V1.Maybe (PMaybeData)
 import Plutarch.Extra.Functor
+import Plutarch.LedgerApi (PMaybeData)
 import Plutarch.Test.QuickCheck (
   FromPFun,
   PA,

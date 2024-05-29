@@ -83,18 +83,18 @@ module Plutarch.Extra.Ord (
 ) where
 
 import Data.Semigroup (Semigroup (stimes), stimesIdempotentMonoid)
-import Plutarch.Api.V1.AssocMap (KeyGuarantees (Sorted), PMap)
-import Plutarch.Api.V1.Value (
-  AmountGuarantees,
-  PCurrencySymbol,
-  PTokenName,
-  PValue,
- )
 import Plutarch.Bool (pif')
 import Plutarch.Extra.List (phandleList, precListLookahead)
 import Plutarch.Extra.Map (phandleMin)
 import Plutarch.Extra.Maybe (ptraceIfNothing)
 import Plutarch.Internal.PlutusType (PlutusType (pcon', pmatch'))
+import Plutarch.LedgerApi.AssocMap (KeyGuarantees (Sorted), PMap)
+import Plutarch.LedgerApi.Value (
+  AmountGuarantees,
+  PCurrencySymbol,
+  PTokenName,
+  PValue,
+ )
 import Plutarch.Lift (
   PConstantDecl (
     PConstantRepr,
@@ -1001,7 +1001,7 @@ passertSortedLookahead = phoistAcyclic $
       unorderedError
 
 unorderedError :: forall (a :: S -> Type) (s :: S). Term s a
-unorderedError = ptraceError "ptryMergeBy: argument list-like out of order"
+unorderedError = ptraceInfoError "ptryMergeBy: argument list-like out of order"
 
 -- Helper for dragging a comparator through a map. We hide this away to ensure
 -- that people actually use the comparator as intended.
@@ -1116,7 +1116,7 @@ pinsertUniqueBy = phoistAcyclic $
               let ensureUniqueness =
                     pif
                       (eq # x # h)
-                      (ptraceError "inserted value already exists")
+                      (ptraceInfoError "inserted value already exists")
                   next =
                     pif
                       (lt # x # h)

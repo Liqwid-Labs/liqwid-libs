@@ -8,5 +8,5 @@ pkgs.haskell-nix.cabalProject'
     "https://chap.intersectmbo.org/" = inputs.CHaP;
     "https://github.com/Plutonomicon/plutarch-plutus.git" = inputs.plutarch;
   };
-  sha256map = { "https://github.com/Plutonomicon/plutarch-plutus"."7efbb9fc9f358cfbfd89ff245d85632a17ff3fb3" = "sha256-S7UQrcBO+6G77O4OAAMfQNrChuGzfTr9ARovjAcP7eg="; };
+  sha256map = { "https://github.com/Plutonomicon/plutarch-plutus"."a170ce4763891e24f59572209722edf2874a7d83" = "sha256-ZIKSI6zVmBd6trzx7W46sshTv+oLW97FnPERAnBlhhc="; };
 }

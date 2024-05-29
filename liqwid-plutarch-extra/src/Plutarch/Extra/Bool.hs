@@ -56,4 +56,4 @@ passert ::
   -- | The result.
   Term s a ->
   Term s a
-passert msg cond x = pif cond x $ ptraceError msg
+passert msg cond x = pif cond x $ ptraceInfoError msg

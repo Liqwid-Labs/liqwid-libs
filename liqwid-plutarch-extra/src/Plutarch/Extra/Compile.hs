@@ -7,7 +7,8 @@ module Plutarch.Extra.Compile (
 
 import Data.Text qualified as T
 import Plutarch (
-  Config (Config, tracingMode),
+  Config (Tracing),
+  LogLevel (LogInfo),
   Script,
   TracingMode (DetTracing),
   compile,
@@ -22,7 +23,8 @@ mustCompile t = case compile conf t of
   Left err -> error $ unwords ["Plutarch compilation error:", T.unpack err]
   Right s -> s
   where
-    conf = Config {tracingMode = DetTracing}
+    conf :: Config
+    conf = Tracing LogInfo DetTracing
 
 -- Like 'mustCompile', but with tracing turned on.
 --
@@ -32,7 +34,7 @@ mustCompileTracing ::
   (forall (s :: S). Term s a) ->
   Script
 mustCompileTracing term =
-  case compile Config {tracingMode = DetTracing} term of
+  case compile (Tracing LogInfo DetTracing) term of
     Left err ->
       error $
         unwords

@@ -31,39 +31,37 @@ module Plutarch.Extra.ScriptContext (
 ) where
 
 import Data.Coerce (coerce)
-import Plutarch.Api.V1 (
-  AmountGuarantees (NoGuarantees, NonZero, Positive),
-  PCredential (PPubKeyCredential, PScriptCredential),
-  PMap,
-  PTokenName,
-  PValue,
- )
-import Plutarch.Api.V1.AssocMap (plookup)
-import Plutarch.Api.V1.AssocMap qualified as AssocMap
-import Plutarch.Api.V1.Scripts (PRedeemer)
-import Plutarch.Api.V2 (
-  KeyGuarantees (Sorted, Unsorted),
-  PAddress (PAddress),
-  PDatum,
-  PDatumHash,
-  PMaybeData,
-  POutputDatum (PNoOutputDatum, POutputDatum, POutputDatumHash),
-  PPubKeyHash,
-  PScriptContext,
-  PScriptHash,
-  PScriptPurpose (PSpending),
-  PStakingCredential,
-  PTxInInfo (PTxInInfo),
-  PTxInfo,
-  PTxOut (PTxOut),
-  PTxOutRef,
- )
 import Plutarch.Extra.AssetClass (PAssetClass)
 import Plutarch.Extra.Function ((#.*))
 import Plutarch.Extra.Functor (PFunctor (pfmap))
 import Plutarch.Extra.List (pfindJust)
 import Plutarch.Extra.Maybe (pfromJust, pisJust, pjust, pnothing, ptraceIfNothing)
 import Plutarch.Extra.Value (passetClassValueOf)
+import Plutarch.LedgerApi (
+  AmountGuarantees (NoGuarantees, NonZero, Positive),
+  KeyGuarantees (Sorted, Unsorted),
+  PAddress (PAddress),
+  PCredential (PPubKeyCredential, PScriptCredential),
+  PDatum,
+  PDatumHash,
+  PMap,
+  PMaybeData,
+  POutputDatum (PNoOutputDatum, POutputDatum, POutputDatumHash),
+  PPubKeyHash,
+  PRedeemer,
+  PScriptContext,
+  PScriptHash,
+  PScriptPurpose (PSpending),
+  PStakingCredential,
+  PTokenName,
+  PTxInInfo (PTxInInfo),
+  PTxInfo,
+  PTxOut (PTxOut),
+  PTxOutRef,
+  PValue,
+ )
+import Plutarch.LedgerApi.AssocMap (plookup)
+import Plutarch.LedgerApi.AssocMap qualified as AssocMap
 import Plutarch.Unsafe (punsafeCoerce)
 import PlutusLedgerApi.V1 (TokenName (TokenName))
 import PlutusLedgerApi.V2 (ScriptHash (ScriptHash))
@@ -112,7 +110,7 @@ ptryOwnInput = phoistAcyclic $
     txInInfos <- pletC (pfromData $ pfield @"inputs" # txInfo)
     res <- pmatchC (pfind # (go # txOutRef) # txInInfos)
     pure $ case res of
-      PNothing -> ptraceError "ptryOwnInput: Could not find my own input"
+      PNothing -> ptraceInfoError "ptryOwnInput: Could not find my own input"
       PJust res' -> res'
   where
     go ::
@@ -237,11 +235,11 @@ presolveOutputDatum ::
 presolveOutputDatum = phoistAcyclic $
   plam $ \od m -> pmatch od $ \case
     PNoOutputDatum _ ->
-      ptrace "no datum" pnothing
+      ptraceInfo "no datum" pnothing
     POutputDatum ((pfield @"outputDatum" #) -> datum) ->
-      ptrace "inline datum" pjust # datum
+      ptraceInfo "inline datum" pjust # datum
     POutputDatumHash ((pfield @"datumHash" #) -> hash) ->
-      ptrace "datum hash" $ AssocMap.plookup # hash # m
+      ptraceInfo "datum hash" $ AssocMap.plookup # hash # m
 
 {- | As 'presolveOutputDatum', but error if there's no 'PDatum' to be had.
 
@@ -300,7 +298,7 @@ ptryFromDatumHash = phoistAcyclic $
   plam $
     flip pmatch $ \case
       POutputDatumHash ((pfield @"datumHash" #) -> hash) -> hash
-      _ -> ptraceError "not a datum hash"
+      _ -> ptraceInfoError "not a datum hash"
 
 {- | Extract the inline datum from a 'POutputDatum', throw an error if the given
      'POuptutDatum' is not an inline datum.
@@ -312,7 +310,7 @@ ptryFromInlineDatum = phoistAcyclic $
   plam $
     flip pmatch $ \case
       POutputDatum ((pfield @"outputDatum" #) -> datum) -> datum
-      _ -> ptraceError "not an inline datum"
+      _ -> ptraceInfoError "not an inline datum"
 
 {- | Construct an address from a @PScriptHash@ and maybe a
      @PStakingCredential@.

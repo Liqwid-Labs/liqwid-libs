@@ -97,8 +97,8 @@ import Optics (
   view,
  )
 import Plutarch (S)
-import Plutarch.Api.V2 (datumHash)
 import Plutarch.Builtin (PIsData, pdata, pforgetData)
+import Plutarch.LedgerApi (datumHash)
 import Plutarch.Lift (PUnsafeLiftDecl (PLifted), pconstant, plift)
 import PlutusLedgerApi.V1.Value qualified as Value
 import PlutusLedgerApi.V2 (
@@ -959,6 +959,7 @@ yieldMint = foldMap mintToValue . toList
 mintToValue :: Mint -> Value
 mintToValue m =
   Value.singleton adaSymbol adaToken 0 <> foldMap f (view #tokens m)
+  where
     f :: (TokenName, Integer) -> Value
     f = uncurry $ Value.singleton $ view #symbol m
 

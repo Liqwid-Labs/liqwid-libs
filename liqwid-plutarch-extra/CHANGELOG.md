@@ -13,6 +13,10 @@ Internally:
 
 These should not have an effect on the public-facing API, but are mentioned for completeness.
 
+### Removed
+
+- `Plutarch.Extra.Tuple`, as it is no longer needed for anything
+
 ### Changed
 
 - Removed dependency on `ply-core` and `ply-plutarch`. This removes:

@@ -8,10 +8,10 @@ module Plutarch.Extra.Bind (
   pjoin,
 ) where
 
-import Plutarch.Api.V1.Maybe (PMaybeData (PDJust, PDNothing))
 import Plutarch.Extra.Applicative (PApply)
 import Plutarch.Extra.Function (pidentity)
 import Plutarch.Extra.Functor (PSubcategory)
+import Plutarch.LedgerApi (PMaybeData (PDJust, PDNothing))
 import Plutarch.Lift (PUnsafeLiftDecl)
 
 {- | Gives the capability to bind a Kleisli arrow over @f@ to a value:

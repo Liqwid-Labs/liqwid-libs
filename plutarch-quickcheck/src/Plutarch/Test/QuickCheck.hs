@@ -43,7 +43,13 @@ module Plutarch.Test.QuickCheck (
 import Data.Kind (Constraint, Type)
 import GHC.TypeLits
 import Generics.SOP (All, HPure (hcpure), NP (Nil, (:*)), Proxy (Proxy))
-import Plutarch (Config (Config), Script, TracingMode (DoTracing, NoTracing), compile, tracingMode)
+import Plutarch (
+  Config (NoTracing, Tracing),
+  LogLevel (LogInfo),
+  Script,
+  TracingMode (DoTracing),
+  compile,
+ )
 import Plutarch.Evaluate (evalScript, evalScriptHuge, evalTerm)
 import Plutarch.Lift (DerivePConstantViaNewtype (..), PConstantDecl, PUnsafeLiftDecl (PLifted))
 import Plutarch.Num (PNum)
@@ -510,7 +516,7 @@ instance
   HaskEquiv e 'ByPartial (Maybe h) p '[]
   where
   haskEquiv h (TestableTerm p) _ =
-    case evalTerm (Config {tracingMode = DoTracing}) p of
+    case evalTerm (Tracing LogInfo DoTracing) p of
       Left err -> failWith $ "Plutarch compilation failed.\n" <> show err
       Right (Left err, _, t) ->
         case h of
@@ -587,7 +593,7 @@ uplcEq x y = either failWith property go
       y' <- eval y
       return $ x' == y'
     eval (TestableTerm t) =
-      case compile (Config {tracingMode = NoTracing}) t of
+      case compile NoTracing t of
         Left err -> Left $ "Term compilation failed:\n" <> show err
         Right s' ->
           case evalScript s' of

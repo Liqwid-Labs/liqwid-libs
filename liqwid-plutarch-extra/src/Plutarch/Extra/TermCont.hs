@@ -1,4 +1,3 @@
-
 {-# LANGUAGE PolyKinds #-}
 
 module Plutarch.Extra.TermCont (
