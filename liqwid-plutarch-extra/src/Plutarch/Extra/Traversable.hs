@@ -22,7 +22,7 @@ module Plutarch.Extra.Traversable (
   Plutarch.Extra.Traversable.pall,
 ) where
 
-import Plutarch.Api.V1.Maybe (PMaybeData (PDJust, PDNothing))
+import Plutarch.LedgerApi (PMaybeData (PDJust, PDNothing))
 import Plutarch.Extra.Applicative (
   PApplicative (ppure),
   PApply (pliftA2),

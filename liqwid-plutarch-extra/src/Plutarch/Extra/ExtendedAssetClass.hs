@@ -49,7 +49,7 @@ import Optics.AffineTraversal (An_AffineTraversal, atraversal)
 import Optics.Getter (A_Getter, to, view)
 import Optics.Label (LabelOptic (labelOptic))
 import Optics.Setter (set)
-import Plutarch.Api.V1 (
+import Plutarch.LedgerApi (
   AmountGuarantees,
   KeyGuarantees,
   PCurrencySymbol,

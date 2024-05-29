@@ -53,7 +53,7 @@ import Optics.Lens (A_Lens)
 import Optics.Optic (Is, (%%))
 import Optics.Setter (set)
 import Optics.TH (makeFieldLabelsNoPrefix)
-import Plutarch.Api.V1 (PCurrencySymbol, PTokenName)
+import Plutarch.LedgerApi (PCurrencySymbol, PTokenName)
 import Plutarch.DataRepr (PDataFields)
 import Plutarch.Extra.Applicative (ppure)
 import Plutarch.Extra.IsData (

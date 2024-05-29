@@ -255,7 +255,7 @@ ptoPositiveCases n contNeg contPos =
     (n #<= 0)
     ( pif
         (n #== 0)
-        (ptraceError "ptoPositiveCases with 0")
+        (ptraceInfoError "ptoPositiveCases with 0")
         -- The PPositive constructor is not exported, so we need coercion
         (contNeg (punsafeCoerce $ -n))
     )

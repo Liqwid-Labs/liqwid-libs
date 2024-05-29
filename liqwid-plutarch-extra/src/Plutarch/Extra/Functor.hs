@@ -13,8 +13,8 @@ module Plutarch.Extra.Functor (
 ) where
 
 import Data.Kind (Constraint)
-import Plutarch.Api.V1.AssocMap (KeyGuarantees, PMap (PMap))
-import Plutarch.Api.V1.Maybe (PMaybeData (PDJust, PDNothing))
+import Plutarch.LedgerApi (PMaybeData (PDNothing, PDJust), KeyGuarantees,
+  PMap (PMap))
 import Plutarch.Builtin (ppairDataBuiltin)
 import Plutarch.Extra.Boring (PBoring (pboring))
 import Plutarch.Extra.Function (pconst, pidentity)

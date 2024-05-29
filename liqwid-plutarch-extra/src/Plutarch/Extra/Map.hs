@@ -43,7 +43,7 @@ module Plutarch.Extra.Map (
 ) where
 
 import Data.Foldable (foldl')
-import Plutarch.Api.V1.AssocMap (
+import Plutarch.LedgerApi.AssocMap (
   KeyGuarantees (Sorted, Unsorted),
   PMap (PMap),
   pdelete,

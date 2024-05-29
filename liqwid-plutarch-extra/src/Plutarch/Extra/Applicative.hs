@@ -19,11 +19,11 @@ module Plutarch.Extra.Applicative (
   ppureIf,
 ) where
 
-import Plutarch.Api.V1.Maybe (PMaybeData (PDJust, PDNothing))
+import Plutarch.LedgerApi (PMaybeData (PDJust, PDNothing), pdnothing)
 import Plutarch.Extra.Boring (PBoring (pboring))
 import Plutarch.Extra.Function (papply, pconst)
 import Plutarch.Extra.Functor (PFunctor (PSubcategory))
-import Plutarch.Extra.Maybe (pdnothing, pnothing)
+import Plutarch.Extra.Maybe (pnothing)
 import Plutarch.List (puncons)
 
 -- | @since 1.0.0

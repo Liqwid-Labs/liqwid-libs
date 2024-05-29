@@ -51,21 +51,19 @@ import GHC.TypeLits (Symbol)
 import Optics.Getter (A_Getter, view)
 import Optics.Internal.Optic (Is)
 import Optics.Label (LabelOptic')
-import Plutarch.Api.V1 (
+import Plutarch.LedgerApi (
   AmountGuarantees (NonZero),
   PCurrencySymbol,
   PMap (PMap),
   PTokenName,
   PValue (PValue),
- )
-import Plutarch.Api.V1.AssocMap (plookup)
-import Plutarch.Api.V1.AssocMap qualified as AssocMap
-import Plutarch.Api.V1.Value (padaSymbol)
-import Plutarch.Api.V1.Value qualified as Value
-import Plutarch.Api.V2 (
   AmountGuarantees (NoGuarantees, Positive),
   KeyGuarantees (Sorted),
  )
+import Plutarch.LedgerApi.AssocMap (plookup)
+import Plutarch.LedgerApi.AssocMap qualified as AssocMap
+import Plutarch.LedgerApi.Value (padaSymbol)
+import Plutarch.LedgerApi.Value qualified as Value
 import Plutarch.Builtin (pforgetData, ppairDataBuiltin)
 import Plutarch.DataRepr.Internal.Field (HRec (HCons, HNil), Labeled (Labeled))
 import Plutarch.Extra.Applicative (ppure)
@@ -101,7 +99,7 @@ passetClassDataValue = phoistAcyclic $
   plam $ \ac i ->
     pif
       (i #== 0)
-      (ptraceError "passetClassDataValue: given zero argument, expecting nonzero.")
+      (ptraceInfoError "passetClassDataValue: given zero argument, expecting nonzero.")
       ( let cs = pfield @"symbol" # ac
             tn = pfield @"name" # ac
          in Value.psingleton # pfromData cs # pfromData tn # i
@@ -657,11 +655,11 @@ phasOnlyOneTokenOfCurrencySymbol =
                 )
             isZeroAdaEntry = plam $ \pair ->
               let cs' = pfromData $ pfstBuiltin # pair
-                  isAda = ptraceIfFalse "Not ada" $ cs' #== padaSymbol
+                  isAda = ptraceInfoIfFalse "Not ada" $ cs' #== padaSymbol
 
                   tnMap = pfromData $ psndBuiltin # pair
                   count = pfromData $ psndBuiltin # (ptryFromSingleton # pto tnMap)
-                  zeroAda = ptraceIfFalse "Non zero ada" $ count #== 0
+                  zeroAda = ptraceInfoIfFalse "Non zero ada" $ count #== 0
                in isAda #&& zeroAda
 
             isNonAdaEntryValid ::
@@ -672,10 +670,10 @@ phasOnlyOneTokenOfCurrencySymbol =
                 )
             isNonAdaEntryValid = plam $ \pair ->
               let cs' = pfromData $ pfstBuiltin # pair
-                  validCs = ptraceIfFalse "Unknown symbol" $ cs' #== cs
+                  validCs = ptraceInfoIfFalse "Unknown symbol" $ cs' #== cs
 
                   tnMap = pfromData $ psndBuiltin # pair
-                  validTnMap = ptraceIfFalse "More than one token names or tokens" $
+                  validTnMap = ptraceInfoIfFalse "More than one token names or tokens" $
                     pmatch (pfromSingleton # pto tnMap) $ \case
                       PNothing -> pcon PFalse
                       PJust ((pfromData . (psndBuiltin #)) -> tokenCount) ->
@@ -715,7 +713,7 @@ phasOnlyOneTokenOfCurrencySymbol =
                             (self # pcon PFound # xs)
                             (pcon PFailed)
                         PFound -> pcon PFailed
-                        PFailed -> ptraceError "unreachable"
+                        PFailed -> ptraceInfoError "unreachable"
                   )
                   ( pmatch lastState $ \case
                       PFound -> lastState
@@ -847,7 +845,7 @@ findValue sym tk self x xs = plet x $ \pair ->
       pif
         (pfstBuiltin # kv #== tk)
         (pfromData $ psndBuiltin # kv)
-        (ptraceError "findValue: Unexpectedly missing result.")
+        (ptraceInfoError "findValue: Unexpectedly missing result.")
 
 unsafeMatchValueAssetsInternal ::
   forall (k :: KeyGuarantees) (s :: S).

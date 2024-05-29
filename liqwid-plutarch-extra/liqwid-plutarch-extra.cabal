@@ -35,8 +35,9 @@ common common-lang
     pprelude (PPrelude as Prelude)
 
   build-depends:
-    , base               ^>=4.18.1.0
+    , base                 ^>=4.18.1.0
     , plutarch
+    , plutarch-ledger-api
     , plutus-ledger-api
     , plutus-tx
     , pprelude
@@ -131,7 +132,6 @@ library
     Plutarch.Extra.These
     Plutarch.Extra.Time
     Plutarch.Extra.Traversable
-    Plutarch.Extra.Tuple
     Plutarch.Extra.Value
     Plutarch.Numeric.Additive
     Plutarch.Orphans

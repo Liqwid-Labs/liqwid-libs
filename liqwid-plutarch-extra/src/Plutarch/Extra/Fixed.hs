@@ -14,9 +14,9 @@ import Control.Composition (on, (.*))
 import Data.Bifunctor (first)
 import Data.Proxy (Proxy (Proxy))
 import GHC.TypeLits (KnownNat, Nat, natVal)
-import Plutarch.Api.V1 (AmountGuarantees (NonZero), PValue)
-import Plutarch.Api.V1.Value qualified as Value
-import Plutarch.Api.V2 (KeyGuarantees (Sorted))
+import Plutarch.LedgerApi (PValue, KeyGuarantees(Sorted), 
+  AmountGuarantees(NonZero))
+import Plutarch.LedgerApi.Value qualified as Value
 import Plutarch.Extra.Function (pflip)
 import Plutarch.Num (PNum (pfromInteger, (#*)))
 import Plutarch.Numeric.Additive qualified as A (

@@ -22,7 +22,7 @@ import GHC.Records (HasField)
 import Optics.Getter (A_Getter, to)
 import Optics.Label (LabelOptic (labelOptic))
 import Optics.Traversal (A_Traversal, traversalVL)
-import Plutarch.Api.V2 (PPubKeyHash)
+import Plutarch.LedgerApi (PPubKeyHash)
 import Plutarch.DataRepr (
   DerivePConstantViaData (DerivePConstantViaData),
   PDataFields,

@@ -4,7 +4,7 @@
 module ValueProp (tests) where
 
 import Data.Maybe (catMaybes)
-import Plutarch.Api.V2 (PMap (PMap))
+import Plutarch.LedgerApi (PMap (PMap))
 import Plutarch.Builtin (ppairDataBuiltin)
 import Plutarch.Extra.Value (phasOnlyOneTokenOfCurrencySymbol, pvalue)
 import Plutarch.Test.QuickCheck (fromPFun)
