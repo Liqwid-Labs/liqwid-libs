@@ -5,11 +5,9 @@ module Main (main) where
 
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
 import Plutarch (
-  Config (Config, tracingMode),
-  TracingMode (NoTracing),
+  Config (NoTracing),
   compile,
  )
-import Plutarch.Api.V1 (PValidator)
 import Plutarch.Prelude (
   PAsData,
   PInteger,
@@ -19,13 +17,16 @@ import Plutarch.Prelude (
   pif,
   plam,
   popaque,
-  ptraceError,
+  ptraceInfoError,
   ptryFromC,
   unTermCont,
   (#),
   (#==),
   (:-->),
+  PData,
+  POpaque
  )
+import Plutarch.LedgerApi (PScriptContext)
 import Plutarch.Test.Precompiled (
   Expectation (Failure, Success),
   testEqualityCase,
@@ -50,14 +51,14 @@ main = do
       , sampleFunctionTest
       ]
 
-sampleValidator :: Term s PValidator
+sampleValidator :: Term s (PData :--> PData :--> PScriptContext :--> POpaque)
 sampleValidator = plam $ \_ x _ -> unTermCont $ do
   (pfromData -> x', _) <- ptryFromC @(PAsData PInteger) x
   pure $
     popaque $
       pif
         (x' #== 10)
-        (ptraceError "x shouldn't be 10")
+        (ptraceInfoError "x shouldn't be 10")
         x'
 
 sampleValidatorTest :: TestTree
@@ -90,10 +91,10 @@ sampleFunctionTest = tryFromPTerm "sample function" sampleFunction $ do
   where
     compiled1 =
       either (error . show) id $
-        compile (Config {tracingMode = NoTracing}) $
+        compile ( NoTracing) $
           sampleFunction # pdata 1
 
     compiled11 =
       either (error . show) id $
-        compile (Config {tracingMode = NoTracing}) $
+        compile ( NoTracing) $
           sampleFunction # pdata 1 # pdata 1

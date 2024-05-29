@@ -26,7 +26,6 @@ module Plutarch.Test.Unit (
 
 import Data.Tagged (Tagged (Tagged))
 import Data.Text (Text)
-import Plutarch.Api.V2 (PMintingPolicy, PValidator)
 import Plutarch.Builtin (pforgetData)
 import Plutarch.Evaluate (EvalError, evalScript)
 import Plutarch.Extra.Compile (mustCompile)
@@ -39,6 +38,9 @@ import Plutarch.Prelude (
   pconstant,
   pconstantData,
   (#),
+  (:-->),
+  POpaque,
+
  )
 import Plutarch.Script (Script)
 import PlutusLedgerApi.V2 (ScriptContext)
@@ -61,6 +63,7 @@ import Text.PrettyPrint (
   vcat,
  )
 import Text.Show.Pretty (ppDoc)
+import Plutarch.LedgerApi(PScriptContext)
 
 {- | Ensure the given 'Script' executes without erroring.
  This is a low-level function: you probably don't need this, unless you're
@@ -89,7 +92,7 @@ mintingPolicySucceedsWith ::
   forall (redeemer :: S -> Type).
   (PUnsafeLiftDecl redeemer, ToData (PLifted redeemer)) =>
   String ->
-  (forall (s :: S). Term s PMintingPolicy) ->
+  (forall (s :: S). Term s (PData :--> PScriptContext :--> POpaque)) ->
   PLifted redeemer ->
   ScriptContext ->
   TestTree
@@ -104,7 +107,7 @@ mintingPolicyFailsWith ::
   forall (redeemer :: S -> Type).
   (PUnsafeLiftDecl redeemer, ToData (PLifted redeemer)) =>
   String ->
-  (forall (s :: S). Term s PMintingPolicy) ->
+  (forall (s :: S). Term s (PData :--> PScriptContext :--> POpaque)) ->
   PLifted redeemer ->
   ScriptContext ->
   TestTree
@@ -123,7 +126,7 @@ validatorSucceedsWith ::
   , ToData (PLifted redeemer)
   ) =>
   String ->
-  (forall (s :: S). Term s PValidator) ->
+  (forall (s :: S). Term s (PData :--> PData :--> PScriptContext :--> POpaque)) ->
   PLifted datum ->
   PLifted redeemer ->
   ScriptContext ->
@@ -143,7 +146,7 @@ validatorFailsWith ::
   , ToData (PLifted redeemer)
   ) =>
   String ->
-  (forall (s :: S). Term s PValidator) ->
+  (forall (s :: S). Term s (PData :--> PData :--> PScriptContext :--> POpaque)) ->
   PLifted datum ->
   PLifted redeemer ->
   ScriptContext ->
@@ -161,7 +164,7 @@ testValidator ::
   ) =>
   (String -> Script -> TestTree) ->
   String ->
-  (forall (s :: S). Term s PValidator) ->
+  (forall (s :: S). Term s (PData :--> PData :--> PScriptContext :--> POpaque)) ->
   PLifted datum ->
   PLifted redeemer ->
   ScriptContext ->
@@ -187,7 +190,7 @@ testMP ::
   (PUnsafeLiftDecl redeemer, ToData (PLifted redeemer)) =>
   (String -> Script -> TestTree) ->
   String ->
-  (forall (s :: S). Term s PMintingPolicy) ->
+  (forall (s :: S). Term s (PData :--> PScriptContext :--> POpaque)) ->
   PLifted redeemer ->
   ScriptContext ->
   TestTree
