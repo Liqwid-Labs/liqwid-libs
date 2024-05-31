@@ -10,13 +10,13 @@ repository cardano-haskell-packages
     d4a35cd3121aa00d18544bb0ac01c3e1691d618f462c46129271bccf39f7e8ee
 
 source-repository-package
-    type: git
-    location: https://github.com/Plutonomicon/plutarch-plutus
-    tag: a170ce4763891e24f59572209722edf2874a7d83
-    subdir:
-      .
-      plutarch-ledger-api
-      plutarch-extra
+  type: git
+  location: https://github.com/albertodvp/plutarch-plutus
+  tag: 1b2b5fb684e69e3d12319608278c1f6dea6e12af
+  subdir:
+    .
+    plutarch-ledger-api
+    plutarch-extra
 
 packages:
   ./*
@@ -25,4 +25,4 @@ tests: true
 test-show-details: direct
 
 constraints:
-  , plutus-core == 1.20.0.0
+  , plutus-core == 1.23.0.0

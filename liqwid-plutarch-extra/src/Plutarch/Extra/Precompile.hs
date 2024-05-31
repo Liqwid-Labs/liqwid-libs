@@ -55,7 +55,6 @@ import Plutarch.Lift (
   plift',
  )
 import Plutarch.Script (Script (Script))
-import PlutusCore.Builtin (KnownTypeError (KnownTypeEvaluationFailure, KnownTypeUnliftingError))
 import UntypedPlutusCore qualified as UPLC
 
 {- | Type-safe wrapper for compiled Plutarch functions.
@@ -224,12 +223,7 @@ liftErrorMsg :: LiftError -> String
 -- anyway.
 liftErrorMsg = \case
   LiftError_FromRepr -> "pconstantFromRepr returned 'Nothing'"
-  LiftError_KnownTypeError e ->
-    case e of
-      KnownTypeUnliftingError unliftErr ->
-        "incorrect type: " <> show unliftErr
-      KnownTypeEvaluationFailure ->
-        "absurd evaluation failure"
+  LiftError_KnownTypeError e -> "incorrect type: " <> show e
   LiftError_EvalError e -> "erring term: " <> show e
   LiftError_CompilationError msg -> "compilation failed: " <> Text.unpack msg
 

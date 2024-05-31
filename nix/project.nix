@@ -6,7 +6,8 @@ pkgs.haskell-nix.cabalProject'
   shell = import ./shell.nix { inherit pkgs; };
   inputMap = {
     "https://chap.intersectmbo.org/" = inputs.CHaP;
-    "https://github.com/Plutonomicon/plutarch-plutus.git" = inputs.plutarch;
   };
-  sha256map = { "https://github.com/Plutonomicon/plutarch-plutus"."a170ce4763891e24f59572209722edf2874a7d83" = "sha256-ZIKSI6zVmBd6trzx7W46sshTv+oLW97FnPERAnBlhhc="; };
+  sha256map = {
+    "https://github.com/albertodvp/plutarch-plutus"."1b2b5fb684e69e3d12319608278c1f6dea6e12af" = "sha256-xViZbZlq5Sw9rHakS9nwcQikCOfwZClSBL8UD+5eJJ4=";
+  };
 }
