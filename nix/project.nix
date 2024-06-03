@@ -8,6 +8,6 @@ pkgs.haskell-nix.cabalProject'
     "https://chap.intersectmbo.org/" = inputs.CHaP;
   };
   sha256map = {
-    "https://github.com/albertodvp/plutarch-plutus"."1b2b5fb684e69e3d12319608278c1f6dea6e12af" = "sha256-xViZbZlq5Sw9rHakS9nwcQikCOfwZClSBL8UD+5eJJ4=";
+    "https://github.com/Plutonomicon/plutarch-plutus"."fcdd2209433d8b8979e820dc4fa9aad5f202216d" = "sha256-gQwaYGIds5owHivXi+ktH7CGeBqoLBykVxyHZZiDUM4=";
   };
 }
