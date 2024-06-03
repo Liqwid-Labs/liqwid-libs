@@ -8,6 +8,7 @@
     plutarch = {
       url = "github:Plutonomicon/plutarch-plutus";
     };
+    ply.url = "github:liqwid-labs/ply";
     CHaP = {
       url = "github:intersectmbo/cardano-haskell-packages?ref=repo";
       flake = false;
