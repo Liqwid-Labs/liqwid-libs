@@ -66,13 +66,13 @@ ptryElimSingle ::
   (Term s a -> Term s r) ->
   Term s (ell a) ->
   Term s r
-ptryElimSingle f = pelimList go (ptraceError emptyErr)
+ptryElimSingle f = pelimList go (ptraceInfoError emptyErr)
   where
     go ::
       Term s a ->
       Term s (ell a) ->
       Term s r
-    go h t = pif (pnull # t) (f h) (ptraceError nonSingleErr)
+    go h t = pif (pnull # t) (f h) (ptraceInfoError nonSingleErr)
     emptyErr :: Term s PString
     emptyErr = "ptryElimSingle: Found empty list-like."
     nonSingleErr :: Term s PString
@@ -304,7 +304,7 @@ ptryDeleteFirstBy = phoistAcyclic $
             t
             (pcons # h #$ self # t)
       )
-      (const $ ptraceError "Cannot delete element")
+      (const $ ptraceInfoError "Cannot delete element")
 
 {- | Special version of 'pdeleteBy', for types with 'PEq' instance.
 
@@ -377,6 +377,6 @@ ptryFromSingleton =
           pif
             (pnull # t)
             h
-            (ptraceError "More than one element")
+            (ptraceInfoError "More than one element")
       )
-      (const $ ptraceError "Empty list")
+      (const $ ptraceInfoError "Empty list")

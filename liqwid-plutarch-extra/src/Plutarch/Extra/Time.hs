@@ -12,18 +12,16 @@ module Plutarch.Extra.Time (
 
 import Control.Composition ((.*))
 import GHC.Records (HasField)
-import Plutarch.Api.V1 (
-  PExtended (PFinite),
-  PInterval (PInterval),
-  PLowerBound (PLowerBound),
-  PPOSIXTime,
-  PUpperBound (PUpperBound),
- )
-import Plutarch.Api.V2 (PPOSIXTimeRange)
 import Plutarch.Extra.Applicative (pliftA2)
 import Plutarch.Extra.Field (pletAll, pletAllC)
 import Plutarch.Extra.Maybe (passertPJust, pjust, pnothing)
-import Plutarch.Extra.TermCont (pmatchC)
+import Plutarch.LedgerApi (
+  PExtended (PFinite),
+  PInterval (PInterval),
+  PLowerBound (PLowerBound),
+  PPosixTime,
+  PUpperBound (PUpperBound),
+ )
 
 {- | Represent a fully bounded time range.
 
@@ -35,10 +33,10 @@ import Plutarch.Extra.TermCont (pmatchC)
 -}
 data PFullyBoundedTimeRange (s :: S)
   = PFullyBoundedTimeRange
-      (Term s PPOSIXTime)
-      -- ^ The lower bound.
-      (Term s PPOSIXTime)
-      -- ^ The upper bound.
+      -- | The lower bound.
+      (Term s PPosixTime)
+      -- | The upper bound.
+      (Term s PPosixTime)
   deriving stock
     ( -- | @since 3.3.0
       Generic
@@ -65,7 +63,7 @@ pgetFullyBoundedTimeRange ::
   forall (s :: S).
   Term
     s
-    ( PPOSIXTimeRange
+    ( PInterval PPosixTime
         :--> PMaybe PFullyBoundedTimeRange
     )
 pgetFullyBoundedTimeRange = phoistAcyclic $
@@ -83,11 +81,11 @@ pgetFullyBoundedTimeRange = phoistAcyclic $
                 ( pmatch (getField @"_0" f) $ \case
                     PFinite (pfromData . (pfield @"_0" #) -> d) -> pjust # d
                     _ ->
-                      ptrace
+                      ptraceInfo
                         "pcurrentTime: time range should be bounded"
                         pnothing
                 )
-                (ptrace "pcurrentTime: time range should be inclusive" pnothing)
+                (ptraceInfo "pcurrentTime: time range should be inclusive" pnothing)
 
         lb' = getBound # pcon PFalse # lb
         ub' = getBound # pcon PTrue # ub
@@ -102,7 +100,7 @@ pgetFullyBoundedTimeRange = phoistAcyclic $
 -}
 fullyBoundedTimeRangeFromValidRange ::
   forall r (s :: S).
-  (HasField "validRange" r (Term s PPOSIXTimeRange)) =>
+  (HasField "validRange" r (Term s (PInterval PPosixTime))) =>
   r ->
   Term s (PMaybe PFullyBoundedTimeRange)
 fullyBoundedTimeRangeFromValidRange x =
@@ -119,7 +117,7 @@ passertFullyBoundedTimeRange ::
   Term
     s
     ( PString
-        :--> PPOSIXTimeRange
+        :--> PInterval PPosixTime
         :--> PFullyBoundedTimeRange
     )
 passertFullyBoundedTimeRange = phoistAcyclic $
@@ -134,7 +132,7 @@ pisWithinTimeRange ::
   forall (s :: S).
   Term
     s
-    ( PPOSIXTime
+    ( PPosixTime
         :--> PFullyBoundedTimeRange
         :--> PBool
     )
@@ -154,8 +152,8 @@ pisTimeRangeWithin ::
   forall (s :: S).
   Term
     s
-    ( PPOSIXTime
-        :--> PPOSIXTime
+    ( PPosixTime
+        :--> PPosixTime
         :--> PFullyBoundedTimeRange
         :--> PBool
     )
@@ -173,7 +171,7 @@ ptimeRangeDuration ::
   Term
     s
     ( PFullyBoundedTimeRange
-        :--> PPOSIXTime
+        :--> PPosixTime
     )
 ptimeRangeDuration = phoistAcyclic $
   plam $

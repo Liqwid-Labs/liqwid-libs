@@ -25,9 +25,8 @@ import Data.Text qualified as Text
 import Data.Text.Encoding (encodeUtf8)
 import Data.Text.Encoding qualified as Text.Encoding
 import Data.Vector qualified as Vector
-import Plutarch.Api.V2 (PDatumHash (PDatumHash))
 import Plutarch.Builtin (PIsData (pdataImpl, pfromDataImpl))
-import Plutarch.Extra.TermCont (ptryFromC)
+import Plutarch.LedgerApi (PDatumHash (PDatumHash))
 import Plutarch.TryFrom (PTryFrom (ptryFrom'), PTryFromExcess)
 import Plutarch.Unsafe (punsafeCoerce)
 
@@ -84,7 +83,7 @@ instance PTryFrom PData (PAsData PDatumHash) where
         -- Blake2b_256 hash: 256 bits/32 bytes.
         (plengthBS # unwrapped #== 32)
         (f ())
-        (ptraceError "ptryFrom(PDatumHash): must be 32 bytes long")
+        (ptraceInfoError "ptryFrom(PDatumHash): must be 32 bytes long")
     pure (punsafeCoerce opq, pcon $ PDatumHash unwrapped)
 
 -- | @since 3.0.3
@@ -363,14 +362,14 @@ instance Aeson.ToJSON StakingCredential where
       ( "contents"
           .= cred
           <> "tag"
-          .= Aeson.String "StakingHash"
+            .= Aeson.String "StakingHash"
       )
   toEncoding (StakingPtr x y z) =
     Aeson.pairs
       ( "contents"
           .= [x, y, z]
           <> "tag"
-          .= Aeson.String "StakingPtr"
+            .= Aeson.String "StakingPtr"
       )
 
 -- @since 3.16.0
@@ -410,14 +409,14 @@ instance Aeson.ToJSON Credential where
       ( "contents"
           .= cred
           <> "tag"
-          .= Aeson.String "PubKeyCredential"
+            .= Aeson.String "PubKeyCredential"
       )
   toEncoding (ScriptCredential cred) =
     Aeson.pairs
       ( "contents"
           .= cred
           <> "tag"
-          .= Aeson.String "ScriptCredential"
+            .= Aeson.String "ScriptCredential"
       )
 
 -- @since 3.16.0

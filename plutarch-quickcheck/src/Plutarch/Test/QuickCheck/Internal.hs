@@ -22,12 +22,13 @@ import Data.Text qualified as T (intercalate, pack, unpack)
 import Data.Word (Word8)
 import GHC.Exts qualified as Exts (IsList (fromList, toList))
 import Plutarch (
-  Config (Config, tracingMode),
+  Config (NoTracing, Tracing),
+  LogLevel (LogInfo),
   POpaque,
   PlutusType,
   S,
   Term,
-  TracingMode (DoTracing, NoTracing),
+  TracingMode (DoTracing),
   compile,
   pcon,
   pmatch,
@@ -35,43 +36,34 @@ import Plutarch (
   (#),
   (#$),
  )
-import Plutarch.Api.V1 (
+import Plutarch.Builtin (pfstBuiltin, ppairDataBuiltin, psndBuiltin)
+import Plutarch.Evaluate (evalScriptHuge, evalTerm)
+import Plutarch.Extra.Maybe (
+  pisJust,
+ )
+import Plutarch.LedgerApi (
+  AmountGuarantees (NoGuarantees),
+  KeyGuarantees (Unsorted),
+  PAddress (PAddress),
   PCredential (PPubKeyCredential, PScriptCredential),
   PCurrencySymbol (PCurrencySymbol),
+  PDatumHash (PDatumHash),
   PExtended (PFinite, PNegInf, PPosInf),
   PInterval (PInterval),
   PLowerBound (PLowerBound),
   PMap (PMap),
-  PTokenName (PTokenName),
-  PUpperBound (PUpperBound),
-  PValue (PValue),
- )
-import Plutarch.Api.V1.Scripts (
-  PScriptHash (PScriptHash),
- )
-import Plutarch.Api.V1.Time (PPOSIXTime (PPOSIXTime))
-import Plutarch.Api.V1.Tuple (
-  PTuple,
-  pbuiltinPairFromTuple,
-  ptuple,
-  ptupleFromBuiltin,
- )
-import Plutarch.Api.V2 (
-  AmountGuarantees (NoGuarantees),
-  KeyGuarantees (Unsorted),
-  PAddress (PAddress),
-  PDatumHash (PDatumHash),
   PMaybeData (PDJust, PDNothing),
+  PPosixTime (PPosixTime),
   PPubKeyHash (PPubKeyHash),
+  PScriptHash (PScriptHash),
   PStakingCredential (PStakingHash, PStakingPtr),
+  PTokenName (PTokenName),
   PTxId (PTxId),
   PTxOutRef (PTxOutRef),
- )
-import Plutarch.Evaluate (evalScriptHuge, evalTerm)
-import Plutarch.Extra.Maybe (
+  PUpperBound (PUpperBound),
+  PValue (PValue),
   pfromDJust,
   pisDJust,
-  pisJust,
  )
 import Plutarch.Lift (PUnsafeLiftDecl (PLifted), plift, plift')
 import Plutarch.Maybe (pfromJust)
@@ -107,7 +99,7 @@ import Plutarch.Prelude (
   pif,
   pnumerator,
   pshow,
-  ptraceError,
+  ptraceInfoError,
  )
 import Plutarch.Show (PShow)
 import Plutarch.Test.QuickCheck.Helpers (loudEval)
@@ -152,10 +144,10 @@ data FailingTestableTerm (a :: S -> Type)
 -- | @since 2.2.1
 instance Testable (TestableTerm PBool) where
   property (TestableTerm t) =
-    case plift' (Config {tracingMode = NoTracing}) t of
+    case plift' NoTracing t of
       Right p -> property p
       Left _ ->
-        case compile (Config {tracingMode = DoTracing}) t of
+        case compile (Tracing LogInfo DoTracing) t of
           Left err ->
             counterexample ("Script failed to compile:\n" <> show err) $
               property False
@@ -174,10 +166,10 @@ instance Testable (TestableTerm PBool) where
 -- | @since 2.1.6
 instance Testable (TestableTerm POpaque) where
   property (TestableTerm t) =
-    case evalTerm (Config {tracingMode = NoTracing}) t of
+    case evalTerm NoTracing t of
       Right (Right _, _, _) -> property True
       Right (Left _, _, _) ->
-        case evalTerm (Config {tracingMode = DoTracing}) t of
+        case evalTerm (Tracing LogInfo DoTracing) t of
           Right (Left err, _, trace) ->
             counterexample
               ( "Script evaluated with an error:\n"
@@ -194,7 +186,7 @@ instance Testable (TestableTerm POpaque) where
 -- | @since 2.1.6
 instance Testable (FailingTestableTerm a) where
   property (FailingTestableTerm (TestableTerm t)) =
-    case evalTerm (Config {tracingMode = NoTracing}) t of
+    case evalTerm NoTracing t of
       Right (Right _, _, _) ->
         counterexample "Script ran successfully when it is expected to fail" $
           property False
@@ -229,10 +221,10 @@ instance (forall (s :: S). Num (Term s a)) => Num (TestableTerm a) where
 
  @since 2.0.0
 -}
-instance PShow a => Show (TestableTerm a) where
+instance (PShow a) => Show (TestableTerm a) where
   show (TestableTerm term) =
-    case compile (Config {tracingMode = DoTracing}) $
-      ptraceError
+    case compile (Tracing LogInfo DoTracing) $
+      ptraceInfoError
         (pshow term) of
       Left err -> show err
       Right (evalScriptHuge -> (_, _, trace)) ->
@@ -280,11 +272,11 @@ class PCoArbitrary (a :: S -> Type) where
 
  @since 2.0.0
 -}
-instance PArbitrary p => Arbitrary (TestableTerm p) where
+instance (PArbitrary p) => Arbitrary (TestableTerm p) where
   arbitrary = parbitrary
   shrink = pshrink . (\(TestableTerm x) -> TestableTerm $ loudEval x)
 
-instance PCoArbitrary p => CoArbitrary (TestableTerm p) where
+instance (PCoArbitrary p) => CoArbitrary (TestableTerm p) where
   coarbitrary = pcoarbitrary
 
 -- | @since 2.0.0
@@ -369,7 +361,7 @@ instance PCoArbitrary PString where
   pcoarbitrary = coarbitrary . T.unpack . pliftT
 
 -- | @since 2.0.0
-instance PArbitrary a => PArbitrary (PMaybe a) where
+instance (PArbitrary a) => PArbitrary (PMaybe a) where
   parbitrary = do
     (TestableTerm x) <- parbitrary
     frequency
@@ -388,7 +380,7 @@ instance PArbitrary a => PArbitrary (PMaybe a) where
             ]
     | otherwise = []
 
-instance PCoArbitrary a => PCoArbitrary (PMaybe a) where
+instance (PCoArbitrary a) => PCoArbitrary (PMaybe a) where
   pcoarbitrary (TestableTerm x)
     | plift $ pisJust # x =
         variant (1 :: Integer)
@@ -453,6 +445,7 @@ instance (PCoArbitrary a, PCoArbitrary b) => PCoArbitrary (PEither a b) where
  @since 2.0.0
 -}
 instance
+  {-# OVERLAPPING #-}
   ( PLift a
   , PLift b
   , Arbitrary (PLifted a, PLifted b)
@@ -463,7 +456,9 @@ instance
 
   pshrink = fmap pconstantT . shrink . pliftT
 
+-- | @since 2.0.0
 instance
+  {-# OVERLAPPING #-}
   ( PLift a
   , PLift b
   , CoArbitrary (PLifted a, PLifted b)
@@ -471,36 +466,6 @@ instance
   PCoArbitrary (PBuiltinPair a b)
   where
   pcoarbitrary = coarbitrary . pliftT
-
--- | @since 2.0.0
-instance
-  {-# OVERLAPPING #-}
-  ( PArbitrary a
-  , PArbitrary b
-  , PIsData a
-  , PIsData b
-  ) =>
-  PArbitrary (PBuiltinPair (PAsData a) (PAsData b))
-  where
-  parbitrary = do
-    (TestableTerm x) <- parbitrary
-    return $ TestableTerm $ pfromData $ pbuiltinPairFromTuple (pdata x)
-
-  pshrink = fmap fromTuple . shrink . toTuple
-    where
-      toTuple = liftT (pfromData . ptupleFromBuiltin . pdata)
-      fromTuple = liftT (pfromData . pbuiltinPairFromTuple . pdata)
-
-instance
-  {-# OVERLAPPING #-}
-  ( PCoArbitrary a
-  , PCoArbitrary b
-  , PIsData a
-  , PIsData b
-  ) =>
-  PCoArbitrary (PBuiltinPair (PAsData a) (PAsData b))
-  where
-  pcoarbitrary (liftT ptupleFromBuiltin . pdataT -> t) = pcoarbitrary t
 
 -- | @since 2.0.0
 instance
@@ -525,33 +490,36 @@ instance (PCoArbitrary a, PCoArbitrary b) => PCoArbitrary (PPair a b) where
 
 -- | @since 2.0.0
 instance
+  {-# OVERLAPPING #-}
   forall (a :: S -> Type) (b :: S -> Type).
   ( PArbitrary a
   , PArbitrary b
   , PIsData a
   , PIsData b
   ) =>
-  PArbitrary (PTuple a b)
+  PArbitrary (PBuiltinPair (PAsData a) (PAsData b))
   where
   parbitrary = do
     (TestableTerm x) <- parbitrary
     (TestableTerm y) <- parbitrary
-    return $ TestableTerm $ ptuple # pdata x # pdata y
+    return $ TestableTerm $ ppairDataBuiltin # pdata x # pdata y
 
   pshrink x =
-    [ TestableTerm $ ptuple # a # b
+    [ TestableTerm $ ppairDataBuiltin # a # b
     | (TestableTerm a) <- shrink $ ptFstT x
     , (TestableTerm b) <- shrink $ ptSndT x
     ]
 
+-- | @since 2.0.0
 instance
+  {-# OVERLAPPING #-}
   forall (a :: S -> Type) (b :: S -> Type).
   ( PCoArbitrary a
   , PCoArbitrary b
   , PIsData a
   , PIsData b
   ) =>
-  PCoArbitrary (PTuple a b)
+  PCoArbitrary (PBuiltinPair (PAsData a) (PAsData b))
   where
   pcoarbitrary x = pcoarbitrary (ptFstT x) . pcoarbitrary (ptSndT x)
 
@@ -613,13 +581,13 @@ instance
       unMap = flip pmatchT $ \(PMap a) -> a
 
 -- | @since 2.2.2
-instance PArbitrary PPOSIXTime where
+instance PArbitrary PPosixTime where
   parbitrary = do
     TestableTerm x <- parbitrary
-    return . pconT $ PPOSIXTime $ pabs # x
-  pshrink = fmap (\(TestableTerm x) -> pconT $ PPOSIXTime x) . shrink . unTime
+    return . pconT $ PPosixTime $ pabs # x
+  pshrink = fmap (\(TestableTerm x) -> pconT $ PPosixTime x) . shrink . unTime
     where
-      unTime = flip pmatchT $ \(PPOSIXTime a) -> a
+      unTime = flip pmatchT $ \(PPosixTime a) -> a
 
 -- | @since 2.0.0
 instance
@@ -836,7 +804,7 @@ pright ::
   TestableTerm b
 pright = flip pmatchT $ \case
   PRight a -> a
-  _ -> ptraceError "asked for PRight when it is PLeft"
+  _ -> ptraceInfoError "asked for PRight when it is PLeft"
 
 pleft ::
   forall
@@ -846,7 +814,7 @@ pleft ::
   TestableTerm b1
 pleft = flip pmatchT $ \case
   PLeft a -> a
-  _ -> ptraceError "asked for PLeft when it is PRight"
+  _ -> ptraceInfoError "asked for PLeft when it is PRight"
 
 -- | @since 2.0.0
 liftT ::
@@ -879,14 +847,14 @@ ppSndT = flip pmatchT $ \(PPair _ a) -> a
 
 pdataT ::
   forall {p :: S -> Type}.
-  PIsData p =>
+  (PIsData p) =>
   TestableTerm p ->
   TestableTerm (PAsData p)
 pdataT (TestableTerm x) = TestableTerm $ pdata x
 
 pfromDataT ::
   forall {p :: S -> Type}.
-  PIsData p =>
+  (PIsData p) =>
   TestableTerm (PAsData p) ->
   TestableTerm p
 pfromDataT (TestableTerm x) = TestableTerm $ pfromData x
@@ -907,14 +875,14 @@ pconstantT h = TestableTerm $ pconstant h
 
 pconT ::
   forall {p :: S -> Type}.
-  PlutusType p =>
+  (PlutusType p) =>
   (forall {s :: S}. p s) ->
   TestableTerm p
 pconT p = TestableTerm $ pcon p
 
 pmatchT ::
   forall {p :: S -> Type} {b :: S -> Type}.
-  PlutusType p =>
+  (PlutusType p) =>
   TestableTerm p ->
   (forall {s :: S}. p s -> Term s b) ->
   TestableTerm b
@@ -922,15 +890,15 @@ pmatchT (TestableTerm p) f = TestableTerm $ pmatch p f
 
 ptFstT ::
   forall {a :: S -> Type} {b :: S -> Type}.
-  TestableTerm (PTuple a b) ->
+  TestableTerm (PBuiltinPair (PAsData a) (PAsData b)) ->
   TestableTerm (PAsData a)
-ptFstT = liftT (pfield @"_0" #)
+ptFstT = liftT (pfstBuiltin #)
 
 ptSndT ::
   forall {a :: S -> Type} {b :: S -> Type}.
-  TestableTerm (PTuple a b) ->
+  TestableTerm (PBuiltinPair (PAsData a) (PAsData b)) ->
   TestableTerm (PAsData b)
-ptSndT = liftT (pfield @"_1" #)
+ptSndT = liftT (psndBuiltin #)
 
 constrPList ::
   forall {a :: S -> Type} {b :: (S -> Type) -> S -> Type}.

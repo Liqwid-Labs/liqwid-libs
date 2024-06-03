@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutarch-unit
-version:            1.3.0
+version:            2.0.0
 synopsis:           Unit checks for Plutarch
 description:
   An independent unitcheck library for constructing unit checks for Plutarch.
@@ -47,11 +47,11 @@ common common-lang
     ghc-options: -Werror
 
   build-depends:
-    , base      ^>=4.16
+    , base                 ^>=4.18.1.0
     , plutarch
+    , plutarch-ledger-api
 
   default-extensions:
-    NoStarIsType
     BangPatterns
     BinaryLiterals
     ConstraintKinds
@@ -71,6 +71,8 @@ common common-lang
     KindSignatures
     LambdaCase
     MultiParamTypeClasses
+    NoFieldSelectors
+    NoStarIsType
     NumericUnderscores
     OverloadedLabels
     OverloadedStrings
@@ -81,7 +83,6 @@ common common-lang
     TypeFamilies
     TypeOperators
     UndecidableInstances
-    NoFieldSelectors
 
   default-language:   Haskell2010
 
@@ -103,7 +104,6 @@ common common-tests
 library
   import:          common-lang
   exposed-modules:
-    Plutarch.Test.Export
     Plutarch.Test.Precompiled
     Plutarch.Test.Script
     Plutarch.Test.Unit
@@ -113,7 +113,6 @@ library
     , acc
     , containers
     , liqwid-plutarch-extra
-    , liqwid-script-export
     , mtl
     , optics-core
     , optics-extra
@@ -121,7 +120,6 @@ library
     , plutus-core
     , plutus-ledger-api
     , plutus-tx
-    , ply-core
     , pretty
     , pretty-show
     , selective

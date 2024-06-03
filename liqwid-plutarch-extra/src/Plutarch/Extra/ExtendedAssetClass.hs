@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Plutarch.Extra.ExtendedAssetClass (
   -- * Types
@@ -48,12 +49,6 @@ import Optics.AffineTraversal (An_AffineTraversal, atraversal)
 import Optics.Getter (A_Getter, to, view)
 import Optics.Label (LabelOptic (labelOptic))
 import Optics.Setter (set)
-import Plutarch.Api.V1 (
-  AmountGuarantees,
-  KeyGuarantees,
-  PCurrencySymbol,
-  PValue,
- )
 import Plutarch.DataRepr (DerivePConstantViaData (DerivePConstantViaData))
 import Plutarch.Extra.AssetClass (
   AssetClass (AssetClass),
@@ -67,19 +62,21 @@ import Plutarch.Extra.Value (
   passetClassValueOf',
   psymbolValueOf,
  )
+import Plutarch.LedgerApi (
+  AmountGuarantees,
+  KeyGuarantees,
+  PCurrencySymbol,
+  PValue,
+ )
 import Plutarch.Lift (
   PConstantDecl,
   PUnsafeLiftDecl (PLifted),
  )
 import PlutusLedgerApi.V2 (
   CurrencySymbol,
-  Data,
   TokenName,
-  toData,
  )
 import PlutusTx.IsData (makeIsDataIndexed)
-import Ply.Core.Class (PlyArg (UPLCRep, toBuiltinArg, toBuiltinArgData))
-import Ply.Plutarch.Class (PlyArgOf)
 
 {- | An 'AssetClass' whose 'TokenName' may or may not be relevant.
 
@@ -107,12 +104,6 @@ makeIsDataIndexed
   [ ('AnyToken, 0)
   , ('FixedToken, 1)
   ]
-
--- | @since 3.14.5
-instance PlyArg ExtendedAssetClass where
-  type UPLCRep ExtendedAssetClass = Data
-  toBuiltinArg = toData
-  toBuiltinArgData = toData
 
 -- | @since 3.14.2
 deriving via
@@ -275,9 +266,6 @@ instance DerivePlutusType PExtendedAssetClass where
 -- | @since 3.14.2
 instance PUnsafeLiftDecl PExtendedAssetClass where
   type PLifted PExtendedAssetClass = ExtendedAssetClass
-
--- | @since 3.14.5
-type instance PlyArgOf PExtendedAssetClass = ExtendedAssetClass
 
 {- | As 'passetClassValueOf', but for 'PExtendedAssetClass'.
 

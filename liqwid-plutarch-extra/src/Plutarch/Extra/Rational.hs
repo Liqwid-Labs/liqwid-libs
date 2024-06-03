@@ -1,4 +1,3 @@
-{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 
@@ -22,7 +21,6 @@ import Data.Tagged (Tagged)
 import GHC.Stack (HasCallStack)
 import Plutarch.Builtin (pforgetData)
 import Plutarch.Extra.Tagged (PTagged)
-import "plutarch-extra" Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Num (PNum (pabs, pfromInteger, pnegate, psignum, (#*), (#+), (#-)))
 import Plutarch.Orphans ()
 import Plutarch.Positive (PPositive)
@@ -256,7 +254,7 @@ ptoPositiveCases n contNeg contPos =
     (n #<= 0)
     ( pif
         (n #== 0)
-        (ptraceError "ptoPositiveCases with 0")
+        (ptraceInfoError "ptoPositiveCases with 0")
         -- The PPositive constructor is not exported, so we need coercion
         (contNeg (punsafeCoerce $ -n))
     )
@@ -265,7 +263,7 @@ ptoPositiveCases n contNeg contPos =
 -- | `plift` for Tagged Rationals (kind polymorphic)
 pliftTaggedRational ::
   forall k (tag :: k).
-  HasCallStack =>
+  (HasCallStack) =>
   ClosedTerm (PTagged tag PRational) ->
   Tagged tag Rational
 pliftTaggedRational term =

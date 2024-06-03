@@ -119,7 +119,7 @@ pbenchNonTinySizesRandomUniform ::
   , MonadPrim s m
   ) =>
   -- | Size-dependent random input generator
-  (forall (g :: Type). RandomGen g => Int -> g -> (a, g)) ->
+  (forall (g :: Type). (RandomGen g) => Int -> g -> (a, g)) ->
   -- | Name of the function being benchmarked.
   Text ->
   -- | The function being benchmarked.
@@ -162,7 +162,7 @@ pbenchSizesRandomCached ::
   , MonadPrim s m
   ) =>
   -- | Size-dependent random input generator
-  (forall (g :: Type). RandomGen g => Int -> g -> (a, g)) ->
+  (forall (g :: Type). (RandomGen g) => Int -> g -> (a, g)) ->
   -- | Name of the function being benchmarked.
   Text ->
   -- | The function being benchmarked.
@@ -205,7 +205,7 @@ pbenchSizesRandom ::
   , MonadPrim s m
   ) =>
   -- | Size-dependent random input generator
-  (forall (g :: Type). RandomGen g => Int -> g -> (a, g)) ->
+  (forall (g :: Type). (RandomGen g) => Int -> g -> (a, g)) ->
   -- | Name of the function being benchmarked.
   Text ->
   -- | The function being benchmarked.

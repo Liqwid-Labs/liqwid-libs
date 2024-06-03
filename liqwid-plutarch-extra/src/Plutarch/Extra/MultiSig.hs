@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE ViewPatterns #-}
 
 {- |
 Module     : Plutarch.Extra.MultiSig
@@ -21,14 +22,13 @@ import GHC.Records (HasField)
 import Optics.Getter (A_Getter, to)
 import Optics.Label (LabelOptic (labelOptic))
 import Optics.Traversal (A_Traversal, traversalVL)
-import Plutarch.Api.V2 (PPubKeyHash)
 import Plutarch.DataRepr (
   DerivePConstantViaData (DerivePConstantViaData),
   PDataFields,
  )
 import Plutarch.Extra.Field (pletAllC)
 import Plutarch.Extra.Function (pflip)
-import Plutarch.Extra.TermCont (pmatchC)
+import Plutarch.LedgerApi (PPubKeyHash)
 import Plutarch.Lift (PConstantDecl, PLifted, PUnsafeLiftDecl)
 import PlutusLedgerApi.V1.Crypto (PubKeyHash)
 import PlutusTx qualified (makeLift, unstableMakeIsData)
@@ -194,7 +194,8 @@ pvalidatedByMultisig =
 
       pure $
         getField @"minSigs" multiF
-          #<= ( plength #$ pfilter
+          #<= ( plength
+                  #$ pfilter
                   # (pflip # pelem # sigs)
                   # getField @"keys" multiF
               )

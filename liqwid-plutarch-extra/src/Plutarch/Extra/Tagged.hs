@@ -16,7 +16,6 @@ import Plutarch.Extra.Comonad (
   PExtend (pextend),
  )
 import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap), Plut)
-import Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Extra.Traversable (
   PSemiTraversable (psemitraverse, psemitraverse_),
   PTraversable (ptraverse, ptraverse_),

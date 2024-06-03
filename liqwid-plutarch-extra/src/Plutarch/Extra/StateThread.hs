@@ -7,20 +7,21 @@ module Plutarch.Extra.StateThread (
   pwithStateThreadMulti,
 ) where
 
-import Plutarch.Api.V1 (PCurrencySymbol, PValue)
-import Plutarch.Api.V1.AssocMap (plookup)
-import Plutarch.Api.V2 (
-  AmountGuarantees,
-  KeyGuarantees,
-  PMintingPolicy,
-  PScriptPurpose (PMinting),
-  PTxInInfo,
-  PTxOutRef,
- )
 import Plutarch.Builtin (ppairDataBuiltin)
 import Plutarch.Extra.Field (pletAll)
 import Plutarch.Extra.List (ptryFromSingleton)
 import Plutarch.Extra.Maybe (pfromJust)
+import Plutarch.LedgerApi (
+  AmountGuarantees,
+  KeyGuarantees,
+  PCurrencySymbol,
+  PScriptContext,
+  PScriptPurpose (PMinting),
+  PTxInInfo,
+  PTxOutRef,
+  PValue,
+ )
+import Plutarch.LedgerApi.AssocMap (plookup)
 
 {- | Adds a state thread to a minting policy.
  Parameterized at the Haskell level.
@@ -30,10 +31,10 @@ import Plutarch.Extra.Maybe (pfromJust)
 withStateThread ::
   forall (s :: S).
   -- | Minting policy to wrap
-  Term s PMintingPolicy ->
+  Term s (PData :--> PScriptContext :--> POpaque) ->
   -- | Initial spend
   Term s PTxOutRef ->
-  Term s PMintingPolicy
+  Term s (PData :--> PScriptContext :--> POpaque)
 withStateThread = withStateThreadGeneric uniqueStateTokenMint
 
 {- | Adds a state thread to a minting policy.
@@ -43,7 +44,14 @@ withStateThread = withStateThreadGeneric uniqueStateTokenMint
 -}
 pwithStateThread ::
   forall (s :: S).
-  Term s (PMintingPolicy :--> PTxOutRef :--> PMintingPolicy)
+  Term
+    s
+    ( (PData :--> PScriptContext :--> POpaque)
+        :--> PTxOutRef
+        :--> PData
+        :--> PScriptContext
+        :--> POpaque
+    )
 pwithStateThread = plam withStateThread
 
 {- | Adds a state thread to a minting policy
@@ -55,10 +63,10 @@ pwithStateThread = plam withStateThread
 withStateThreadMulti ::
   forall (s :: S).
   -- | Minting policy to wrap
-  Term s PMintingPolicy ->
+  Term s (PData :--> PScriptContext :--> POpaque) ->
   -- | Initial spend
   Term s PTxOutRef ->
-  Term s PMintingPolicy
+  Term s (PData :--> PScriptContext :--> POpaque)
 withStateThreadMulti = withStateThreadGeneric uniqueStateTokensMint
 
 {- | Adds a state thread to a minting policy
@@ -69,7 +77,14 @@ withStateThreadMulti = withStateThreadGeneric uniqueStateTokensMint
 -}
 pwithStateThreadMulti ::
   forall (s :: S).
-  Term s (PMintingPolicy :--> PTxOutRef :--> PMintingPolicy)
+  Term
+    s
+    ( (PData :--> PScriptContext :--> POpaque)
+        :--> PTxOutRef
+        :--> PData
+        :--> PScriptContext
+        :--> POpaque
+    )
 pwithStateThreadMulti = plam withStateThreadMulti
 
 -- Helpers
@@ -88,10 +103,10 @@ withStateThreadGeneric ::
     Term s PBool
   ) ->
   -- | Minting policy to wrap
-  Term s PMintingPolicy ->
+  Term s (PData :--> PScriptContext :--> POpaque) ->
   -- | Initial spend
   Term s PTxOutRef ->
-  Term s PMintingPolicy
+  Term s (PData :--> PScriptContext :--> POpaque)
 withStateThreadGeneric checkMint mp ref = plam $ \red ctx -> pletAll ctx $ \ctx' ->
   pletFields @'["inputs", "mint"] (getField @"txInfo" ctx') $ \txInfo ->
     pmatch (getField @"purpose" ctx') $ \case
@@ -101,10 +116,10 @@ withStateThreadGeneric checkMint mp ref = plam $ \red ctx -> pletAll ctx $ \ctx'
           ( pif
               (pany # (hasUniqueInput # ref) # getField @"inputs" txInfo)
               (mp # red # ctx)
-              (ptraceError "stateThread: Unique input not found")
+              (ptraceInfoError "stateThread: Unique input not found")
           )
-          (ptraceError "stateThread: Not minting a unique state token")
-      _ -> ptraceError "stateThread: Not a minting script purpose"
+          (ptraceInfoError "stateThread: Not minting a unique state token")
+      _ -> ptraceInfoError "stateThread: Not a minting script purpose"
 
 uniqueStateTokenMint ::
   forall (keys :: KeyGuarantees) (amounts :: AmountGuarantees) (s :: S).

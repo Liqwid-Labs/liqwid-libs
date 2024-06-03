@@ -167,7 +167,7 @@ data SUniversalGen (a :: Type) = SUniversalGen
   -- non-termination.
   , exhaustiveGen :: Int -> [a]
   -- ^ Exhaustive input generator, given the input size
-  , randomGen :: forall (g :: Type). RandomGen g => Int -> g -> (a, g)
+  , randomGen :: forall (g :: Type). (RandomGen g) => Int -> g -> (a, g)
   -- ^ Random input generator, given the input size.
   --
   -- For a comfortable interface, use something like
@@ -318,7 +318,6 @@ benchInputSizeUniversal
                   then -- coverage close to 1 would have extreme slowdown if we
                   -- didn't do this (shoutout to fourmolu for this horrible
                   -- formatting)
-
                     genRandomSubset
                       card
                       sampleSize
@@ -369,7 +368,7 @@ benchNonTinySizesRandomUniform ::
   , NFData se
   ) =>
   -- | Size-dependent random input generator
-  (forall (g :: Type). RandomGen g => Int -> g -> (a, g)) ->
+  (forall (g :: Type). (RandomGen g) => Int -> g -> (a, g)) ->
   -- | Sampling function: From input to sample element (a "measurement").
   (a -> se) ->
   -- | The exact sample size per input size.
@@ -426,7 +425,7 @@ benchSizesRandomCached ::
   , MonadPrim s m
   ) =>
   -- | Size-dependent random input generator
-  (forall (g :: Type). RandomGen g => Int -> g -> (a, g)) ->
+  (forall (g :: Type). (RandomGen g) => Int -> g -> (a, g)) ->
   -- | Sampling function: From input to sample element (a "measurement").
   (a -> se) ->
   -- | The sample size per input size.
@@ -482,7 +481,7 @@ benchSizesRandom ::
   , NFData se
   ) =>
   -- | Size-dependent random input generator
-  (forall (g :: Type). RandomGen g => Int -> g -> (a, g)) ->
+  (forall (g :: Type). (RandomGen g) => Int -> g -> (a, g)) ->
   -- | Sampling function: From input to sample element (a "measurement").
   (a -> se) ->
   -- | The sample size per input size.

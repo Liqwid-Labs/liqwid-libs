@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutarch-benchmark
-version:            0.1
+version:            2.0.0
 synopsis:           Benchmark plutarch code and compare implementations
 description:
   A library containing utilities to concurrently compare
@@ -39,7 +39,7 @@ common common-lang
     ghc-options: -Werror
 
   build-depends:
-    , base               >=4.16
+    , base               ^>=4.18.1.0
     , plutarch
     , plutus-core
     , plutus-ledger-api
@@ -96,6 +96,7 @@ library
     Plutarch.Benchmark.Cost
     Plutarch.Benchmark.Exhaustive
     Plutarch.Benchmark.Main
+    Plutarch.Benchmark.Orphans
     Plutarch.Benchmark.Plutarch
     Plutarch.Benchmark.Plutus
     Plutarch.Benchmark.QuickCheck

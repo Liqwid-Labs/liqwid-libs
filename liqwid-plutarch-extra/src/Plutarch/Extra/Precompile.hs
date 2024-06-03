@@ -37,12 +37,12 @@ import Plutarch.Extra.DebuggableScript (
   mustEvalD,
  )
 import Plutarch.Internal (
-  Config (Config),
+  Config (Tracing),
+  LogLevel (LogInfo),
   RawTerm (RCompiled),
   Term (Term),
   TermResult (TermResult),
   TracingMode (DetTracing),
-  tracingMode,
  )
 import Plutarch.Lift (
   LiftError (
@@ -241,7 +241,7 @@ liftErrorMsg = \case
 -}
 pliftCompiled' ::
   forall (p :: S -> Type).
-  PUnsafeLiftDecl p =>
+  (PUnsafeLiftDecl p) =>
   CompiledTerm p ->
   Either (LiftError, [Text]) (PLifted p)
 pliftCompiled' ct =
@@ -249,7 +249,7 @@ pliftCompiled' ct =
     Left evalError -> Left (LiftError_EvalError evalError, traces)
     Right evaluatedScript ->
       case plift'
-        (Config {tracingMode = DetTracing})
+        (Tracing LogInfo DetTracing)
         (scriptToTerm @p evaluatedScript) of
         Right lifted -> Right lifted
         Left (LiftError_EvalError evalError) ->
@@ -282,7 +282,7 @@ pliftCompiled' ct =
             ]
         Right evaluatedDebugScript ->
           case plift'
-            (Config {tracingMode = DetTracing})
+            (Tracing LogInfo DetTracing)
             (scriptToTerm @p evaluatedDebugScript) of
             Right _ ->
               error . unlines $

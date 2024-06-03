@@ -17,7 +17,6 @@ import Plutarch.Extra.Functor (
   PFunctor (PSubcategory, pfmap),
   Plut,
  )
-import Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Num (PNum)
 import Plutarch.Unsafe (punsafeCoerce)
 

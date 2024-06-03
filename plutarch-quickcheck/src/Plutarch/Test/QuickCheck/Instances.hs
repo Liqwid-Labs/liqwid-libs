@@ -104,7 +104,7 @@ instance Arbitrary Data where
               , I <$> arbitrary
               , List <$> Gen.listOf (go $ size `quot` 2)
               , Map <$> Gen.listOf ((,) <$> go (size `quot` 2) <*> go (size `quot` 2))
-              , Constr <$> (getNonNegative <$> arbitrary) <*> Gen.listOf (go $ size `quot` 2)
+              , (Constr . getNonNegative <$> arbitrary) <*> Gen.listOf (go $ size `quot` 2)
               ]
   {-# INLINEABLE shrink #-}
   shrink = \case
@@ -113,7 +113,7 @@ instance Arbitrary Data where
     List xs -> List <$> shrink xs
     Map kvs -> Map <$> shrink kvs
     Constr ix args ->
-      Constr <$> (getNonNegative <$> (shrink . NonNegative $ ix)) <*> shrink args
+      (Constr . getNonNegative <$> (shrink . NonNegative $ ix)) <*> shrink args
 
 -- | @since 2.1.3
 instance CoArbitrary Data where

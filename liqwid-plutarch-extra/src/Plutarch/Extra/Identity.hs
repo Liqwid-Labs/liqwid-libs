@@ -10,7 +10,6 @@ import Plutarch.Extra.Comonad (
   PExtend (pextend),
  )
 import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap), Plut)
-import Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Num (PNum)
 
 {- | Just a value of type @a@.

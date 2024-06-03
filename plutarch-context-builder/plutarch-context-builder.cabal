@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutarch-context-builder
-version:            2.11.0
+version:            3.0.0
 synopsis:           A builder for ScriptContexts
 description:
   Defines a builder for ScriptContexts, with helpers for commonly-needed uses.
@@ -36,8 +36,9 @@ common common-lang
     -Wmissing-export-lists -Wmissing-deriving-strategies -Werror
 
   build-depends:
-    , base      ^>=4.16
+    , base                 ^>=4.18.1.0
     , plutarch
+    , plutarch-ledger-api
 
   default-extensions:
     BangPatterns
@@ -60,6 +61,7 @@ common common-lang
     KindSignatures
     LambdaCase
     MultiParamTypeClasses
+    NoFieldSelectors
     NumericUnderscores
     OverloadedLabels
     OverloadedStrings
@@ -69,7 +71,6 @@ common common-lang
     TypeApplications
     TypeFamilies
     TypeOperators
-    NoFieldSelectors
 
   default-language:   Haskell2010
 

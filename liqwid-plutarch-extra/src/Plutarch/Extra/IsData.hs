@@ -42,7 +42,6 @@ import Generics.SOP (
  )
 import Generics.SOP qualified as SOP
 import Plutarch.Builtin (pasInt)
-import Plutarch.Extra.TermCont (pletC)
 import Plutarch.Internal.Generic (PCode, PGeneric, gpfrom, gpto)
 import Plutarch.Internal.PlutusType (
   PlutusTypeStrat (DerivedPInner, PlutusTypeStratConstraint, derivedPCon, derivedPMatch),

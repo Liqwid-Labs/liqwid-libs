@@ -51,21 +51,6 @@ import GHC.TypeLits (Symbol)
 import Optics.Getter (A_Getter, view)
 import Optics.Internal.Optic (Is)
 import Optics.Label (LabelOptic')
-import Plutarch.Api.V1 (
-  AmountGuarantees (NonZero),
-  PCurrencySymbol,
-  PMap (PMap),
-  PTokenName,
-  PValue (PValue),
- )
-import Plutarch.Api.V1.AssocMap (plookup)
-import Plutarch.Api.V1.AssocMap qualified as AssocMap
-import Plutarch.Api.V1.Value (padaSymbol)
-import Plutarch.Api.V1.Value qualified as Value
-import Plutarch.Api.V2 (
-  AmountGuarantees (NoGuarantees, Positive),
-  KeyGuarantees (Sorted),
- )
 import Plutarch.Builtin (pforgetData, ppairDataBuiltin)
 import Plutarch.DataRepr.Internal.Field (HRec (HCons, HNil), Labeled (Labeled))
 import Plutarch.Extra.Applicative (ppure)
@@ -82,7 +67,18 @@ import Plutarch.Extra.Map (phandleMin)
 import Plutarch.Extra.Maybe (pexpectJustC)
 import Plutarch.Extra.Ord (PComparator, pfromOrdBy)
 import Plutarch.Extra.Tagged (PTagged (PTagged))
-import Plutarch.Extra.TermCont (pmatchC)
+import Plutarch.LedgerApi (
+  AmountGuarantees (NoGuarantees, NonZero, Positive),
+  KeyGuarantees (Sorted),
+  PCurrencySymbol,
+  PMap (PMap),
+  PTokenName,
+  PValue (PValue),
+ )
+import Plutarch.LedgerApi.AssocMap (plookup)
+import Plutarch.LedgerApi.AssocMap qualified as AssocMap
+import Plutarch.LedgerApi.Value (padaSymbol)
+import Plutarch.LedgerApi.Value qualified as Value
 import PlutusLedgerApi.V2 (CurrencySymbol, TokenName)
 
 --------------------------------------------------------------------------------
@@ -102,7 +98,7 @@ passetClassDataValue = phoistAcyclic $
   plam $ \ac i ->
     pif
       (i #== 0)
-      (ptraceError "passetClassDataValue: given zero argument, expecting nonzero.")
+      (ptraceInfoError "passetClassDataValue: given zero argument, expecting nonzero.")
       ( let cs = pfield @"symbol" # ac
             tn = pfield @"name" # ac
          in Value.psingleton # pfromData cs # pfromData tn # i
@@ -647,7 +643,7 @@ phasOnlyOneTokenOfCurrencySymbol =
   -}
   plam $
     \cs
-     ( (pto . pto) ->
+     ( pto . pto ->
         l
       ) ->
         let isZeroAdaEntry ::
@@ -658,11 +654,11 @@ phasOnlyOneTokenOfCurrencySymbol =
                 )
             isZeroAdaEntry = plam $ \pair ->
               let cs' = pfromData $ pfstBuiltin # pair
-                  isAda = ptraceIfFalse "Not ada" $ cs' #== padaSymbol
+                  isAda = ptraceInfoIfFalse "Not ada" $ cs' #== padaSymbol
 
                   tnMap = pfromData $ psndBuiltin # pair
                   count = pfromData $ psndBuiltin # (ptryFromSingleton # pto tnMap)
-                  zeroAda = ptraceIfFalse "Non zero ada" $ count #== 0
+                  zeroAda = ptraceInfoIfFalse "Non zero ada" $ count #== 0
                in isAda #&& zeroAda
 
             isNonAdaEntryValid ::
@@ -673,10 +669,10 @@ phasOnlyOneTokenOfCurrencySymbol =
                 )
             isNonAdaEntryValid = plam $ \pair ->
               let cs' = pfromData $ pfstBuiltin # pair
-                  validCs = ptraceIfFalse "Unknown symbol" $ cs' #== cs
+                  validCs = ptraceInfoIfFalse "Unknown symbol" $ cs' #== cs
 
                   tnMap = pfromData $ psndBuiltin # pair
-                  validTnMap = ptraceIfFalse "More than one token names or tokens" $
+                  validTnMap = ptraceInfoIfFalse "More than one token names or tokens" $
                     pmatch (pfromSingleton # pto tnMap) $ \case
                       PNothing -> pcon PFalse
                       PJust ((pfromData . (psndBuiltin #)) -> tokenCount) ->
@@ -716,7 +712,7 @@ phasOnlyOneTokenOfCurrencySymbol =
                             (self # pcon PFound # xs)
                             (pcon PFailed)
                         PFound -> pcon PFailed
-                        PFailed -> ptraceError "unreachable"
+                        PFailed -> ptraceInfoError "unreachable"
                   )
                   ( pmatch lastState $ \case
                       PFound -> lastState
@@ -742,13 +738,13 @@ phasOnlyOneTokenOfCurrencySymbol =
 pcountNonZeroes :: forall (kg :: KeyGuarantees) (ag :: AmountGuarantees) (s :: S). Term s (PValue kg ag :--> PInteger)
 pcountNonZeroes = plam $ \value ->
   let
-    nonZero :: Term s ((PBuiltinPair (PAsData PCurrencySymbol) (PAsData (PMap kg PTokenName PInteger))) :--> PBool)
+    nonZero :: Term s (PBuiltinPair (PAsData PCurrencySymbol) (PAsData (PMap kg PTokenName PInteger)) :--> PBool)
     nonZero = plam $ \currencySymbolPair ->
       plet (pto $ pfromData $ psndBuiltin # currencySymbolPair) $ \tokens ->
         pall
-          # plam (\tokenNamePair -> pnot #$ (pfromData $ psndBuiltin # tokenNamePair) #== 0)
+          # plam (\tokenNamePair -> pnot #$ pfromData (psndBuiltin # tokenNamePair) #== 0)
           # tokens
-            #&& pnot
+          #&& pnot
           # (pnull # tokens)
    in
     plength #$ pfilter # nonZero #$ pto $ pto value
@@ -848,7 +844,7 @@ findValue sym tk self x xs = plet x $ \pair ->
       pif
         (pfstBuiltin # kv #== tk)
         (pfromData $ psndBuiltin # kv)
-        (ptraceError "findValue: Unexpectedly missing result.")
+        (ptraceInfoError "findValue: Unexpectedly missing result.")
 
 unsafeMatchValueAssetsInternal ::
   forall (k :: KeyGuarantees) (s :: S).
@@ -884,7 +880,7 @@ instance HRecToList '[] (x :: Type) where
 -- Converts type level lists of tagged assets back to dynamic-typed assets
 instance
   forall (rest :: [(Symbol, Type)]) (name :: Symbol) (unit :: Symbol).
-  HRecToList rest AssetClass =>
+  (HRecToList rest AssetClass) =>
   HRecToList
     ('(name, Tagged unit AssetClass) ': rest)
     AssetClass
@@ -917,7 +913,7 @@ instance
     (classSymbol :: Symbol)
     (is :: [(Symbol, Type)])
     (s :: S).
-  MatchValueAssetReferences is s =>
+  (MatchValueAssetReferences is s) =>
   MatchValueAssetReferences
     ('(name, Tagged classSymbol AssetClass) ': is)
     s

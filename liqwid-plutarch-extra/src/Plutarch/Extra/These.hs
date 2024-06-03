@@ -20,7 +20,6 @@ import Plutarch.Extra.Functor (
   PFunctor (PSubcategory, pfmap),
   Plut,
  )
-import Plutarch.Extra.TermCont (pletC, pmatchC)
 import Plutarch.Extra.Traversable (PTraversable (ptraverse, ptraverse_))
 
 {- | A data type which contains an @a@, a @b@, or both. This uses a

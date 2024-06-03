@@ -22,7 +22,6 @@ module Plutarch.Extra.Traversable (
   Plutarch.Extra.Traversable.pall,
 ) where
 
-import Plutarch.Api.V1.Maybe (PMaybeData (PDJust, PDNothing))
 import Plutarch.Extra.Applicative (
   PApplicative (ppure),
   PApply (pliftA2),
@@ -40,7 +39,7 @@ import Plutarch.Extra.Monoid (
   pgetAny,
  )
 import Plutarch.Extra.Sum (PSum (PSum))
-import Plutarch.Extra.TermCont (pletC, pmatchC)
+import Plutarch.LedgerApi (PMaybeData (PDJust, PDNothing))
 import Plutarch.List (puncons)
 import Plutarch.Num (PNum)
 

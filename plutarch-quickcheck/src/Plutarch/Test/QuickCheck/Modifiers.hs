@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RoleAnnotations #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Plutarch.Test.QuickCheck.Modifiers (
   -- * Types
@@ -438,7 +439,7 @@ deriving via
   (mod Integer)
   instance
     ( forall (a :: Type) (b :: Type).
-      ( Coercible a b => Coercible (mod a) (mod b)
+      ( (Coercible a b) => Coercible (mod a) (mod b)
       )
     , CoArbitrary (mod Integer)
     ) =>
@@ -446,7 +447,7 @@ deriving via
 
 -- | @since 2.1.4
 instance
-  (forall (a :: Type) (b :: Type). Coercible a b => Coercible (mod a) b) =>
+  (forall (a :: Type) (b :: Type). (Coercible a b) => Coercible (mod a) b) =>
   Function (TimeDelta mod n)
   where
   {-# INLINEABLE function #-}

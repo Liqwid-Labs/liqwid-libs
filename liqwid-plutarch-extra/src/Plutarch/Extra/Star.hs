@@ -11,7 +11,6 @@ import Plutarch.Extra.Bind (PBind ((#>>=)))
 import Plutarch.Extra.Category (PCategory (pidentity), PSemigroupoid ((#>>>)))
 import Plutarch.Extra.Functor (PFunctor (PSubcategory, pfmap), Plut)
 import Plutarch.Extra.Profunctor (PProfunctor (PCoSubcategory, PContraSubcategory, pdimap))
-import Plutarch.Extra.TermCont (pmatchC)
 
 {- | The (profunctorial) view over a Kleisli arrow. Its name comes from category
  theory, as it is one of the ways we can lift a functor (in this case, @f@)

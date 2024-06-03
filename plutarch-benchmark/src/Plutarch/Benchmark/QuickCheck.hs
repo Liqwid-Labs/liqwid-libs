@@ -25,7 +25,7 @@ import Test.QuickCheck.Random (mkQCGen)
 -}
 genToRand ::
   forall (a :: Type) (g :: Type).
-  RandomGen g =>
+  (RandomGen g) =>
   Gen a ->
   Int ->
   g ->
@@ -41,7 +41,7 @@ genToRand (MkGen runQcGen) size g = runStateGen g $ \stateGen -> do
 -}
 randToGen ::
   forall (a :: Type).
-  (forall (g :: Type). RandomGen g => Int -> g -> (a, g)) ->
+  (forall (g :: Type). (RandomGen g) => Int -> g -> (a, g)) ->
   Gen a
 randToGen pureRand = do
   g <- mkStdGen <$> arbitrary

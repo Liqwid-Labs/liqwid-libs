@@ -23,8 +23,9 @@ import Data.Text qualified as Text
 import Optics.Getter (A_Getter, to, view)
 import Optics.Label (LabelOptic (labelOptic))
 import Plutarch (
-  Config (Config, tracingMode),
-  TracingMode (DetTracing, NoTracing),
+  Config (NoTracing, Tracing),
+  LogLevel (LogInfo),
+  TracingMode (DetTracing),
   compile,
  )
 import Plutarch.Evaluate (EvalError, evalScript)
@@ -137,8 +138,8 @@ checkedCompileD ::
   (forall (s :: S). Term s a) ->
   Either Text DebuggableScript
 checkedCompileD term = do
-  script <- compile Config {tracingMode = NoTracing} term
-  debugScript <- compile Config {tracingMode = DetTracing} term
+  script <- compile NoTracing term
+  debugScript <- compile (Tracing LogInfo DetTracing) term
   pure $ DebuggableScript script debugScript
 
 {- | Compilation errors cause exceptions, but deferred by lazyness.

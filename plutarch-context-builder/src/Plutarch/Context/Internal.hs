@@ -6,7 +6,7 @@ module Plutarch.Context.Internal (
 import Data.Kind (Type)
 import Plutarch.Context.Base (BaseBuilder, Builder, mkNormalizedBase)
 
-class Builder a => Normalizer (a :: Type) where
+class (Builder a) => Normalizer (a :: Type) where
   mkNormalized' :: a -> a
 
 instance Normalizer BaseBuilder where
@@ -16,5 +16,5 @@ instance Normalizer BaseBuilder where
 
  @since 2.4.0
 -}
-mkNormalized :: Normalizer a => a -> a
+mkNormalized :: (Normalizer a) => a -> a
 mkNormalized = mkNormalized'
