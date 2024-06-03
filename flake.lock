@@ -2982,15 +2982,15 @@
         "pre-commit-hooks": "pre-commit-hooks_2"
       },
       "locked": {
-        "lastModified": 1681430513,
-        "narHash": "sha256-Fhvs1dCI9fHizJOHdqek7JmjifZHLVSutYAJR3IXNQE=",
-        "owner": "liqwid-labs",
+        "lastModified": 1705544824,
+        "narHash": "sha256-om9EEGrw09gm0i+i9GYp0KYWQMXAd6ZvAZPzW6cGSLw=",
+        "owner": "mlabs-haskell",
         "repo": "ply",
-        "rev": "b8cf54f57a3ec8543781f1b205544175f3341355",
+        "rev": "efeb0baddffccdbbf38d1e7e02cd1778422eeb78",
         "type": "github"
       },
       "original": {
-        "owner": "liqwid-labs",
+        "owner": "mlabs-haskell",
         "repo": "ply",
         "type": "github"
       }

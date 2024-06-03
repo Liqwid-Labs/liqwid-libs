@@ -23,7 +23,6 @@ source-repository-package
     location: https://github.com/mlabs-haskell/ply
     tag: efeb0baddffccdbbf38d1e7e02cd1778422eeb78
     subdir:
-      .
       ply-core
       ply-plutarch
 
