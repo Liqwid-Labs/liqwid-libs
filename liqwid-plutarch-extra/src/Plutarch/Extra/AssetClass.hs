@@ -75,6 +75,14 @@ import Plutarch.Test.QuickCheck.Modifiers (
 import PlutusLedgerApi.V1.Value (CurrencySymbol, TokenName)
 import PlutusLedgerApi.V1.Value qualified as Value
 import PlutusTx qualified
+import Ply.Core.Class (
+  PlyArg (
+    UPLCRep,
+    toBuiltinArg,
+    toBuiltinArgData
+  ),
+ )
+import Ply.Plutarch (PlyArgOf)
 import Test.QuickCheck (
   Arbitrary (arbitrary, shrink),
   CoArbitrary (coarbitrary),
@@ -419,6 +427,18 @@ instance
 
 ----------------------------------------
 -- Ply instances
+
+-- | @since 3.10.4
+instance PlyArg AssetClass where
+  type UPLCRep AssetClass = [PlutusTx.Data]
+  toBuiltinArg ac =
+    case PlutusTx.toData @AssetClass ac of
+      PlutusTx.List x -> x
+      _ -> error "unreachable"
+  toBuiltinArgData = PlutusTx.toData
+
+-- | @since 3.10.4
+type instance PlyArgOf PAssetClassData = AssetClass
 
 {- | Type-level marker to indicate whether a 'GenAssetClass' can have the ADA
  'AssetClass' inside it or not.
