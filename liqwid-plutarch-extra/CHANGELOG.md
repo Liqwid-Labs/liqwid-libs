@@ -2,6 +2,13 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 4.0.1 --- 2024-06-04
+
+### Added
+
+- `markInfoC` and `markDebugC` in `Plutarch.Extra.TermCont` for 'marker tracing'
+  for specific functions
+
 ## 4.0.0
 
 Internally:
