@@ -31,6 +31,8 @@ module ScriptExport.ScriptInfo (
   mkValidatorInfo,
   mkPolicyInfo,
   mkStakeValidatorInfo,
+  mkTwoArgumentScriptInfo,
+  mkThreeArgumentScriptInfo,
   toScript,
 
   -- * Re-exports
@@ -56,20 +58,24 @@ import Optics (view)
 import Optics.TH (makeFieldLabelsNoPrefix)
 import Plutarch (
   ClosedTerm,
-  Config (Config, tracingMode),
-  TracingMode (NoTracing),
+  Config (Tracing),
+  LogLevel (LogInfo),
+  TracingMode (DetTracing),
   compile,
  )
-import Plutarch.Api.V2 (
-  PMintingPolicy,
-  PStakeValidator,
-  PValidator,
+import Plutarch.LedgerApi (
+  PScriptContext,
   scriptHash,
  )
 import Plutarch.Orphans ()
+import Plutarch.Prelude (
+  PData,
+  POpaque,
+  (:-->),
+ )
 import Plutarch.Script (Script (Script), deserialiseScript, serialiseScript)
 import Ply (
-  ScriptRole (MintingPolicyRole, ValidatorRole),
+  ScriptRole (ThreeArgumentScript, TwoArgumentScript),
   TypedScript (TypedScript),
   TypedScriptEnvelope,
  )
@@ -226,11 +232,11 @@ class ToRoledScript (rl :: ScriptRole) where
   toRoledScript' ::
     forall (params :: [Type]). TypedScript rl params -> RoledScript
 
-instance ToRoledScript 'MintingPolicyRole where
-  toRoledScript' s = RoledScript (toScript s) MintingPolicyRole
+instance ToRoledScript 'TwoArgumentScript where
+  toRoledScript' s = RoledScript (toScript s) TwoArgumentScript
 
-instance ToRoledScript 'ValidatorRole where
-  toRoledScript' s = RoledScript (toScript s) ValidatorRole
+instance ToRoledScript 'ThreeArgumentScript where
+  toRoledScript' s = RoledScript (toScript s) ThreeArgumentScript
 
 {- | Convert any 'TypedScript' into 'RoledScript'.
 
@@ -349,32 +355,48 @@ mkScriptInfo script =
         }
 
 exportConfig :: Config
-exportConfig =
-  Config
-    { tracingMode = NoTracing
-    }
+exportConfig = Tracing LogInfo DetTracing
+
+{- | Create a 'ScriptInfo' given a Plutarch term of a two argument script.
+
+     @since 2.4.0
+-}
+mkTwoArgumentScriptInfo :: ClosedTerm (PData :--> PScriptContext :--> POpaque) -> ScriptInfo
+mkTwoArgumentScriptInfo term =
+  mkScriptInfo (either (error . T.unpack) id $ compile exportConfig term)
+
+{- | Create a 'ScriptInfo' given a Plutarch term of a three argument script.
+
+     @since 2.4.0
+-}
+mkThreeArgumentScriptInfo :: ClosedTerm (PData :--> PData :--> PScriptContext :--> POpaque) -> ScriptInfo
+mkThreeArgumentScriptInfo term =
+  mkScriptInfo (either (error . T.unpack) id $ compile exportConfig term)
 
 {- | Create a 'ScriptInfo' given a Plutarch term of a policy.
 
      @since 1.1.0
+     @deprecated Use 'mkTwoArgumentScriptInfo' instead.
 -}
-mkPolicyInfo :: ClosedTerm PMintingPolicy -> ScriptInfo
+mkPolicyInfo :: ClosedTerm (PData :--> PScriptContext :--> POpaque) -> ScriptInfo
 mkPolicyInfo term =
   mkScriptInfo (either (error . T.unpack) id $ compile exportConfig term)
 
 {- | Create a 'ScriptInfo' given a Plutarch term of a validator.
 
      @since 1.1.0
+     @deprecated Use 'mkThreeArgumentScriptInfo' instead.
 -}
-mkValidatorInfo :: ClosedTerm PValidator -> ScriptInfo
+mkValidatorInfo :: ClosedTerm (PData :--> PData :--> PScriptContext :--> POpaque) -> ScriptInfo
 mkValidatorInfo term =
   mkScriptInfo (either (error . T.unpack) id $ compile exportConfig term)
 
 {- | Create a 'ScriptInfo' given a Plutarch term of a stake validator.
 
      @since 1.1.1
+     @deprecated Use 'mkTwoArgumentScriptInfo' instead.
 -}
-mkStakeValidatorInfo :: ClosedTerm PStakeValidator -> ScriptInfo
+mkStakeValidatorInfo :: ClosedTerm (PData :--> PScriptContext :--> POpaque) -> ScriptInfo
 mkStakeValidatorInfo term =
   mkScriptInfo (either (error . T.unpack) id $ compile exportConfig term)
 
