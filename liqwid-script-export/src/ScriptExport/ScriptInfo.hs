@@ -44,6 +44,7 @@ import Control.Monad.Except (Except, MonadError, runExcept, throwError)
 import Control.Monad.Reader (MonadReader, ReaderT, ask, asks, runReaderT)
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Types qualified as Aeson
+import Data.Base16.Types qualified as Base16
 import Data.ByteString qualified as BS
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Short qualified as SBS
@@ -52,7 +53,6 @@ import Data.Kind (Type)
 import Data.Map (Map, (!?))
 import Data.Text (Text, pack)
 import Data.Text qualified as T
-import Data.Text.Encoding qualified as Text
 import GHC.Generics qualified as GHC
 import Optics (view)
 import Optics.TH (makeFieldLabelsNoPrefix)
@@ -269,8 +269,8 @@ instance Aeson.ToJSON RoledScript where
         cbor = CBOR.serialize' $ SBS.toShort raw
      in Aeson.toJSON $
           Aeson.object
-            [ "cborHex" Aeson..= Base16.encodeBase16 cbor
-            , "rawHex" Aeson..= Base16.encodeBase16 raw
+            [ "cborHex" Aeson..= (Base16.extractBase16 . Base16.encodeBase16 $ cbor)
+            , "rawHex" Aeson..= (Base16.extractBase16 . Base16.encodeBase16 $ raw)
             , "hash" Aeson..= scriptHash scr
             , "role" Aeson..= view #role s
             ]
@@ -284,9 +284,9 @@ instance Aeson.FromJSON RoledScript where
     where
       parseAndDeserialize v =
         Aeson.parseJSON v
-          >>= either (fail . show) (either (fail . show) pure . cborToScript)
-            . Base16.decodeBase16
-            . Text.encodeUtf8
+          >>= (either (fail . show) pure . cborToScript)
+            . Base16.decodeBase16'
+            . Base16.assertBase16
   parseJSON invalid =
     Aeson.prependFailure
       "parsing RoledScript failed, "
@@ -350,8 +350,8 @@ mkScriptInfo script =
   let scriptRaw = serialiseScript script
       scriptCBOR = CBOR.serialize' scriptRaw
    in ScriptInfo
-        { cborHex = Base16.encodeBase16 scriptCBOR
-        , rawHex = Base16.encodeBase16 $ SBS.fromShort scriptRaw
+        { cborHex = Base16.extractBase16 . Base16.encodeBase16 $ scriptCBOR
+        , rawHex = Base16.extractBase16 . Base16.encodeBase16 $ SBS.fromShort scriptRaw
         }
 
 exportConfig :: Config
