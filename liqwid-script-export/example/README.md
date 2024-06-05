@@ -15,7 +15,6 @@ Which will result in:
 ```json
 {
   "cborHex": "4746010000222499",
-  "hash": "fc61e623d413aa67dc9367e8e48f5ab7f38093e871af6d9dd27b717e",
   "rawHex": "46010000222499"
 }
 ```

@@ -48,21 +48,21 @@ decodeExport filename = do
   content <- BS.readFile filename <|> help
 
   return $
-    Raw <$> Aeson.eitherDecodeStrict content
-      <|> Export <$> Aeson.eitherDecodeStrict content
-      <|> MultipleExport <$> Aeson.eitherDecodeStrict content
+    (Raw <$> Aeson.eitherDecodeStrict content)
+      <> (Export <$> Aeson.eitherDecodeStrict content)
+      <> (MultipleExport <$> Aeson.eitherDecodeStrict content)
 
 makeStats :: FileFormats -> Map Text ScriptStats
 makeStats =
   \case
-    Raw e -> go . Script . tsScript <$> view # rawScripts e
-    Export e -> go . view # script <$> view # scripts e
+    Raw e -> go . Script . tsScript <$> view #rawScripts e
+    Export e -> go . view #script <$> view #scripts e
     MultipleExport e ->
       fromList
         $ foldMap
           ( \(k, x) ->
-              (\(k', x') -> (k <> "-" <> k', go $ view # script x'))
-                <$> toList (view # scripts x)
+              (\(k', x') -> (k <> "-" <> k', go $ view #script x'))
+                <$> toList (view #scripts x)
           )
         $ toList e
   where

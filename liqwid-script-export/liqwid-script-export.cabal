@@ -112,14 +112,14 @@ library
     Codec.Serialise.Orphans
     Data.Cache.Cached
 
--- executable export-stat
---   import:         lang, deps
---   hs-source-dirs: export-stat
---   main-is:        Main.hs
---   build-depends:  liqwid-script-export
+executable export-stat
+  import:         lang, deps
+  hs-source-dirs: export-stat
+  main-is:        Main.hs
+  build-depends:  liqwid-script-export
 
--- executable example
---   import:         lang, deps
---   hs-source-dirs: example
---   main-is:        Main.hs
---   build-depends:  liqwid-script-export
+executable example
+  import:         lang, deps
+  hs-source-dirs: example
+  main-is:        Main.hs
+  build-depends:  liqwid-script-export

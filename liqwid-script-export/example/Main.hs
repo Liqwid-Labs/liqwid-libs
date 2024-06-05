@@ -8,14 +8,20 @@ Example usage of 'liqwid-script-export'.
 -}
 module Main (main) where
 
-import Data.Default (def)
 import Data.Map (fromList)
 import Data.Text (unpack)
-import Plutarch (compile)
-import Plutarch.Api.V2 (PValidator)
+import Plutarch (
+  Config (Tracing),
+  LogLevel (LogInfo),
+  TracingMode (DetTracing),
+  compile,
+ )
+import Plutarch.LedgerApi (PScriptContext)
 import Plutarch.Prelude (
   ClosedTerm,
+  PData,
   PInteger,
+  POpaque,
   PUnit (PUnit),
   pcon,
   pconstant,
@@ -35,7 +41,7 @@ import ScriptExport.ScriptInfo (
   RawScriptExport (RawScriptExport),
   RoledScript (RoledScript),
   ScriptExport (ScriptExport),
-  ScriptRole (ValidatorRole),
+  ScriptRole (ThreeArgumentScript),
   fetchTS,
   getParam,
   mkValidatorInfo,
@@ -79,11 +85,11 @@ builders =
     ]
 
 -- This is our dummy validator.
-alwaysSucceeds :: ClosedTerm PValidator
+alwaysSucceeds :: ClosedTerm (PData :--> PData :--> PScriptContext :--> POpaque)
 alwaysSucceeds = plam $ \_ _ _ -> popaque (pcon PUnit)
 
 -- This is our dummy paramterized validator.
-alwaysSucceedsParam :: ClosedTerm (PInteger :--> PValidator)
+alwaysSucceedsParam :: ClosedTerm (PInteger :--> PData :--> PData :--> PScriptContext :--> POpaque)
 alwaysSucceedsParam = plam $ \x _ _ _ -> unTermCont $ do
   _ <- tcont $ plet $ x + x
   pure $ popaque (pcon PUnit)
@@ -93,7 +99,7 @@ myproject :: ScriptExport Int
 myproject =
   ScriptExport
     ( fromList
-        [ ("alwaysSucceeds", RoledScript (either (error . unpack) id $ compile def alwaysSucceeds) ValidatorRole)
+        [ ("alwaysSucceeds", RoledScript (either (error . unpack) id $ compile conf alwaysSucceeds) ThreeArgumentScript)
         ]
     )
     10
@@ -103,13 +109,16 @@ myProjectParameterized :: RawScriptExport
 myProjectParameterized =
   RawScriptExport $
     fromList
-      [ ("alwaysSucceeds", either (error . unpack) id $ mkEnvelope def "alwaysSucceedsParam" alwaysSucceedsParam)
+      [ ("alwaysSucceeds", either (error . unpack) id $ mkEnvelope conf "alwaysSucceedsParam" alwaysSucceedsParam)
       ]
+
+conf :: Config
+conf = Tracing LogInfo DetTracing
 
 -- This is example script linker.
 myProjectLinker :: Linker Integer (ScriptExport ())
 myProjectLinker = do
-  as <- fetchTS @ValidatorRole @'[Integer] "alwaysSucceeds"
+  as <- fetchTS @ThreeArgumentScript @'[Integer] "alwaysSucceeds"
   arg <- getParam
 
   return $
