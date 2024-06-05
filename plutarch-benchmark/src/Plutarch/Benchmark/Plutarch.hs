@@ -33,8 +33,8 @@ import Plutarch.Benchmark.Sized (
   benchSizesRandom,
   benchSizesRandomCached,
  )
-import Plutarch.Extra.Compile (mustCompile)
-import Plutarch.Extra.DebuggableScript (mustCompileD)
+import Plutarch.Extra.Compile (tryCompile)
+import Plutarch.Extra.DebuggableScript (tryCompileD)
 import Plutarch.Extra.Precompile (CompiledTerm, compile', toDebuggableScript)
 import Plutarch.Prelude (ClosedTerm, S)
 import System.Random (RandomGen)
@@ -47,11 +47,11 @@ mkTermImplMetaData ::
   -- | The implementation without any inputs
   ClosedTerm a ->
   ImplMetaData
-mkTermImplMetaData name term = mkScriptImplMetaData name $ mustCompile term
+mkTermImplMetaData name term = mkScriptImplMetaData name $ tryCompile term
 
 -- | @since 1.0.0
 sampleTerm :: ClosedTerm a -> Either (BudgetExceeded PlutusCostAxis) Costs
-sampleTerm term = sampleDebuggableScript $ mustCompileD term
+sampleTerm term = sampleDebuggableScript $ tryCompileD term
 
 -- | @since 1.0.0
 sampleTerm' :: CompiledTerm a -> Either (BudgetExceeded PlutusCostAxis) Costs
