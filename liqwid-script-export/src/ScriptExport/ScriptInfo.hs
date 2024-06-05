@@ -376,8 +376,8 @@ mkThreeArgumentScriptInfo term =
 {- | Create a 'ScriptInfo' given a Plutarch term of a policy.
 
      @since 1.1.0
-     @deprecated Use 'mkTwoArgumentScriptInfo' instead.
 -}
+{-# DEPRECATED mkPolicyInfo "Use 'mkTwoArgumentScriptInfo' instead." #-}
 mkPolicyInfo :: ClosedTerm (PData :--> PScriptContext :--> POpaque) -> ScriptInfo
 mkPolicyInfo term =
   mkScriptInfo (either (error . T.unpack) id $ compile exportConfig term)
@@ -385,8 +385,8 @@ mkPolicyInfo term =
 {- | Create a 'ScriptInfo' given a Plutarch term of a validator.
 
      @since 1.1.0
-     @deprecated Use 'mkThreeArgumentScriptInfo' instead.
 -}
+{-# DEPRECATED mkValidatorInfo "Use 'mkThreeArgumentScriptInfo' instead." #-}
 mkValidatorInfo :: ClosedTerm (PData :--> PData :--> PScriptContext :--> POpaque) -> ScriptInfo
 mkValidatorInfo term =
   mkScriptInfo (either (error . T.unpack) id $ compile exportConfig term)
@@ -394,8 +394,8 @@ mkValidatorInfo term =
 {- | Create a 'ScriptInfo' given a Plutarch term of a stake validator.
 
      @since 1.1.1
-     @deprecated Use 'mkTwoArgumentScriptInfo' instead.
 -}
+{-# DEPRECATED mkStakeValidatorInfo "Use 'mkTwoArgumentScriptInfo' instead." #-}
 mkStakeValidatorInfo :: ClosedTerm (PData :--> PScriptContext :--> POpaque) -> ScriptInfo
 mkStakeValidatorInfo term =
   mkScriptInfo (either (error . T.unpack) id $ compile exportConfig term)

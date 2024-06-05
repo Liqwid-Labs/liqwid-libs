@@ -44,7 +44,7 @@ import ScriptExport.ScriptInfo (
   ScriptRole (ThreeArgumentScript),
   fetchTS,
   getParam,
-  mkValidatorInfo,
+  mkThreeArgumentScriptInfo,
   toRoledScript,
  )
 import ScriptExport.Types (
@@ -76,10 +76,10 @@ handle linker given parameter. Also, it will return serialized
 builders :: Builders
 builders =
   mconcat
-    [ insertStaticBuilder "alwaysSucceeds" (mkValidatorInfo alwaysSucceeds)
+    [ insertStaticBuilder "alwaysSucceeds" (mkThreeArgumentScriptInfo alwaysSucceeds)
     , insertBuilder @Integer
         "alwaysSucceedsParam"
-        (\x -> mkValidatorInfo (alwaysSucceedsParam Plutarch.Prelude.# pconstant x))
+        (\x -> mkThreeArgumentScriptInfo (alwaysSucceedsParam Plutarch.Prelude.# pconstant x))
     , insertStaticBuilder "my-onchain-project" myproject
     , insertScriptExportWithLinker "my-onchain-project-param" myProjectParameterized myProjectLinker
     ]
