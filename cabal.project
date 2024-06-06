@@ -20,8 +20,8 @@ source-repository-package
 
 source-repository-package
     type: git
-    location: https://github.com/the-headless-ghost/ply
-    tag: 7c77122e040ec34ced500946950f9041cb05277e
+    location: https://github.com/mlabs-haskell/ply
+    tag: a0aa36863372a3375e0ec73dd0ccfa49046d7855
     subdir:
       ply-core
       ply-plutarch

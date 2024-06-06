@@ -3037,15 +3037,15 @@
         "pre-commit-hooks": "pre-commit-hooks_2"
       },
       "locked": {
-        "lastModified": 1717501808,
+        "lastModified": 1717675431,
         "narHash": "sha256-dSXC40u8taswmygFDuGDLkdRj/ebsnk/hsJM5JAmWE4=",
-        "owner": "the-headless-ghost",
+        "owner": "mlabs-haskell",
         "repo": "ply",
-        "rev": "7c77122e040ec34ced500946950f9041cb05277e",
+        "rev": "a0aa36863372a3375e0ec73dd0ccfa49046d7855",
         "type": "github"
       },
       "original": {
-        "owner": "the-headless-ghost",
+        "owner": "mlabs-haskell",
         "ref": "edgr/0.7.0",
         "repo": "ply",
         "type": "github"

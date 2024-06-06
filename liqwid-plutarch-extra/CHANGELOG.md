@@ -5,9 +5,17 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 ## 4.2.0 --- 2024-06-06
 
 ### Changed
+
 - Renamed functions in `Plutarch.Extra.Compile` to conform to naming conventions:
   - `mustCompile` to `tryCompile`
   - `mustCompileTracing` to `tryCompileTracing`
+
+### Added
+
+- `ply` dependency
+- `PlyArg` instance for `AssetClass` and `ExtendedAssetClass`
+- `PlyArgOf` implementation for `PAssetClassData` and `PExtendedAssetClass`
+- LSE from [`liqwid-script-export`](https://github.com/Liqwid-Labs/liqwid-libs)
 
 ## 4.1.0 --- 2024-06-05
 
