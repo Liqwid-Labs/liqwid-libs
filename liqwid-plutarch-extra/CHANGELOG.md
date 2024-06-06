@@ -2,6 +2,19 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 4.2.0 --- 2024-06-06
+
+### Changed
+- Renamed functions in `Plutarch.Extra.Compile` to conform to naming conventions:
+  - `mustCompile` to `tryCompile`
+  - `mustCompileTracing` to `tryCompileTracing`
+
+## 4.1.0 --- 2024-06-05
+
+### Changed
+
+- Relaxed signature of `markInfoC` and `markDebugC` to allow for more general 'marker tracing', specifically for `ptryFromC`.
+
 ## 4.0.1 --- 2024-06-04
 
 ### Added

@@ -6,7 +6,7 @@ module Plutarch.Extra.DebuggableScript (
 
   -- * Construction
   checkedCompileD,
-  mustCompileD,
+  tryCompileD,
 
   -- * Use
   applyScript,
@@ -29,7 +29,7 @@ import Plutarch (
   compile,
  )
 import Plutarch.Evaluate (EvalError, evalScript)
-import Plutarch.Extra.Compile (mustCompile, mustCompileTracing)
+import Plutarch.Extra.Compile (tryCompile, tryCompileTracing)
 import Plutarch.Extra.Script (applyArguments)
 import Plutarch.Script (
   Script (Script),
@@ -129,7 +129,7 @@ applyDebuggableArg f x =
 {- | For handling compilation errors right away.
 
  You pay for the compilation of the debug script, even if it's not needed down
- the line. You most likely want 'mustCompileD' instead.
+ the line. You most likely want 'tryCompileD' instead.
 
   @since 3.0.2
 -}
@@ -148,12 +148,12 @@ checkedCompileD term = do
 
  @since 3.0.2
 -}
-mustCompileD ::
+tryCompileD ::
   forall (a :: S -> Type).
   (forall (s :: S). Term s a) ->
   DebuggableScript
-mustCompileD term =
-  DebuggableScript (mustCompile term) (mustCompileTracing term)
+tryCompileD term =
+  DebuggableScript (tryCompile term) (tryCompileTracing term)
 
 {- | Final evaluation of a 'DebuggableScript' to a 'Script', with errors resulting in
  exceptions.

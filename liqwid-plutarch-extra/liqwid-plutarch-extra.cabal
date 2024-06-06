@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               liqwid-plutarch-extra
-version:            4.0.1
+version:            4.2.0
 synopsis:           A collection of Plutarch extras from Liqwid Labs
 description:        Several useful data types and functions for Plutarch.
 homepage:           https://github.com/Liqwid-Labs/liqwid-plutarch-extra
@@ -12,7 +12,7 @@ maintainer:         Koz Ross <koz@mlabs.city>
 copyright:          (C) 2022 Liqwid Labs
 category:           Test
 build-type:         Simple
-tested-with:        GHC ==9.2.5
+tested-with:        GHC ==9.6.4
 extra-source-files:
   LICENSE
   README.md

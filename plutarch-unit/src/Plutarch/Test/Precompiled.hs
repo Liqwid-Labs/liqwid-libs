@@ -46,7 +46,7 @@ import Plutarch.Extra.DebuggableScript (
   DebuggableScript,
   applyDebuggableScript,
   checkedCompileD,
-  mustCompileD,
+  tryCompileD,
  )
 import Plutarch.Prelude (ClosedTerm, S, Type)
 import Plutarch.Script (Script)
@@ -265,7 +265,7 @@ tryFromPTerm ::
 tryFromPTerm name term ctests =
   testGroup name $ toList $ go <$> tests
   where
-    (_, tests) = execRWS (view #unTestCompiled ctests) (mustCompileD term) ()
+    (_, tests) = execRWS (view #unTestCompiled ctests) (tryCompileD term) ()
     go ts = singleTest (view #caseName ts) ts
 
 -- | @since 1.2.0

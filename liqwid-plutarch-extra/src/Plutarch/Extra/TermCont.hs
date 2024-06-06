@@ -62,13 +62,13 @@ This runs in 'TermCont' to ensure sensible sequencing.
 @since 4.0.1
 -}
 markInfoC ::
-  forall (r :: S -> Type) (a :: S -> Type) (s :: S).
+  forall (r :: S -> Type) (a :: Type) (s :: S).
   -- | Pre-action marker
   Term s PString ->
   -- | Post-action marker
   Term s PString ->
-  TermCont @r s (Term s a) ->
-  TermCont @r s (Term s a)
+  TermCont @r s a ->
+  TermCont @r s a
 markInfoC pre post act = do
   tcont $ \f -> ptraceInfo pre (f ())
   x <- act
@@ -80,13 +80,13 @@ markInfoC pre post act = do
 @since 4.0.1
 -}
 markDebugC ::
-  forall (r :: S -> Type) (a :: S -> Type) (s :: S).
+  forall (r :: S -> Type) (a :: Type) (s :: S).
   -- | Pre-action marker
   Term s PString ->
   -- | Post-action marker
   Term s PString ->
-  TermCont @r s (Term s a) ->
-  TermCont @r s (Term s a)
+  TermCont @r s a ->
+  TermCont @r s a
 markDebugC pre post act = do
   tcont $ \f -> ptraceDebug pre (f ())
   x <- act

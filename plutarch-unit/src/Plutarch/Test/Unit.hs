@@ -28,7 +28,7 @@ import Data.Tagged (Tagged (Tagged))
 import Data.Text (Text)
 import Plutarch.Builtin (pforgetData)
 import Plutarch.Evaluate (EvalError, evalScript)
-import Plutarch.Extra.Compile (mustCompile)
+import Plutarch.Extra.Compile (tryCompile)
 import Plutarch.LedgerApi (PScriptContext)
 import Plutarch.Lift (PUnsafeLiftDecl (PLifted))
 import Plutarch.Prelude (
@@ -170,7 +170,7 @@ testValidator ::
   TestTree
 testValidator f name val dat red sc =
   f name $
-    mustCompile
+    tryCompile
       ( val
           # pforgetConstant dat
           # pforgetConstant red
@@ -195,7 +195,7 @@ testMP ::
   TestTree
 testMP f name policy red sc =
   f name $
-    mustCompile
+    tryCompile
       ( policy # pforgetConstant red # pconstant sc
       )
 
