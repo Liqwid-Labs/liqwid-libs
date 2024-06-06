@@ -33,7 +33,7 @@ import Plutarch.Extra.DebuggableScript (
   DebuggableScript,
   applyDebuggableArg,
   finalEvalDebuggableScript,
-  mustCompileD,
+  tryCompileD,
   mustEvalD,
  )
 import Plutarch.Internal (
@@ -82,7 +82,7 @@ compile' ::
   forall (a :: S -> Type).
   (forall (s :: S). Term s a) ->
   CompiledTerm a
-compile' t = CompiledTerm $ mustCompileD t
+compile' t = CompiledTerm $ tryCompileD t
 
 {- | Convert a 'CompiledTerm' to a 'Script'.
 
@@ -108,7 +108,7 @@ applyCompiledTerm ::
   (forall (s :: S). Term s a) ->
   CompiledTerm b
 applyCompiledTerm (CompiledTerm sf) a =
-  CompiledTerm $ applyDebuggableArg sf (mustEvalD $ mustCompileD a)
+  CompiledTerm $ applyDebuggableArg sf (mustEvalD $ tryCompileD a)
 
 {- | Apply a 'CompiledTerm' to a closed Plutarch 'Term'.
 
@@ -124,7 +124,7 @@ applyCompiledTerm' ::
   (forall (s :: S). Term s a) ->
   CompiledTerm b
 applyCompiledTerm' (CompiledTerm sf) a =
-  CompiledTerm $ applyDebuggableArg sf (mustCompileD a)
+  CompiledTerm $ applyDebuggableArg sf (tryCompileD a)
 
 {- | Apply a 'CompiledTerm' to a 'CompiledTerm'.
 

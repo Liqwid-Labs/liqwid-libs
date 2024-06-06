@@ -1,8 +1,8 @@
 {-# LANGUAGE RankNTypes #-}
 
 module Plutarch.Extra.Compile (
-  mustCompile,
-  mustCompileTracing,
+  tryCompile,
+  tryCompileTracing,
 ) where
 
 import Data.Text qualified as T
@@ -18,22 +18,22 @@ import Plutarch (
 
      @since 2.0.0
 -}
-mustCompile :: forall (a :: S -> Type). ClosedTerm a -> Script
-mustCompile t = case compile conf t of
+tryCompile :: forall (a :: S -> Type). ClosedTerm a -> Script
+tryCompile t = case compile conf t of
   Left err -> error $ unwords ["Plutarch compilation error:", T.unpack err]
   Right s -> s
   where
     conf :: Config
     conf = Tracing LogInfo DetTracing
 
--- Like 'mustCompile', but with tracing turned on.
+-- Like 'tryCompile', but with tracing turned on.
 --
 -- @since 3.8.0
-mustCompileTracing ::
+tryCompileTracing ::
   forall (a :: S -> Type).
   (forall (s :: S). Term s a) ->
   Script
-mustCompileTracing term =
+tryCompileTracing term =
   case compile (Tracing LogInfo DetTracing) term of
     Left err ->
       error $
