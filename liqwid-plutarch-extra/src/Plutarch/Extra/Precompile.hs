@@ -33,8 +33,8 @@ import Plutarch.Extra.DebuggableScript (
   DebuggableScript,
   applyDebuggableArg,
   finalEvalDebuggableScript,
-  tryCompileD,
   mustEvalD,
+  tryCompileD,
  )
 import Plutarch.Internal (
   Config (Tracing),

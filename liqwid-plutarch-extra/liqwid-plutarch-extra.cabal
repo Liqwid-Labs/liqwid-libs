@@ -152,6 +152,8 @@ library
     , plutarch-extra
     , plutarch-quickcheck
     , plutus-core
+    , ply-core
+    , ply-plutarch
     , QuickCheck
     , serialise
     , tagged
