@@ -34,6 +34,9 @@ import Plutarch.Unsafe (punsafeCoerce)
 
 import Plutarch.Script (Script, deserialiseScript, serialiseScript)
 import PlutusLedgerApi.V1.Bytes (bytes, encodeByteString, fromHex)
+import PlutusLedgerApi.V1.Time (
+  DiffMilliSeconds (DiffMilliSeconds),
+ )
 import PlutusLedgerApi.V1.Value (tokenName)
 import PlutusLedgerApi.V2 (
   BuiltinByteString,
@@ -296,6 +299,18 @@ deriving via
   Integer
   instance
     (Aeson.FromJSON POSIXTime)
+
+-- @ since 4.2.1
+deriving via
+  Integer
+  instance
+    (Aeson.ToJSON DiffMilliSeconds)
+
+-- @ since 4.2.1
+deriving via
+  Integer
+  instance
+    (Aeson.FromJSON DiffMilliSeconds)
 
 -- @ since 3.6.1
 deriving via
