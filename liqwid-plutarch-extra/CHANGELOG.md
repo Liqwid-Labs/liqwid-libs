@@ -2,6 +2,12 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 4.2.1 --- 2024-06-07
+
+### Added
+
+- `Plutarch.Orphans`: `FromJSON` and `ToJSON` instances for `DiffMilliSeconds`.
+
 ## 4.2.0 --- 2024-06-06
 
 ### Changed
