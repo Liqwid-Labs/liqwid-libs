@@ -63,10 +63,10 @@ import Plutarch (
   TracingMode (DetTracing),
   compile,
  )
-import Plutarch.LedgerApi (
-  PScriptContext,
-  scriptHash,
+import Plutarch.LedgerApi.V2 (
+  PScriptContext,  
  )
+import Plutarch.LedgerApi.V3 (scriptHash)
 import Plutarch.Orphans ()
 import Plutarch.Prelude (
   PData,

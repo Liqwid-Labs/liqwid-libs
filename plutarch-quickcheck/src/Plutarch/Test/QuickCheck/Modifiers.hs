@@ -258,7 +258,7 @@ instance
   where
   {-# INLINEABLE arbitrary #-}
   arbitrary =
-    GenValue . Value . AssocMap.fromList <$> do
+    GenValue . Value . AssocMap.unsafeFromList <$> do
       -- First, make an ADA entry
       adaEntry <- mkAdaEntry @adaMod
       -- Then, generate the rest, making sure not to use the ADA CurrencySymbol
@@ -269,7 +269,7 @@ instance
         CurrencySymbol ->
         Gen (CurrencySymbol, AssocMap.Map TokenName Integer)
       go sym =
-        (sym,) . AssocMap.fromList <$> do
+        (sym,) . AssocMap.unsafeFromList <$> do
           tokNames <- mkTokenNames
           traverse (pairWith @otherMod) tokNames
   {-# INLINEABLE shrink #-}
@@ -278,14 +278,14 @@ instance
     -- entry.
     [] -> error "Shrinker for GenValue: Empty 'outer map'."
     (adaEntry : otherEntries) ->
-      GenValue . Value . AssocMap.fromList <$> do
+      GenValue . Value . AssocMap.unsafeFromList <$> do
         -- Handle ADA entry shrinks by only shrinking the sole amount it has in
         -- it.
         case adaEntry of
           ("", adaInner) -> case AssocMap.toList adaInner of
             [("", adaMod)] -> do
               adaMod' <- coerciveShrink @adaMod adaMod
-              let adaEntry' = ("", AssocMap.fromList [("", adaMod')])
+              let adaEntry' = ("", AssocMap.unsafeFromList [("", adaMod')])
               -- Shrink whatever remains according to the rules.
               otherEntries' <-
                 shrinkList (traverse (go . AssocMap.toList)) otherEntries
@@ -298,7 +298,7 @@ instance
       go kvs = do
         kvs' <- shrinkList (traverse (coerciveShrink @otherMod)) kvs
         guard (not . null $ kvs')
-        pure . AssocMap.fromList $ kvs'
+        pure . AssocMap.unsafeFromList $ kvs'
 
 -- | @since 2.1.3
 instance CoArbitrary (GenValue adaMod otherMod) where
@@ -530,14 +530,14 @@ rewrap ::
 rewrap =
   GenValue
     . Value
-    . AssocMap.fromList
+    . AssocMap.unsafeFromList
     . fmap (bimap rewrapCS rewrapInner)
   where
     rewrapCS :: [Word8] -> CurrencySymbol
     rewrapCS = CurrencySymbol . toBuiltin @ByteString . fromList
     rewrapInner :: [([Word8], Integer)] -> AssocMap.Map TokenName Integer
     rewrapInner =
-      AssocMap.fromList
+      AssocMap.unsafeFromList
         . fmap (first (TokenName . toBuiltin @ByteString . fromList))
 
 mkAdaEntry ::
@@ -548,7 +548,7 @@ mkAdaEntry ::
   Gen (CurrencySymbol, AssocMap.Map TokenName Integer)
 mkAdaEntry = do
   amount <- coerce @(adaMod Integer) @Integer <$> arbitrary
-  pure ("", AssocMap.fromList [("", amount)])
+  pure ("", AssocMap.unsafeFromList [("", amount)])
 
 mkOtherEntrySymbols :: Gen [CurrencySymbol]
 mkOtherEntrySymbols =

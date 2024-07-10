@@ -61,7 +61,7 @@ import Plutarch.Extra.IsData (
  )
 import Plutarch.Extra.Record (mkRecordConstr, (.&), (.=))
 import Plutarch.Extra.Tagged (PTagged)
-import Plutarch.LedgerApi (PCurrencySymbol, PTokenName)
+import Plutarch.LedgerApi.V2 (PCurrencySymbol, PTokenName)
 import Plutarch.Lift (
   PConstantDecl,
   PUnsafeLiftDecl (PLifted),

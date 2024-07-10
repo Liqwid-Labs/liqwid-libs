@@ -8,7 +8,7 @@ import Plutarch (
   Config (NoTracing),
   compile,
  )
-import Plutarch.LedgerApi (PScriptContext)
+import Plutarch.LedgerApi.V2 (PScriptContext)
 import Plutarch.Prelude (
   PAsData,
   PData,

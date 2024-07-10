@@ -52,9 +52,9 @@ import PlutusLedgerApi.V2 (
     txInfoReferenceInputs,
     txInfoSignatories,
     txInfoWdrl
-  ),
-  fromList,
+  )
  )
+import PlutusTx.AssocMap qualified as AssocMap
 
 {- | A context builder for Certifying. Corresponds to
  'Plutus.V1.Ledger.Contexts.Certifying' specifically.
@@ -130,11 +130,11 @@ buildCertifying' builder@(unpack -> bb) =
           { txInfoInputs = ins
           , txInfoReferenceInputs = refin
           , txInfoOutputs = outs
-          , txInfoData = fromList $ inDat <> outDat <> extraDat
+          , txInfoData = AssocMap.unsafeFromList $ inDat <> outDat <> extraDat
           , txInfoMint = mintedValue
-          , txInfoRedeemers = fromList $ toList (view #redeemers bb) <> redeemerMap
+          , txInfoRedeemers = AssocMap.unsafeFromList $ toList (view #redeemers bb) <> redeemerMap
           , txInfoSignatories = toList . view #signatures $ bb
-          , txInfoWdrl = fromList $ toList (view #withdrawals bb)
+          , txInfoWdrl = AssocMap.unsafeFromList $ toList (view #withdrawals bb)
           , txInfoDCert = toList (view #dcerts bb)
           }
       rewardCred = case view #certifyingDCert builder of

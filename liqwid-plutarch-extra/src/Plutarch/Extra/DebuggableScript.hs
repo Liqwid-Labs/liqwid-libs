@@ -47,7 +47,7 @@ import UntypedPlutusCore.Core.Type qualified as UplcType
 import UntypedPlutusCore.Evaluation.Machine.Cek (
   CekUserError (CekEvaluationFailure, CekOutOfExError),
   ErrorWithCause (ErrorWithCause),
-  EvaluationError (InternalEvaluationError, UserEvaluationError),
+  EvaluationError (OperationalEvaluationError, StructuralEvaluationError)
  )
 
 {- | A 'Script' with a debug fallback that has tracing turned on.
@@ -188,14 +188,11 @@ finalEvalDebuggableScript ::
 finalEvalDebuggableScript (DebuggableScript script debugScript) =
   case res of
     Right _ -> r
-    Left (ErrorWithCause evalErr _) ->
-      case evalErr of
-        UserEvaluationError e ->
-          case e of
-            CekEvaluationFailure ->
-              verifyDebuggableScriptOutput evalErr
-            _ -> r
+    Left (ErrorWithCause evalErr _) -> case evalErr of 
+      OperationalEvaluationError err -> case err of 
+        CekEvaluationFailure -> verifyDebuggableScriptOutput evalErr
         _ -> r
+      _ -> r
   where
     r@(res, _, _) = evalScript script
     r'@(res', _, traces) = evalScript debugScript
@@ -211,36 +208,29 @@ finalEvalDebuggableScript (DebuggableScript script debugScript) =
               , "Debug Script traces:"
               , Text.unpack (Text.unlines traces)
               ]
-        Left (ErrorWithCause evalErr _) ->
-          case evalErr of
-            UserEvaluationError e ->
-              case e of
-                CekEvaluationFailure ->
-                  r'
-                CekOutOfExError _ ->
-                  error $
-                    unlines
-                      [ "Script failed normally, "
-                          <> "but corresponding debug Script"
-                          <> "ran out of budget!"
-                      , "Original error:"
-                      , show origEvalErr
-                      , "Debug Script traces until crash:"
-                      , Text.unpack (Text.unlines traces)
-                      ]
-            InternalEvaluationError e ->
-              error $
-                unlines
-                  [ "Script failed with UserEvaluationError, "
-                      <> "but corresponding debug Script caused "
-                      <> "internal evaluation error!"
-                  , "an Internal evaluation error:"
-                  , show e
-                  , "Original error:"
-                  , show origEvalErr
-                  , "Debug Script traces until crash:"
-                  , Text.unpack (Text.unlines traces)
-                  ]
+        Left (ErrorWithCause evalErr _) -> case evalErr of 
+          OperationalEvaluationError err -> case err of 
+            CekEvaluationFailure -> r'
+            CekOutOfExError _ -> error $ unlines [
+              "Script failed normally, " <>
+              "but corresponding debug Script " <>
+              "ran out of budget!",
+              "Original error:",
+              show origEvalErr,
+              "Debug Script traces until crash:",
+              Text.unpack (Text.unlines traces)
+              ]
+          StructuralEvaluationError err -> error $ unlines [
+              "Script failed with OperationalEvaluationError, " <>
+              "but corresponding debug Script caused " <>
+              "StructuralEvaluationError!",
+              "StructuralEvaluationError:",
+              show err,
+              "Original error:",
+              show origEvalErr,
+              "Debug Script traces until crash:",
+              Text.unpack (Text.unlines traces)
+              ]
 
 {- | Evaluate a 'Script' to a 'Script', with errors resulting in exceptions.
 

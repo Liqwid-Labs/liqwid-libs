@@ -44,8 +44,8 @@ import PlutusLedgerApi.V2 (
     txInfoSignatories,
     txInfoWdrl
   ),
-  fromList,
  )
+import PlutusTx.AssocMap qualified as AssocMap
 
 {- | Builder that builds TxInfo.
 
@@ -81,11 +81,11 @@ buildTxInfo (unpack -> builder) =
           { txInfoInputs = ins
           , txInfoReferenceInputs = refin
           , txInfoOutputs = outs
-          , txInfoData = fromList $ inDat <> outDat <> extraDat
+          , txInfoData = AssocMap.unsafeFromList $ inDat <> outDat <> extraDat
           , txInfoMint = mintedValue
           , txInfoSignatories = toList (view #signatures builder)
-          , txInfoRedeemers = fromList $ toList (view #redeemers builder) <> redeemerMap
-          , txInfoWdrl = fromList $ toList (view #withdrawals builder)
+          , txInfoRedeemers = AssocMap.unsafeFromList $ toList (view #redeemers builder) <> redeemerMap
+          , txInfoWdrl = AssocMap.unsafeFromList $ toList (view #withdrawals builder)
           }
    in txinfo
 

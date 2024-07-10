@@ -15,7 +15,7 @@ import GHC.Records (HasField)
 import Plutarch.Extra.Applicative (pliftA2)
 import Plutarch.Extra.Field (pletAll, pletAllC)
 import Plutarch.Extra.Maybe (passertPJust, pjust, pnothing)
-import Plutarch.LedgerApi (
+import Plutarch.LedgerApi.V2 (
   PExtended (PFinite),
   PInterval (PInterval),
   PLowerBound (PLowerBound),

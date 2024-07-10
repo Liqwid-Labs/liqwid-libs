@@ -23,7 +23,8 @@ import Plutarch.Extra.Boring (PBoring (pboring))
 import Plutarch.Extra.Function (papply, pconst)
 import Plutarch.Extra.Functor (PFunctor (PSubcategory))
 import Plutarch.Extra.Maybe (pnothing)
-import Plutarch.LedgerApi (PMaybeData (PDJust, PDNothing), pdnothing)
+import Plutarch.LedgerApi.Utils (PMaybeData (PDJust, PDNothing))
+import Plutarch.LedgerApi.V3 (pdnothing)
 import Plutarch.List (puncons)
 
 -- | @since 1.0.0

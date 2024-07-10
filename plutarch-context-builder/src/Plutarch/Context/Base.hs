@@ -98,7 +98,7 @@ import Optics (
  )
 import Plutarch (S)
 import Plutarch.Builtin (PIsData, pdata, pforgetData)
-import Plutarch.LedgerApi (datumHash)
+import Plutarch.LedgerApi.V3 (datumHash)
 import Plutarch.Lift (PUnsafeLiftDecl (PLifted), pconstant, plift)
 import PlutusLedgerApi.V1.Value qualified as Value
 import PlutusLedgerApi.V2 (
@@ -935,11 +935,11 @@ yieldBaseTxInfo b = case unpack b of
       , txInfoFee = view #fee bb
       , txInfoMint = mempty
       , txInfoDCert = mempty
-      , txInfoWdrl = AssocMap.fromList []
+      , txInfoWdrl = AssocMap.unsafeFromList []
       , txInfoValidRange = view #timeRange bb
       , txInfoSignatories = mempty
-      , txInfoRedeemers = AssocMap.fromList []
-      , txInfoData = AssocMap.fromList []
+      , txInfoRedeemers = AssocMap.unsafeFromList []
+      , txInfoData = AssocMap.unsafeFromList []
       , txInfoId = view #txId bb
       }
 
@@ -1099,7 +1099,7 @@ combineMap ::
   Map k v ->
   Map k v
 combineMap c (AssocMap.toList -> m) =
-  AssocMap.fromList $ foldr (combinePair c) [] m
+  AssocMap.unsafeFromList $ foldr (combinePair c) [] m
 
 {- | Sort given 'AssocMap' by given comparator.
 
@@ -1111,7 +1111,7 @@ sortMap ::
   Map k v ->
   Map k v
 sortMap (AssocMap.toList -> m) =
-  AssocMap.fromList $ sortBy (\(k, _) (k', _) -> compare k k') m
+  AssocMap.unsafeFromList $ sortBy (\(k, _) (k', _) -> compare k k') m
 
 {- | Normalize and sort 'Value'.
 
@@ -1134,7 +1134,7 @@ normalizeValue (getValue -> val) =
   let valWith0Ada =
         AssocMap.insert
           adaSymbol
-          (AssocMap.fromList [(adaToken, 0)])
+          (AssocMap.unsafeFromList [(adaToken, 0)])
           val
       val' = case AssocMap.lookup adaSymbol val of
         Nothing -> valWith0Ada -- No Ada symbol present, add the 0 entry
@@ -1147,8 +1147,8 @@ normalizeValue (getValue -> val) =
             -}
             AssocMap.insert
               adaSymbol
-              (AssocMap.fromList [(adaToken, adaAmount)])
-              ( AssocMap.fromList $
+              (AssocMap.unsafeFromList [(adaToken, adaAmount)])
+              ( AssocMap.unsafeFromList $
                   filter (\e -> fst e /= adaSymbol) (AssocMap.toList val)
               )
    in Value.Value

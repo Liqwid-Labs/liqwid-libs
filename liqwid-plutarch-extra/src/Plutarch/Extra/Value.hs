@@ -67,7 +67,7 @@ import Plutarch.Extra.Map (phandleMin)
 import Plutarch.Extra.Maybe (pexpectJustC)
 import Plutarch.Extra.Ord (PComparator, pfromOrdBy)
 import Plutarch.Extra.Tagged (PTagged (PTagged))
-import Plutarch.LedgerApi (
+import Plutarch.LedgerApi.V2 (
   AmountGuarantees (NoGuarantees, NonZero, Positive),
   KeyGuarantees (Sorted),
   PCurrencySymbol,

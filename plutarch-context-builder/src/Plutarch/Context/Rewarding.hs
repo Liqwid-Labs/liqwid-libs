@@ -54,8 +54,8 @@ import PlutusLedgerApi.V2 (
     txInfoSignatories,
     txInfoWdrl
   ),
-  fromList,
  )
+import PlutusTx.AssocMap qualified as AssocMap
 
 {- | A context builder for Rewarding. Corresponds to
  'Plutus.V1.Ledger.Contexts.Rewarding' specifically.
@@ -131,11 +131,11 @@ buildRewarding' builder@(unpack -> bb) =
           { txInfoInputs = ins
           , txInfoReferenceInputs = refin
           , txInfoOutputs = outs
-          , txInfoData = fromList $ inDat <> outDat <> extraDat
+          , txInfoData = AssocMap.unsafeFromList $ inDat <> outDat <> extraDat
           , txInfoMint = mintedValue
-          , txInfoRedeemers = fromList $ toList (view #redeemers bb) <> redeemerMap
+          , txInfoRedeemers = AssocMap.unsafeFromList $ toList (view #redeemers bb) <> redeemerMap
           , txInfoSignatories = toList . view #signatures $ bb
-          , txInfoWdrl = fromList $ toList (view #withdrawals bb)
+          , txInfoWdrl = AssocMap.unsafeFromList $ toList (view #withdrawals bb)
           , txInfoDCert = toList (view #dcerts bb)
           }
       rewardCred = case view #rewardingCred builder of

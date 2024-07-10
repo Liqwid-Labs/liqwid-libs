@@ -7,7 +7,7 @@ module TraversableProp (tests) where
 import Plutarch.Extra.Functor (PSubcategory)
 import Plutarch.Extra.Identity (PIdentity (PIdentity))
 import Plutarch.Extra.Traversable (PTraversable, ptraverse)
-import Plutarch.LedgerApi (PMaybeData)
+import Plutarch.LedgerApi.Utils (PMaybeData)
 import Plutarch.Test.QuickCheck (PA, PArbitrary, punlam)
 import Test.QuickCheck (
   Property,

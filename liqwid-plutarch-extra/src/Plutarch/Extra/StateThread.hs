@@ -11,7 +11,7 @@ import Plutarch.Builtin (ppairDataBuiltin)
 import Plutarch.Extra.Field (pletAll)
 import Plutarch.Extra.List (ptryFromSingleton)
 import Plutarch.Extra.Maybe (pfromJust)
-import Plutarch.LedgerApi (
+import Plutarch.LedgerApi.V2 (
   AmountGuarantees,
   KeyGuarantees,
   PCurrencySymbol,
@@ -114,7 +114,8 @@ withStateThreadGeneric checkMint mp ref = plam $ \red ctx -> pletAll ctx $ \ctx'
         pif
           (checkMint (pfield @"_0" # thisPolicy) . getField @"mint" $ txInfo)
           ( pif
-              (pany # (hasUniqueInput # ref) # getField @"inputs" txInfo)
+              (pany # (hasUniqueInput # ref) # pfromData (getField @"inputs" txInfo))
+              -- (pany # (hasUniqueInput # ref) # getField @"inputs" txInfo)
               (mp # red # ctx)
               (ptraceInfoError "stateThread: Unique input not found")
           )
@@ -142,6 +143,6 @@ uniqueStateTokensMint thisPolicy mint =
 
 hasUniqueInput ::
   forall (s :: S).
-  Term s (PTxOutRef :--> PTxInInfo :--> PBool)
+  Term s (PTxOutRef :--> PAsData PTxInInfo :--> PBool)
 hasUniqueInput =
   plam $ \ref txInInfo -> ref #== (pfield @"outRef" # txInInfo)

@@ -29,7 +29,7 @@ import Data.Text (Text)
 import Plutarch.Builtin (pforgetData)
 import Plutarch.Evaluate (EvalError, evalScript)
 import Plutarch.Extra.Compile (tryCompile)
-import Plutarch.LedgerApi (PScriptContext)
+import Plutarch.LedgerApi.V2 (PScriptContext)
 import Plutarch.Lift (PUnsafeLiftDecl (PLifted))
 import Plutarch.Prelude (
   PData,

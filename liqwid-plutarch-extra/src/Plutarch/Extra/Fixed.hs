@@ -15,7 +15,7 @@ import Data.Bifunctor (first)
 import Data.Proxy (Proxy (Proxy))
 import GHC.TypeLits (KnownNat, Nat, natVal)
 import Plutarch.Extra.Function (pflip)
-import Plutarch.LedgerApi (
+import Plutarch.LedgerApi.V2 (
   AmountGuarantees (NonZero),
   KeyGuarantees (Sorted),
   PValue,

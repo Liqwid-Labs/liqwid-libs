@@ -16,11 +16,11 @@ import Data.Kind (Constraint)
 import Plutarch.Builtin (ppairDataBuiltin)
 import Plutarch.Extra.Boring (PBoring (pboring))
 import Plutarch.Extra.Function (pconst, pidentity)
-import Plutarch.LedgerApi (
+import Plutarch.LedgerApi.V2 (
   KeyGuarantees,
   PMap (PMap),
-  PMaybeData (PDJust, PDNothing),
  )
+import Plutarch.LedgerApi.Utils (PMaybeData (PDJust, PDNothing))
 import Plutarch.Lift (PUnsafeLiftDecl)
 
 {- | Describes the entire category of Plutarch types, with arrows being Plutarch

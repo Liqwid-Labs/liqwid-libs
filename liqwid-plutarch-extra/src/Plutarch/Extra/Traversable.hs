@@ -39,7 +39,7 @@ import Plutarch.Extra.Monoid (
   pgetAny,
  )
 import Plutarch.Extra.Sum (PSum (PSum))
-import Plutarch.LedgerApi (PMaybeData (PDJust, PDNothing))
+import Plutarch.LedgerApi.Utils (PMaybeData (PDJust, PDNothing))
 import Plutarch.List (puncons)
 import Plutarch.Num (PNum)
 

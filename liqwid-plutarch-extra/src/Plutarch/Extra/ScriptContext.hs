@@ -37,15 +37,15 @@ import Plutarch.Extra.Functor (PFunctor (pfmap))
 import Plutarch.Extra.List (pfindJust)
 import Plutarch.Extra.Maybe (pfromJust, pisJust, pjust, pnothing, ptraceIfNothing)
 import Plutarch.Extra.Value (passetClassValueOf)
-import Plutarch.LedgerApi (
-  AmountGuarantees (NoGuarantees, NonZero, Positive),
+import Plutarch.LedgerApi.Utils (PMaybeData)
+import Plutarch.LedgerApi.V2 (
+  AmountGuarantees (NoGuarantees, Positive),
   KeyGuarantees (Sorted, Unsorted),
   PAddress (PAddress),
   PCredential (PPubKeyCredential, PScriptCredential),
   PDatum,
   PDatumHash,
   PMap,
-  PMaybeData,
   POutputDatum (PNoOutputDatum, POutputDatum, POutputDatumHash),
   PPubKeyHash,
   PRedeemer,
@@ -58,7 +58,7 @@ import Plutarch.LedgerApi (
   PTxInfo,
   PTxOut (PTxOut),
   PTxOutRef,
-  PValue,
+  PValue (PValue),
  )
 import Plutarch.LedgerApi.AssocMap (plookup)
 import Plutarch.LedgerApi.AssocMap qualified as AssocMap
@@ -108,14 +108,14 @@ ptryOwnInput = phoistAcyclic $
     txInfo <- pletC (pownTxInfo # sc)
     txOutRef <- pletC (pownTxOutRef # sc)
     txInInfos <- pletC (pfromData $ pfield @"inputs" # txInfo)
-    res <- pmatchC (pfind # (go # txOutRef) # txInInfos)
+    res <- pmatchC (pfind # (go # pdata txOutRef) # txInInfos)
     pure $ case res of
       PNothing -> ptraceInfoError "ptryOwnInput: Could not find my own input"
-      PJust res' -> res'
+      PJust res' -> pfromData res'
   where
     go ::
       forall (s' :: S).
-      Term s' (PTxOutRef :--> PTxInInfo :--> PBool)
+      Term s' (PAsData PTxOutRef :--> PAsData PTxInInfo :--> PBool)
     go = phoistAcyclic $
       plam $ \tgt t -> unTermCont $ do
         x <- pletC (pfield @"outRef" # t)
@@ -150,8 +150,7 @@ pvalueSpent = phoistAcyclic $
                   (\(PTxOut o) -> pfield @"value" # o)
                   <> v
         )
-      -- TODO: This should be possible without coercions, but I can't figure out the types atm.
-      # punsafeCoerce (pconstant mempty :: forall (s' :: S). Term s' (PValue 'Unsorted 'NonZero))
+      # (pcon . PValue $ AssocMap.pempty) 
       # inputs
 
 {- | Check if a particular asset class has been spent in the input list.

@@ -36,12 +36,14 @@ import Plutarch (
   (#),
   (#$),
  )
-import Plutarch.Builtin (pfstBuiltin, ppairDataBuiltin, psndBuiltin)
+import Plutarch.Builtin (pfstBuiltin, ppairDataBuiltin, psndBuiltin, 
+  PDataNewtype (PDataNewtype))
 import Plutarch.Evaluate (evalScriptHuge, evalTerm)
 import Plutarch.Extra.Maybe (
   pisJust,
  )
-import Plutarch.LedgerApi (
+import Plutarch.LedgerApi.V3 (pisDJust, pfromDJust)
+import Plutarch.LedgerApi.V2 (
   AmountGuarantees (NoGuarantees),
   KeyGuarantees (Unsorted),
   PAddress (PAddress),
@@ -52,7 +54,6 @@ import Plutarch.LedgerApi (
   PInterval (PInterval),
   PLowerBound (PLowerBound),
   PMap (PMap),
-  PMaybeData (PDJust, PDNothing),
   PPosixTime (PPosixTime),
   PPubKeyHash (PPubKeyHash),
   PScriptHash (PScriptHash),
@@ -62,9 +63,8 @@ import Plutarch.LedgerApi (
   PTxOutRef (PTxOutRef),
   PUpperBound (PUpperBound),
   PValue (PValue),
-  pfromDJust,
-  pisDJust,
  )
+import Plutarch.LedgerApi.Utils (PMaybeData (PDNothing, PDJust))
 import Plutarch.Lift (PUnsafeLiftDecl (PLifted), plift, plift')
 import Plutarch.Maybe (pfromJust)
 import Plutarch.Num (pabs)
@@ -584,10 +584,12 @@ instance
 instance PArbitrary PPosixTime where
   parbitrary = do
     TestableTerm x <- parbitrary
-    return . pconT $ PPosixTime $ pabs # x
-  pshrink = fmap (\(TestableTerm x) -> pconT $ PPosixTime x) . shrink . unTime
+    return . pconT $ PPosixTime $ pcon $ PDataNewtype $ pdata $ pabs # x
+  pshrink = fmap (\(TestableTerm x) -> pconT $ PPosixTime $ pcon $ PDataNewtype $ pdata x) . shrink . unTime
     where
-      unTime = flip pmatchT $ \(PPosixTime a) -> a
+      unTime :: TestableTerm PPosixTime -> TestableTerm PInteger
+      unTime pt = pmatchT pt $ \(PPosixTime t) -> 
+        pmatch t $ \(PDataNewtype i) -> pfromData i
 
 -- | @since 2.0.0
 instance
@@ -650,21 +652,21 @@ instance PArbitrary PDatumHash where
   parbitrary = do
     -- PDatumHash should be 32 bytes long
     bs <- genByteString 32
-    return . pconT $ PDatumHash $ pconstant bs
+    pure $ pconT $ PDatumHash $ pcon $ PDataNewtype $ pdata $ pconstant bs
 
 -- | @since 2.0.0
 instance PArbitrary PPubKeyHash where
   parbitrary = do
     -- PubKeyHash should be 28 bytes long
     bs <- genByteString 28
-    return $ pconT $ PPubKeyHash $ pconstant bs
+    pure $ pconT $ PPubKeyHash $ pcon $ PDataNewtype $ pdata $ pconstant bs
 
 -- | @since 2.0.0
 instance PArbitrary PScriptHash where
   parbitrary = do
     -- StakeValidatorHash should be 28 bytes long
     bs <- genByteString 28
-    return $ pconT $ PScriptHash $ pconstant bs
+    pure $ pconT $ PScriptHash $ pcon $ PDataNewtype $ pdata $ pconstant bs
 
 -- | @since 2.0.0
 instance PArbitrary PCredential where
@@ -742,7 +744,7 @@ instance PArbitrary PAddress where
 instance PArbitrary PCurrencySymbol where
   parbitrary = do
     (TestableTerm cs) <- parbitrary
-    return $ pconT $ PCurrencySymbol cs
+    return $ pconT $ PCurrencySymbol $ pcon $ PDataNewtype $ pdata cs
 
 {- | This generates only those 'PTokenName's that correspond to ASCII strings.
  This is somewhat limited, but otherwise would require UTF-8 encoding as part
@@ -758,7 +760,7 @@ instance PArbitrary PTokenName where
   parbitrary = do
     asList <- listOf genAsciiByte
     let bs = Exts.fromList asList
-    pure . pconT $ PTokenName $ pconstant bs
+    pure . pconT $ PTokenName $ pcon $ PDataNewtype $ pdata $ pconstant bs
     where
       -- This generates only those bytes which are readable (so, not control
       -- sequences)

@@ -62,7 +62,7 @@ import Plutarch.Extra.Value (
   passetClassValueOf',
   psymbolValueOf,
  )
-import Plutarch.LedgerApi (
+import Plutarch.LedgerApi.V2 (
   AmountGuarantees,
   KeyGuarantees,
   PCurrencySymbol,

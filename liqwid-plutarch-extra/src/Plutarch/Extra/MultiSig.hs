@@ -28,7 +28,7 @@ import Plutarch.DataRepr (
  )
 import Plutarch.Extra.Field (pletAllC)
 import Plutarch.Extra.Function (pflip)
-import Plutarch.LedgerApi (PPubKeyHash)
+import Plutarch.LedgerApi.V2 (PPubKeyHash)
 import Plutarch.Lift (PConstantDecl, PLifted, PUnsafeLiftDecl)
 import PlutusLedgerApi.V1.Crypto (PubKeyHash)
 import PlutusTx qualified (makeLift, unstableMakeIsData)

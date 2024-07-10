@@ -55,7 +55,7 @@ import PlutusCore.Evaluation.Machine.ExBudget (
  )
 import PlutusCore.Evaluation.Machine.Exception (
   ErrorWithCause (..),
-  EvaluationError (InternalEvaluationError, UserEvaluationError),
+  EvaluationError (StructuralEvaluationError, OperationalEvaluationError)
  )
 import PlutusLedgerApi.V1 (
   ExBudget (ExBudget),
@@ -179,8 +179,8 @@ sampleScript' script =
     Right _ -> pure $ Costs {cpuCost, memCost}
     Left (ErrorWithCause evalErr _) ->
       case evalErr of
-        InternalEvaluationError _ -> error "Internal evaluation-error!"
-        UserEvaluationError e ->
+        StructuralEvaluationError _ -> error "Internal evaluation-error!"
+        OperationalEvaluationError e ->
           case e of
             CekEvaluationFailure ->
               Left . Left $ ScriptFailure traces

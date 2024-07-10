@@ -16,7 +16,7 @@ import Plutarch (
   TracingMode (DetTracing),
   compile,
  )
-import Plutarch.LedgerApi (PScriptContext)
+import Plutarch.LedgerApi.V2 (PScriptContext)
 import Plutarch.Prelude (
   ClosedTerm,
   PData,

@@ -26,8 +26,6 @@ import Data.Text.Encoding (encodeUtf8)
 import Data.Text.Encoding qualified as Text.Encoding
 import Data.Vector qualified as Vector
 import Plutarch.Builtin (PIsData (pdataImpl, pfromDataImpl))
-import Plutarch.LedgerApi (PDatumHash (PDatumHash))
-import Plutarch.TryFrom (PTryFrom (ptryFrom'), PTryFromExcess)
 import Plutarch.Unsafe (punsafeCoerce)
 
 --------------------------------------------------------------------------------
@@ -75,19 +73,6 @@ newtype Flip f a b = Flip (f b a) deriving stock (Generic)
 instance (PIsData a) => PIsData (PAsData a) where
   pfromDataImpl = punsafeCoerce
   pdataImpl = pdataImpl . pfromData
-
--- | @since 3.0.3
-instance PTryFrom PData (PAsData PDatumHash) where
-  type PTryFromExcess PData (PAsData PDatumHash) = Flip Term PDatumHash
-  ptryFrom' opq = runTermCont $ do
-    unwrapped <- pfromData . fst <$> ptryFromC @(PAsData PByteString) opq
-    tcont $ \f ->
-      pif
-        -- Blake2b_256 hash: 256 bits/32 bytes.
-        (plengthBS # unwrapped #== 32)
-        (f ())
-        (ptraceInfoError "ptryFrom(PDatumHash): must be 32 bytes long")
-    pure (punsafeCoerce opq, pcon $ PDatumHash unwrapped)
 
 -- | @since 3.0.3
 instance PTryFrom PData (PAsData PUnit)
