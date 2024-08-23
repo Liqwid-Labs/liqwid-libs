@@ -234,6 +234,7 @@ and we serialize it base16 encoded, with 0x in front so it will look as a hex st
 -}
 
 -- @ since 3.20.2
+-- NOTE(Kylix, 23 Aug 2024): Changed this to work with base-16 directly instead of encoding to UTF-8, which was unconventional for non-UTF-8 strings.
 instance Aeson.ToJSON TokenName where
   toJSON c =
     Aeson.object
@@ -248,6 +249,7 @@ instance Aeson.ToJSON TokenName where
       ]
 
 -- @ since 3.20.2
+-- NOTE(Kylix, 23 Aug 2024): Changed this to work with base-16 directly instead of decoding from UTF-8, which was unconventional for non-UTF-8 strings.
 instance Aeson.FromJSON TokenName where
   parseJSON =
     Aeson.withObject "TokenName" $ \object -> do
