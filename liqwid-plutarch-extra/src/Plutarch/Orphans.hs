@@ -21,9 +21,7 @@ import Data.Coerce (Coercible, coerce)
 import Data.Functor ((<&>))
 import Data.Ratio (Ratio, denominator, numerator, (%))
 import Data.Text (Text)
-import Data.Text qualified as Text
 import Data.Text.Encoding (encodeUtf8)
-import Data.Text.Encoding qualified as Text.Encoding
 import Data.Vector qualified as Vector
 import Plutarch.Api.V2 (PDatumHash (PDatumHash))
 import Plutarch.Builtin (PIsData (pdataImpl, pfromDataImpl))
@@ -35,7 +33,6 @@ import Plutarch.Unsafe (punsafeCoerce)
 
 import Plutarch.Script (Script, deserialiseScript, serialiseScript)
 import PlutusLedgerApi.V1.Bytes (bytes, encodeByteString, fromHex)
-import PlutusLedgerApi.V1.Value (tokenName)
 import PlutusLedgerApi.V2 (
   BuiltinByteString,
   BuiltinData (BuiltinData),
@@ -56,6 +53,7 @@ import PlutusLedgerApi.V2 (
  )
 
 import PlutusTx (FromData (fromBuiltinData), ToData (toBuiltinData))
+import PlutusLedgerApi.V1 (TokenName(unTokenName))
 
 --------------------------------------------------------------------------------
 
@@ -237,42 +235,25 @@ and we serialize it base16 encoded, with 0x in front so it will look as a hex st
 
 -- @ since 3.20.2
 instance Aeson.ToJSON TokenName where
-  toJSON =
+  toJSON c =
     Aeson.object
-      . pure
-      . (,) "unTokenName"
-      . Aeson.toJSON
-      . fromTokenName
-        (Text.cons '\NUL' . asBase16)
-        ( \t -> case Text.take 1 t of
-            "\NUL" -> Text.concat ["\NUL\NUL", t]
-            _ -> t
+      [
+        ( "unTokenName"
+        , Aeson.String
+            . encodeByteString
+            . fromBuiltin
+            . unTokenName
+            $ c
         )
-    where
-      fromTokenName ::
-        (ByteStringStrict.ByteString -> r) ->
-        (Text -> r) ->
-        TokenName ->
-        r
-      fromTokenName handleBytestring handleText (TokenName bs) =
-        either (\_ -> handleBytestring $ fromBuiltin bs) handleText $
-          Text.Encoding.decodeUtf8' (fromBuiltin bs)
-
-      asBase16 :: ByteStringStrict.ByteString -> Text
-      asBase16 bs = Text.concat ["0x", encodeByteString bs]
+      ]
 
 -- @ since 3.20.2
 instance Aeson.FromJSON TokenName where
   parseJSON =
     Aeson.withObject "TokenName" $ \object -> do
       raw <- object .: "unTokenName"
-      fromJSONText raw
-    where
-      fromJSONText t = case Text.take 3 t of
-        "\NUL0x" -> either fail (pure . tokenName) . tryDecode . Text.drop 3 $ t
-        "\NUL\NUL\NUL" ->
-          pure . tokenName . Text.Encoding.encodeUtf8 . Text.drop 2 $ t
-        _ -> pure . tokenName . Text.Encoding.encodeUtf8 $ t
+      bytes' <- decodeByteString raw
+      pure $ TokenName $ toBuiltin bytes'
 
 -- @ since 3.6.1
 deriving via
